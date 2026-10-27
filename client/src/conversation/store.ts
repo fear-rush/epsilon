@@ -48,6 +48,15 @@ export class ConversationStore {
 		link.send({ t: "rpc", sessionId: this.sessionId, command: { type: "abort" } });
 	}
 
+	/** pi answers with a fresh snapshot, so the picker shows the model it chose. */
+	setModel(provider: string, modelId: string): void {
+		link.send({
+			t: "rpc",
+			sessionId: this.sessionId,
+			command: { type: "set_model", provider, modelId },
+		});
+	}
+
 	answerDialog(answer: RpcExtensionUIResponse): void {
 		link.send({ t: "dialog", sessionId: this.sessionId, answer });
 	}

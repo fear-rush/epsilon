@@ -87,13 +87,15 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 ### S4: Composer
 
-Steer and abort are built and verified: while a turn runs the composer turns into
-steer and stop, Esc stops from the textarea, and a refused command becomes a
-notice. Model switching, the palette and `!cmd` are not started.
+Steer, abort and the model picker are built; steer and abort are verified. The
+picker's socket half works and its next-turn half is pending. The palette and
+`!cmd` are not started.
 
 - [x] Steer mid-run and see the message land in the transcript
 - [x] Abort, and the run stops in the CLI as well
 - [ ] Change model; the next turn uses it, and `get_state` in the CLI agrees
+      (socket: `set_model` answered ok, the refreshed snapshot is pi's own
+      `get_state` with the new model, and a bogus pair answers `Model not found`)
 - [ ] An installed skill or prompt template appears in the palette and runs
 - [ ] `!ls` runs a shell command and its output is in the transcript
 
@@ -140,12 +142,13 @@ notice. Model switching, the palette and `!cmd` are not started.
 
 ## Active slice
 
-**S4: Composer.** Steer and abort are done; three controls remain.
+**S4: Composer.** Steer, abort and the model picker are built; the palette and
+`!cmd` remain.
 
-Next action: the model picker. `get_available_models` lists the choices,
-`set_model` switches, and the snapshot's `model` and `thinkingLevel` say what is
-current. Confirm in the CLI on the same session, because the socket forwards only
-`ok`/`error` and drops pi's response data.
+Next action: `!cmd`. The `bash` RPC records a result and the reducer already turns
+a `bashExecution` message into a bash card, so the work is the `!` prefix in the
+composer plus the `bash` command. Then the skill and prompt palette, which needs
+`get_commands` in the snapshot and another protocol bump.
 
 ## Facts worth keeping
 
@@ -207,6 +210,15 @@ current. Confirm in the CLI on the same session, because the socket forwards onl
 - The socket's `rpc-result` carries only `ok`/`error`, so pi's response data (the
   steer disposition, `get_state`, the chosen model) never reaches the browser. A
   refused command becomes a notice with its error text.
+- The driver drops replies to the server's own reads, so a snapshot no longer
+  leaves three phantom `rpc-result` frames on the wire.
+- A snapshot carries `models` from `get_available_models`: 510 entries across the
+  configured providers here. The picker is a native select grouped by provider
+  with the current provider first; a searchable palette is the eventual control.
+- After a successful `set_model`, the server re-reads the snapshot for every
+  subscriber, so the picker shows pi's answer instead of echoing the request. pi
+  validates the pair against `get_available_models` and answers
+  `Model not found: provider/id` otherwise.
 - The tab settles a turn twice: `agent_end` then `agent_settled`. Both clear
   `busy`; `abort` produces `message_end`, `turn_end`, `agent_end` and
   `agent_settled`, so a stopped turn keeps its partial text.

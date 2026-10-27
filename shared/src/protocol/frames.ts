@@ -60,11 +60,20 @@ export const clientFrameSchema = z.discriminatedUnion("t", [
 
 /**
  * A snapshot is built from RPC reads, never from server memory. `commands` and
- * `stats` land with the composer palette (S4) and the resources page (S8).
+ * `stats` land with the composer palette (S4) and the resources page (S8), and
+ * they travel as their own frames when they do.
  */
+/**
+ * One entry of the model picker. pi's `Model` also carries pricing, input limits
+ * and headers; the browser needs an identity and a label, nothing else.
+ */
+export type SnapshotModel = { provider: string; id: string; name: string };
+
 export type Snapshot = {
 	state: RpcSessionState;
 	messages: SnapshotMessage[];
+	/** `get_available_models`, mapped down to what the picker shows. */
+	models: SnapshotModel[];
 };
 
 export const serverFrameSchema = z.discriminatedUnion("t", [

@@ -1,5 +1,11 @@
 // Shared, browser-safe code: the socket contract both sides parse with.
-export type { ClientFrame, ProtocolErrorCode, ServerFrame, Snapshot } from "./protocol/frames";
+export type {
+	ClientFrame,
+	ProtocolErrorCode,
+	ServerFrame,
+	Snapshot,
+	SnapshotModel,
+} from "./protocol/frames";
 export {
 	agentEventSchema,
 	clientFrameSchema,

@@ -169,7 +169,15 @@ export class Driver {
 			this.collectStderr(`\nunparsed stdout line: ${trimmed.slice(0, 200)}\n`);
 			return;
 		}
-		if (parsed.type === "response") this.settle(parsed);
+		if (parsed.type === "response") {
+			// A reply to a read this server made (`sendSnapshot`) is not a browser
+			// frame: forwarding it would show a command nobody sent.
+			const internal = parsed.id !== undefined && this.waiting.has(parsed.id);
+			this.settle(parsed);
+			if (internal) return;
+			this.options.onFrame(parsed);
+			return;
+		}
 		// SAFETY: `parseJsonLine` returned a JSON object whose `type` is a string, and
 		// pi owns every other field. agent/normalize.ts is the single place that
 		// reads their shapes, so the driver forwards the frame untouched.

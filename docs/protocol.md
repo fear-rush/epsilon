@@ -3,7 +3,7 @@
 Status: **partly implemented.** This is the contract between `server/` and
 `client/`. Both sides implement it; neither invents frames.
 
-On the wire today (S3): `hello`, `welcome`, `attach`, `detach`, `rpc`, `dialog`
+On the wire today (S4): `hello`, `welcome`, `attach`, `detach`, `rpc`, `dialog`
 and `dialog-closed`, `ui`, `ping`/`pong`, plus `snapshot`, `event`, `rpc-result`,
 `meta` and `error`. Not yet: every `terminal` frame, `commands` and `stats` inside
 a snapshot, the coalescing and backpressure rules, the heartbeat and the restart
@@ -25,7 +25,12 @@ resources, ui-state) and this socket for everything agent-shaped.
 
 1. Client connects and sends `hello`.
 2. Server replies `welcome` or `error { code: "PROTOCOL_MISMATCH" }`.
-3. On mismatch the client reloads the page instead of reconnecting.
+3. On mismatch the server answers with `error { code: "PROTOCOL_MISMATCH" }` and the
+   client shows it as a notice. Reload the tab; guessing at a changed frame is
+   worse than a stale page.
+
+Version history: 1 was the S2 transcript; 2 added `models` to the snapshot for
+the model picker.
 
 Version the socket, not the REST paths. A stale tab or an installed PWA can
 outlive a server upgrade; REST requests cannot, because the bundle is served by
@@ -72,23 +77,20 @@ Every frame that concerns a session carries its `sessionId`. There is no ambient
 
 ## Snapshot
 
-A snapshot is sent once per `attach`, and again after any client-initiated
-resync. It is built from RPC reads, never from server memory:
+A snapshot is sent once per `attach`, and again after a command that changes
+pi's own state (`set_model`). It is built from RPC reads, never from server memory:
 
 ```ts
 type Snapshot = {
 	state: RpcSessionState; // get_state
-	messages: AgentMessage[]; // get_messages (the model-facing branch)
-	commands: RpcSlashCommand[]; // get_commands
-	stats?: SessionStats; // get_session_stats
-	pendingDialogs: ExtensionUiRequest[]; // replayed from server memory, see below
-	running: boolean;
-	needsInput: boolean;
+	messages: AgentMessage[]; // get_messages, system entries filtered out
+	models: { provider: string; id: string; name: string }[]; // get_available_models
 };
 ```
 
-`get_entries` / `get_tree` are used only for full-history and tree views, not for
-the snapshot.
+`commands` and `stats` join the snapshot with the palette (S4) and the resources
+page (S8). Dialogs, `running` and `needsInput` travel in their own frames.
+`get_entries` / `get_tree` are used only for full-history and tree views.
 
 The client reducer must be able to **replace** its state from a snapshot at any
 moment. That is what makes reconnect, tab duplication and server restart

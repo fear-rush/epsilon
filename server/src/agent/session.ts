@@ -22,11 +22,14 @@ export type FrameSink = (frame: ServerFrame) => void;
  * The two reads a snapshot needs, unwrapped from their RPC envelopes. pi owns the
  * inner shapes; the transcript stores them as they arrive.
  */
+const modelSchema = z.looseObject({ provider: z.string(), id: z.string(), name: z.string() });
+
 const repliesSchema = z.tuple([
 	z.looseObject({ data: z.custom<Snapshot["state"]>() }),
 	z.looseObject({
 		data: z.looseObject({ messages: z.array(z.custom<Snapshot["messages"][number]>()) }),
 	}),
+	z.looseObject({ data: z.looseObject({ models: z.array(modelSchema) }) }),
 ]);
 
 const QUESTION_METHODS = ["select", "confirm", "input", "editor"];
@@ -106,11 +109,12 @@ export class AgentSession {
 	/** History comes from pi's session file, never from server memory. */
 	private async sendSnapshot(sink: FrameSink): Promise<void> {
 		try {
-			const [state, messages] = await Promise.all([
+			const [state, messages, models] = await Promise.all([
 				this.driver.request({ type: "get_state" }),
 				this.driver.request({ type: "get_messages" }),
+				this.driver.request({ type: "get_available_models" }),
 			]);
-			const replies = repliesSchema.safeParse([state, messages]);
+			const replies = repliesSchema.safeParse([state, messages, models]);
 			if (!replies.success) {
 				this.emit({
 					t: "error",
@@ -120,13 +124,18 @@ export class AgentSession {
 				});
 				return;
 			}
-			const [sessionState, sessionMessages] = replies.data;
+			const [sessionState, sessionMessages, sessionModels] = replies.data;
 			sink({
 				t: "snapshot",
 				sessionId: this.sessionId,
 				snapshot: {
 					state: sessionState.data,
 					messages: sessionMessages.data.messages.filter(isVisibleMessage),
+					models: sessionModels.data.models.map((model) => ({
+						provider: model.provider,
+						id: model.id,
+						name: model.name,
+					})),
 				},
 			});
 		} catch (error) {
@@ -137,6 +146,11 @@ export class AgentSession {
 				sessionId: this.sessionId,
 			});
 		}
+	}
+
+	/** Re-read the snapshot for everyone watching, after pi changed its state. */
+	private resync(): void {
+		for (const sink of this.subscribers) void this.sendSnapshot(sink);
 	}
 
 	get dialogs(): DialogQuestion[] {
@@ -186,6 +200,9 @@ export class AgentSession {
 					ok: frame.success,
 					error: frame.success ? undefined : frame.error,
 				});
+				// The chosen model lives in pi, so read it back instead of echoing the
+				// request: the picker shows pi's answer, not the browser's guess.
+				if (frame.success && frame.command === "set_model") this.resync();
 				return;
 			default:
 				this.emit({ t: "event", sessionId: this.sessionId, event: frame });

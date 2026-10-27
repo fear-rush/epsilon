@@ -103,8 +103,8 @@ content. It never shares an origin with the API (ADR-0003).
 ## Data flows
 
 **Open a session.** The id comes from `GET /api/sessions` → WS `attach` → server
-ensures a child → snapshot from `get_state` and `get_messages` → client replaces
-state → later frames are deltas. REST lives under `/api` and `/sessions/<id>` is
+ensures a child → snapshot from `get_state`, `get_messages` and
+`get_available_models` → client replaces state → later frames are deltas. REST lives under `/api` and `/sessions/<id>` is
 a client route, so a reload is not swallowed by the dev proxy.
 
 **Send a prompt.** Client sends `rpc { prompt }` → driver writes JSON → pi streams

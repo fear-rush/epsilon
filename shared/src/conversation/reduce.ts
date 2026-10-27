@@ -256,6 +256,7 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 			// A snapshot replaces the transcript: that is what makes reconnect and a
 			// second tab safe. Dialogs stay, because they come from their own frames.
 			const messages = frame.snapshot.messages.filter(isVisibleMessage);
+			const current = frame.snapshot.state.model;
 			return {
 				...state,
 				messages,
@@ -264,6 +265,11 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				// Attaching mid-run must show the run as live, not as idle until the next
 				// `agent_start`, which has already happened.
 				busy: frame.snapshot.state.isStreaming,
+				models: frame.snapshot.models,
+				model:
+					current === undefined
+						? undefined
+						: { provider: current.provider, id: current.id, name: current.name },
 			};
 		case "event":
 			return reduceEvent(state, frame.event);

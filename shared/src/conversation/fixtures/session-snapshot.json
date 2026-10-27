@@ -36,6 +36,7 @@
 			"messageCount": 10,
 			"pendingMessageCount": 0
 		},
+		"models": [],
 		"messages": [
 			{
 				"role": "user",

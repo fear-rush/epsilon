@@ -8,6 +8,7 @@ import { useState } from "react";
 import { transcript } from "shared";
 
 import { QuestionRow } from "@/components/chat/question-row";
+import { ModelPicker } from "@/components/composer/model-picker";
 import { Transcript } from "@/components/chat/transcript";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
@@ -20,7 +21,8 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 		const { store, snapshot } = useConversation(sessionId);
 		const [prompt, setPrompt] = useState("");
 		const rows = transcript(snapshot.state);
-		const { busy, running, needsInput, dialogs, statuses, widgets, title } = snapshot.state;
+		const { busy, running, needsInput, dialogs, statuses, widgets, title, models, model } =
+			snapshot.state;
 		const aboveComposer = widgets.filter((widget) => widget.placement === "aboveEditor");
 		const belowComposer = widgets.filter((widget) => widget.placement === "belowEditor");
 
@@ -46,6 +48,13 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 							{status.text}
 						</span>
 					))}
+					<div className="ml-auto">
+						<ModelPicker
+							models={models}
+							model={model}
+							onSelect={(next) => store.setModel(next.provider, next.id)}
+						/>
+					</div>
 				</div>
 
 				{dialogs.length > 0 && (
