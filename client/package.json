@@ -11,13 +11,11 @@
 		"routes:generate": "bun run --bun tsr generate"
 	},
 	"dependencies": {
-		"@ai-sdk/react": "4.0.157",
 		"@base-ui/react": "1.9.0",
 		"@shadcn/react": "0.3.1",
 		"@tailwindcss/vite": "4.3.3",
 		"@tanstack/react-query": "5.104.1",
 		"@tanstack/react-router": "1.170.41",
-		"ai": "7.0.153",
 		"class-variance-authority": "0.7.1",
 		"clsx": "2.1.1",
 		"cn": "0.5.0",
