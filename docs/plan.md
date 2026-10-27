@@ -1,9 +1,8 @@
 # Plan
 
-Status: **S1 and S2 verified in a browser. S3 is built, waiting for its browser
-checks.** This file answers: what the product does for its user, which slice is
-being built, and whether it is done. Keep "Active slice" honest; that is the only
-part that must never drift.
+Status: **S1, S2 and S3 verified in a browser. S4 is next.** This file answers:
+what the product does for its user, which slice is being built, and whether it is
+done. Keep "Active slice" honest; that is the only part that must never drift.
 
 Scope and the not-building list are in [features.md](features.md). Architecture is
 in [architecture.md](architecture.md).
@@ -39,18 +38,18 @@ without a child process and a socket.
 
 ## Slices
 
-| #   | Outcome you can see                                             | Status            |
-| --- | --------------------------------------------------------------- | ----------------- |
-| S1  | Type a prompt, watch a real answer stream in                    | done              |
-| S2  | Read a terminal-created session on a phone, tool calls and all  | done              |
-| S3  | Browse sessions, resume one, close the tab, come back           | built, unverified |
-| S4  | Run a full turn (steer, abort, change model) without a terminal | todo              |
-| S5  | Answer a permission prompt from the browser                     | todo              |
-| S6  | Open a file, its diff, and insert its path into the composer    | todo              |
-| S7  | Use `pi` itself in a terminal tab                               | todo              |
-| S8  | See which skills, packages and MCP servers are loaded           | todo              |
-| S9  | Preview what the agent built, from the phone                    | todo              |
-| S10 | Get pinged when a run needs an answer                           | todo              |
+| #   | Outcome you can see                                             | Status |
+| --- | --------------------------------------------------------------- | ------ |
+| S1  | Type a prompt, watch a real answer stream in                    | done   |
+| S2  | Read a terminal-created session on a phone, tool calls and all  | done   |
+| S3  | Browse sessions, resume one, close the tab, come back           | done   |
+| S4  | Run a full turn (steer, abort, change model) without a terminal | todo   |
+| S5  | Answer a permission prompt from the browser                     | todo   |
+| S6  | Open a file, its diff, and insert its path into the composer    | todo   |
+| S7  | Use `pi` itself in a terminal tab                               | todo   |
+| S8  | See which skills, packages and MCP servers are loaded           | todo   |
+| S9  | Preview what the agent built, from the phone                    | todo   |
+| S10 | Get pinged when a run needs an answer                           | todo   |
 
 Checks are written to be run by hand, in this order, on a phone where the slice
 says so. A slice is not done because it compiles.
@@ -80,17 +79,11 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 ### S3: Sessions and resume
 
-Built. The list, the open route and the delete work through the API; the four
-checks below are the browser half and have not been run yet.
-
-- [ ] The project's sessions are listed newest first; a live child shows a
-      running badge and a pending dialog shows a needs-input badge (checked with
-      `curl` only: `running` is true for a live child, false after `kill -9`, and
-      another project's id is refused with `404`)
-- [ ] Open a session the CLI created, steer it, and the CLI shows the same messages
-- [ ] Close the tab mid-run, reopen it, and the run has continued
-- [ ] Deleting a session from the UI removes it from `pi`'s list too (checked with
-      `curl` only: `409` while a child lives, `204` and the file gone after)
+- [x] The project's sessions are listed newest first; a live child shows a
+      running badge and a pending dialog shows a needs-input badge
+- [x] Open a session the CLI created, steer it, and the CLI shows the same messages
+- [x] Close the tab mid-run, reopen it, and the run has continued
+- [x] Deleting a session from the UI removes it from `pi`'s list too
 
 ### S4: Composer
 
@@ -143,12 +136,13 @@ checks below are the browser half and have not been run yet.
 
 ## Active slice
 
-**S3: Sessions and resume.** Built; the browser checks are pending. Reading a
-session no longer means typing an id into a search parameter: `/` lists this
-project's sessions and `/sessions/<id>` opens one.
+**S4: Composer.** Not started. Reading and listing sessions work; the composer
+still has one control, a prompt.
 
-Next action: run the four checks above at phone width against `bun run dev`, then
-mark S3 done and start S4 with steer and abort, which the socket already forwards.
+Next action: steer and abort. Both are RPC commands on the existing `rpc` frame,
+so the work is a control plus the transcript row a steered message produces.
+Prove it in the CLI before touching model switching, because the two share the
+`get_state` read that S4 uses to confirm.
 
 ## Facts worth keeping
 
