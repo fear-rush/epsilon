@@ -9,6 +9,7 @@
 	"include": [
 		"tools/**/*.ts",
 		"server/drizzle.config.ts",
+		"server/scripts/**/*.ts",
 		"server/src/**/*.test.ts",
 		"shared/src/**/*.test.ts"
 	],
