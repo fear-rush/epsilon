@@ -1,9 +1,23 @@
 # epsilon
 
-Single-user web dashboard for the `pi` coding agent. It drives the `pi` CLI as a
-child process in `--mode rpc`, so it shares sessions, extensions, tools and
-credentials with the terminal `pi`. Start with [plan.md](docs/plan.md), then
-[architecture.md](docs/architecture.md).
+A web dashboard for one user. It controls the `pi` coding agent and starts the
+`pi` CLI as a child process in `--mode rpc`. The dashboard and the terminal share
+sessions, extensions, tools and credentials.
+
+Status: design, not implemented.
+
+Start with [docs/README.md](docs/README.md). Read these documents in this order:
+
+| Document                                        | Use                                                  |
+| ----------------------------------------------- | ---------------------------------------------------- |
+| [plan.md](docs/plan.md)                         | What to build next. Keep "Active slice" honest.      |
+| [architecture.md](docs/architecture.md)         | Modules, data flows, state ownership, failure modes  |
+| [protocol.md](docs/protocol.md)                 | The browser socket contract                          |
+| [ui.md](docs/ui.md)                             | Component choice, layout, visual states, interaction |
+| [features.md](docs/features.md)                 | Every feature, its scope and how to build it         |
+| [reference/pi-rpc.md](docs/reference/pi-rpc.md) | What pi's RPC exposes, and what it does not          |
+| [adr/](docs/adr/README.md)                      | Why the engine and the UI contract are what they are |
+| [notes/](docs/notes/README.md)                  | How to record a trap that cost time                  |
 
 ## Workspaces
 
@@ -14,75 +28,79 @@ credentials with the terminal `pi`. Start with [plan.md](docs/plan.md), then
 
 ## Commands
 
-`bun run dev` · `build` · `test` · `lint` · `format` · `type-check` ·
-`routes:generate` · `hooks:install` (once per clone).
+Run these commands from the repository root:
 
-## Docs
-
-| Read                                            | For                                                   |
-| ----------------------------------------------- | ----------------------------------------------------- |
-| [plan.md](docs/plan.md)                         | What to build next. Keep its "Current state" honest.  |
-| [architecture.md](docs/architecture.md)         | Modules, data flows, state ownership, failure modes.  |
-| [protocol.md](docs/protocol.md)                 | The browser socket contract.                          |
-| [ui.md](docs/ui.md)                             | Component choice, layout, visual states, interaction. |
-| [features.md](docs/features.md)                 | Every feature and how it is built.                    |
-| [reference/pi-rpc.md](docs/reference/pi-rpc.md) | What pi's RPC exposes and what it does not.           |
-| [adr/](docs/adr/README.md)                      | Why the engine and the UI contract are what they are. |
+| Command                   | Result                                                 |
+| ------------------------- | ------------------------------------------------------ |
+| `bun run dev`             | Start the client and the server                        |
+| `bun run build`           | Build every workspace                                  |
+| `bun run test`            | Run the tests                                          |
+| `bun run lint`            | Run Oxlint on every workspace                          |
+| `bun run format`          | Format the files with Oxfmt                            |
+| `bun run type-check`      | Check TypeScript                                       |
+| `bun run routes:generate` | Generate the route tree                                |
+| `bun run hooks:install`   | Install the Git hooks. Run this command once per clone |
 
 ## Rules
 
-1. `@earendil-works/*` only in `server/src/agent/` (runtime) and `shared/src/pi.ts`
-   (types). Everywhere else, use what those modules export.
-2. `shared/` imports no `node:*` and no React. `client/src/conversation/` imports
-   no React: the reducer stays pure and replay-testable.
-3. No invented capability. If [pi-rpc.md](docs/reference/pi-rpc.md) does not list
-   it, pi does not expose it: no `/reload`, no in-session branch switching, no
-   login or trust forms.
-4. One schema language (`zod`), one styling system (Tailwind + shadcn variants).
-5. Files under 300 lines. Route handlers under 60: validate, call one function,
-   return.
-6. No state that lives only in server memory or only in the browser.
-7. Unsupported or unknown UI shows a visible notice, never silence.
+1. Import `@earendil-works/*` only in `server/src/agent/` for runtime code and
+   `shared/src/pi.ts` for types. Everywhere else, use the exports of those modules.
+2. `shared/` imports no `node:*` module and no React. `client/src/conversation/`
+   imports no React. The reducer stays pure and testable by replay.
+3. Do not invent a capability. If [pi-rpc.md](docs/reference/pi-rpc.md) does not
+   list it, pi does not expose it. Examples: no `/reload`, no in-session branch
+   switch, no login form.
+4. Use one schema language (`zod`) and one styling system (Tailwind with shadcn
+   variants).
+5. Keep every file under 300 lines. Keep every route handler under 60 lines. A
+   route handler rejects bad input, calls one function and returns.
+6. Do not keep state that lives only in server memory or only in the browser.
+7. Show a visible notice when the UI is unsupported or unknown. Silence is not an
+   acceptable result.
 
 ## Truth and drift
 
-Docs record intent. Code records reality. When they disagree, **code wins**, and the
-doc is corrected in the same commit.
+Documents record intent. Code records reality. When they disagree, code wins.
+Correct the document in the same commit.
 
-- Verify by reading the file, running the command or grepping pi's `dist`. Never
-  answer from memory, and never from these docs alone.
-- [reference/pi-rpc.md](docs/reference/pi-rpc.md) goes stale when pi changes. Re-run
-  the greps in its header before trusting it.
-- Do not restate code in docs: no file inventories, no copied types, no route
-  lists. Name the file or the command instead.
-- Facts that can be generated are generated (OpenAPI, types). Never keep a second
-  hand-maintained copy.
-- An accepted ADR is history. Supersede it with a new record; never edit it.
-- Delete rather than comment out. Scaffolding from a finished slice is removed.
-- A file too large to read in one pass is a defect. Split it before adding to it.
+- Check a fact by reading the file, running the command or searching pi's `dist`
+  folder. Do not answer from memory. Do not answer from these documents alone.
+- [reference/pi-rpc.md](docs/reference/pi-rpc.md) becomes stale when pi changes.
+  Run the greps in its header before you trust it.
+- Do not copy code into a document. Do not list files, types or routes. Name the
+  file or the command.
+- Generate a fact when a tool can generate it, such as OpenAPI or types. Do not
+  keep a second copy by hand.
+- An accepted ADR is history. Write a new record to supersede it. Do not edit the
+  old record.
+- Delete code. Do not comment it out. Delete the scaffolding when you finish a
+  slice.
+- Split a file that is too large to read in one pass. Split it before you add to it.
 
 ## Stop and ask
 
-Ask before acting when any of these is true:
+Ask before you act when one of these is true:
 
-- Two docs disagree, or a doc disagrees with the code.
-- The request names a capability that
-  [reference/pi-rpc.md](docs/reference/pi-rpc.md) does not list.
-- The change would break one of the rules above (import boundary, size cap, one
-  schema language, one styling system).
-- A check fails for a reason you do not understand, or a result looks unusual.
-- More than one reading of the requirement would produce different code.
+- Two documents disagree.
+- A document and the code disagree.
+- The request names a capability that [reference/pi-rpc.md](docs/reference/pi-rpc.md)
+  does not list.
+- The change breaks a rule above: import boundary, size cap, one schema language
+  or one styling system.
+- A check fails for a reason you do not understand.
+- A result looks unusual.
+- Two readings of the requirement produce different code.
 
-State what is inconsistent, what you checked, and the options. Do not guess, do not
-rewrite the doc to match a bug, and do not proceed silently.
+State what is inconsistent, what you checked and the options. Do not guess. Do not
+rewrite a document to match a bug. Do not continue without an answer.
 
 ## Integrations
 
-- REST state through TanStack Query. Socket state never enters Query.
-- File routes in `client/src/routes`. Never edit `routeTree.gen.ts`.
-- API routes use `createRoute`; the OpenAPI document is generated, never
-  hand-written.
-- shadcn: `bunx --bun shadcn@latest add <name>`, never `npx`.
+- Read REST state with TanStack Query. Never put socket state in Query.
+- Put file routes in `client/src/routes`. Never edit `routeTree.gen.ts`.
+- Build API routes with `createRoute`. Generate the OpenAPI document. Never write
+  it by hand.
+- Add shadcn components with `bunx --bun shadcn@latest add <name>`. Never use `npx`.
 
 <!-- BEGIN:turborepo-agent-rules -->
 

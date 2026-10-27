@@ -39,8 +39,7 @@ event travels. Rationale lives in [adr/](adr/); rules live in
 ```
 
 The preview origin is a **second listener**, on its own port, serving agent-written
-content. It never shares an origin with the API (ADR-0003, to be written; the
-reason is in [features.md](features.md) and in ADR-0002's consequences).
+content. It never shares an origin with the API (ADR-0003).
 
 ## Module map
 

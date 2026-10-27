@@ -2,10 +2,11 @@
 
 One file per decision a future contributor (human or agent) could reasonably reverse.
 
-| Record                              | Decision                                                                         |
-| ----------------------------------- | -------------------------------------------------------------------------------- |
-| [0001](0001-engine-rpc-child.md)    | Drive the `pi` CLI over `--mode rpc`. No embedded session, no durable, no chord. |
-| [0002](0002-own-the-ui-contract.md) | Epsilon owns its UI contract. Render what pi's RPC expresses, never pi's TUI.    |
+| Record                                | Decision                                                                         |
+| ------------------------------------- | -------------------------------------------------------------------------------- |
+| [0001](0001-engine-rpc-child.md)      | Drive the `pi` CLI over `--mode rpc`. No embedded session, no durable, no chord. |
+| [0002](0002-own-the-ui-contract.md)   | Epsilon owns its UI contract. Render what pi's RPC expresses, never pi's TUI.    |
+| [0003](0003-preview-second-origin.md) | Serve agent-written preview content from a second origin.                        |
 
 ## Writing one
 
