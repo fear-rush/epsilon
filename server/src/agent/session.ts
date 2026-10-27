@@ -8,13 +8,26 @@ import type {
 	RpcExtensionUIRequest,
 	RpcExtensionUIResponse,
 } from "@earendil-works/pi-coding-agent";
-import type { DialogQuestion, ServerFrame } from "shared";
+import { isVisibleMessage } from "shared";
+import type { DialogQuestion, ServerFrame, Snapshot } from "shared";
+import { z } from "zod";
 
 import { Driver } from "./driver";
 import type { AgentFrame, ExitInfo } from "./driver";
 
 /** A socket, or anything else that wants this session's frames. */
 export type FrameSink = (frame: ServerFrame) => void;
+
+/**
+ * The two reads a snapshot needs, unwrapped from their RPC envelopes. pi owns the
+ * inner shapes; the transcript stores them as they arrive.
+ */
+const repliesSchema = z.tuple([
+	z.looseObject({ data: z.custom<Snapshot["state"]>() }),
+	z.looseObject({
+		data: z.looseObject({ messages: z.array(z.custom<Snapshot["messages"][number]>()) }),
+	}),
+]);
 
 const QUESTION_METHODS = ["select", "confirm", "input", "editor"];
 
@@ -54,7 +67,44 @@ export class AgentSession {
 			sink({ t: "dialog", sessionId: this.sessionId, request });
 		}
 		this.sendMetaTo(sink);
+		void this.sendSnapshot(sink);
 		return () => this.subscribers.delete(sink);
+	}
+
+	/** History comes from pi's session file, never from server memory. */
+	private async sendSnapshot(sink: FrameSink): Promise<void> {
+		try {
+			const [state, messages] = await Promise.all([
+				this.driver.request({ type: "get_state" }),
+				this.driver.request({ type: "get_messages" }),
+			]);
+			const replies = repliesSchema.safeParse([state, messages]);
+			if (!replies.success) {
+				this.emit({
+					t: "error",
+					code: "UNSUPPORTED_FRAME",
+					message: "Unreadable snapshot",
+					sessionId: this.sessionId,
+				});
+				return;
+			}
+			const [sessionState, sessionMessages] = replies.data;
+			sink({
+				t: "snapshot",
+				sessionId: this.sessionId,
+				snapshot: {
+					state: sessionState.data,
+					messages: sessionMessages.data.messages.filter(isVisibleMessage),
+				},
+			});
+		} catch (error) {
+			sink({
+				t: "error",
+				code: "AGENT_START_FAILED",
+				message: error instanceof Error ? error.message : "The agent did not answer",
+				sessionId: this.sessionId,
+			});
+		}
 	}
 
 	get dialogs(): DialogQuestion[] {
@@ -73,6 +123,7 @@ export class AgentSession {
 	answerDialog(answer: RpcExtensionUIResponse): boolean {
 		if (!this.pendingDialogs.delete(answer.id)) return false;
 		this.driver.send(answer);
+		this.emit({ t: "dialog-closed", sessionId: this.sessionId, id: answer.id });
 		this.sendMeta();
 		return true;
 	}

@@ -3,11 +3,11 @@
 Status: **partly implemented.** This is the contract between `server/` and
 `client/`. Both sides implement it; neither invents frames.
 
-On the wire today (S1): `hello`, `welcome`, `attach`, `detach`, `rpc`, `dialog`
-in both directions, `ping`/`pong`, plus `event`, `rpc-result`, `meta` and
-`error`. Not yet: `snapshot`, every `terminal` frame, the coalescing and
-backpressure rules, the heartbeat and the restart action. Those steps are S3, S7
-and S8 in [plan.md](plan.md).
+On the wire today (S2): `hello`, `welcome`, `attach`, `detach`, `rpc`, `dialog`
+and `dialog-closed`, `ping`/`pong`, plus `snapshot`, `event`, `rpc-result`,
+`meta` and `error`. Not yet: every `terminal` frame, `commands` and `stats` inside
+a snapshot, the coalescing and backpressure rules, the heartbeat and the restart
+action. Those belong to S3, S7 and S8 in [plan.md](plan.md).
 
 The REST API is separate. Use REST for reading the disk (sessions, files, git,
 resources, ui-state) and this socket for everything agent-shaped.
@@ -57,6 +57,7 @@ type ServerFrame =
 	| { t: "snapshot"; sessionId: string; snapshot: Snapshot }
 	| { t: "event"; sessionId: string; event: JsonAgentSessionEvent }
 	| { t: "dialog"; sessionId: string; request: ExtensionUiRequest }
+	| { t: "dialog-closed"; sessionId: string; id: string }
 	| { t: "rpc-result"; sessionId: string; id?: string; ok: boolean; error?: string }
 	| { t: "meta"; sessionId: string; running: boolean; needsInput: boolean; title?: string }
 	| { t: "terminal"; terminalId: string; output: string }
@@ -102,6 +103,8 @@ survivable.
 - `abort` cancels outstanding dialogs: the server answers them as `cancelled`.
 - A dialog answered by a tab that then closes must not be answered again by a
   second tab; the first answer wins and the entry leaves `pendingDialogs`.
+- `dialog-closed` tells every attached tab which request left the pending set, so
+  a second tab removes it without guessing from `meta`.
 - `needsInput` is exactly `pendingDialogs.length > 0`.
 - Only `select`, `confirm`, `input` and `editor` wait for an answer. `notify`,
   `setStatus`, `setWidget`, `setTitle` and `set_editor_text` are fire-and-forget;

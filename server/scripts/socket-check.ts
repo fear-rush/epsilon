@@ -3,6 +3,8 @@ import type { ClientFrame, ServerFrame } from "shared";
 
 const url = "ws://127.0.0.1:3000/api/link";
 const sessionId = process.argv[2] ?? crypto.randomUUID();
+/** With an argument this script only attaches, to prove an existing session reads back. */
+const attachOnly = process.argv[2] !== undefined;
 const socket = new WebSocket(url);
 const seen: string[] = [];
 let answered = 0;
@@ -27,11 +29,24 @@ socket.addEventListener("message", (message) => {
 
 	if (frame.t === "welcome") {
 		send({ t: "attach", sessionId });
-		send({
-			t: "rpc",
-			sessionId,
-			command: { type: "prompt", message: "Run bash 'echo s1-ok' and reply with its output." },
-		});
+		if (!attachOnly) {
+			send({
+				t: "rpc",
+				sessionId,
+				command: { type: "prompt", message: "Run bash 'echo s1-ok' and reply with its output." },
+			});
+		}
+	}
+	if (attachOnly && frame.t === "snapshot") {
+		const savePath = process.env.SAVE_SNAPSHOT;
+		if (savePath !== undefined) {
+			Bun.write(savePath, JSON.stringify(frame));
+		}
+		console.log(`--- snapshot: ${frame.snapshot.messages.length} messages ---`);
+		for (const message of frame.snapshot.messages) {
+			console.log(`  ${message.role}: ${JSON.stringify(message).slice(0, 90)}`);
+		}
+		process.exit(0);
 	}
 	if (frame.t === "dialog" && answered === 0) {
 		answered += 1;

@@ -26,6 +26,8 @@ import { z } from "zod";
 const STDERR_TAIL_BYTES = 8_000;
 /** Time a child gets to exit on SIGTERM before SIGKILL. */
 const KILL_GRACE_MS = 2_000;
+/** Time a command may wait for its correlated reply. */
+const REQUEST_TIMEOUT_MS = 20_000;
 
 const require = createRequire(import.meta.url);
 const packageJsonPath = require.resolve("@earendil-works/pi-coding-agent/package.json");
@@ -79,6 +81,10 @@ export class Driver {
 	private pending = "";
 	private exited = false;
 	private killRequested = false;
+	private readonly waiting = new Map<
+		string,
+		{ resolve: (r: RpcResponse) => void; reject: (e: Error) => void }
+	>();
 
 	constructor(options: DriverOptions) {
 		this.options = options;
@@ -107,6 +113,29 @@ export class Driver {
 	send(command: AgentCommand): void {
 		if (this.exited) throw new Error("Agent driver is not running");
 		this.child.stdin.write(`${JSON.stringify(command)}\n`);
+	}
+
+	/**
+	 * Send a command and wait for the reply carrying the same `id`. pi echoes it,
+	 * which is the only correlation the protocol offers.
+	 */
+	async request(command: RpcCommand, timeoutMs = REQUEST_TIMEOUT_MS): Promise<RpcResponse> {
+		const id = crypto.randomUUID();
+		const reply = new Promise<RpcResponse>((resolve, reject) => {
+			const timer = setTimeout(() => {
+				this.waiting.delete(id);
+				reject(new Error(`No reply to ${command.type} within ${timeoutMs}ms`));
+			}, timeoutMs);
+			this.waiting.set(id, {
+				resolve: (response) => {
+					clearTimeout(timer);
+					resolve(response);
+				},
+				reject,
+			});
+		});
+		this.send({ ...command, id });
+		return reply;
 	}
 
 	/** Ask the child to stop, then insist after the grace period. */
@@ -140,15 +169,29 @@ export class Driver {
 			this.collectStderr(`\nunparsed stdout line: ${trimmed.slice(0, 200)}\n`);
 			return;
 		}
+		if (parsed.type === "response") this.settle(parsed);
 		// SAFETY: `parseJsonLine` returned a JSON object whose `type` is a string, and
 		// pi owns every other field. agent/normalize.ts is the single place that
 		// reads their shapes, so the driver forwards the frame untouched.
 		this.options.onFrame(parsed);
 	}
 
+	/** Hand a correlated reply to its waiting request, if any. */
+	private settle(response: RpcResponse): void {
+		if (response.id === undefined) return;
+		const waiting = this.waiting.get(response.id);
+		if (waiting === undefined) return;
+		this.waiting.delete(response.id);
+		waiting.resolve(response);
+	}
+
 	private finish(code: number | null, signal: string | null): void {
 		if (this.exited) return;
 		this.exited = true;
+		for (const waiting of this.waiting.values()) {
+			waiting.reject(new Error("The agent exited before replying"));
+		}
+		this.waiting.clear();
 		if (this.pending.trim() !== "") this.emitLine(this.pending);
 		this.pending = "";
 		this.options.onExit({

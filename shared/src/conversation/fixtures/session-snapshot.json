@@ -1,0 +1,213 @@
+{
+	"t": "snapshot",
+	"sessionId": "bbd82128-136e-4f5a-9f98-e277762c4ace",
+	"snapshot": {
+		"state": {
+			"model": {
+				"id": "deepseek/deepseek-v4.1-flash",
+				"name": "DeepSeek V4.1 Flash · vision",
+				"api": "openai-completions",
+				"provider": "commandcode",
+				"baseUrl": "https://api.commandcode.ai/provider/v1",
+				"reasoning": true,
+				"thinkingLevelMap": {
+					"off": null,
+					"minimal": null,
+					"low": "low",
+					"medium": null,
+					"high": "high",
+					"xhigh": null,
+					"max": "max"
+				},
+				"input": ["text", "image"],
+				"cost": { "input": 0.15, "output": 0.6, "cacheRead": 0.003, "cacheWrite": 0 },
+				"contextWindow": 1000000,
+				"maxTokens": 131072,
+				"compat": { "supportsDeveloperRole": false }
+			},
+			"thinkingLevel": "high",
+			"isStreaming": false,
+			"isCompacting": false,
+			"steeringMode": "one-at-a-time",
+			"followUpMode": "one-at-a-time",
+			"sessionFile": "/Users/maryln/.pi/agent/sessions/--private-tmp-s2-live--/2026-10-27T22-33-30-870Z_bbd82128-136e-4f5a-9f98-e277762c4ace.jsonl",
+			"sessionId": "bbd82128-136e-4f5a-9f98-e277762c4ace",
+			"autoCompactionEnabled": true,
+			"messageCount": 10,
+			"pendingMessageCount": 0
+		},
+		"messages": [
+			{
+				"role": "user",
+				"content": [{ "type": "text", "text": "Read file.txt and reply with its contents." }],
+				"timestamp": 1793140411932
+			},
+			{
+				"role": "assistant",
+				"content": [
+					{ "type": "text", "text": "I'll check for the file first." },
+					{
+						"type": "toolCall",
+						"id": "call_00_lvptv8rxqvcai2mg3vj7h6if",
+						"name": "bash",
+						"arguments": {
+							"command": "ls -la /private/tmp/s2-live/ 2>&1; echo \"---\"; cat /private/tmp/s2-live/file.txt 2>&1"
+						}
+					}
+				],
+				"api": "openai-completions",
+				"provider": "commandcode",
+				"model": "deepseek/deepseek-v4.1-flash",
+				"usage": {
+					"input": 7507,
+					"output": 79,
+					"cacheRead": 4096,
+					"cacheWrite": 0,
+					"reasoning": 0,
+					"totalTokens": 11682,
+					"cost": {
+						"input": 0.00112605,
+						"output": 0.0000474,
+						"cacheRead": 0.000012288,
+						"cacheWrite": 0,
+						"total": 0.001185738
+					}
+				},
+				"stopReason": "toolUse",
+				"timestamp": 1793140411955,
+				"responseId": "f49e3df6936f5e0c5bd8937349b225fe",
+				"responseModel": "deepseek/deepseek-v4.1-flash-1017",
+				"rawStopReason": "tool_calls",
+				"durationMs": 1677,
+				"thinkingLevel": "high"
+			},
+			{
+				"role": "toolResult",
+				"toolCallId": "call_00_lvptv8rxqvcai2mg3vj7h6if",
+				"toolName": "bash",
+				"content": [
+					{
+						"type": "text",
+						"text": "total 8\ndrwxr-xr-x@   3 maryln  wheel     96 Oct 28 05:33 .\ndrwxrwxrwt  705 root    wheel  22560 Oct 28 05:33 ..\n-rw-r--r--@   1 maryln  wheel      8 Oct 28 05:33 file.txt\n---\none\ntwo\n"
+					}
+				],
+				"isError": false,
+				"durationMs": 29,
+				"timestamp": 1793140413665
+			},
+			{
+				"role": "assistant",
+				"content": [{ "type": "text", "text": "`file.txt` contains:\n\n```\none\ntwo\n```" }],
+				"api": "openai-completions",
+				"provider": "commandcode",
+				"model": "deepseek/deepseek-v4.1-flash",
+				"usage": {
+					"input": 256,
+					"output": 13,
+					"cacheRead": 11520,
+					"cacheWrite": 0,
+					"reasoning": 0,
+					"totalTokens": 11789,
+					"cost": {
+						"input": 0.0000384,
+						"output": 0.0000078,
+						"cacheRead": 0.00003456,
+						"cacheWrite": 0,
+						"total": 0.00008076
+					}
+				},
+				"stopReason": "stop",
+				"timestamp": 1793140413668,
+				"responseId": "22b4ce65c062c9f6c7e367e662f8481d",
+				"responseModel": "deepseek/deepseek-v4.1-flash-1017",
+				"rawStopReason": "stop",
+				"durationMs": 1276,
+				"thinkingLevel": "high"
+			},
+			{
+				"role": "user",
+				"content": [{ "type": "text", "text": "Run bash 'echo s1-ok' and reply with its output." }],
+				"timestamp": 1793140426476
+			},
+			{
+				"role": "assistant",
+				"content": [
+					{
+						"type": "thinking",
+						"thinking": "Simple task.",
+						"thinkingSignature": "reasoning_content"
+					},
+					{
+						"type": "toolCall",
+						"id": "call_00_s0rairkl4tdlxxjzogur53z2",
+						"name": "bash",
+						"arguments": { "command": "echo s1-ok" }
+					}
+				],
+				"api": "openai-completions",
+				"provider": "commandcode",
+				"model": "deepseek/deepseek-v4.1-flash",
+				"usage": {
+					"input": 11809,
+					"output": 44,
+					"cacheRead": 0,
+					"cacheWrite": 0,
+					"reasoning": 3,
+					"totalTokens": 11853,
+					"cost": {
+						"input": 0.0017713499999999999,
+						"output": 0.000026399999999999998,
+						"cacheRead": 0,
+						"cacheWrite": 0,
+						"total": 0.0017977499999999999
+					}
+				},
+				"stopReason": "toolUse",
+				"timestamp": 1793140426497,
+				"responseId": "60abde843516b87c00418ab37c89ab8e",
+				"responseModel": "deepseek/deepseek-v4.1-flash-1017",
+				"rawStopReason": "tool_calls",
+				"durationMs": 2217,
+				"thinkingLevel": "high"
+			},
+			{
+				"role": "toolResult",
+				"toolCallId": "call_00_s0rairkl4tdlxxjzogur53z2",
+				"toolName": "bash",
+				"content": [{ "type": "text", "text": "s1-ok\n" }],
+				"isError": false,
+				"durationMs": 7,
+				"timestamp": 1793140428727
+			},
+			{
+				"role": "assistant",
+				"content": [{ "type": "text", "text": "Output: `s1-ok`" }],
+				"api": "openai-completions",
+				"provider": "commandcode",
+				"model": "deepseek/deepseek-v4.1-flash",
+				"usage": {
+					"input": 94,
+					"output": 9,
+					"cacheRead": 11776,
+					"cacheWrite": 0,
+					"reasoning": 0,
+					"totalTokens": 11879,
+					"cost": {
+						"input": 0.000014099999999999999,
+						"output": 0.0000054,
+						"cacheRead": 0.000035328,
+						"cacheWrite": 0,
+						"total": 0.000054828
+					}
+				},
+				"stopReason": "stop",
+				"timestamp": 1793140428731,
+				"responseId": "b36cc7361f504e25a11ba7cf8384ec05",
+				"responseModel": "deepseek/deepseek-v4.1-flash-1017",
+				"rawStopReason": "stop",
+				"durationMs": 1536,
+				"thinkingLevel": "high"
+			}
+		]
+	}
+}

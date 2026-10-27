@@ -10,6 +10,7 @@
 		"tools/**/*.ts",
 		"server/drizzle.config.ts",
 		"server/scripts/**/*.ts",
+		"shared/scripts/**/*.ts",
 		"server/src/**/*.test.ts",
 		"shared/src/**/*.test.ts"
 	],

@@ -1,102 +1,86 @@
 /**
- * S1: the raw page. A prompt box, a running/needs-input line, the extension
- * questions that block the agent, and every frame as JSON. Deliberately ugly:
- * the transcript renders in S2, from the reducer.
+ * The session page for S2: transcript, blocking questions, composer. One session
+ * per page for now; the session list and resume arrive in S3.
  */
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import type { ServerFrame } from "shared";
+import { transcript } from "shared";
+import { z } from "zod";
 
-import { QuestionRow } from "@/components/raw/question-row";
+import { QuestionRow } from "@/components/chat/question-row";
+import { Transcript } from "@/components/chat/transcript";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { lastMeta, openQuestions } from "@/conversation/frames";
-import { Link } from "@/link";
-import type { LinkStatus } from "@/link";
-
-const MAX_FRAMES = 300;
+import { useConversation } from "@/hooks/use-conversation";
 
 export const Route = createFileRoute("/")({
-	component: function RawSession() {
-		const [sessionId] = useState(() => crypto.randomUUID());
-		const [status, setStatus] = useState<LinkStatus>("connecting");
-		const [frames, setFrames] = useState<ServerFrame[]>([]);
-		const [answered, setAnswered] = useState<string[]>([]);
+	// `?session=<id>` opens a session the CLI created: no session list yet (S3).
+	validateSearch: z.object({ session: z.string().optional() }),
+	component: function Session() {
+		const { session } = Route.useSearch();
+		const { store, snapshot } = useConversation(session);
 		const [prompt, setPrompt] = useState("");
-		const link = useRef<Link | null>(null);
+		const rows = transcript(snapshot.state);
+		const { running, needsInput, dialogs } = snapshot.state;
 
-		useEffect(() => {
-			const connection = new Link({
-				onStatus: setStatus,
-				onFrame: (frame) => setFrames((current) => [...current, frame].slice(-MAX_FRAMES)),
-			});
-			link.current = connection;
-			connection.attach(sessionId);
-			return () => connection.close();
-		}, [sessionId]);
-
-		const meta = lastMeta(frames);
-		const questions = openQuestions(frames, answered);
-
-		const submitPrompt = () => {
+		const submit = () => {
 			const message = prompt.trim();
 			if (message === "") return;
-			link.current?.send({
-				t: "rpc",
-				sessionId,
-				command: { type: "prompt", message },
-			});
+			store.sendPrompt(message);
 			setPrompt("");
 		};
 
 		return (
-			<div className="flex flex-1 flex-col gap-3 overflow-hidden p-4 font-mono text-xs">
-				<div className="flex flex-wrap items-center gap-3 text-muted-foreground">
-					<span>socket: {status}</span>
-					<span>session: {sessionId.slice(0, 8)}</span>
-					<span>
-						agent: {meta === undefined ? "not started" : meta.running ? "running" : "idle"}
-					</span>
-					{questions.length > 0 && <span className="text-amber-600">needs input</span>}
-					<Button size="sm" variant="outline" onClick={() => setFrames([])}>
-						clear
-					</Button>
+			<div className="flex min-h-0 flex-1 flex-col">
+				<div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-2 text-xs text-muted-foreground">
+					<span data-status={snapshot.status}>{snapshot.status}</span>
+					<span>{running ? "running" : "idle"}</span>
+					{needsInput && <span className="font-medium text-amber-600">needs input</span>}
 				</div>
 
-				{questions.map((question) => (
-					<QuestionRow
-						key={question.id}
-						question={question}
-						onAnswer={(answer) => {
-							setAnswered((current) => [...current, question.id]);
-							link.current?.send({ t: "dialog", sessionId, answer });
-						}}
-					/>
-				))}
+				{dialogs.length > 0 && (
+					<div className="flex flex-col gap-2 border-b p-3">
+						{dialogs.map((question) => (
+							<QuestionRow
+								key={question.id}
+								question={question}
+								onAnswer={(answer) => store.answerDialog(answer)}
+							/>
+						))}
+					</div>
+				)}
 
-				<div className="flex items-start gap-2">
-					<Textarea
-						value={prompt}
-						onChange={(event) => setPrompt(event.target.value)}
-						placeholder="prompt (Enter sends, Shift+Enter is a newline)"
-						className="min-h-16"
-						onKeyDown={(event) => {
-							if (event.key === "Enter" && !event.shiftKey) {
-								event.preventDefault();
-								submitPrompt();
-							}
-						}}
-					/>
-					<Button onClick={submitPrompt}>send</Button>
+				{rows.length === 0 ? (
+					<div className="flex flex-1 items-center justify-center p-6">
+						<Empty>
+							<EmptyHeader>
+								<EmptyTitle>No messages yet</EmptyTitle>
+								<EmptyDescription>Ask for something to start the session.</EmptyDescription>
+							</EmptyHeader>
+						</Empty>
+					</div>
+				) : (
+					<Transcript rows={rows} />
+				)}
+
+				<div className="border-t p-3">
+					<div className="mx-auto flex w-full max-w-3xl items-end gap-2">
+						<Textarea
+							value={prompt}
+							onChange={(event) => setPrompt(event.target.value)}
+							placeholder="Message the agent (Enter sends, Shift+Enter is a newline)"
+							className="max-h-40 min-h-11 flex-1 resize-none"
+							onKeyDown={(event) => {
+								if (event.key === "Enter" && !event.shiftKey) {
+									event.preventDefault();
+									submit();
+								}
+							}}
+						/>
+						<Button onClick={submit}>send</Button>
+					</div>
 				</div>
-
-				<ol className="flex-1 overflow-auto rounded border bg-muted/30 p-2">
-					{frames.map((frame, index) => (
-						<li key={index} className={frame.t === "error" ? "text-red-600" : undefined}>
-							{JSON.stringify(frame)}
-						</li>
-					))}
-				</ol>
 			</div>
 		);
 	},

@@ -41,7 +41,7 @@ without a child process and a socket.
 | #   | Outcome you can see                                             | Status |
 | --- | --------------------------------------------------------------- | ------ |
 | S1  | Type a prompt, watch a real answer stream in                    | wip    |
-| S2  | Read a terminal-created session on a phone, tool calls and all  | todo   |
+| S2  | Read a terminal-created session on a phone, tool calls and all  | wip    |
 | S3  | Browse sessions, resume one, close the tab, come back           | todo   |
 | S4  | Run a full turn (steer, abort, change model) without a terminal | todo   |
 | S5  | Answer a permission prompt from the browser                     | todo   |
@@ -75,7 +75,7 @@ Reducer plus renderers, driven by the fixture first, then live.
 - [ ] A `bash` card shows command and output; an `edit` shows a diff; an image
       result shows the image
 - [ ] A tool name with no renderer still renders (generic fallback, never blank)
-- [ ] Replaying a recorded fixture twice yields an identical transcript
+- [x] Replaying a recorded fixture twice yields an identical transcript
 
 ### S3: Sessions and resume
 
@@ -135,29 +135,29 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 ## Active slice
 
-**S1: One live turn.** In progress. The path is complete end to end: driver →
-socket → raw page. A prompt typed in the browser streams a real answer once the
-page is opened against a running server; the socket half is proven by
-`server/scripts/socket-check.ts` and `server/scripts/protocol-check.ts`, not yet
-by eye in a browser.
+**S2: Transcript.** In progress. The reducer, the selectors and the renderers
+exist, and four recorded traces replay to identical state; the rows they produce
+are in `shared/src/conversation/fixtures/`. History comes from `get_messages`
+inside a snapshot, so a session the CLI created reads back through the socket.
+Nothing is verified in a browser yet, and S1's browser checks are still open.
 
-Next action: open the page on the phone, send a prompt, approve the permission
-question and confirm S1's four checks by hand. Then delete the two check scripts
-and the trace script, and start S2 with `agent/normalize.ts` and the reducer.
+Next action: open the page on the phone against a session the CLI created, then
+confirm S2's five checks by hand at that width.
 
 Facts worth keeping while this slice closes:
 
-- `server/src/serve.ts` is the only listener. `bun run dev` starts it on
-  `127.0.0.1:3000`; Vite proxies `/api` to it, including the socket upgrade.
-- `PROTOCOL_VERSION` is 1, and a mismatch produces `PROTOCOL_MISMATCH` instead of
-  a silent reconnect loop.
-- The child leaks if a tab closes: the registry keeps it, and killing it when
-  idle is the pool's job in S3. Only server shutdown kills every child today.
+- `bun run scripts/replay.ts` in `shared/` replays every fixture twice and prints
+  the rows. A `.json` fixture is one frame, such as a snapshot.
+- Rows exist for every message role: `bashExecution` becomes a bash card, a
+  branch or compaction summary becomes a muted block, `custom` names its type.
+  Nothing is skipped silently.
+- Tool output arrives twice: from `tool_execution_end` live, and from the
+  `toolResult` message in a snapshot. Both paths write the same `ToolRun`.
 - `client/src/link.ts` ignores events from a socket it already replaced. Without
   that guard, React StrictMode's double mount reports `closed` on a working
   connection, because the first socket's close lands after the second one opens.
 
-Resolved risks for this slice:
+Resolved risks for S1 and S2:
 
 - pi's shipped `RpcClient` cannot answer an extension dialog and reports no
   child exit, so the driver is ours ([ADR-0004](adr/0004-own-the-rpc-driver.md)).
@@ -169,11 +169,11 @@ Resolved risks for this slice:
 - A tool call blocks on the permission extension's `confirm` until something
   answers it
   ([notes/2026-10-28-rpc-permission-block.md](notes/2026-10-28-rpc-permission-block.md)).
-  The driver therefore cannot be a pure pipe: it needs the `extension_ui_response`
-  path before a tool turn can finish.
-- `--session-id` warns on stderr and creates a file when the id is unknown, and
-  it still reports a `sessionId` from `get_state`. The driver takes an explicit
-  `SessionTarget` instead of letting a default decide which file to touch.
+- `get_messages` returns system messages even though the wire event type excludes
+  them, so the snapshot filters them at the edge and the system prompt never
+  reaches the browser.
+- `--session-id` creates a file when the id is unknown. The driver takes an
+  explicit `SessionTarget` instead of letting a default decide which file to touch.
 
 ## Universal done list
 

@@ -9,13 +9,17 @@
  */
 import { z } from "zod";
 
+import type { DialogQuestion } from "../pi";
+import type { SnapshotMessage } from "../conversation/state";
 import type {
 	JsonAgentSessionEvent,
 	RpcCommand,
-	RpcExtensionUIRequest,
 	RpcExtensionUIResponse,
 	RpcResponse,
+	RpcSessionState,
 } from "../pi";
+
+export const snapshotSchema = z.custom<Snapshot>();
 
 /** pi's own vocabulary, never a parallel copy. */
 export const rpcCommandSchema = z.custom<RpcCommand>();
@@ -23,11 +27,7 @@ export const agentEventSchema = z.custom<JsonAgentSessionEvent>();
 export const dialogRequestSchema = z.custom<DialogQuestion>();
 export const dialogAnswerSchema = z.custom<RpcExtensionUIResponse>();
 
-/** The extension requests that block the agent until answered. */
-export type DialogQuestion = Extract<
-	RpcExtensionUIRequest,
-	{ method: "select" | "confirm" | "input" | "editor" }
->;
+export type { DialogQuestion } from "../pi";
 
 export const protocolErrorCodeSchema = z.enum([
 	"PROTOCOL_MISMATCH",
@@ -56,17 +56,24 @@ export const clientFrameSchema = z.discriminatedUnion("t", [
 ]);
 
 /**
- * A snapshot is built from RPC reads, never from server memory. Its payload is
- * pi's, so it is declared here when the reader lands (S3).
+ * A snapshot is built from RPC reads, never from server memory. `commands` and
+ * `stats` land with the composer palette (S4) and the resources page (S8).
  */
+export type Snapshot = {
+	state: RpcSessionState;
+	messages: SnapshotMessage[];
+};
+
 export const serverFrameSchema = z.discriminatedUnion("t", [
 	z.object({
 		t: z.literal("welcome"),
 		protocol: z.number().int(),
 		serverVersion: z.string(),
 	}),
+	z.object({ t: z.literal("snapshot"), sessionId: z.string(), snapshot: snapshotSchema }),
 	z.object({ t: z.literal("event"), sessionId: z.string(), event: agentEventSchema }),
 	z.object({ t: z.literal("dialog"), sessionId: z.string(), request: dialogRequestSchema }),
+	z.object({ t: z.literal("dialog-closed"), sessionId: z.string(), id: z.string() }),
 	z.object({
 		t: z.literal("rpc-result"),
 		sessionId: z.string(),
