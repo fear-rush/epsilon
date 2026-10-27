@@ -1,0 +1,73 @@
+minimum_prek_version: "0.5.5"
+default_stages: [pre-commit]
+repos:
+  - repo: builtin
+    hooks:
+      - id: trailing-whitespace
+        priority: 0
+        args: [--markdown-linebreak-ext=md]
+        exclude: '(^|/)(drizzle/|routeTree\.gen\.ts$)'
+      - id: end-of-file-fixer
+        priority: 1
+        exclude: '(^|/)(drizzle/|routeTree\.gen\.ts$)'
+      - id: mixed-line-ending
+        priority: 2
+        args: [--fix=lf]
+      - id: check-merge-conflict
+        priority: 10
+        args: [--assume-in-merge]
+      - id: check-added-large-files
+        priority: 10
+        args: [--maxkb=1000]
+      - id: check-case-conflict
+        priority: 10
+      - id: check-symlinks
+        priority: 10
+      # JSONC files are checked by check-jsonc, not check-json.
+      - id: check-json
+        priority: 10
+        exclude: '(^|/)(tsconfig[^/]*\.json|\.oxlintrc\.json)$'
+      - id: check-jsonc
+        priority: 10
+        files: '(^|/)(tsconfig[^/]*\.json|\.oxlintrc\.json)$'
+        types: [file]
+      - id: check-yaml
+        priority: 10
+      - id: check-toml
+        priority: 10
+      - id: detect-private-key
+        priority: 10
+      - id: deny-filename-pattern
+        name: Block dotenv files except .env.example
+        priority: 10
+        args: ['^\.env(?:\..*)?$']
+        exclude: '(^|/)\.env\.example$'
+  - repo: local
+    hooks:
+      - id: format
+        name: Format staged files
+        language: system
+        entry: bun --bun run oxfmt --write
+        files: '\.[cm]?[jt]sx?$|\.(jsonc?|css|scss|html|mdx?|ya?ml)$'
+        exclude: '(^|/)(dist/|build/|drizzle/|routeTree\.gen\.ts$)|^(?:\.(?:agent|agents|claude|codex|continue|cursor|gemini|opencode|pi|roo|windsurf)/|tools/oxlint/anti-slop/)'
+        priority: 3
+      - id: lint
+        name: Lint staged code
+        language: system
+        entry: bun --bun run oxlint
+        files: '\.[cm]?[jt]sx?$'
+        exclude: '(^|/)(dist/|build/|routeTree\.gen\.ts$)|^(?:\.(?:agent|agents|claude|codex|continue|cursor|gemini|opencode|pi|roo|windsurf)/|tools/oxlint/anti-slop/)'
+        priority: 10
+      - id: type-check
+        name: Check workspace types
+        language: system
+        entry: bun run type-check
+        pass_filenames: false
+        files: '(\.[cm]?[jt]sx?$|(^|/)(package\.json|bun\.lock|tsconfig[^/]*\.json)$)'
+        priority: 10
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: 83d9cd684c87d95d656c1458ef04895a7f1cbd8e # v8.30.1
+    hooks:
+      - id: gitleaks
+        priority: 10
+        entry: gitleaks git --pre-commit --redact --staged --verbose

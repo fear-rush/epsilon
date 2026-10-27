@@ -1,0 +1,90 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["typescript", "react"],
+	"categories": {
+		"correctness": "error"
+	},
+	"rules": {
+		"anti-slop/no-chained-type-assertions": "error",
+		"anti-slop/no-conditional-empty-object-spread": "error",
+		"anti-slop/no-known-value-widening": "error",
+		"anti-slop/no-module-mocking": "error",
+		"anti-slop/no-object-parameters": "error",
+		"anti-slop/no-reflect-apply": "error",
+		"anti-slop/no-reflect-get": "error",
+		"anti-slop/no-runtime-typeof": "error",
+		"anti-slop/no-unsafe-dictionary-type": "error",
+		"anti-slop/no-shape-in-symbol-names": "error",
+		"anti-slop/no-unknown-parameters": "error",
+		"anti-slop/no-unknown-returns": "error",
+		"anti-slop/no-unknown-type-aliases": "error",
+		"anti-slop/no-widen-then-assert": "error",
+		"anti-slop/require-safety-comment-for-type-assertion": "error"
+	},
+	"env": {
+		"es2024": true
+	},
+	"ignorePatterns": [
+		"**/dist/**",
+		"**/build/**",
+		"**/.turbo/**",
+		"**/routeTree.gen.ts",
+		"**/drizzle/**",
+		".agent/**",
+		".agents/**",
+		".claude/**",
+		".codex/**",
+		".continue/**",
+		".cursor/**",
+		".gemini/**",
+		".opencode/**",
+		".pi/**",
+		".roo/**",
+		".windsurf/**",
+		"tools/oxlint/anti-slop/**"
+	],
+	"overrides": [
+		{
+			"files": ["client/**/*.{ts,tsx}"],
+			"env": {
+				"browser": true
+			},
+			"rules": {
+				"react/rules-of-hooks": "error",
+				"react/exhaustive-deps": "warn",
+				"react/only-export-components": [
+					"warn",
+					{
+						"allowConstantExport": true,
+						"allowExportNames": ["Route"]
+					}
+				]
+			}
+		},
+		{
+			"files": ["server/**/*.ts"],
+			"env": {
+				"node": true
+			},
+			"globals": {
+				"Bun": "readonly"
+			}
+		},
+		{
+			"files": ["client/src/components/ui/**/*.tsx"],
+			"rules": {
+				"react/only-export-components": "off",
+				// Registry components are vendored from ui.shadcn.com and updated by
+				// `shadcn add`, so local rewrites would be overwritten.
+				"anti-slop/no-runtime-typeof": "off",
+				"anti-slop/require-safety-comment-for-type-assertion": "off"
+			}
+		}
+	],
+	"jsPlugins": [
+		{
+			"name": "anti-slop",
+			"specifier": "./tools/oxlint/anti-slop/index.ts"
+		}
+	]
+}

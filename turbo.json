@@ -1,0 +1,39 @@
+{
+	"$schema": "./node_modules/turbo/schema.json",
+	"ui": "tui",
+	"tasks": {
+		"build": {
+			"dependsOn": ["^build"],
+			"outputs": ["dist/**", "build/**"],
+			"env": ["NODE_ENV", "VITE_*"],
+			"inputs": ["$TURBO_DEFAULT$", ".env", ".env.*", "!.env.example"]
+		},
+		"dev": {
+			"cache": false,
+			"persistent": true,
+			"env": ["NODE_ENV", "PORT", "VITE_*"],
+			"dependsOn": ["^build"]
+		},
+		"type-check": {
+			"dependsOn": ["^build"],
+			"outputs": [],
+			"env": ["NODE_ENV"]
+		},
+		"test": {
+			"dependsOn": ["^build"],
+			"outputs": [],
+			"env": ["NODE_ENV", "CI"],
+			"inputs": ["$TURBO_DEFAULT$", ".env", ".env.*", "!.env.example"]
+		}
+	},
+	"globalDependencies": [
+		".gitignore",
+		"turbo.json",
+		"package.json",
+		"bun.lock",
+		"tsconfig.json",
+		"tsconfig.base.json",
+		"bunfig.toml"
+	],
+	"globalEnv": ["NODE_ENV", "CI"]
+}

@@ -1,0 +1,16 @@
+{
+	"extends": "./tsconfig.base.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"types": ["bun"],
+		"jsxImportSource": "hono/jsx"
+	},
+	"include": [
+		"tools/**/*.ts",
+		"server/drizzle.config.ts",
+		"server/src/**/*.test.ts",
+		"shared/src/**/*.test.ts"
+	],
+	"exclude": ["**/node_modules/**", "**/dist/**", "**/build/**", "**/.turbo/**"]
+}

@@ -1,0 +1,26 @@
+{
+	"extends": "../tsconfig.base.json",
+	"compilerOptions": {
+		// Environment setup
+		// DOM supplies fetch and AbortSignal for the chat tools.
+		"lib": ["ESNext", "DOM"],
+		"target": "ESNext",
+		"module": "ESNext",
+
+		// Output configuration
+		"declaration": true,
+		"rootDir": "./src",
+		"outDir": "./dist",
+		"noEmit": false,
+
+		// Type checking
+		"strict": true,
+		"skipLibCheck": true,
+
+		// Additional checks
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedIndexedAccess": true
+	},
+	"include": ["src/**/*"],
+	"exclude": ["node_modules", "**/*.test.ts", "dist"]
+}

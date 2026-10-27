@@ -1,0 +1,27 @@
+{
+	"extends": "../tsconfig.base.json",
+	"compilerOptions": {
+		// Environment settings
+		"lib": ["ESNext"],
+		"target": "ESNext",
+		"module": "ESNext",
+		"jsx": "react-jsx",
+		"jsxImportSource": "hono/jsx",
+
+		// Types
+		"types": ["bun"],
+
+		// Output settings
+		"declaration": true,
+		"rootDir": "./src",
+		"outDir": "dist",
+		"noEmit": false,
+		"emitDecoratorMetadata": true,
+
+		// Module resolution
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": false
+	},
+	"include": ["src/**/*"],
+	"exclude": ["node_modules", "dist", "**/*.test.ts"]
+}

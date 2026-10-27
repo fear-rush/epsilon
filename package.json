@@ -1,0 +1,56 @@
+{
+	"name": "epsilon",
+	"version": "0.5.1",
+	"description": "A monorepo template built with Bun, Hono, Vite, and React",
+	"keywords": [
+		"bun",
+		"hono",
+		"monorepo",
+		"react",
+		"turbo",
+		"vite"
+	],
+	"homepage": "https://github.com/stevedylandev/bhvr",
+	"license": "MIT",
+	"author": "Steve Simkins",
+	"workspaces": [
+		"./server",
+		"./client",
+		"./shared"
+	],
+	"type": "module",
+	"scripts": {
+		"dev": "turbo dev",
+		"dev:client": "turbo dev --filter=client",
+		"dev:server": "turbo dev --filter=server",
+		"build": "turbo build",
+		"build:client": "turbo build --filter=client",
+		"build:server": "turbo build --filter=server",
+		"lint": "oxlint .",
+		"type-check": "tsc --noEmit && turbo type-check",
+		"test": "turbo test",
+		"postinstall": "bun run routes:generate && turbo build --filter=shared --filter=server",
+		"lint:fix": "oxlint --fix .",
+		"format": "oxfmt --write .",
+		"format:check": "oxfmt --check .",
+		"routes:generate": "bun run --cwd client routes:generate",
+		"hooks:install": "prek install",
+		"hooks:run": "prek run --all-files",
+		"hooks:update": "prek update"
+	},
+	"dependencies": {},
+	"devDependencies": {
+		"@j178/prek": "0.5.5",
+		"@oxlint/plugins": "1.87.0",
+		"@types/bun": "1.4.2",
+		"oxfmt": "0.72.0",
+		"oxlint": "1.87.0",
+		"turbo": "2.11.7",
+		"typescript": "7.0.2"
+	},
+	"engines": {
+		"bun": ">=1.4.2",
+		"node": ">=22.22.0"
+	},
+	"packageManager": "bun@1.4.2"
+}

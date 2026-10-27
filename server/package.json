@@ -1,0 +1,32 @@
+{
+	"name": "server",
+	"version": "0.0.1",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
+	},
+	"scripts": {
+		"build": "tsc",
+		"dev": "bun --watch run src/index.ts",
+		"type-check": "tsc --noEmit",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"@ai-sdk/anthropic": "4.0.88",
+		"@ai-sdk/openai-compatible": "3.0.78",
+		"@scalar/hono-api-reference": "0.12.11",
+		"ai": "7.0.153",
+		"hono": "4.13.13",
+		"shared": "workspace:*",
+		"zod": "4.6.7"
+	},
+	"devDependencies": {
+		"@types/bun": "1.4.2",
+		"typescript": "7.0.2"
+	}
+}
