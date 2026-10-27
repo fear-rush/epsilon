@@ -1,7 +1,13 @@
 # Browser protocol
 
-Status: **design, not implemented.** This is the contract between `server/` and
+Status: **partly implemented.** This is the contract between `server/` and
 `client/`. Both sides implement it; neither invents frames.
+
+On the wire today (S1): `hello`, `welcome`, `attach`, `detach`, `rpc`, `dialog`
+in both directions, `ping`/`pong`, plus `event`, `rpc-result`, `meta` and
+`error`. Not yet: `snapshot`, every `terminal` frame, the coalescing and
+backpressure rules, the heartbeat and the restart action. Those steps are S3, S7
+and S8 in [plan.md](plan.md).
 
 The REST API is separate. Use REST for reading the disk (sessions, files, git,
 resources, ui-state) and this socket for everything agent-shaped.
@@ -97,6 +103,10 @@ survivable.
 - A dialog answered by a tab that then closes must not be answered again by a
   second tab; the first answer wins and the entry leaves `pendingDialogs`.
 - `needsInput` is exactly `pendingDialogs.length > 0`.
+- Only `select`, `confirm`, `input` and `editor` wait for an answer. `notify`,
+  `setStatus`, `setWidget`, `setTitle` and `set_editor_text` are fire-and-forget;
+  counting them as pending would leave `needsInput` stuck true. They are dropped
+  today, and rendering them belongs to the status surface in S8.
 
 ## Ordering, coalescing, backpressure
 

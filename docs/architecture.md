@@ -1,6 +1,7 @@
 # Architecture
 
-Status: **design, not implemented.**
+Status: **partly implemented.** The socket, the driver and one raw page exist;
+see [plan.md](plan.md) for the slice in progress rather than a status here.
 
 A map of the system: what the parts are, what each owns, and how a request or an
 event travels. Rationale lives in [adr/](adr/); rules live in

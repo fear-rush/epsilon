@@ -12,7 +12,7 @@
 	},
 	"scripts": {
 		"build": "tsc",
-		"dev": "bun --watch run src/index.ts",
+		"dev": "bun --watch run src/serve.ts",
 		"type-check": "tsc --noEmit",
 		"test": "bun test"
 	},

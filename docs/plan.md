@@ -135,15 +135,24 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 ## Active slice
 
-**S1: One live turn.** In progress. A full tool-using turn runs end to end under
-Bun against the pinned pi 1.4.0, and its event log is the fixture
-`shared/src/conversation/fixtures/bash-turn.jsonl`. `agent/driver.ts` owns the
-child. Nothing reaches a browser yet, and `server/scripts/trace-rpc.ts` is its
-only caller.
+**S1: One live turn.** In progress. The path is complete end to end: driver →
+socket → raw page. A prompt typed in the browser streams a real answer once the
+page is opened against a running server; the socket half is proven by
+`server/scripts/socket-check.ts` and `server/scripts/protocol-check.ts`, not yet
+by eye in a browser.
 
-Next action: one WebSocket that forwards driver frames raw to a textarea, plus a
-raw event list on the page. Keep the frames raw until the socket is proven, then
-write `agent/normalize.ts`.
+Next action: open the page on the phone, send a prompt, approve the permission
+question and confirm S1's four checks by hand. Then delete the two check scripts
+and the trace script, and start S2 with `agent/normalize.ts` and the reducer.
+
+Facts worth keeping while this slice closes:
+
+- `server/src/serve.ts` is the only listener. `bun run dev` starts it on
+  `127.0.0.1:3000`; Vite proxies `/api` to it, including the socket upgrade.
+- `PROTOCOL_VERSION` is 1, and a mismatch produces `PROTOCOL_MISMATCH` instead of
+  a silent reconnect loop.
+- The child leaks if a tab closes: the registry keeps it, and killing it when
+  idle is the pool's job in S3. Only server shutdown kills every child today.
 
 Resolved risks for this slice:
 
