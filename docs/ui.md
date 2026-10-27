@@ -2,7 +2,7 @@
 
 Status: **design, not implemented.** Covers the visual vocabulary, the layout,
 and the interaction rules. Numbers marked "starting value" are decisions to adopt
-now and tune in M2, not laws.
+now and tune in S2, not laws.
 
 ## Principles
 
@@ -138,7 +138,7 @@ uses a bottom `Sheet`. Destructive items confirm in `AlertDialog`.
 no in-session branch switcher (not an RPC command); no settings form for resources.
 See `docs/reference/pi-rpc.md`.
 
-## Open questions for M2
+## Open questions for S2
 
 Deciding these needs a real transcript, not a document:
 
