@@ -3,21 +3,27 @@
 Reference for what `pi --mode rpc` can and cannot do. Everything here was read
 from pi's shipped types and code, not from documentation prose.
 
-**Re-verify after every pi upgrade.** The sources of truth:
+**Re-verify after every pi upgrade.** The sources of truth. Paths are relative to
+the pinned package, `server/node_modules/@earendil-works/pi-coding-agent`, which
+is the copy epsilon spawns. `pi` on `PATH` may be a different version, so grep
+the pinned package, not the installed CLI.
 
-| Fact                        | File                                                                         |
-| --------------------------- | ---------------------------------------------------------------------------- |
-| Command and response shapes | `node_modules/@earendil-works/pi-coding-agent/dist/modes/rpc/rpc-types.d.ts` |
-| Which commands exist        | `dist/modes/rpc/rpc-mode.js` (the `handleCommand` switch)                    |
-| Wire events                 | `dist/modes/json-event.d.ts`                                                 |
-| Typed client                | `dist/modes/rpc/rpc-client.d.ts`                                             |
-| Interactive-only commands   | `dist/modes/interactive/interactive-mode.js` (the editor submit handler)     |
+| Fact                        | File                                                                     |
+| --------------------------- | ------------------------------------------------------------------------ |
+| Command and response shapes | `dist/modes/rpc/rpc-types.d.ts`                                          |
+| Which commands exist        | `dist/modes/rpc/rpc-mode.js` (the `handleCommand` switch)                |
+| Wire events                 | `dist/modes/json-event.d.ts`, `pi-agent-core`'s `dist/types.d.ts`        |
+| Typed client                | `dist/modes/rpc/rpc-client.d.ts`                                         |
+| Interactive-only commands   | `dist/modes/interactive/interactive-mode.js` (the editor submit handler) |
 
-Quick re-verification:
+Verified against 1.4.0.
+
+Quick re-verification, from `server/`:
 
 ```sh
-grep -o 'case "[a-z_]*":' dist/modes/rpc/rpc-mode.js | sort -u
-node -e "const s=require('fs').readFileSync('dist/modes/rpc/rpc-types.d.ts','utf8');console.log([...new Set([...s.matchAll(/method:\\s*\"([a-zA-Z_]+)\"/g)].map(m=>m[1]))].sort().join(' '))"
+P=node_modules/@earendil-works/pi-coding-agent
+grep -o 'case "[a-z_]*":' $P/dist/modes/rpc/rpc-mode.js | sort -u
+node -e "const s=require('fs').readFileSync('$P/dist/modes/rpc/rpc-types.d.ts','utf8');console.log([...new Set([...s.matchAll(/method:\\s*\"([a-zA-Z_]+)\"/g)].map(m=>m[1]))].sort().join(' '))"
 ```
 
 ## Commands (33, from the RPC switch)
@@ -37,6 +43,9 @@ node -e "const s=require('fs').readFileSync('dist/modes/rpc/rpc-types.d.ts','utf
 for an end event). `steer` and `follow_up` return a queue disposition. Every
 command takes an optional `id`; responses echo it, which is how you correlate.
 
+The envelope is flat, not a `method` field: a command is `{ id?, type: "get_state" }`
+and a reply is `{ id?, type: "response", command, success, data? }`.
+
 ## Extension UI methods (9)
 
 `select`, `confirm`, `input`, `editor`, `notify`, `setStatus`, `setWidget`,
@@ -46,6 +55,12 @@ Requests arrive as `{ type: "extension_ui_request", id, method, ... }`. Answers
 go back as `{ type: "extension_ui_response", id, value }`,
 `{ id, confirmed }`, or `{ id, cancelled: true }`. `select`, `confirm` and `input`
 carry an optional `timeout`.
+
+The channel is live before the first prompt: a child sends `setStatus` and
+`setWidget` within milliseconds of start, and sends them again on teardown. A
+tool call then blocks until something answers its `confirm`, with no error and no
+timeout of pi's own. See
+[../notes/2026-10-28-rpc-permission-block.md](../notes/2026-10-28-rpc-permission-block.md).
 
 There is **no `custom` method**. See ADR-0002.
 
@@ -59,7 +74,7 @@ carries a full message.
 
 Events observed in pi's own handler:
 
-Run lifecycle: `agent_start`, `turn_start`, `agent_end`, `agent_settled`
+Run lifecycle: `agent_start`, `turn_start`, `turn_end`, `agent_end`, `agent_settled`
 
 Messages: `message_start`, `message_update`, `message_end`, `entry_appended`
 
@@ -73,8 +88,7 @@ Session and queue: `queue_update`, `session_info_changed`,
 `thinking_level_changed`, `bash_execution_update`
 
 Plus `extension_ui_request` from RPC mode and `session_shutdown` on teardown.
-Confirm the full union on the first real trace; pi's event union is not exported
-as a named type, so the switch above is the best available list.
+Confirmed on a real trace: `shared/src/conversation/fixtures/bash-turn.jsonl`.
 
 `bash_execution_update` exists in the union but pi's own UI ignores it.
 

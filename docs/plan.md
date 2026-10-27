@@ -40,7 +40,7 @@ without a child process and a socket.
 
 | #   | Outcome you can see                                             | Status |
 | --- | --------------------------------------------------------------- | ------ |
-| S1  | Type a prompt, watch a real answer stream in                    | todo   |
+| S1  | Type a prompt, watch a real answer stream in                    | wip    |
 | S2  | Read a terminal-created session on a phone, tool calls and all  | todo   |
 | S3  | Browse sessions, resume one, close the tab, come back           | todo   |
 | S4  | Run a full turn (steer, abort, change model) without a terminal | todo   |
@@ -61,7 +61,7 @@ list. Ugly on purpose.
 
 - [ ] A prompt sent from the browser streams a real answer back, incrementally
 - [ ] Kill the child mid-stream: the page reports the agent exited, no silence
-- [ ] A tool-using turn is recorded and committed to
+- [x] A tool-using turn is recorded and committed to
       `shared/src/conversation/fixtures/`
 - [ ] `@earendil-works/*` is imported only in `server/src/agent/` and
       `shared/src/pi.ts` (a `grep` proves it; the lint rule is in place)
@@ -135,14 +135,26 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 ## Active slice
 
-**S1: One live turn.** Not started.
+**S1: One live turn.** In progress. A full tool-using turn runs end to end under
+Bun against the pinned pi 1.4.0, and its event log is the fixture
+`shared/src/conversation/fixtures/bash-turn.jsonl`. Nothing reaches a browser
+yet: `server/scripts/trace-rpc.ts` is the only consumer of the child.
 
-Next action: spawn `pi --mode rpc`, print raw stdout lines in a terminal, then wire
-the socket. Do not start framing abstraction work before one real trace exists.
+Next action: replace the trace script with `agent/driver.ts` (spawn, JSONL
+framing, `send`, `onEvent`, `kill`), then one WebSocket that forwards the frames
+raw to a textarea. Keep the frames raw until the driver is proven on a real turn.
 
-Known open risk for this slice: a full tool-using turn under Bun is unproven. If it
-fails, run the child under Node (`PI_RUNTIME=node`) and record why in
-`docs/notes/`.
+Resolved risks for this slice:
+
+- Bun runs a full tool-using turn, so `PI_RUNTIME=node` is not needed.
+- A tool call blocks on the permission extension's `confirm` until something
+  answers it
+  ([notes/2026-10-28-rpc-permission-block.md](notes/2026-10-28-rpc-permission-block.md)).
+  The driver therefore cannot be a pure pipe: it needs the `extension_ui_response`
+  path before a tool turn can finish.
+- The trace used `--no-session` and still got a `sessionId` from `get_state`.
+  The driver must pass `--session-id` or `--session` explicitly, because the
+  default would resume or create a session file the browser never asked for.
 
 ## Universal done list
 
@@ -164,7 +176,7 @@ Every slice, in this order:
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | The normalizer is the hard part | Deltas, tool updates, retries and compaction must fold into one pure reducer; this is where pi-web accumulated thousands of lines | Fixtures from real traces; replay is the only test that catches ordering bugs |
 | pi's RPC surface changes        | An upgrade can drop or rename a command                                                                                           | Exact pin; re-verify with the greps in `reference/pi-rpc.md` before upgrading |
-| Bun + pi beyond startup         | `get_state` answered; nothing else proven                                                                                         | S1 does not end until a tool-using turn passes, or Node is chosen             |
+| Bun + pi beyond startup         | `get_state` and one tool-using turn pass under Bun 1.4.2                                                                          | None needed; re-check after a pi upgrade                                      |
 | Preview proxy WebSockets        | HMR dies silently without upgrade passthrough                                                                                     | Static preview first in S9; the proxy is its own step if it fights            |
 | Extension `custom` UI           | An extension needing it is unusable in the web UI                                                                                 | Visible notice, not silence; terminal tab                                     |
 | Scope creep into settings forms | 20k+ lines in the project this replaces                                                                                           | The terminal tab is the settings UI (ADR-0002)                                |

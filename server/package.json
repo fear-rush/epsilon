@@ -17,6 +17,7 @@
 		"test": "bun test"
 	},
 	"dependencies": {
+		"@earendil-works/pi-coding-agent": "1.4.0",
 		"@scalar/hono-api-reference": "0.12.11",
 		"hono": "4.13.13",
 		"shared": "workspace:*",
