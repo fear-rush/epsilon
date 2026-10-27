@@ -44,6 +44,38 @@ credentials with the terminal `pi`. Start with [plan.md](docs/plan.md), then
 6. No state that lives only in server memory or only in the browser.
 7. Unsupported or unknown UI shows a visible notice, never silence.
 
+## Truth and drift
+
+Docs record intent. Code records reality. When they disagree, **code wins**, and the
+doc is corrected in the same commit.
+
+- Verify by reading the file, running the command or grepping pi's `dist`. Never
+  answer from memory, and never from these docs alone.
+- [reference/pi-rpc.md](docs/reference/pi-rpc.md) goes stale when pi changes. Re-run
+  the greps in its header before trusting it.
+- Do not restate code in docs: no file inventories, no copied types, no route
+  lists. Name the file or the command instead.
+- Facts that can be generated are generated (OpenAPI, types). Never keep a second
+  hand-maintained copy.
+- An accepted ADR is history. Supersede it with a new record; never edit it.
+- Delete rather than comment out. Scaffolding from a finished slice is removed.
+- A file too large to read in one pass is a defect. Split it before adding to it.
+
+## Stop and ask
+
+Ask before acting when any of these is true:
+
+- Two docs disagree, or a doc disagrees with the code.
+- The request names a capability that
+  [reference/pi-rpc.md](docs/reference/pi-rpc.md) does not list.
+- The change would break one of the rules above (import boundary, size cap, one
+  schema language, one styling system).
+- A check fails for a reason you do not understand, or a result looks unusual.
+- More than one reading of the requirement would produce different code.
+
+State what is inconsistent, what you checked, and the options. Do not guess, do not
+rewrite the doc to match a bug, and do not proceed silently.
+
 ## Integrations
 
 - REST state through TanStack Query. Socket state never enters Query.
