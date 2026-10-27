@@ -39,6 +39,15 @@ export class ConversationStore {
 		link.send({ t: "rpc", sessionId: this.sessionId, command: { type: "prompt", message } });
 	}
 
+	/** Interrupt the running turn with this message instead of waiting for it. */
+	steer(message: string): void {
+		link.send({ t: "rpc", sessionId: this.sessionId, command: { type: "steer", message } });
+	}
+
+	abort(): void {
+		link.send({ t: "rpc", sessionId: this.sessionId, command: { type: "abort" } });
+	}
+
 	answerDialog(answer: RpcExtensionUIResponse): void {
 		link.send({ t: "dialog", sessionId: this.sessionId, answer });
 	}

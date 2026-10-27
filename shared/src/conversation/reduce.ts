@@ -136,10 +136,10 @@ const toolsFromMessages = (messages: ConversationMessage[]): ToolRun[] => {
 const reduceEvent = (state: ConversationState, event: JsonAgentSessionEvent): ConversationState => {
 	switch (event.type) {
 		case "agent_start":
-			return { ...state, running: true };
+			return { ...state, busy: true };
 		case "agent_end":
 		case "agent_settled":
-			return { ...state, running: false, streaming: null };
+			return { ...state, busy: false, streaming: null };
 		case "message_start":
 			if (event.message.role !== "assistant") return state;
 			return { ...state, streaming: { text: "", thinking: "" } };
@@ -256,7 +256,15 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 			// A snapshot replaces the transcript: that is what makes reconnect and a
 			// second tab safe. Dialogs stay, because they come from their own frames.
 			const messages = frame.snapshot.messages.filter(isVisibleMessage);
-			return { ...state, messages, tools: toolsFromMessages(messages), streaming: null };
+			return {
+				...state,
+				messages,
+				tools: toolsFromMessages(messages),
+				streaming: null,
+				// Attaching mid-run must show the run as live, not as idle until the next
+				// `agent_start`, which has already happened.
+				busy: frame.snapshot.state.isStreaming,
+			};
 		case "event":
 			return reduceEvent(state, frame.event);
 		case "meta":
@@ -271,6 +279,12 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 		}
 		case "ui":
 			return reduceDisplay(state, frame);
+		case "rpc-result":
+			// A command the child refused must not vanish: it has no command name on the
+			// wire, so the notice quotes the error alone.
+			return frame.ok
+				? state
+				: withNotice(state, "notice", frame.error ?? "The agent rejected a command");
 		case "error":
 			return withNotice(state, "notice", `${frame.code}: ${frame.message}`);
 		default:

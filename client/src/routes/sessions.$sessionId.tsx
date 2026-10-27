@@ -20,14 +20,15 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 		const { store, snapshot } = useConversation(sessionId);
 		const [prompt, setPrompt] = useState("");
 		const rows = transcript(snapshot.state);
-		const { running, needsInput, dialogs, statuses, widgets, title } = snapshot.state;
+		const { busy, running, needsInput, dialogs, statuses, widgets, title } = snapshot.state;
 		const aboveComposer = widgets.filter((widget) => widget.placement === "aboveEditor");
 		const belowComposer = widgets.filter((widget) => widget.placement === "belowEditor");
 
 		const submit = () => {
 			const message = prompt.trim();
 			if (message === "") return;
-			store.sendPrompt(message);
+			if (busy) store.steer(message);
+			else store.sendPrompt(message);
 			setPrompt("");
 		};
 
@@ -36,7 +37,9 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 				<div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-2 text-xs text-muted-foreground">
 					{title !== undefined && <span className="font-medium text-foreground">{title}</span>}
 					<span data-status={snapshot.status}>{snapshot.status}</span>
-					<span>{running ? "running" : "idle"}</span>
+					{snapshot.status === "open" && (
+						<span>{running ? (busy ? "working" : "idle") : "agent stopped"}</span>
+					)}
 					{needsInput && <span className="font-medium text-amber-600">needs input</span>}
 					{statuses.map((status) => (
 						<span key={status.key} className="rounded bg-muted px-1.5 py-0.5 font-mono">
@@ -85,16 +88,30 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 						<Textarea
 							value={prompt}
 							onChange={(event) => setPrompt(event.target.value)}
-							placeholder="Message the agent (Enter sends, Shift+Enter is a newline)"
+							placeholder={
+								busy
+									? "Steer the run (Enter steers, Esc stops)"
+									: "Message the agent (Enter sends, Shift+Enter is a newline)"
+							}
 							className="max-h-40 min-h-11 flex-1 resize-none"
 							onKeyDown={(event) => {
+								if (event.key === "Escape" && busy) {
+									event.preventDefault();
+									store.abort();
+									return;
+								}
 								if (event.key === "Enter" && !event.shiftKey) {
 									event.preventDefault();
 									submit();
 								}
 							}}
 						/>
-						<Button onClick={submit}>send</Button>
+						{busy && (
+							<Button variant="outline" onClick={() => store.abort()}>
+								stop
+							</Button>
+						)}
+						<Button onClick={submit}>{busy ? "steer" : "send"}</Button>
 					</div>
 				</div>
 			</div>

@@ -72,6 +72,10 @@ export type ConversationState = {
 	widgets: UiWidget[];
 	/** Set by an extension through `setTitle`. */
 	title?: string;
+	/** A turn is in progress. `agent_start` and `agent_end` carry this; a child that
+	 * is merely alive does not. */
+	busy: boolean;
+	/** The child process behind this session is alive (the socket's `meta`). */
 	running: boolean;
 	needsInput: boolean;
 	nextNoticeId: number;
@@ -85,6 +89,7 @@ export const emptyConversation: ConversationState = {
 	dialogs: [],
 	statuses: [],
 	widgets: [],
+	busy: false,
 	running: false,
 	needsInput: false,
 	nextNoticeId: 0,

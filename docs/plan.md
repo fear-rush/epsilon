@@ -87,8 +87,16 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 ### S4: Composer
 
-- [ ] Steer mid-run and see the message land in the transcript
-- [ ] Abort, and the run stops in the CLI as well
+Steer and abort are built: while a turn runs the composer turns into steer and
+stop, Esc stops from the textarea, and a refused command becomes a notice. Model
+switching, the palette and `!cmd` are not started.
+
+- [ ] Steer mid-run and see the message land in the transcript (checked over the
+      socket: `steer` answered ok, its text arrived as a user message, and the
+      turn ended with it; the buttons are not yet checked in a browser)
+- [ ] Abort, and the run stops in the CLI as well (checked over the socket:
+      `abort` answered ok, then `message_end`, `turn_end`, `agent_end` and
+      `agent_settled`)
 - [ ] Change model; the next turn uses it, and `get_state` in the CLI agrees
 - [ ] An installed skill or prompt template appears in the palette and runs
 - [ ] `!ls` runs a shell command and its output is in the transcript
@@ -136,13 +144,13 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 ## Active slice
 
-**S4: Composer.** Not started. Reading and listing sessions work; the composer
-still has one control, a prompt.
+**S4: Composer.** Steer and abort are built; their browser checks and three
+controls remain.
 
-Next action: steer and abort. Both are RPC commands on the existing `rpc` frame,
-so the work is a control plus the transcript row a steered message produces.
-Prove it in the CLI before touching model switching, because the two share the
-`get_state` read that S4 uses to confirm.
+Next action: the model picker. `get_available_models` lists the choices,
+`set_model` switches, and the snapshot's `model` and `thinkingLevel` say what is
+current. Confirm in the CLI on the same session, because the socket forwards only
+`ok`/`error` and drops pi's response data.
 
 ## Facts worth keeping
 
@@ -194,6 +202,19 @@ Prove it in the CLI before touching model switching, because the two share the
 - The list badges poll `/api/sessions` every 5 s; a session running only in the
   terminal shows no badge, because pi keeps no lock and appends to the JSONL
   without one.
+- `meta.running` means the child process is alive; `busy` means a turn is
+  running. `busy` comes from `agent_start`/`agent_end` and from the snapshot's
+  `isStreaming`, so a tab that attaches mid-run shows "working" and offers stop
+  instead of looking idle.
+- pi's `steer` lands at the next turn boundary, not mid-token: a count that was
+  steered at 38 characters still ran to 300 before "steered-ok" appeared. The
+  composer says "steer" for that reason.
+- The socket's `rpc-result` carries only `ok`/`error`, so pi's response data (the
+  steer disposition, `get_state`, the chosen model) never reaches the browser. A
+  refused command becomes a notice with its error text.
+- The tab settles a turn twice: `agent_end` then `agent_settled`. Both clear
+  `busy`; `abort` produces `message_end`, `turn_end`, `agent_end` and
+  `agent_settled`, so a stopped turn keeps its partial text.
 
 Resolved risks for S1 and S2:
 
