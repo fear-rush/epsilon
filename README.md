@@ -9,7 +9,7 @@ Status: design, not implemented. Start with [docs/README.md](docs/README.md), th
 
 ## Requirements
 
-- Bun 1.4.2 or newer.
+- Bun 1.4.4 or newer.
 - Node.js 22.22 or newer.
 - `pi` installed and configured on the same machine.
 
