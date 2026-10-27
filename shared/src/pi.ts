@@ -11,6 +11,12 @@ export type DialogQuestion = Extract<
 	{ method: "select" | "confirm" | "input" | "editor" }
 >;
 
+/**
+ * The extension UI methods that display something and never block the agent:
+ * `notify`, `setStatus`, `setWidget`, `setTitle` and `set_editor_text`.
+ */
+export type ExtensionDisplay = Exclude<RpcExtensionUIRequest, DialogQuestion>;
+
 export type {
 	JsonAgentSessionEvent,
 	RpcCommand,

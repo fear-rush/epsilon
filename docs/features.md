@@ -59,8 +59,8 @@ Legend: **RPC** = a pi command or frame · **REST** = our HTTP route ·
 
 | Feature                                                | How                                                       |
 | ------------------------------------------------------ | --------------------------------------------------------- |
-| `select`, `confirm`, `input`, `editor` dialogs         | WS `dialog` frames, 9-method set                          |
-| Toasts, status bar, widgets, window title, editor text | WS `dialog` frames                                        |
+| `select`, `confirm`, `input`, `editor` dialogs         | WS `dialog` frames, answered from the page                |
+| Toasts, status bar, widgets, window title, editor text | WS `ui` frames; keyed status and widgets replay on attach |
 | Approvals and permission prompts                       | extension dialog flow; not a pi core feature              |
 | `ctx.ui.custom`                                        | **unsupported. Visible notice + terminal tab** (ADR-0002) |
 

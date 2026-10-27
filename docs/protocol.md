@@ -4,7 +4,7 @@ Status: **partly implemented.** This is the contract between `server/` and
 `client/`. Both sides implement it; neither invents frames.
 
 On the wire today (S2): `hello`, `welcome`, `attach`, `detach`, `rpc`, `dialog`
-and `dialog-closed`, `ping`/`pong`, plus `snapshot`, `event`, `rpc-result`,
+and `dialog-closed`, `ui`, `ping`/`pong`, plus `snapshot`, `event`, `rpc-result`,
 `meta` and `error`. Not yet: every `terminal` frame, `commands` and `stats` inside
 a snapshot, the coalescing and backpressure rules, the heartbeat and the restart
 action. Those belong to S3, S7 and S8 in [plan.md](plan.md).
@@ -58,6 +58,7 @@ type ServerFrame =
 	| { t: "event"; sessionId: string; event: JsonAgentSessionEvent }
 	| { t: "dialog"; sessionId: string; request: ExtensionUiRequest }
 	| { t: "dialog-closed"; sessionId: string; id: string }
+	| { t: "ui"; sessionId: string; request: ExtensionDisplay }
 	| { t: "rpc-result"; sessionId: string; id?: string; ok: boolean; error?: string }
 	| { t: "meta"; sessionId: string; running: boolean; needsInput: boolean; title?: string }
 	| { t: "terminal"; terminalId: string; output: string }
@@ -106,10 +107,15 @@ survivable.
 - `dialog-closed` tells every attached tab which request left the pending set, so
   a second tab removes it without guessing from `meta`.
 - `needsInput` is exactly `pendingDialogs.length > 0`.
-- Only `select`, `confirm`, `input` and `editor` wait for an answer. `notify`,
-  `setStatus`, `setWidget`, `setTitle` and `set_editor_text` are fire-and-forget;
-  counting them as pending would leave `needsInput` stuck true. They are dropped
-  today, and rendering them belongs to the status surface in S8.
+- Only `select`, `confirm`, `input` and `editor` wait for an answer and travel as
+  `dialog`. The other five display something and travel as `ui`; counting them as
+  pending would leave `needsInput` stuck true from the first millisecond.
+- `setStatus` and `setWidget` are keyed state: a value replaces the previous one
+  for the same key, an undefined value clears it, and the server replays what is
+  still set to every late-attaching tab. `notify`, `setTitle` and
+  `set_editor_text` are one-off events and are not replayed.
+- `set_editor_text` has no composer to write into yet, so the client shows a
+  notice instead of silently discarding it.
 
 ## Ordering, coalescing, backpressure
 

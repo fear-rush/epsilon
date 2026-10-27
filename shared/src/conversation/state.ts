@@ -54,6 +54,12 @@ export type Notice = {
 	afterMessages: number;
 };
 
+/** A keyed status string an extension set, such as the permission state. */
+export type UiStatus = { key: string; text: string };
+
+/** Keyed widget lines an extension set, placed around the composer. */
+export type UiWidget = { key: string; placement: "aboveEditor" | "belowEditor"; lines: string[] };
+
 export type ConversationState = {
 	messages: ConversationMessage[];
 	tools: ToolRun[];
@@ -61,6 +67,11 @@ export type ConversationState = {
 	notices: Notice[];
 	/** Extension questions that still block the agent. */
 	dialogs: DialogQuestion[];
+	/** Extension display state that is still set, replayed on attach. */
+	statuses: UiStatus[];
+	widgets: UiWidget[];
+	/** Set by an extension through `setTitle`. */
+	title?: string;
 	running: boolean;
 	needsInput: boolean;
 	nextNoticeId: number;
@@ -72,6 +83,8 @@ export const emptyConversation: ConversationState = {
 	streaming: null,
 	notices: [],
 	dialogs: [],
+	statuses: [],
+	widgets: [],
 	running: false,
 	needsInput: false,
 	nextNoticeId: 0,

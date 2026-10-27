@@ -16,7 +16,8 @@ import type { SessionRegistry } from "../agent/registry";
 export type ChatState = {
 	tabId: string;
 	welcomed: boolean;
-	unsubscribes: Set<() => void>;
+	/** One unsubscribe per watched session. A tab may watch several at once. */
+	unsubscribes: Map<string, () => void>;
 };
 
 export type ChatSocket = ServerWebSocket<ChatState>;
@@ -43,7 +44,7 @@ export const handleOpen = (socket: ChatSocket): void => {
 };
 
 export const handleClose = (socket: ChatSocket): void => {
-	for (const unsubscribe of socket.data.unsubscribes) unsubscribe();
+	for (const unsubscribe of socket.data.unsubscribes.values()) unsubscribe();
 	socket.data.unsubscribes.clear();
 };
 
@@ -85,8 +86,7 @@ const route = (registry: SessionRegistry, socket: ChatSocket, frame: ClientFrame
 			watch(registry, socket, frame.sessionId);
 			return;
 		case "detach":
-			for (const unsubscribe of socket.data.unsubscribes) unsubscribe();
-			socket.data.unsubscribes.clear();
+			unwatch(socket, frame.sessionId);
 			return;
 		case "rpc":
 			watch(registry, socket, frame.sessionId);
@@ -121,11 +121,22 @@ const welcome = (socket: ChatSocket, frame: Extract<ClientFrame, { t: "hello" }>
 	send(socket, { t: "welcome", protocol: PROTOCOL_VERSION, serverVersion: SERVER_VERSION });
 };
 
-/** Watch a session. Repeated attaches for the same session do not stack sinks. */
+/** Watch one session. Repeating the same attach does not stack a second sink. */
 const watch = (registry: SessionRegistry, socket: ChatSocket, sessionId: string): void => {
+	if (socket.data.unsubscribes.has(sessionId)) return;
 	const session = registry.ensure(sessionId);
-	if (socket.data.unsubscribes.size > 0) return;
-	socket.data.unsubscribes.add(session.subscribe((out) => send(socket, out)));
+	socket.data.unsubscribes.set(
+		sessionId,
+		session.subscribe((out) => send(socket, out)),
+	);
+};
+
+/** Stop watching one session and leave the others alone. */
+const unwatch = (socket: ChatSocket, sessionId: string): void => {
+	const unsubscribe = socket.data.unsubscribes.get(sessionId);
+	if (unsubscribe === undefined) return;
+	unsubscribe();
+	socket.data.unsubscribes.delete(sessionId);
 };
 
 const runCommand = (

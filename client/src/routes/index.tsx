@@ -22,7 +22,9 @@ export const Route = createFileRoute("/")({
 		const { store, snapshot } = useConversation(session);
 		const [prompt, setPrompt] = useState("");
 		const rows = transcript(snapshot.state);
-		const { running, needsInput, dialogs } = snapshot.state;
+		const { running, needsInput, dialogs, statuses, widgets, title } = snapshot.state;
+		const aboveComposer = widgets.filter((widget) => widget.placement === "aboveEditor");
+		const belowComposer = widgets.filter((widget) => widget.placement === "belowEditor");
 
 		const submit = () => {
 			const message = prompt.trim();
@@ -34,9 +36,15 @@ export const Route = createFileRoute("/")({
 		return (
 			<div className="flex min-h-0 flex-1 flex-col">
 				<div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-2 text-xs text-muted-foreground">
+					{title !== undefined && <span className="font-medium text-foreground">{title}</span>}
 					<span data-status={snapshot.status}>{snapshot.status}</span>
 					<span>{running ? "running" : "idle"}</span>
 					{needsInput && <span className="font-medium text-amber-600">needs input</span>}
+					{statuses.map((status) => (
+						<span key={status.key} className="rounded bg-muted px-1.5 py-0.5 font-mono">
+							{status.text}
+						</span>
+					))}
 				</div>
 
 				{dialogs.length > 0 && (
@@ -62,6 +70,16 @@ export const Route = createFileRoute("/")({
 					</div>
 				) : (
 					<Transcript rows={rows} />
+				)}
+
+				{widgets.length > 0 && (
+					<div className="flex flex-col gap-1 border-t px-4 py-2 font-mono text-[11px] whitespace-pre-wrap text-muted-foreground">
+						{[...aboveComposer, ...belowComposer].map((widget) => (
+							<div key={widget.key} data-placement={widget.placement}>
+								{widget.lines.join("\n")}
+							</div>
+						))}
+					</div>
 				)}
 
 				<div className="border-t p-3">

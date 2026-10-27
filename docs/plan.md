@@ -153,6 +153,12 @@ Facts worth keeping while this slice closes:
   Nothing is skipped silently.
 - Tool output arrives twice: from `tool_execution_end` live, and from the
   `toolResult` message in a snapshot. Both paths write the same `ToolRun`.
+- A tab keeps one subscription per session: a second `attach` no longer returns
+  early, and `detach` drops only that session. Verified with two sessions on one
+  tab while a second tab drove the detached one.
+- The five display-only extension methods travel as `ui` frames. Keyed status and
+  widget state is replayed to a late attach. Verified: a second tab receives
+  `setStatus` without prompting.
 - `client/src/link.ts` ignores events from a socket it already replaced. Without
   that guard, React StrictMode's double mount reports `closed` on a working
   connection, because the first socket's close lands after the second one opens.

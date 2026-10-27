@@ -5,6 +5,7 @@ export {
 	clientFrameSchema,
 	dialogAnswerSchema,
 	dialogRequestSchema,
+	extensionDisplaySchema,
 	protocolErrorCodeSchema,
 	rpcCommandSchema,
 	serverFrameSchema,
@@ -20,6 +21,8 @@ export type {
 	SnapshotMessage,
 	StreamingTurn,
 	ToolRun,
+	UiStatus,
+	UiWidget,
 } from "./conversation/state";
 export { reduce } from "./conversation/reduce";
 export { isStreaming, transcript } from "./conversation/selectors";
@@ -30,7 +33,7 @@ export {
 	writeArgsSchema,
 } from "./conversation/tools";
 export type { TranscriptRow } from "./conversation/selectors";
-export type { DialogQuestion } from "./pi";
+export type { DialogQuestion, ExtensionDisplay } from "./pi";
 export type {
 	JsonAgentSessionEvent,
 	RpcCommand,

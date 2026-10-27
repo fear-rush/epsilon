@@ -9,7 +9,7 @@
  */
 import { z } from "zod";
 
-import type { DialogQuestion } from "../pi";
+import type { DialogQuestion, ExtensionDisplay } from "../pi";
 import type { SnapshotMessage } from "../conversation/state";
 import type {
 	JsonAgentSessionEvent,
@@ -25,6 +25,9 @@ export const snapshotSchema = z.custom<Snapshot>();
 export const rpcCommandSchema = z.custom<RpcCommand>();
 export const agentEventSchema = z.custom<JsonAgentSessionEvent>();
 export const dialogRequestSchema = z.custom<DialogQuestion>();
+
+/** An extension UI method that displays something and never waits for an answer. */
+export const extensionDisplaySchema = z.custom<ExtensionDisplay>();
 export const dialogAnswerSchema = z.custom<RpcExtensionUIResponse>();
 
 export type { DialogQuestion } from "../pi";
@@ -74,6 +77,7 @@ export const serverFrameSchema = z.discriminatedUnion("t", [
 	z.object({ t: z.literal("event"), sessionId: z.string(), event: agentEventSchema }),
 	z.object({ t: z.literal("dialog"), sessionId: z.string(), request: dialogRequestSchema }),
 	z.object({ t: z.literal("dialog-closed"), sessionId: z.string(), id: z.string() }),
+	z.object({ t: z.literal("ui"), sessionId: z.string(), request: extensionDisplaySchema }),
 	z.object({
 		t: z.literal("rpc-result"),
 		sessionId: z.string(),

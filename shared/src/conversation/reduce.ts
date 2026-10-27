@@ -11,7 +11,14 @@ import type { JsonAgentSessionEvent, ServerFrame } from "shared";
 import { z } from "zod";
 
 import { emptyConversation, isVisibleMessage } from "./state";
-import type { ConversationMessage, ConversationState, Notice, ToolRun } from "./state";
+import type {
+	ConversationMessage,
+	ConversationState,
+	Notice,
+	ToolRun,
+	UiStatus,
+	UiWidget,
+} from "./state";
 
 const contentPartSchema = z.looseObject({
 	type: z.string(),
@@ -180,6 +187,42 @@ const reduceEvent = (state: ConversationState, event: JsonAgentSessionEvent): Co
 	}
 };
 
+/** The five display-only extension methods. None of them waits for an answer. */
+const reduceDisplay = (
+	state: ConversationState,
+	request: ServerFrame & { t: "ui" },
+): ConversationState => {
+	const frame = request.request;
+	switch (frame.method) {
+		case "setStatus": {
+			const statuses = state.statuses.filter((status) => status.key !== frame.statusKey);
+			if (frame.statusText === undefined) return { ...state, statuses };
+			const next: UiStatus = { key: frame.statusKey, text: frame.statusText };
+			return { ...state, statuses: [...statuses, next] };
+		}
+		case "setWidget": {
+			const widgets = state.widgets.filter((widget) => widget.key !== frame.widgetKey);
+			if (frame.widgetLines === undefined) return { ...state, widgets };
+			const next: UiWidget = {
+				key: frame.widgetKey,
+				placement: frame.widgetPlacement ?? "aboveEditor",
+				lines: frame.widgetLines,
+			};
+			return { ...state, widgets: [...widgets, next] };
+		}
+		case "setTitle":
+			return { ...state, title: frame.title };
+		case "notify":
+			return withNotice(state, "notice", frame.message);
+		case "set_editor_text":
+			return withNotice(
+				state,
+				"notice",
+				"An extension tried to fill the composer: not supported here.",
+			);
+	}
+};
+
 export const reduce = (state: ConversationState, frame: ServerFrame): ConversationState => {
 	switch (frame.t) {
 		case "snapshot":
@@ -199,6 +242,8 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 			const dialogs = state.dialogs.filter((dialog) => dialog.id !== frame.id);
 			return { ...state, dialogs, needsInput: dialogs.length > 0 };
 		}
+		case "ui":
+			return reduceDisplay(state, frame);
 		case "error":
 			return withNotice(state, "notice", `${frame.code}: ${frame.message}`);
 		default:

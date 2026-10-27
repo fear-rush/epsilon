@@ -22,7 +22,7 @@ const server = Bun.serve<ChatState>({
 		if (pathname !== SOCKET_PATH) return app.fetch(request);
 		const tabId = crypto.randomUUID();
 		const upgraded = bunServer.upgrade(request, {
-			data: { tabId, welcomed: false, unsubscribes: new Set() },
+			data: { tabId, welcomed: false, unsubscribes: new Map() },
 		});
 		return upgraded ? undefined : new Response("Expected a WebSocket upgrade", { status: 400 });
 	},

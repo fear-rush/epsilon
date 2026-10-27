@@ -9,7 +9,7 @@ import type {
 	RpcExtensionUIResponse,
 } from "@earendil-works/pi-coding-agent";
 import { isVisibleMessage } from "shared";
-import type { DialogQuestion, ServerFrame, Snapshot } from "shared";
+import type { DialogQuestion, ExtensionDisplay, ServerFrame, Snapshot } from "shared";
 import { z } from "zod";
 
 import { Driver } from "./driver";
@@ -31,6 +31,17 @@ const repliesSchema = z.tuple([
 
 const QUESTION_METHODS = ["select", "confirm", "input", "editor"];
 
+/** The two methods that carry state across attaches, and how to key them. */
+const displayKey = (request: ExtensionDisplay): string | undefined => {
+	if (request.method === "setStatus") return `status:${request.statusKey}`;
+	if (request.method === "setWidget") return `widget:${request.widgetKey}`;
+	return undefined;
+};
+
+const isCleared = (request: ExtensionDisplay): boolean =>
+	(request.method === "setStatus" && request.statusText === undefined) ||
+	(request.method === "setWidget" && request.widgetLines === undefined);
+
 const isQuestion = (request: RpcExtensionUIRequest): request is DialogQuestion =>
 	QUESTION_METHODS.includes(request.method);
 
@@ -39,6 +50,11 @@ export class AgentSession {
 	private readonly driver: Driver;
 	private readonly subscribers = new Set<FrameSink>();
 	private readonly pendingDialogs = new Map<string, DialogQuestion>();
+	/**
+	 * Keyed display state an extension set and has not cleared, so a tab that
+	 * attaches later sees the current status and widgets instead of nothing.
+	 */
+	private readonly displayState = new Map<string, ExtensionDisplay>();
 	private running = false;
 
 	constructor(sessionId: string, cwd: string) {
@@ -66,9 +82,25 @@ export class AgentSession {
 		for (const request of this.pendingDialogs.values()) {
 			sink({ t: "dialog", sessionId: this.sessionId, request });
 		}
+		for (const request of this.displayState.values()) {
+			sink({ t: "ui", sessionId: this.sessionId, request });
+		}
 		this.sendMetaTo(sink);
 		void this.sendSnapshot(sink);
 		return () => this.subscribers.delete(sink);
+	}
+
+	/**
+	 * Forward a display-only request, remembering the keyed ones. `setStatus` and
+	 * `setWidget` clear themselves by sending an undefined value.
+	 */
+	private show(request: ExtensionDisplay): void {
+		const key = displayKey(request);
+		if (key !== undefined) {
+			if (isCleared(request)) this.displayState.delete(key);
+			else this.displayState.set(key, request);
+		}
+		this.emit({ t: "ui", sessionId: this.sessionId, request });
 	}
 
 	/** History comes from pi's session file, never from server memory. */
@@ -135,10 +167,13 @@ export class AgentSession {
 	private receive(frame: AgentFrame): void {
 		switch (frame.type) {
 			case "extension_ui_request":
-				// Only these four ask and wait. notify/setStatus/setWidget/setTitle/
-				// set_editor_text are fire-and-forget; treating them as pending would
-				// leave needsInput stuck true from the first millisecond.
-				if (!isQuestion(frame)) return;
+				// Only these four ask and wait. The other five display something and
+				// never block, so they must not enter pendingDialogs: that would leave
+				// needsInput stuck true from the first millisecond.
+				if (!isQuestion(frame)) {
+					this.show(frame);
+					return;
+				}
 				this.pendingDialogs.set(frame.id, frame);
 				this.emit({ t: "dialog", sessionId: this.sessionId, request: frame });
 				this.sendMeta();
