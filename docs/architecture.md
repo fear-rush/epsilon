@@ -51,7 +51,7 @@ content. It never shares an origin with the API (ADR-0003).
 | `serve.ts`           | `Bun.serve` with `fetch` + `websocket`, plus the preview listener, plus shutdown hooks |
 | `config.ts`          | Ports, paths, caps, env. The only place that reads `process.env`                       |
 | `security.ts`        | Loopback and Host checks, optional token                                               |
-| `agent/driver.ts`    | Spawning `pi --mode rpc`, JSONL framing, `send`, `onEvent`, `kill`                     |
+| `agent/driver.ts`    | Spawning `pi --mode rpc`, JSONL framing, `send`, `onFrame`, `onExit`, `kill`           |
 | `agent/pool.ts`      | sessionId → child, cap, LRU, idle kill, idle-gated restart                             |
 | `agent/normalize.ts` | `JsonAgentSessionEvent` → protocol frames. The only place that knows pi's event shapes |
 | `agent/extui.ts`     | The nine dialog methods, pending-request replay, cancel on abort                       |

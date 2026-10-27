@@ -56,6 +56,11 @@ go back as `{ type: "extension_ui_response", id, value }`,
 `{ id, confirmed }`, or `{ id, cancelled: true }`. `select`, `confirm` and `input`
 carry an optional `timeout`.
 
+Both directions are their own unions, outside the command and event types:
+incoming is `RpcExtensionUIRequest`, outgoing is `RpcExtensionUIResponse`.
+`RpcCommand` does not contain an `extension_ui_response` member, and
+`JsonAgentSessionEvent` does not contain an `extension_ui_request` member.
+
 The channel is live before the first prompt: a child sends `setStatus` and
 `setWidget` within milliseconds of start, and sends them again on teardown. A
 tool call then blocks until something answers its `confirm`, with no error and no
@@ -66,11 +71,14 @@ There is **no `custom` method**. See ADR-0002.
 
 ## Events
 
-`JsonAgentSessionEvent` is what the wire carries, and it is deliberately not the
-same as the in-process event: `toJsonEvent()` strips cumulative assistant
-snapshots. `message_start` gives the initial message, deltas build on it, and
-`message_end` gives the authoritative message. Do not assume `message_update`
-carries a full message.
+Three unions share stdout, and pi does not combine them into one type:
+`JsonAgentSessionEvent`, `RpcResponse` (the answer to a command, correlated by
+`id`) and `RpcExtensionUIRequest`. A reader of the child must expect all three.
+
+`JsonAgentSessionEvent` is deliberately not the same as the in-process event:
+`toJsonEvent()` strips cumulative assistant snapshots. `message_start` gives the
+initial message, deltas build on it, and `message_end` gives the authoritative
+message. Do not assume `message_update` carries a full message.
 
 Events observed in pi's own handler:
 
@@ -88,6 +96,7 @@ Session and queue: `queue_update`, `session_info_changed`,
 `thinking_level_changed`, `bash_execution_update`
 
 Plus `extension_ui_request` from RPC mode and `session_shutdown` on teardown.
+Note that `extension_ui_request` is not a member of the event union; see above.
 Confirmed on a real trace: `shared/src/conversation/fixtures/bash-turn.jsonl`.
 
 `bash_execution_update` exists in the union but pi's own UI ignores it.

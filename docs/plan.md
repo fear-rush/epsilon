@@ -137,24 +137,31 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 **S1: One live turn.** In progress. A full tool-using turn runs end to end under
 Bun against the pinned pi 1.4.0, and its event log is the fixture
-`shared/src/conversation/fixtures/bash-turn.jsonl`. Nothing reaches a browser
-yet: `server/scripts/trace-rpc.ts` is the only consumer of the child.
+`shared/src/conversation/fixtures/bash-turn.jsonl`. `agent/driver.ts` owns the
+child. Nothing reaches a browser yet, and `server/scripts/trace-rpc.ts` is its
+only caller.
 
-Next action: replace the trace script with `agent/driver.ts` (spawn, JSONL
-framing, `send`, `onEvent`, `kill`), then one WebSocket that forwards the frames
-raw to a textarea. Keep the frames raw until the driver is proven on a real turn.
+Next action: one WebSocket that forwards driver frames raw to a textarea, plus a
+raw event list on the page. Keep the frames raw until the socket is proven, then
+write `agent/normalize.ts`.
 
 Resolved risks for this slice:
 
+- pi's shipped `RpcClient` cannot answer an extension dialog and reports no
+  child exit, so the driver is ours ([ADR-0004](adr/0004-own-the-rpc-driver.md)).
+- A child that dies on its own and a child we stopped are told apart by
+  `onExit.requested`. Verified with SIGKILL and SIGTERM.
+- A spawn failure emits no `exit` event, so the driver reports it as an exit
+  with `code: null`. Verified with a nonexistent `cwd`.
 - Bun runs a full tool-using turn, so `PI_RUNTIME=node` is not needed.
 - A tool call blocks on the permission extension's `confirm` until something
   answers it
   ([notes/2026-10-28-rpc-permission-block.md](notes/2026-10-28-rpc-permission-block.md)).
   The driver therefore cannot be a pure pipe: it needs the `extension_ui_response`
   path before a tool turn can finish.
-- The trace used `--no-session` and still got a `sessionId` from `get_state`.
-  The driver must pass `--session-id` or `--session` explicitly, because the
-  default would resume or create a session file the browser never asked for.
+- `--session-id` warns on stderr and creates a file when the id is unknown, and
+  it still reports a `sessionId` from `get_state`. The driver takes an explicit
+  `SessionTarget` instead of letting a default decide which file to touch.
 
 ## Universal done list
 
