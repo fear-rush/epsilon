@@ -1,103 +1,105 @@
 /**
- * The session page for S2: transcript, blocking questions, composer. One session
- * per page for now; the session list and resume arrive in S3.
+ * The session list: pi's files for this project, newest first, with the live
+ * state only the server knows. Opening a session is a URL, so a reload and a
+ * resumed tab land on the same transcript.
  */
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { transcript } from "shared";
-import { z } from "zod";
 
-import { QuestionRow } from "@/components/chat/question-row";
-import { Transcript } from "@/components/chat/transcript";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { SessionList } from "@/components/sessions/session-list";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { useConversation } from "@/hooks/use-conversation";
+import {
+	Empty,
+	EmptyContent,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyTitle,
+} from "@/components/ui/empty";
+import { deleteSession, fetchSessions } from "@/lib/api";
+
+const SESSIONS_QUERY_KEY = ["sessions"] as const;
+/** Live children come and go outside this tab, so the badges poll. */
+const LIVE_REFRESH_MS = 5_000;
 
 export const Route = createFileRoute("/")({
-	// `?session=<id>` opens a session the CLI created: no session list yet (S3).
-	validateSearch: z.object({ session: z.string().optional() }),
-	component: function Session() {
-		const { session } = Route.useSearch();
-		const { store, snapshot } = useConversation(session);
-		const [prompt, setPrompt] = useState("");
-		const rows = transcript(snapshot.state);
-		const { running, needsInput, dialogs, statuses, widgets, title } = snapshot.state;
-		const aboveComposer = widgets.filter((widget) => widget.placement === "aboveEditor");
-		const belowComposer = widgets.filter((widget) => widget.placement === "belowEditor");
+	component: function SessionListPage() {
+		const navigate = useNavigate();
+		const queryClient = useQueryClient();
+		const [confirming, setConfirming] = useState<string | undefined>(undefined);
+		const sessions = useQuery({
+			queryKey: SESSIONS_QUERY_KEY,
+			queryFn: fetchSessions,
+			refetchInterval: LIVE_REFRESH_MS,
+		});
+		const remove = useMutation({
+			mutationFn: deleteSession,
+			onSuccess: async () => {
+				setConfirming(undefined);
+				await queryClient.invalidateQueries({ queryKey: SESSIONS_QUERY_KEY });
+			},
+		});
 
-		const submit = () => {
-			const message = prompt.trim();
-			if (message === "") return;
-			store.sendPrompt(message);
-			setPrompt("");
+		const open = (sessionId: string): void => {
+			void navigate({ to: "/sessions/$sessionId", params: { sessionId } });
 		};
+		const problem = sessions.error ?? remove.error;
+		const data = sessions.data;
 
 		return (
 			<div className="flex min-h-0 flex-1 flex-col">
-				<div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-2 text-xs text-muted-foreground">
-					{title !== undefined && <span className="font-medium text-foreground">{title}</span>}
-					<span data-status={snapshot.status}>{snapshot.status}</span>
-					<span>{running ? "running" : "idle"}</span>
-					{needsInput && <span className="font-medium text-amber-600">needs input</span>}
-					{statuses.map((status) => (
-						<span key={status.key} className="rounded bg-muted px-1.5 py-0.5 font-mono">
-							{status.text}
-						</span>
-					))}
+				<div className="flex items-center justify-between gap-3 border-b px-4 py-2">
+					<div className="min-w-0">
+						<div className="text-sm font-medium">Sessions</div>
+						<div className="truncate text-xs text-muted-foreground">
+							{data?.project ?? "loading…"}
+						</div>
+					</div>
+					<Button size="sm" onClick={() => open(crypto.randomUUID())}>
+						New session
+					</Button>
 				</div>
 
-				{dialogs.length > 0 && (
-					<div className="flex flex-col gap-2 border-b p-3">
-						{dialogs.map((question) => (
-							<QuestionRow
-								key={question.id}
-								question={question}
-								onAnswer={(answer) => store.answerDialog(answer)}
-							/>
-						))}
+				{problem !== null && (
+					<div className="p-3">
+						<Alert variant="destructive">
+							<AlertTitle>Sessions</AlertTitle>
+							<AlertDescription>{problem.message}</AlertDescription>
+						</Alert>
 					</div>
 				)}
 
-				{rows.length === 0 ? (
-					<div className="flex flex-1 items-center justify-center p-6">
-						<Empty>
-							<EmptyHeader>
-								<EmptyTitle>No messages yet</EmptyTitle>
-								<EmptyDescription>Ask for something to start the session.</EmptyDescription>
-							</EmptyHeader>
-						</Empty>
-					</div>
-				) : (
-					<Transcript rows={rows} />
-				)}
-
-				{widgets.length > 0 && (
-					<div className="flex flex-col gap-1 border-t px-4 py-2 font-mono text-[11px] whitespace-pre-wrap text-muted-foreground">
-						{[...aboveComposer, ...belowComposer].map((widget) => (
-							<div key={widget.key} data-placement={widget.placement}>
-								{widget.lines.join("\n")}
-							</div>
-						))}
-					</div>
-				)}
-
-				<div className="border-t p-3">
-					<div className="mx-auto flex w-full max-w-3xl items-end gap-2">
-						<Textarea
-							value={prompt}
-							onChange={(event) => setPrompt(event.target.value)}
-							placeholder="Message the agent (Enter sends, Shift+Enter is a newline)"
-							className="max-h-40 min-h-11 flex-1 resize-none"
-							onKeyDown={(event) => {
-								if (event.key === "Enter" && !event.shiftKey) {
-									event.preventDefault();
-									submit();
-								}
-							}}
+				<div className="min-h-0 flex-1 overflow-y-auto">
+					{data === undefined ? (
+						<p className="px-4 py-6 text-sm text-muted-foreground">
+							{problem === null ? "Loading sessions…" : "Sessions could not load."}
+						</p>
+					) : data.sessions.length === 0 ? (
+						<div className="flex justify-center p-6">
+							<Empty>
+								<EmptyHeader>
+									<EmptyTitle>No sessions yet</EmptyTitle>
+									<EmptyDescription>
+										Start one here, or run `pi` in this project and it appears in this list.
+									</EmptyDescription>
+								</EmptyHeader>
+								<EmptyContent>
+									<Button size="sm" onClick={() => open(crypto.randomUUID())}>
+										New session
+									</Button>
+								</EmptyContent>
+							</Empty>
+						</div>
+					) : (
+						<SessionList
+							sessions={data.sessions}
+							confirming={confirming}
+							onAskDelete={setConfirming}
+							onCancelDelete={() => setConfirming(undefined)}
+							onDelete={(id) => remove.mutate(id)}
 						/>
-						<Button onClick={submit}>send</Button>
-					</div>
+					)}
 				</div>
 			</div>
 		);

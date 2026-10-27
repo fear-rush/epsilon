@@ -1,8 +1,9 @@
 # Plan
 
-Status: **S1 and S2 verified in a browser. S3 is next.** This file answers: what
-the product does for its user, which slice is being built, and whether it is done.
-Keep "Active slice" honest; that is the only part that must never drift.
+Status: **S1 and S2 verified in a browser. S3 is built, waiting for its browser
+checks.** This file answers: what the product does for its user, which slice is
+being built, and whether it is done. Keep "Active slice" honest; that is the only
+part that must never drift.
 
 Scope and the not-building list are in [features.md](features.md). Architecture is
 in [architecture.md](architecture.md).
@@ -38,18 +39,18 @@ without a child process and a socket.
 
 ## Slices
 
-| #   | Outcome you can see                                             | Status |
-| --- | --------------------------------------------------------------- | ------ |
-| S1  | Type a prompt, watch a real answer stream in                    | done   |
-| S2  | Read a terminal-created session on a phone, tool calls and all  | done   |
-| S3  | Browse sessions, resume one, close the tab, come back           | todo   |
-| S4  | Run a full turn (steer, abort, change model) without a terminal | todo   |
-| S5  | Answer a permission prompt from the browser                     | todo   |
-| S6  | Open a file, its diff, and insert its path into the composer    | todo   |
-| S7  | Use `pi` itself in a terminal tab                               | todo   |
-| S8  | See which skills, packages and MCP servers are loaded           | todo   |
-| S9  | Preview what the agent built, from the phone                    | todo   |
-| S10 | Get pinged when a run needs an answer                           | todo   |
+| #   | Outcome you can see                                             | Status            |
+| --- | --------------------------------------------------------------- | ----------------- |
+| S1  | Type a prompt, watch a real answer stream in                    | done              |
+| S2  | Read a terminal-created session on a phone, tool calls and all  | done              |
+| S3  | Browse sessions, resume one, close the tab, come back           | built, unverified |
+| S4  | Run a full turn (steer, abort, change model) without a terminal | todo              |
+| S5  | Answer a permission prompt from the browser                     | todo              |
+| S6  | Open a file, its diff, and insert its path into the composer    | todo              |
+| S7  | Use `pi` itself in a terminal tab                               | todo              |
+| S8  | See which skills, packages and MCP servers are loaded           | todo              |
+| S9  | Preview what the agent built, from the phone                    | todo              |
+| S10 | Get pinged when a run needs an answer                           | todo              |
 
 Checks are written to be run by hand, in this order, on a phone where the slice
 says so. A slice is not done because it compiles.
@@ -79,10 +80,17 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 ### S3: Sessions and resume
 
-- [ ] Sessions are grouped by project; a running one shows a badge
+Built. The list, the open route and the delete work through the API; the four
+checks below are the browser half and have not been run yet.
+
+- [ ] The project's sessions are listed newest first; a live child shows a
+      running badge and a pending dialog shows a needs-input badge (checked with
+      `curl` only: `running` is true for a live child, false after `kill -9`, and
+      another project's id is refused with `404`)
 - [ ] Open a session the CLI created, steer it, and the CLI shows the same messages
 - [ ] Close the tab mid-run, reopen it, and the run has continued
-- [ ] Deleting a session from the UI removes it from `pi`'s list too
+- [ ] Deleting a session from the UI removes it from `pi`'s list too (checked with
+      `curl` only: `409` while a child lives, `204` and the file gone after)
 
 ### S4: Composer
 
@@ -135,13 +143,12 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 ## Active slice
 
-**S3: Sessions and resume.** Not started. Reading a session still means typing its
-id into `?session=`, which is the one friction S2 leaves behind.
+**S3: Sessions and resume.** Built; the browser checks are pending. Reading a
+session no longer means typing an id into a search parameter: `/` lists this
+project's sessions and `/sessions/<id>` opens one.
 
-Next action: list the session files under the project's directory in
-`~/.pi/agent/sessions/`, show them grouped by project, and open one by clicking
-it. A running one needs `meta` from an attached child, so attach is still what
-tells the page whether a session is live.
+Next action: run the four checks above at phone width against `bun run dev`, then
+mark S3 done and start S4 with steer and abort, which the socket already forwards.
 
 ## Facts worth keeping
 
@@ -159,10 +166,13 @@ tells the page whether a session is live.
   widget state is replayed to a late attach. Verified: a second tab receives
   `setStatus` without prompting.
 - `client/src/link.ts` ignores events from a socket it already replaced, so a
-  retry's predecessor cannot report `closed` on a working connection.
+  retry's predecessor cannot report `closed` on a working connection. The tab has
+  one Link for every session it watches: the store subscribes, and frames reach it
+  by `sessionId`, so opening three sessions in one tab keeps one socket.
 - `client/src/hooks/use-conversation.ts` keeps one store per session outside
-  React. A store created per mount loses the StrictMode race, and the socket the
-  page renders is the one that was closed
+  React, so a remount reuses the reduced transcript instead of an empty page. The
+  socket no longer lives there, so the StrictMode race that cost S2 an afternoon
+  cannot close a working connection
   ([notes/2026-10-28-strictmode-closes-the-socket.md](notes/2026-10-28-strictmode-closes-the-socket.md)).
 - The agent's project is `config.projectDir`: `EPSILON_PROJECT` or the repo root,
   never `process.cwd()`, because `turbo dev` starts the server task inside
@@ -172,6 +182,24 @@ tells the page whether a session is live.
   `toolsFromMessages` makes two passes, so a run built from a snapshot still has
   its command, its path and its diff. Verified at 390px: `bash echo …` shows the
   command and the output, `edit` shows `- old` / `+ new`.
+- The list is `SessionManager.list(config.projectDir)` behind
+  `server/src/agent/sessions.ts`, joined with `registry.live()` by
+  `server/src/sessions/list.ts`. `listAll()` is not used: it takes 1.5 s for 345
+  sessions across 94 projects, and this server drives one project.
+- REST lives under `/api`. `/sessions/<id>` is a client route, so a dev-server
+  proxy on `/sessions` would swallow a page reload. `/api` is already proxied.
+- Browse writes nothing: only the session page calls `attach`, and a new id
+  writes no file until the first message
+  ([notes/2026-10-28-fresh-session-id-writes-no-file.md](notes/2026-10-28-fresh-session-id-writes-no-file.md)).
+- Delete resolves the id with `SessionManager.findById` and refuses while the
+  registry holds a live child. A real id from another project answers `404` and
+  leaves the file alone, so the temp-project test could not touch this repo's
+  sessions.
+- No idle kill: a child stays alive after its last tab closes, so browsing many
+  sessions leaves one `pi` per session until the server stops.
+- The list badges poll `/api/sessions` every 5 s; a session running only in the
+  terminal shows no badge, because pi keeps no lock and appends to the JSONL
+  without one.
 
 Resolved risks for S1 and S2:
 
@@ -188,8 +216,10 @@ Resolved risks for S1 and S2:
 - `get_messages` returns system messages even though the wire event type excludes
   them, so the snapshot filters them at the edge and the system prompt never
   reaches the browser.
-- `--session-id` creates a file when the id is unknown. The driver takes an
-  explicit `SessionTarget` instead of letting a default decide which file to touch.
+- `--session-id` on an unknown id creates the session in memory, not a file: the
+  JSONL appears on the first message. The driver still takes an explicit
+  `SessionTarget` instead of letting a default decide which file to touch
+  ([notes/2026-10-28-fresh-session-id-writes-no-file.md](notes/2026-10-28-fresh-session-id-writes-no-file.md)).
 
 ## Universal done list
 
@@ -214,6 +244,8 @@ Every slice, in this order:
 | Bun + pi beyond startup         | `get_state` and one tool-using turn pass under Bun 1.4.4                                                                          | None needed; re-check after a pi upgrade                                      |
 | Preview proxy WebSockets        | HMR dies silently without upgrade passthrough                                                                                     | Static preview first in S9; the proxy is its own step if it fights            |
 | Extension `custom` UI           | An extension needing it is unusable in the web UI                                                                                 | Visible notice, not silence; terminal tab                                     |
+| Two writers on one session      | pi appends to the JSONL with no lock, so the terminal and a browser child on the same session would interleave entries            | Resume sequentially; nothing guards the concurrent case yet                   |
+| One child per opened session    | There is no idle kill, so every session ever opened keeps a `pi` process until shutdown                                           | Pool and idle timeout (`agent/pool.ts`) is still unbuilt                      |
 | Scope creep into settings forms | 20k+ lines in the project this replaces                                                                                           | The terminal tab is the settings UI (ADR-0002)                                |
 
 ## Definition of done for V1

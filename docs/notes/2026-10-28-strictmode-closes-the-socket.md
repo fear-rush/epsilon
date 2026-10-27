@@ -29,8 +29,12 @@ per page load. Both StrictMode invocations then resolve to the same store and th
 same socket. The store no longer closes itself; the tab's lifetime is the
 socket's lifetime.
 
+Since S3 the socket is a singleton in `link.ts` and no store can close it, so the
+closed-socket half of this can no longer happen. The store map stays because a
+remount must keep the reduced transcript.
+
 ## Check
 
-Open `/?session=<id>` in development, where StrictMode is on. The header shows
+Open `/sessions/<id>` in development, where StrictMode is on. The header shows
 `open` and the transcript renders, with exactly one `/api/link` socket in the
-network log.
+network log, also after opening a second session in the same tab.

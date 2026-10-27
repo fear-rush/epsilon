@@ -4,12 +4,10 @@
  * in front (docs/protocol.md, Non-goals).
  */
 import app from "./index";
-import { SessionRegistry } from "./agent/registry";
 import { config } from "./config";
+import { registry } from "./runtime";
 import { handleClose, handleMessage, handleOpen } from "./ws/chat";
 import type { ChatState } from "./ws/chat";
-
-const registry = new SessionRegistry(config.projectDir);
 
 const server = Bun.serve<ChatState>({
 	port: config.port,

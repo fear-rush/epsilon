@@ -1,36 +1,49 @@
 /**
- * One socket per tab. Owns the handshake, the sessions this tab watches, and
- * reconnect with backoff (docs/protocol.md, Reconnect). No React: this module
- * is called from a store, not from a component body.
+ * The tab's socket: one per tab, per docs/protocol.md. Stores come and go with
+ * routes; the socket does not. Frames are routed to the stores watching their
+ * sessionId, so a late store joins a socket that is already open.
  */
 import { PROTOCOL_VERSION, clientFrameSchema, serverFrameSchema } from "shared";
 import type { ClientFrame, ServerFrame } from "shared";
 
 export type LinkStatus = "connecting" | "open" | "closed";
 
-export type LinkHandlers = {
-	onFrame: (frame: ServerFrame) => void;
-	onStatus: (status: LinkStatus) => void;
-};
+type FrameHandler = (frame: ServerFrame) => void;
+type StatusHandler = (status: LinkStatus) => void;
 
 const SOCKET_PATH = "/api/link";
 const RECONNECT_STEPS_MS = [500, 1_000, 2_000, 4_000, 8_000];
 
 export class Link {
-	private readonly handlers: LinkHandlers;
 	private readonly tabId = crypto.randomUUID();
-	private readonly watched = new Set<string>();
+	private readonly frames = new Map<string, Set<FrameHandler>>();
+	private readonly statusListeners = new Set<StatusHandler>();
 	private socket: WebSocket | undefined;
+	private status: LinkStatus = "connecting";
 	private attempt = 0;
 
-	constructor(handlers: LinkHandlers) {
-		this.handlers = handlers;
+	constructor() {
 		this.connect();
 	}
 
-	attach(sessionId: string): void {
-		this.watched.add(sessionId);
+	get current(): LinkStatus {
+		return this.status;
+	}
+
+	/** The current status, then every change. Called immediately on subscribe. */
+	onStatus(listener: StatusHandler): () => void {
+		this.statusListeners.add(listener);
+		listener(this.status);
+		return () => this.statusListeners.delete(listener);
+	}
+
+	/** Watch one session. Returns the detach for that session alone. */
+	attach(sessionId: string, onFrame: FrameHandler): () => void {
+		const handlers = this.frames.get(sessionId) ?? new Set<FrameHandler>();
+		handlers.add(onFrame);
+		this.frames.set(sessionId, handlers);
 		this.send({ t: "attach", sessionId });
+		return () => this.detach(sessionId, onFrame);
 	}
 
 	send(frame: ClientFrame): void {
@@ -38,8 +51,17 @@ export class Link {
 		this.socket.send(JSON.stringify(clientFrameSchema.parse(frame)));
 	}
 
+	private detach(sessionId: string, onFrame: FrameHandler): void {
+		const handlers = this.frames.get(sessionId);
+		if (handlers === undefined) return;
+		handlers.delete(onFrame);
+		if (handlers.size > 0) return;
+		this.frames.delete(sessionId);
+		this.send({ t: "detach", sessionId });
+	}
+
 	private connect(): void {
-		this.handlers.onStatus("connecting");
+		this.setStatus("connecting");
 		const scheme = location.protocol === "https:" ? "wss" : "ws";
 		const socket = new WebSocket(`${scheme}://${location.host}${SOCKET_PATH}`);
 		this.socket = socket;
@@ -58,7 +80,7 @@ export class Link {
 		});
 		socket.addEventListener("close", () => {
 			if (!isCurrent()) return;
-			this.handlers.onStatus("closed");
+			this.setStatus("closed");
 			this.retry();
 		});
 	}
@@ -69,14 +91,25 @@ export class Link {
 		setTimeout(() => this.connect(), delay);
 	}
 
+	private setStatus(status: LinkStatus): void {
+		this.status = status;
+		for (const listener of this.statusListeners) listener(status);
+	}
+
 	private receive(raw: string): void {
 		const frame = serverFrameSchema.safeParse(JSON.parse(raw));
 		if (!frame.success) return;
 		this.attempt = 0;
 		if (frame.data.t === "welcome") {
-			this.handlers.onStatus("open");
-			for (const sessionId of this.watched) this.send({ t: "attach", sessionId });
+			this.setStatus("open");
+			for (const sessionId of this.frames.keys()) this.send({ t: "attach", sessionId });
 		}
-		this.handlers.onFrame(frame.data);
+		if (!("sessionId" in frame.data)) return;
+		const sessionId = frame.data.sessionId;
+		if (sessionId === undefined) return;
+		for (const handler of this.frames.get(sessionId) ?? []) handler(frame.data);
 	}
 }
+
+/** The tab's one socket. The chunk that imports it is the session page. */
+export const link = new Link();

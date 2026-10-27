@@ -1,8 +1,9 @@
 # UI
 
-Status: **design, not implemented.** Covers the visual vocabulary, the layout,
-and the interaction rules. Numbers marked "starting value" are decisions to adopt
-now and tune in S2, not laws.
+Status: **design.** Covers the visual vocabulary, the layout, and the interaction
+rules. Implemented surfaces and their checks are in [plan.md](plan.md). Numbers
+marked "starting value" are decisions to adopt now and tune against a real screen,
+not laws.
 
 ## Principles
 
@@ -138,7 +139,7 @@ uses a bottom `Sheet`. Destructive items confirm in `AlertDialog`.
 no in-session branch switcher (not an RPC command); no settings form for resources.
 See `docs/reference/pi-rpc.md`.
 
-## Open questions for S2
+## Open questions from S2
 
 Deciding these needs a real transcript, not a document:
 

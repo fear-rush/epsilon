@@ -1,29 +1,31 @@
 # Features and how each one is built
 
-Status: **design, not implemented.** One row per feature. The "How" column is
-the point of this page: it records what is possible through pi's RPC surface,
-what needs our own code, and what is deliberately left to the terminal.
+Status: **design.** Implemented slices and their checks live in [plan.md](plan.md).
+One row per feature. The "How" column is the point of this page: it records what
+is possible through pi's RPC surface, what needs our own code, and what is
+deliberately left to the terminal.
 
 Legend: **RPC** = a pi command or frame · **REST** = our HTTP route ·
 **WS** = our socket · **own** = our own module · **terminal** = the terminal tab.
 
 ## Sessions
 
-| Feature                                                               | How                                                |
-| --------------------------------------------------------------------- | -------------------------------------------------- |
-| List sessions grouped by project, with running and needs-input badges | REST `GET /sessions` + WS `meta`                   |
-| Open a session, read the transcript                                   | REST `GET /sessions/{id}` + WS `snapshot`          |
-| Full history, tree view (read-only)                                   | RPC `get_entries`, `get_tree`                      |
-| Rename                                                                | RPC `set_session_name`                             |
-| New session                                                           | RPC `new_session`                                  |
-| Fork from a message into a new session                                | RPC `fork`                                         |
-| Clone the current branch into a new session                           | RPC `clone`                                        |
-| Switch to another session file                                        | RPC `switch_session`                               |
-| Delete                                                                | REST `DELETE /sessions/{id}` (refuses if running)  |
-| Export to HTML                                                        | RPC `export_html`                                  |
-| Search transcripts                                                    | own `server/src/sessions/search.ts`                |
-| Pins, archive, project order, unread                                  | own, `~/.epsilon/ui-state.json`                    |
-| In-session branch switching (`/tree`)                                 | **terminal**; `navigateTree` is not an RPC command |
+| Feature                                                           | How                                                                  |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------- |
+| List this project's sessions, with running and needs-input badges | REST `GET /api/sessions` (live state joined server-side)             |
+| Open a session, read the transcript                               | URL `/sessions/{id}` + WS `attach` → `snapshot`                      |
+| Start a session from the list                                     | own: navigate to a fresh id; pi writes the file on the first message |
+| Full history, tree view (read-only)                               | RPC `get_entries`, `get_tree`                                        |
+| Rename                                                            | RPC `set_session_name`                                               |
+| New session                                                       | RPC `new_session`                                                    |
+| Fork from a message into a new session                            | RPC `fork`                                                           |
+| Clone the current branch into a new session                       | RPC `clone`                                                          |
+| Switch to another session file                                    | RPC `switch_session`                                                 |
+| Delete                                                            | REST `DELETE /api/sessions/{id}` (refuses while a child lives)       |
+| Export to HTML                                                    | RPC `export_html`                                                    |
+| Search transcripts                                                | own `server/src/sessions/search.ts`                                  |
+| Pins, archive, project order, unread                              | own, `~/.epsilon/ui-state.json`                                      |
+| In-session branch switching (`/tree`)                             | **terminal**; `navigateTree` is not an RPC command                   |
 
 ## Running a turn
 

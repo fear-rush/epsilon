@@ -12,6 +12,18 @@ export {
 	snapshotSchema,
 } from "./protocol/frames";
 export { PROTOCOL_VERSION } from "./protocol/version";
+export {
+	sessionErrorCodeSchema,
+	sessionErrorSchema,
+	sessionListSchema,
+	sessionSummarySchema,
+} from "./schemas/sessions";
+export type {
+	SessionError,
+	SessionErrorCode,
+	SessionList,
+	SessionSummary,
+} from "./schemas/sessions";
 export { emptyConversation } from "./conversation/state";
 export { isVisibleMessage } from "./conversation/state";
 export type {

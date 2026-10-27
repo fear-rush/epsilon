@@ -1,8 +1,8 @@
 # Architecture
 
-Status: **partly implemented.** The socket, the driver and the transcript page
-exist; nothing lists the sessions on disk yet. See [plan.md](plan.md) for the
-slice in progress rather than a status here.
+Status: **partly implemented.** The socket, the driver, the transcript page and
+the session list exist. See [plan.md](plan.md) for the slice in progress rather
+than a status here.
 
 A map of the system: what the parts are, what each owns, and how a request or an
 event travels. Rationale lives in [adr/](adr/); rules live in
@@ -49,11 +49,13 @@ content. It never shares an origin with the API (ADR-0003).
 
 | Module               | Owns                                                                                   |
 | -------------------- | -------------------------------------------------------------------------------------- |
-| `index.ts`           | The Hono app, exported for tests. No listener.                                         |
+| `index.ts`           | The Hono app and its generated OpenAPI document, exported for tests. No listener.      |
+| `runtime.ts`         | The one live-child registry, shared by the socket and the REST handlers                |
 | `serve.ts`           | `Bun.serve` with `fetch` + `websocket`, plus the preview listener, plus shutdown hooks |
 | `config.ts`          | Ports, paths, caps, env. The only place that reads `process.env`                       |
 | `security.ts`        | Loopback and Host checks, optional token                                               |
 | `agent/driver.ts`    | Spawning `pi --mode rpc`, JSONL framing, `send`, `onFrame`, `onExit`, `kill`           |
+| `agent/sessions.ts`  | pi's session-manager: the only path from REST to session files                         |
 | `agent/pool.ts`      | sessionId → child, cap, LRU, idle kill, idle-gated restart                             |
 | `agent/normalize.ts` | `JsonAgentSessionEvent` → protocol frames. The only place that knows pi's event shapes |
 | `agent/extui.ts`     | The nine dialog methods, pending-request replay, cancel on abort                       |
@@ -61,7 +63,8 @@ content. It never shares an origin with the API (ADR-0003).
 | `ws/hub.ts`          | Attach/detach, per-session channel registry, meta fan-out                              |
 | `ws/channel.ts`      | Per-session ordering, delta coalescing, backpressure limits                            |
 | `sessions/reader.ts` | Reading a session file through pi's session-manager helpers                            |
-| `sessions/list.ts`   | Grouping by project, running and needs-input joins                                     |
+| `sessions/list.ts`   | Joining stored sessions with live children, newest first                               |
+| `sessions/delete.ts` | Removing one session file, refused while a child holds it                              |
 | `sessions/search.ts` | Transcript search                                                                      |
 | `sessions/fork.ts`   | Copying a branch into a new session file                                               |
 | `routes/*.ts`        | Thin handlers: validate, call one function, return                                     |
@@ -99,9 +102,10 @@ content. It never shares an origin with the API (ADR-0003).
 
 ## Data flows
 
-**Open a session.** REST `GET /sessions/{id}` for the file record → WS `attach` →
-server ensures a child → snapshot from `get_state`, `get_messages`, `get_commands`,
-`get_session_stats` → client replaces state → later frames are deltas.
+**Open a session.** The id comes from `GET /api/sessions` → WS `attach` → server
+ensures a child → snapshot from `get_state` and `get_messages` → client replaces
+state → later frames are deltas. REST lives under `/api` and `/sessions/<id>` is
+a client route, so a reload is not swallowed by the dev proxy.
 
 **Send a prompt.** Client sends `rpc { prompt }` → driver writes JSON → pi streams
 `message_*` and `tool_execution_*` events → normalizer → channel → client reducer.

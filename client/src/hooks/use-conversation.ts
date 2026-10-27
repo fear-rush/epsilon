@@ -3,15 +3,11 @@ import { useSyncExternalStore } from "react";
 import { ConversationStore } from "@/conversation/store";
 
 /**
- * One store per session per tab, held outside React. StrictMode runs a state
- * initializer twice and discards one result, so a store created per mount leaves
- * a closed socket behind the one the page renders: the transcript stays empty and
- * the header stays on "connecting" while the server sends a full snapshot.
+ * One store per session per tab, held outside React: a remount reuses the reduced
+ * transcript instead of showing an empty page until the next snapshot. The socket
+ * is not held here; `link.ts` owns the tab's one socket.
  */
 const stores = new Map<string, ConversationStore>();
-
-/** One fresh session per page load, so a second mount reuses the same id. */
-const freshSessionId = crypto.randomUUID();
 
 const storeFor = (sessionId: string): ConversationStore => {
 	const existing = stores.get(sessionId);
@@ -22,11 +18,12 @@ const storeFor = (sessionId: string): ConversationStore => {
 };
 
 /**
- * Without a session id the page opens a new session, which is what S2 can do
- * before the session list exists.
+ * A session id is always known (the list generates one for a new session), so a
+ * page load can never mint a session by accident. Only the explicit "New session"
+ * does, and pi writes its file on the first message.
  */
-export function useConversation(sessionId?: string) {
-	const store = storeFor(sessionId ?? freshSessionId);
+export function useConversation(sessionId: string) {
+	const store = storeFor(sessionId);
 	const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
 	return { store, snapshot };
 }

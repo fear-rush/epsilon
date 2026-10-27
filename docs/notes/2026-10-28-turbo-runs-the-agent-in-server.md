@@ -30,7 +30,7 @@ so the next surprise is visible in the log.
 
 ## Check
 
-`bun run dev`, then open `/?session=<id>` for a session the terminal created in
+`bun run dev`, then open `/sessions/<id>` for a session the terminal created in
 the repository root. The transcript renders and the startup line names the
 project:
 

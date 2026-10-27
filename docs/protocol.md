@@ -3,11 +3,11 @@
 Status: **partly implemented.** This is the contract between `server/` and
 `client/`. Both sides implement it; neither invents frames.
 
-On the wire today (S2): `hello`, `welcome`, `attach`, `detach`, `rpc`, `dialog`
+On the wire today (S3): `hello`, `welcome`, `attach`, `detach`, `rpc`, `dialog`
 and `dialog-closed`, `ui`, `ping`/`pong`, plus `snapshot`, `event`, `rpc-result`,
 `meta` and `error`. Not yet: every `terminal` frame, `commands` and `stats` inside
 a snapshot, the coalescing and backpressure rules, the heartbeat and the restart
-action. Those belong to S3, S7 and S8 in [plan.md](plan.md).
+action. Those belong to later slices in [plan.md](plan.md).
 
 The REST API is separate. Use REST for reading the disk (sessions, files, git,
 resources, ui-state) and this socket for everything agent-shaped.

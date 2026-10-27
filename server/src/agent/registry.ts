@@ -18,6 +18,13 @@ export class SessionRegistry {
 		return session?.isRunning === true ? session : undefined;
 	}
 
+	/** Every session this server holds a live child for, for the list badges. */
+	live(): { id: string; needsInput: boolean }[] {
+		return [...this.sessions.values()]
+			.filter((session) => session.isRunning)
+			.map((session) => ({ id: session.sessionId, needsInput: session.needsInput }));
+	}
+
 	/** The live child for this session, or a fresh one if it never existed or died. */
 	ensure(sessionId: string): AgentSession {
 		const existing = this.find(sessionId);

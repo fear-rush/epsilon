@@ -4,7 +4,7 @@ A web dashboard for one user. It controls the `pi` coding agent and starts the
 `pi` CLI as a child process in `--mode rpc`. The dashboard and the terminal share
 sessions, extensions, tools and credentials.
 
-Status: S1 and S2 work; the transcript page is real. Progress lives in
+Status: S1 and S2 work; S3 is built and awaits its browser checks. Progress lives in
 [docs/plan.md](docs/plan.md).
 
 Start with [docs/README.md](docs/README.md). Read these documents in this order:

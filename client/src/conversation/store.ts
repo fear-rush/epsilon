@@ -1,15 +1,13 @@
 /**
- * The tab's conversation. Holds one Link and the reducer output; no React, so it
- * can be driven and inspected outside a component.
- *
- * The state is only what frames produced. A reconnect resync replaces it in S3;
- * today the frames simply continue.
+ * One session's transcript in this tab. The socket belongs to the tab (link.ts),
+ * so this store holds only what frames reduced to: a remount reuses it instead of
+ * rebuilding the transcript from a snapshot.
  */
 import type { RpcExtensionUIResponse } from "shared";
 import { emptyConversation, reduce } from "shared";
 import type { ConversationState } from "shared";
 
-import { Link } from "@/link";
+import { link } from "@/link";
 import type { LinkStatus } from "@/link";
 
 export type ConversationSnapshot = {
@@ -21,17 +19,13 @@ export type ConversationSnapshot = {
 export class ConversationStore {
 	private snapshot: ConversationSnapshot;
 	private readonly listeners = new Set<() => void>();
-	private readonly link: Link;
 	readonly sessionId: string;
 
 	constructor(sessionId: string) {
 		this.sessionId = sessionId;
-		this.snapshot = { sessionId, status: "connecting", state: emptyConversation };
-		this.link = new Link({
-			onStatus: (status) => this.update({ status }),
-			onFrame: (frame) => this.update({ state: reduce(this.snapshot.state, frame) }),
-		});
-		this.link.attach(sessionId);
+		this.snapshot = { sessionId, status: link.current, state: emptyConversation };
+		link.onStatus((status) => this.update({ status }));
+		link.attach(sessionId, (frame) => this.update({ state: reduce(this.snapshot.state, frame) }));
 	}
 
 	readonly subscribe = (listener: () => void): (() => void) => {
@@ -42,11 +36,11 @@ export class ConversationStore {
 	readonly getSnapshot = (): ConversationSnapshot => this.snapshot;
 
 	sendPrompt(message: string): void {
-		this.link.send({ t: "rpc", sessionId: this.sessionId, command: { type: "prompt", message } });
+		link.send({ t: "rpc", sessionId: this.sessionId, command: { type: "prompt", message } });
 	}
 
 	answerDialog(answer: RpcExtensionUIResponse): void {
-		this.link.send({ t: "dialog", sessionId: this.sessionId, answer });
+		link.send({ t: "dialog", sessionId: this.sessionId, answer });
 	}
 
 	private update(change: Partial<ConversationSnapshot>): void {
