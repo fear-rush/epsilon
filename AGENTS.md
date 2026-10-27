@@ -7,10 +7,10 @@ credentials with the terminal `pi`. Start with [plan.md](docs/plan.md), then
 
 ## Workspaces
 
-- `server/` — Hono API, agent children, disk reads. Node-compatible.
-- `client/` — React, Vite, Tailwind, shadcn.
-- `shared/` — browser-safe types, zod schemas, the conversation reducer.
-- `tools/` — local Oxlint plugins.
+- `server/`: Hono API, agent children, disk reads. Node-compatible.
+- `client/`: React, Vite, Tailwind, shadcn.
+- `shared/`: browser-safe types, zod schemas, the conversation reducer.
+- `tools/`: local Oxlint plugins.
 
 ## Commands
 

@@ -44,7 +44,7 @@ reason is in [features.md](features.md) and in ADR-0002's consequences).
 
 ## Module map
 
-`server/src/` — the host. Node-compatible, no browser code.
+`server/src/`: the host. Node-compatible, no browser code.
 
 | Module               | Owns                                                                                   |
 | -------------------- | -------------------------------------------------------------------------------------- |
@@ -69,20 +69,20 @@ reason is in [features.md](features.md) and in ADR-0002's consequences).
 | `state/ui.ts`        | `~/.epsilon/ui-state.json`: pins, archive, project order                               |
 | `notify.ts`          | Needs-input and turn-end notifications                                                 |
 
-`shared/src/` — browser-safe. No `node:*`, no React.
+`shared/src/`: browser-safe. No `node:*`, no React.
 
 | Module                      | Owns                                                                    |
 | --------------------------- | ----------------------------------------------------------------------- |
 | `protocol/version.ts`       | `PROTOCOL_VERSION`                                                      |
 | `protocol/frames.ts`        | zod schemas for every socket frame                                      |
 | `conversation/state.ts`     | `ConversationState`                                                     |
-| `conversation/reduce.ts`    | `reduce(state, frame)` — pure, replay-tested                            |
+| `conversation/reduce.ts`    | `reduce(state, frame)`: pure, replay-tested                             |
 | `conversation/selectors.ts` | Derived views: messages, running tools, pending dialog, needs-input     |
 | `conversation/fixtures/`    | Recorded event logs, one per hard case                                  |
 | `pi.ts`                     | Type-only re-exports from pi (`RpcCommand`, `JsonAgentSessionEvent`, …) |
 | `schemas/*.ts`              | zod schemas for REST bodies and responses                               |
 
-`client/src/` — React and Vite.
+`client/src/`: React and Vite.
 
 | Module                                                            | Owns                                                             |
 | ----------------------------------------------------------------- | ---------------------------------------------------------------- |

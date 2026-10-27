@@ -14,8 +14,8 @@ waits.
 
 1. **Continue.** I start a task at my desk, walk away, open the same session on my
    phone, and steer it.
-2. **Inspect.** I see what the agent did — commands, edits, diffs, images,
-   notices — without scrolling a terminal.
+2. **Inspect.** I see what the agent did (commands, edits, diffs, images,
+   notices) without scrolling a terminal.
 3. **Oversee.** I get notified when it needs an answer, and I can answer from
    wherever I am.
 4. **Verify.** I look at what it built and read the diff before I accept it.
@@ -38,23 +38,23 @@ without a child process and a socket.
 
 ## Slices
 
-| #   | Outcome you can see                                               | Status |
-| --- | ----------------------------------------------------------------- | ------ |
-| S1  | Type a prompt, watch a real answer stream in                      | todo   |
-| S2  | Read a terminal-created session on a phone, tool calls and all    | todo   |
-| S3  | Browse sessions, resume one, close the tab, come back             | todo   |
-| S4  | Run a full turn — steer, abort, change model — without a terminal | todo   |
-| S5  | Answer a permission prompt from the browser                       | todo   |
-| S6  | Open a file, its diff, and insert its path into the composer      | todo   |
-| S7  | Use `pi` itself in a terminal tab                                 | todo   |
-| S8  | See which skills, packages and MCP servers are loaded             | todo   |
-| S9  | Preview what the agent built, from the phone                      | todo   |
-| S10 | Get pinged when a run needs an answer                             | todo   |
+| #   | Outcome you can see                                             | Status |
+| --- | --------------------------------------------------------------- | ------ |
+| S1  | Type a prompt, watch a real answer stream in                    | todo   |
+| S2  | Read a terminal-created session on a phone, tool calls and all  | todo   |
+| S3  | Browse sessions, resume one, close the tab, come back           | todo   |
+| S4  | Run a full turn (steer, abort, change model) without a terminal | todo   |
+| S5  | Answer a permission prompt from the browser                     | todo   |
+| S6  | Open a file, its diff, and insert its path into the composer    | todo   |
+| S7  | Use `pi` itself in a terminal tab                               | todo   |
+| S8  | See which skills, packages and MCP servers are loaded           | todo   |
+| S9  | Preview what the agent built, from the phone                    | todo   |
+| S10 | Get pinged when a run needs an answer                           | todo   |
 
 Checks are written to be run by hand, in this order, on a phone where the slice
 says so. A slice is not done because it compiles.
 
-### S1 — One live turn
+### S1: One live turn
 
 Spawn `pi --mode rpc`, frame its stdout, one WebSocket, a textarea and a raw event
 list. Ugly on purpose.
@@ -66,7 +66,7 @@ list. Ugly on purpose.
 - [ ] `@earendil-works/*` is imported only in `server/src/agent/` and
       `shared/src/pi.ts` (a `grep` proves it; the lint rule is in place)
 
-### S2 — Transcript
+### S2: Transcript
 
 Reducer plus renderers, driven by the fixture first, then live.
 
@@ -77,14 +77,14 @@ Reducer plus renderers, driven by the fixture first, then live.
 - [ ] A tool name with no renderer still renders (generic fallback, never blank)
 - [ ] Replaying a recorded fixture twice yields an identical transcript
 
-### S3 — Sessions and resume
+### S3: Sessions and resume
 
 - [ ] Sessions are grouped by project; a running one shows a badge
 - [ ] Open a session the CLI created, steer it, and the CLI shows the same messages
 - [ ] Close the tab mid-run, reopen it, and the run has continued
 - [ ] Deleting a session from the UI removes it from `pi`'s list too
 
-### S4 — Composer
+### S4: Composer
 
 - [ ] Steer mid-run and see the message land in the transcript
 - [ ] Abort, and the run stops in the CLI as well
@@ -92,7 +92,7 @@ Reducer plus renderers, driven by the fixture first, then live.
 - [ ] An installed skill or prompt template appears in the palette and runs
 - [ ] `!ls` runs a shell command and its output is in the transcript
 
-### S5 — Extension dialogs
+### S5: Extension dialogs
 
 - [ ] A permission prompt appears in the browser; approving continues the run
 - [ ] A second tab cannot answer the same prompt twice
@@ -100,34 +100,34 @@ Reducer plus renderers, driven by the fixture first, then live.
 - [ ] An extension using `ctx.ui.custom` shows the unsupported notice and points
       at the terminal tab (never silence)
 
-### S6 — Files and diff
+### S6: Files and diff
 
 - [ ] Browse the project tree; open a source file, an image and a CSV
 - [ ] A path outside the project is refused with `PATH_NOT_ALLOWED`
 - [ ] Open the diff of the file the agent just edited
 - [ ] Insert a file path into the composer with `@`
 
-### S7 — Terminal
+### S7: Terminal
 
 - [ ] `pi` itself runs in the terminal tab; `/login` and `/settings` work
 - [ ] Resize works, and the touch key row types Esc, Tab and Ctrl+C
 - [ ] Closing the tab kills the pty: `pgrep -f pi` shows no orphan
 
-### S8 — Resources
+### S8: Resources
 
 - [ ] Skills, packages and MCP servers are listed with scope and source path
 - [ ] Install a package in the terminal tab, restart the session, and its tool
       appears in the browser
 - [ ] Nothing on this page writes
 
-### S9 — Preview
+### S9: Preview
 
 - [ ] Preview an HTML file the agent wrote, from the phone
 - [ ] A dev server started by the agent is previewable, and edits hot-reload
 - [ ] The previewed page cannot read the API (`fetch` fails from the frame)
 - [ ] Preview / Source / Diff tabs agree with each other
 
-### S10 — Notifications
+### S10: Notifications
 
 - [ ] With a pending prompt and no open tab, a notification arrives on the phone
 - [ ] A finished run notifies once, not once per message
@@ -135,7 +135,7 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 ## Active slice
 
-**S1 — One live turn.** Not started.
+**S1: One live turn.** Not started.
 
 Next action: spawn `pi --mode rpc`, print raw stdout lines in a terminal, then wire
 the socket. Do not start framing abstraction work before one real trace exists.
