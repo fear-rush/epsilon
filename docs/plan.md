@@ -153,6 +153,9 @@ Facts worth keeping while this slice closes:
   a silent reconnect loop.
 - The child leaks if a tab closes: the registry keeps it, and killing it when
   idle is the pool's job in S3. Only server shutdown kills every child today.
+- `client/src/link.ts` ignores events from a socket it already replaced. Without
+  that guard, React StrictMode's double mount reports `closed` on a working
+  connection, because the first socket's close lands after the second one opens.
 
 Resolved risks for this slice:
 

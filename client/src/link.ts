@@ -50,11 +50,22 @@ export class Link {
 		const socket = new WebSocket(`${scheme}://${location.host}${SOCKET_PATH}`);
 		this.socket = socket;
 
+		// Ignore everything from a socket that is no longer live. In development
+		// StrictMode mounts the page twice, and the first socket's `close` arrives
+		// after the second one is already open, which reported "closed" on a
+		// working connection.
+		const isCurrent = () => !this.stopped && this.socket === socket;
+
 		socket.addEventListener("open", () => {
+			if (!isCurrent()) return;
 			this.send({ t: "hello", protocol: PROTOCOL_VERSION, tabId: this.tabId });
 		});
-		socket.addEventListener("message", (event) => this.receive(String(event.data)));
+		socket.addEventListener("message", (event) => {
+			if (!isCurrent()) return;
+			this.receive(String(event.data));
+		});
 		socket.addEventListener("close", () => {
+			if (!isCurrent()) return;
 			this.handlers.onStatus("closed");
 			this.retry();
 		});

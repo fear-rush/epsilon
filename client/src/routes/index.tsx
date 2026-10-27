@@ -54,7 +54,9 @@ export const Route = createFileRoute("/")({
 				<div className="flex flex-wrap items-center gap-3 text-muted-foreground">
 					<span>socket: {status}</span>
 					<span>session: {sessionId.slice(0, 8)}</span>
-					<span>{meta?.running === true ? "running" : "idle"}</span>
+					<span>
+						agent: {meta === undefined ? "not started" : meta.running ? "running" : "idle"}
+					</span>
 					{questions.length > 0 && <span className="text-amber-600">needs input</span>}
 					<Button size="sm" variant="outline" onClick={() => setFrames([])}>
 						clear
