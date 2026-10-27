@@ -87,16 +87,12 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 ### S4: Composer
 
-Steer and abort are built: while a turn runs the composer turns into steer and
-stop, Esc stops from the textarea, and a refused command becomes a notice. Model
-switching, the palette and `!cmd` are not started.
+Steer and abort are built and verified: while a turn runs the composer turns into
+steer and stop, Esc stops from the textarea, and a refused command becomes a
+notice. Model switching, the palette and `!cmd` are not started.
 
-- [ ] Steer mid-run and see the message land in the transcript (checked over the
-      socket: `steer` answered ok, its text arrived as a user message, and the
-      turn ended with it; the buttons are not yet checked in a browser)
-- [ ] Abort, and the run stops in the CLI as well (checked over the socket:
-      `abort` answered ok, then `message_end`, `turn_end`, `agent_end` and
-      `agent_settled`)
+- [x] Steer mid-run and see the message land in the transcript
+- [x] Abort, and the run stops in the CLI as well
 - [ ] Change model; the next turn uses it, and `get_state` in the CLI agrees
 - [ ] An installed skill or prompt template appears in the palette and runs
 - [ ] `!ls` runs a shell command and its output is in the transcript
@@ -144,8 +140,7 @@ switching, the palette and `!cmd` are not started.
 
 ## Active slice
 
-**S4: Composer.** Steer and abort are built; their browser checks and three
-controls remain.
+**S4: Composer.** Steer and abort are done; three controls remain.
 
 Next action: the model picker. `get_available_models` lists the choices,
 `set_model` switches, and the snapshot's `model` and `thinkingLevel` say what is
