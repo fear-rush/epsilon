@@ -5,21 +5,18 @@
  */
 import app from "./index";
 import { SessionRegistry } from "./agent/registry";
+import { config } from "./config";
 import { handleClose, handleMessage, handleOpen } from "./ws/chat";
 import type { ChatState } from "./ws/chat";
 
-const SOCKET_PATH = "/api/link";
-const PORT = Number(process.env.PORT ?? 3000);
-const HOST = "127.0.0.1";
-
-const registry = new SessionRegistry(process.cwd());
+const registry = new SessionRegistry(config.projectDir);
 
 const server = Bun.serve<ChatState>({
-	port: PORT,
-	hostname: HOST,
+	port: config.port,
+	hostname: config.host,
 	fetch(request, bunServer) {
 		const { pathname } = new URL(request.url);
-		if (pathname !== SOCKET_PATH) return app.fetch(request);
+		if (pathname !== config.socketPath) return app.fetch(request);
 		const tabId = crypto.randomUUID();
 		const upgraded = bunServer.upgrade(request, {
 			data: { tabId, welcomed: false, unsubscribes: new Map() },
@@ -35,7 +32,9 @@ const server = Bun.serve<ChatState>({
 	},
 });
 
-console.log(`epsilon on http://${HOST}:${server.port} (socket ${SOCKET_PATH})`);
+console.log(
+	`epsilon on http://${config.host}:${server.port} (socket ${config.socketPath}, project ${config.projectDir})`,
+);
 
 const shutdown = (): void => {
 	registry.killAll();

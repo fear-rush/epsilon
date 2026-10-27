@@ -49,10 +49,6 @@ export class ConversationStore {
 		this.link.send({ t: "dialog", sessionId: this.sessionId, answer });
 	}
 
-	close(): void {
-		this.link.close();
-	}
-
 	private update(change: Partial<ConversationSnapshot>): void {
 		this.snapshot = { ...this.snapshot, ...change };
 		for (const listener of this.listeners) listener();

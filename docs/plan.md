@@ -1,8 +1,8 @@
 # Plan
 
-Status: **design, not implemented.** This file answers: what the product does for
-its user, which slice is being built, and whether it is done. Keep "Active slice"
-honest; that is the only part that must never drift.
+Status: **S1 and S2 verified in a browser. S3 is next.** This file answers: what
+the product does for its user, which slice is being built, and whether it is done.
+Keep "Active slice" honest; that is the only part that must never drift.
 
 Scope and the not-building list are in [features.md](features.md). Architecture is
 in [architecture.md](architecture.md).
@@ -40,8 +40,8 @@ without a child process and a socket.
 
 | #   | Outcome you can see                                             | Status |
 | --- | --------------------------------------------------------------- | ------ |
-| S1  | Type a prompt, watch a real answer stream in                    | wip    |
-| S2  | Read a terminal-created session on a phone, tool calls and all  | wip    |
+| S1  | Type a prompt, watch a real answer stream in                    | done   |
+| S2  | Read a terminal-created session on a phone, tool calls and all  | done   |
 | S3  | Browse sessions, resume one, close the tab, come back           | todo   |
 | S4  | Run a full turn (steer, abort, change model) without a terminal | todo   |
 | S5  | Answer a permission prompt from the browser                     | todo   |
@@ -59,22 +59,22 @@ says so. A slice is not done because it compiles.
 Spawn `pi --mode rpc`, frame its stdout, one WebSocket, a textarea and a raw event
 list. Ugly on purpose.
 
-- [ ] A prompt sent from the browser streams a real answer back, incrementally
-- [ ] Kill the child mid-stream: the page reports the agent exited, no silence
+- [x] A prompt sent from the browser streams a real answer back, incrementally
+- [x] Kill the child mid-stream: the page reports the agent exited, no silence
 - [x] A tool-using turn is recorded and committed to
       `shared/src/conversation/fixtures/`
-- [ ] `@earendil-works/*` is imported only in `server/src/agent/` and
-      `shared/src/pi.ts` (a `grep` proves it; the lint rule is in place)
+- [x] `@earendil-works/*` is imported only in `server/src/agent/` and
+      `shared/src/pi.ts` (a `grep` proves it; no lint rule exists yet)
 
 ### S2: Transcript
 
 Reducer plus renderers, driven by the fixture first, then live.
 
-- [ ] A session created in the terminal `pi` is readable in the browser
-- [ ] On a phone width: no horizontal scrolling, no layout jump while streaming
-- [ ] A `bash` card shows command and output; an `edit` shows a diff; an image
+- [x] A session created in the terminal `pi` is readable in the browser
+- [x] On a phone width: no horizontal scrolling, no layout jump while streaming
+- [x] A `bash` card shows command and output; an `edit` shows a diff; an image
       result shows the image
-- [ ] A tool name with no renderer still renders (generic fallback, never blank)
+- [x] A tool name with no renderer still renders (generic fallback, never blank)
 - [x] Replaying a recorded fixture twice yields an identical transcript
 
 ### S3: Sessions and resume
@@ -135,16 +135,15 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 ## Active slice
 
-**S2: Transcript.** In progress. The reducer, the selectors and the renderers
-exist, and four recorded traces replay to identical state; the rows they produce
-are in `shared/src/conversation/fixtures/`. History comes from `get_messages`
-inside a snapshot, so a session the CLI created reads back through the socket.
-Nothing is verified in a browser yet, and S1's browser checks are still open.
+**S3: Sessions and resume.** Not started. Reading a session still means typing its
+id into `?session=`, which is the one friction S2 leaves behind.
 
-Next action: open the page on the phone against a session the CLI created, then
-confirm S2's five checks by hand at that width.
+Next action: list the session files under the project's directory in
+`~/.pi/agent/sessions/`, show them grouped by project, and open one by clicking
+it. A running one needs `meta` from an attached child, so attach is still what
+tells the page whether a session is live.
 
-Facts worth keeping while this slice closes:
+## Facts worth keeping
 
 - `bun run scripts/replay.ts` in `shared/` replays every fixture twice and prints
   the rows. A `.json` fixture is one frame, such as a snapshot.
@@ -159,9 +158,20 @@ Facts worth keeping while this slice closes:
 - The five display-only extension methods travel as `ui` frames. Keyed status and
   widget state is replayed to a late attach. Verified: a second tab receives
   `setStatus` without prompting.
-- `client/src/link.ts` ignores events from a socket it already replaced. Without
-  that guard, React StrictMode's double mount reports `closed` on a working
-  connection, because the first socket's close lands after the second one opens.
+- `client/src/link.ts` ignores events from a socket it already replaced, so a
+  retry's predecessor cannot report `closed` on a working connection.
+- `client/src/hooks/use-conversation.ts` keeps one store per session outside
+  React. A store created per mount loses the StrictMode race, and the socket the
+  page renders is the one that was closed
+  ([notes/2026-10-28-strictmode-closes-the-socket.md](notes/2026-10-28-strictmode-closes-the-socket.md)).
+- The agent's project is `config.projectDir`: `EPSILON_PROJECT` or the repo root,
+  never `process.cwd()`, because `turbo dev` starts the server task inside
+  `server/` and pi reads that as the project
+  ([notes/2026-10-28-turbo-runs-the-agent-in-server.md](notes/2026-10-28-turbo-runs-the-agent-in-server.md)).
+- Tool arguments live on the assistant's `toolCall`, not on the `toolResult`.
+  `toolsFromMessages` makes two passes, so a run built from a snapshot still has
+  its command, its path and its diff. Verified at 390px: `bash echo …` shows the
+  command and the output, `edit` shows `- old` / `+ new`.
 
 Resolved risks for S1 and S2:
 

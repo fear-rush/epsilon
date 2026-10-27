@@ -100,11 +100,38 @@ const toolsWithResult = (
 	});
 };
 
-const toolsFromMessages = (messages: ConversationMessage[]): ToolRun[] =>
-	messages.reduce<ToolRun[]>(
+/**
+ * The arguments are on the assistant's `toolCall`, never on the result, so a run
+ * built from a result alone has no command and no diff to show.
+ */
+const toolsWithCallArgs = (
+	tools: ToolRun[],
+	message: Extract<ConversationMessage, { role: "assistant" }>,
+): ToolRun[] =>
+	message.content.reduce<ToolRun[]>((current, part) => {
+		if (part.type !== "toolCall") return current;
+		const index = current.findIndex((tool) => tool.toolCallId === part.id);
+		const run = index === -1 ? undefined : current[index];
+		if (run === undefined) return current;
+		const next = [...current];
+		next[index] = { ...run, toolName: part.name, args: part.arguments };
+		return next;
+	}, tools);
+
+/**
+ * Two passes because a result arrives after the call that explains it: results
+ * create the runs, calls then supply the arguments.
+ */
+const toolsFromMessages = (messages: ConversationMessage[]): ToolRun[] => {
+	const withResults = messages.reduce<ToolRun[]>(
 		(tools, message) => (message.role === "toolResult" ? toolsWithResult(tools, message) : tools),
 		[],
 	);
+	return messages.reduce<ToolRun[]>(
+		(tools, message) => (message.role === "assistant" ? toolsWithCallArgs(tools, message) : tools),
+		withResults,
+	);
+};
 
 const reduceEvent = (state: ConversationState, event: JsonAgentSessionEvent): ConversationState => {
 	switch (event.type) {

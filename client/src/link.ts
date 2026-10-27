@@ -22,7 +22,6 @@ export class Link {
 	private readonly watched = new Set<string>();
 	private socket: WebSocket | undefined;
 	private attempt = 0;
-	private stopped = false;
 
 	constructor(handlers: LinkHandlers) {
 		this.handlers = handlers;
@@ -39,22 +38,15 @@ export class Link {
 		this.socket.send(JSON.stringify(clientFrameSchema.parse(frame)));
 	}
 
-	close(): void {
-		this.stopped = true;
-		this.socket?.close();
-	}
-
 	private connect(): void {
 		this.handlers.onStatus("connecting");
 		const scheme = location.protocol === "https:" ? "wss" : "ws";
 		const socket = new WebSocket(`${scheme}://${location.host}${SOCKET_PATH}`);
 		this.socket = socket;
 
-		// Ignore everything from a socket that is no longer live. In development
-		// StrictMode mounts the page twice, and the first socket's `close` arrives
-		// after the second one is already open, which reported "closed" on a
-		// working connection.
-		const isCurrent = () => !this.stopped && this.socket === socket;
+		// Ignore everything from a socket this Link already replaced: a retry opens a
+		// new one and the old one's `close` lands afterwards.
+		const isCurrent = () => this.socket === socket;
 
 		socket.addEventListener("open", () => {
 			if (!isCurrent()) return;
@@ -72,7 +64,6 @@ export class Link {
 	}
 
 	private retry(): void {
-		if (this.stopped) return;
 		const delay = RECONNECT_STEPS_MS[Math.min(this.attempt, RECONNECT_STEPS_MS.length - 1)];
 		this.attempt += 1;
 		setTimeout(() => this.connect(), delay);
