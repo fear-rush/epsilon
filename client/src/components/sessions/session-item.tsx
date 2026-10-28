@@ -11,12 +11,14 @@ import { Button } from "@/components/ui/button";
 import {
 	ContextMenu,
 	ContextMenuContent,
+	ContextMenuGroup,
 	ContextMenuItem,
 	ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -55,10 +57,9 @@ export function SessionItem({ session, active, onDelete }: SessionItemProps) {
 						{session.running && <Skeleton className="size-1.5 shrink-0 rounded-full bg-success" />}
 						<span className="truncate">{sessionLabel(session)}</span>
 					</span>
-					<span className="flex w-full items-center gap-1.5 text-[11px] font-normal text-muted-foreground">
-						<span className="truncate">
-							{formatWhen(session.modified)} · {session.messageCount} messages
-						</span>
+					<span className="flex w-full items-center gap-1.5 text-xs font-normal text-muted-foreground">
+						<span className="truncate">{formatWhen(session.modified)}</span>
+						<span className="shrink-0">{session.messageCount} messages</span>
 						{session.needsInput && <Badge variant="warning">needs input</Badge>}
 					</span>
 				</SidebarMenuButton>
@@ -77,16 +78,20 @@ export function SessionItem({ session, active, onDelete }: SessionItemProps) {
 						<MoreHorizontalIcon />
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">
-						<DropdownMenuItem variant="destructive" onClick={() => onDelete(session)}>
-							Delete session
-						</DropdownMenuItem>
+						<DropdownMenuGroup>
+							<DropdownMenuItem variant="destructive" onClick={() => onDelete(session)}>
+								Delete session
+							</DropdownMenuItem>
+						</DropdownMenuGroup>
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</ContextMenuTrigger>
 			<ContextMenuContent>
-				<ContextMenuItem variant="destructive" onClick={() => onDelete(session)}>
-					Delete session
-				</ContextMenuItem>
+				<ContextMenuGroup>
+					<ContextMenuItem variant="destructive" onClick={() => onDelete(session)}>
+						Delete session
+					</ContextMenuItem>
+				</ContextMenuGroup>
 			</ContextMenuContent>
 		</ContextMenu>
 	);

@@ -122,7 +122,7 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 				)}
 
 				{widgets.length > 0 && (
-					<div className="flex flex-col gap-1 border-t px-4 py-2 font-mono text-[11px] whitespace-pre-wrap text-muted-foreground">
+					<div className="flex flex-col gap-1 border-t px-4 py-2 font-mono text-xs whitespace-pre-wrap text-muted-foreground">
 						{[...aboveComposer, ...belowComposer].map((widget) => (
 							<div key={widget.key} data-placement={widget.placement}>
 								{widget.lines.join("\n")}

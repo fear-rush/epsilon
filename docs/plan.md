@@ -254,9 +254,19 @@ composer plus the `bash` command. Then the skill and prompt palette, which needs
   socket closes. Switching sessions therefore never flashes "No messages yet".
 - Other loading states: the sidebar list shows a `Spinner` while the query runs, and
   the delete action shows one while its request is in flight.
-- The composer is a white surface with a thin `border-foreground/60` border; the
-  model and permission triggers are ghost buttons and submit is the primary round
-  arrow, so the footer follows the surface instead of the old grey fill.
+- The composer is a white surface with a `border-foreground/25` border; the model
+  and permission triggers are ghost buttons and submit is the primary round arrow,
+  so the footer follows the surface instead of the old grey fill.
+- Typography has two UI sizes only: `text-sm` for primary content and `text-xs` for
+  secondary detail, with no arbitrary `text-[…]` values. Assistant markdown runs
+  through `typeset` with `typeset-chat`, which styles headings, lists and tables
+  while keeping the transcript size.
+- Base UI groups its menu parts: a `DropdownMenuLabel` or item that is not inside a
+  `DropdownMenuGroup`/`RadioGroup` throws "MenuGroupContext is missing" during
+  render. The session actions and the permission menu now wrap their items.
+- Network failures are phrased, not raw: a dropped fetch reads "The server is not
+  reachable. Retrying…", so the sidebar never prints the browser's "Failed to
+  fetch".
 - Every blocking prompt is now a component, not a bordered div: `confirm` is an
   `AlertDialog`, `select`/`input`/`editor` are `Dialog`s that only answer or
   cancel. Compaction, retry and extension notices are `Marker`s; `error` notices

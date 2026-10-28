@@ -9,7 +9,7 @@ import { useState } from "react";
 import type { SessionSummary } from "shared";
 
 import { SessionItem } from "@/components/sessions/session-item";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -84,6 +84,7 @@ export function SessionSidebar() {
 				{problem !== null && (
 					<div className="px-2">
 						<Alert variant="destructive">
+							<AlertTitle>Sessions</AlertTitle>
 							<AlertDescription>{problem.message}</AlertDescription>
 						</Alert>
 					</div>

@@ -75,7 +75,7 @@ with it.
 | Reasoning                          | `DropdownMenu` + `DropdownMenuRadioGroup`                                                                                              | Not built yet                                                               |
 | Context usage                      | `HoverCard` + `Progress`                                                                                                               |                                                                             |
 | Attachments                        | `Attachment` + `AttachmentGroup` in `InputGroup`                                                                                       | `state` wired to real progress                                              |
-| Composer                           | `InputGroup` + `InputGroupTextarea`; white surface, thin foreground border; `block-end` addon holds model, permission, stop and submit | Arrow-up submit; Enter sends, Shift+Enter adds a line, Esc stops            |
+| Composer                           | `InputGroup` + `InputGroupTextarea`; white surface, `border-foreground/25`; `block-end` addon holds model, permission, stop and submit | Arrow-up submit; Enter sends, Shift+Enter adds a line, Esc stops            |
 | File tree                          | nested `Collapsible` per folder, `Button` per file                                                                                     | A single read file in a turn stays a `TraceLine`                            |
 | Preview                            | `Resizable` + `Tabs` (Preview / Source / Diff) + sandboxed iframe                                                                      |                                                                             |
 | Terminal                           | `Tabs` + xterm, `Button` row for touch keys                                                                                            |                                                                             |
@@ -126,11 +126,21 @@ composer controls.
 
 ## Density and typography
 
-Starting values:
+Two sizes, no ad-hoc values:
 
-- Body markdown `text-sm`, `leading-relaxed`, `max-w-3xl`.
-- Tool output and diffs `text-[13px]` mono, `max-h-64` with internal scroll.
-- Secondary detail (durations, counts, paths) `text-xs text-muted-foreground`.
+- `text-sm` for primary content: messages, session titles, buttons, menu items.
+- `text-xs` for secondary detail: durations, counts, paths, model names, menu
+  labels, widget rows, composer controls.
+
+Notes:
+
+- Assistant markdown is `typeset typeset-chat`: the typeset system styles headings,
+  lists, tables and quotes, and `typeset-chat` keeps the transcript's own size.
+- `CodeBlock size="sm"` is `text-xs`; the default size is `text-sm`.
+- No `text-[11px]`, `text-[13px]` or other arbitrary values. Pick one of the two.
+- No middots in UI copy. pi's model names are rendered with commas instead.
+- The composer is a white surface with a `border-foreground/25` border; its footer
+  controls are `text-xs`, the submit arrow is the primary round button.
 - Icons 16px in rows, 14px in buttons, one set (lucide).
 - Row rhythm: 8px inside a trace, 16px between traces, 32px between turns.
 - Borders only on containers that need them: header, sidebar edge, right panel edge,

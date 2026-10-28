@@ -158,3 +158,10 @@
 		cursor: pointer;
 	}
 }
+
+@layer components {
+	/* Typeset styles the elements; chat prose keeps the transcript's own size. */
+	.typeset-chat {
+		font-size: inherit;
+	}
+}

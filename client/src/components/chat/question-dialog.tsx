@@ -68,7 +68,7 @@ export function QuestionDialog({
 				{question.method === "editor" && (
 					<Textarea
 						value={text}
-						className="min-h-40 font-mono text-[13px]"
+						className="min-h-40 font-mono text-sm"
 						onChange={(event) => setText(event.target.value)}
 					/>
 				)}

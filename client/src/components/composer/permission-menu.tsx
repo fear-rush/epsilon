@@ -38,18 +38,18 @@ export function PermissionMenu({
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger render={<InputGroupButton size="sm" className="rounded-full" />}>
+			<DropdownMenuTrigger render={<InputGroupButton size="sm" className="rounded-full text-xs" />}>
 				<ShieldIcon data-icon="inline-start" />
 				{active?.label ?? "Permission"}
 				<ChevronDownIcon data-icon="inline-end" />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="start" className="w-64">
-				<DropdownMenuLabel>Permission</DropdownMenuLabel>
 				<DropdownMenuRadioGroup
 					value={mode}
 					onValueChange={(value: PermissionMode) => onSelect(value)}
 				>
 					<DropdownMenuGroup>
+						<DropdownMenuLabel>Permission</DropdownMenuLabel>
 						{PERMISSION_MODES.map((candidate) => (
 							<DropdownMenuRadioItem
 								key={candidate.value}

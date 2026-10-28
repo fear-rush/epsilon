@@ -50,7 +50,7 @@ const statusWord = (run: ToolRun): string => {
 };
 
 const detail = (run: ToolRun): string => {
-	const seconds = run.durationMs === undefined ? "" : ` · ${(run.durationMs / 1000).toFixed(1)}s`;
+	const seconds = run.durationMs === undefined ? "" : ` (${(run.durationMs / 1000).toFixed(1)}s)`;
 	return `${statusWord(run)}${seconds}`;
 };
 

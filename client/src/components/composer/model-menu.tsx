@@ -11,6 +11,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { InputGroupButton } from "@/components/ui/input-group";
+import { modelLabel } from "@/lib/model";
 
 /** A model's identity is the pair pi switches on; the name is only a label. */
 const keyOf = (model: SnapshotModel): string => `${model.provider}/${model.id}`;
@@ -52,11 +53,18 @@ export function ModelMenu({ models, model, onSelect }: ModelMenuProps) {
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger render={<InputGroupButton size="sm" className="ml-auto rounded-full" />}>
-				<span className="max-w-44 truncate">{model?.name ?? "Model"}</span>
+			<DropdownMenuTrigger
+				render={
+					<InputGroupButton
+						size="sm"
+						className="ml-auto max-w-40 truncate rounded-full text-xs sm:max-w-64"
+					/>
+				}
+			>
+				<span className="truncate">{model === undefined ? "Model" : modelLabel(model.name)}</span>
 				<ChevronDownIcon data-icon="inline-end" />
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="start" className="max-h-80 w-64">
+			<DropdownMenuContent align="start" className="max-h-80 w-80">
 				<DropdownMenuRadioGroup
 					value={current}
 					onValueChange={(value: string) => {
