@@ -48,7 +48,7 @@ export type StreamingTurn = {
 
 export type Notice = {
 	id: number;
-	kind: "compaction" | "retry" | "notice";
+	kind: "compaction" | "retry" | "notice" | "error";
 	text: string;
 	/** How many messages had arrived when this notice happened, for ordering. */
 	afterMessages: number;
@@ -72,6 +72,8 @@ export type ConversationState = {
 	widgets: UiWidget[];
 	/** Set by an extension through `setTitle`. */
 	title?: string;
+	/** pi's own session name, from `set_session_name` or the terminal. */
+	sessionName?: string;
 	/** A turn is in progress. `agent_start` and `agent_end` carry this; a child that
 	 * is merely alive does not. */
 	busy: boolean;

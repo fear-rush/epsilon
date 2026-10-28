@@ -4,8 +4,10 @@
  * component (docs/ui.md, Principle 1: semantic components, not decorated divs).
  */
 import { Fragment } from "react";
-import { Message, MessageContent } from "@/components/ui/message";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
+import { Marker } from "@/components/ui/marker";
+import { Message, MessageContent } from "@/components/ui/message";
 import {
 	MessageScroller,
 	MessageScrollerButton,
@@ -80,16 +82,25 @@ function Row({ row }: { row: TranscriptRow }) {
 			return <ToolTrace run={row.run} />;
 		case "summary":
 			return (
-				<div className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
-					<div className="mb-1 font-medium">{row.label}</div>
-					<p className="max-h-64 overflow-auto whitespace-pre-wrap">{row.text}</p>
-				</div>
+				<Fragment>
+					<Marker variant="separator">{row.label}</Marker>
+					<p className="max-h-64 overflow-auto px-1 text-xs whitespace-pre-wrap text-muted-foreground">
+						{row.text}
+					</p>
+				</Fragment>
 			);
 		case "notice":
+			if (row.notice.kind === "error") {
+				return (
+					<Alert variant="destructive">
+						<AlertDescription>{row.notice.text}</AlertDescription>
+					</Alert>
+				);
+			}
 			return (
-				<p className="text-center text-xs text-muted-foreground" data-kind={row.notice.kind}>
+				<Marker variant="separator" data-kind={row.notice.kind}>
 					{row.notice.text}
-				</p>
+				</Marker>
 			);
 	}
 }

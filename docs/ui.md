@@ -22,17 +22,22 @@ not laws.
 
 ## Component inventory
 
-Already installed: `message`, `message-scroller`, `bubble`, `trace`, `code-block`,
+Installed: `message`, `message-scroller`, `bubble`, `trace`, `code-block`,
 `questionnaire`, `empty`, `input-group`, `collapsible`, `select`, `tooltip`,
-`alert`, `button`, `input`, `textarea`.
+`alert`, `button`, `input`, `textarea`, `sidebar`, `sheet`, `badge`, `skeleton`,
+`command`, `popover`, `dropdown-menu`, `context-menu`, `dialog`, `alert-dialog`,
+`marker`.
 
-Add, all verified present in the `@shadcn` registry:
+Add when the slice that needs it lands, all verified present in the registry:
 
 ```sh
-bunx --bun shadcn@latest add sidebar command dropdown-menu context-menu dialog \
-  alert-dialog sheet drawer hover-card progress item marker attachment resizable \
-  tabs sonner switch badge avatar skeleton separator table radio-group popover kbd spinner
+bunx --bun shadcn@latest add drawer hover-card progress item attachment resizable \
+  tabs sonner switch avatar table radio-group kbd spinner
 ```
+
+`sidebar.tsx` is trimmed to the parts epsilon uses (offcanvas column, Sheet below
+1280px, ⌘B) to stay under the file-size cap. Add the rail, submenus or collapsed
+tooltips back from the registry when a screen needs them.
 
 Do not add: `scroll-area` (forbidden for threads by the chat rules), `toast` (use
 `sonner`), `form`/`field`/`label` (no settings forms), `slider`, `toggle`,
@@ -57,12 +62,12 @@ with it.
 | Diff                               | `CodeBlock` + `CodeBlockLine variant="added"/"removed"`                                                       | One column under 720px, two above                                           |
 | Unknown / MCP tool                 | Same as a tool, generic field rows                                                                            | Name, args, output, status. Never blank                                     |
 | Notice, compaction, branch summary | `Marker variant="separator"`                                                                                  | Not a trace row                                                             |
-| Approval or blocked tool           | `Item` + `ItemActions` inline; `AlertDialog` if it blocks the run                                             | Prompt, not activity                                                        |
-| Extension select                   | `Dialog` + `Command`, or `Questionnaire` for several questions                                                | `QuestionnaireProgress` when multi-step                                     |
+| Approval or blocked tool           | `AlertDialog` while it blocks the run                                                                         | Inline `Item` + `ItemActions` when a prompt does not block                  |
+| Extension select                   | `Dialog` with one `Button` per option                                                                         | `Command` search once a list is long                                        |
 | Extension confirm                  | `AlertDialog`                                                                                                 | Destructive variant when pi marks it                                        |
-| Extension input / editor           | `Dialog` + `Input`; `Sheet` + monospace `Textarea`                                                            |                                                                             |
+| Extension input / editor           | `Dialog` + `Input`; monospace `Textarea`                                                                      |                                                                             |
 | Extension status / widget          | `Badge` in the header; widget rows above the composer                                                         | Widget is text, not UI                                                      |
-| Session list                       | `Sidebar` + `SidebarGroup` per project                                                                        | Running: pulsing `skeleton` dot; needs-input: `Badge`                       |
+| Session list                       | `Sidebar` + `SidebarGroup` per project                                                                        | Running: pulsing `Skeleton` dot; needs-input: `Badge variant="warning"`     |
 | Session actions                    | `ContextMenu` (desktop), mirrored `DropdownMenu` on `…`, `Sheet` menu on mobile                               |                                                                             |
 | Search everything                  | `Command` in `Dialog`, ⌘K                                                                                     | Sessions, files, slash commands, actions                                    |
 | Slash palette, `@` files           | `Command` in `Popover` anchored to the composer                                                               | Server-driven from `get_commands`                                           |
@@ -80,11 +85,14 @@ with it.
 
 ## Layout
 
-**Desktop, ≥1280px.** Three columns. `Sidebar` 260px (collapsible to 0), transcript
+**Desktop, ≥1280px.** Three columns. `Sidebar` 16rem (collapsible to 0), transcript
 `max-w-3xl` centred, right panel `Resizable` 360–720px (files, preview, terminal).
 
-**Tablet, 768–1279px.** Sidebar collapses to an icon rail or a `Sheet`; the right
-panel becomes a tab strip over the transcript.
+Built now: the sidebar and the transcript. The right panel arrives with the first
+surface that fills it (files, S6); an empty column would be scaffolding.
+
+**Tablet, 768–1279px.** Sidebar is a `Sheet` (below the 1280px column breakpoint);
+the right panel becomes a tab strip over the transcript.
 
 **Mobile, <768px.** One column. Sidebar is a left `Sheet`; the right panel is a
 full-screen `Sheet`; composer pinned to the bottom with `InputGroup`; terminal adds

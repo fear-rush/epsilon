@@ -1,4 +1,5 @@
-import { SiteHeader } from "@/components/site-header";
+import { SessionSidebar } from "@/components/sessions/session-sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 
@@ -6,10 +7,12 @@ export const Route = createRootRoute({
 	component: function Root() {
 		return (
 			<TooltipProvider>
-				<div className="flex h-svh flex-col">
-					<SiteHeader />
-					<Outlet />
-				</div>
+				<SidebarProvider>
+					<SessionSidebar />
+					<SidebarInset className="h-svh min-h-0 overflow-hidden">
+						<Outlet />
+					</SidebarInset>
+				</SidebarProvider>
 			</TooltipProvider>
 		);
 	},

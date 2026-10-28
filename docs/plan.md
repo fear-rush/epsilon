@@ -143,7 +143,8 @@ picker's socket half works and its next-turn half is pending. The palette and
 ## Active slice
 
 **S4: Composer.** Steer, abort and the model picker are built; the palette and
-`!cmd` remain.
+`!cmd` remain. The shell from ui.md now exists: the session list lives in a
+sidebar, and `/` is the empty state it leaves behind.
 
 Next action: `!cmd`. The `bash` RPC records a result and the reducer already turns
 a `bashExecution` message into a bash card, so the work is the `!` prefix in the
@@ -219,6 +220,25 @@ composer plus the `bash` command. Then the skill and prompt palette, which needs
   subscriber, so the picker shows pi's answer instead of echoing the request. pi
   validates the pair against `get_available_models` and answers
   `Model not found: provider/id` otherwise.
+- The shell is the shadcn sidebar: a 16rem column at 1280px and above, a left
+  Sheet below, ⌘B to toggle. `useIsMobile` treats anything under 1280px as
+  mobile, which is the tablet rule in ui.md. The right panel waits for its first
+  surface (files, S6).
+- `client/src/components/ui/sidebar.tsx` is trimmed from the registry to 298
+  lines for the file-size cap: offcanvas only, with no rail, submenus or
+  collapsed tooltips. Add them back from the registry when a screen needs them.
+- `--warning` and `--success` were added to `client/src/index.css`. The needs-input
+  `Badge`, the pulsing `Skeleton` dot, diff lines and error `Alert`s use theme
+  colours; a grep finds no raw palette class in `client/src` outside generated
+  components.
+- The model picker is a `Command` in a `Popover`: the current provider's models
+  while the search is empty, then 60 results across all providers.
+- Every blocking prompt is now a component, not a bordered div: `confirm` is an
+  `AlertDialog`, `select`/`input`/`editor` are `Dialog`s that only answer or
+  cancel. Compaction, retry and extension notices are `Marker`s; `error` notices
+  are destructive `Alert`s.
+- The composer is an `InputGroup` with a `block-end` addon for stop and send, as
+  ui.md asks.
 - The tab settles a turn twice: `agent_end` then `agent_settled`. Both clear
   `busy`; `abort` produces `message_end`, `turn_end`, `agent_end` and
   `agent_settled`, so a stopped turn keeps its partial text.

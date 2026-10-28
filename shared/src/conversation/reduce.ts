@@ -266,6 +266,7 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				// `agent_start`, which has already happened.
 				busy: frame.snapshot.state.isStreaming,
 				models: frame.snapshot.models,
+				sessionName: frame.snapshot.state.sessionName,
 				model:
 					current === undefined
 						? undefined
@@ -292,7 +293,7 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				? state
 				: withNotice(state, "notice", frame.error ?? "The agent rejected a command");
 		case "error":
-			return withNotice(state, "notice", `${frame.code}: ${frame.message}`);
+			return withNotice(state, "error", `${frame.code}: ${frame.message}`);
 		default:
 			return state;
 	}

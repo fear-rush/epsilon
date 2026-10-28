@@ -128,7 +128,7 @@ function toolBody(run: ToolRun): ReactNode {
 				</CodeBlockHeader>
 				<CodeBlockContent className="max-h-64">
 					{write.data.content.split("\n").map((line, index) => (
-						<div key={index} className="whitespace-pre-wrap bg-emerald-500/10">
+						<div key={index} className="whitespace-pre-wrap bg-success/10">
 							{`+ ${line}`}
 						</div>
 					))}
@@ -148,17 +148,23 @@ function toolBody(run: ToolRun): ReactNode {
 						src={`data:${image.mimeType};base64,${image.data}`}
 					/>
 				))}
-				{run.output !== "" && <pre className="whitespace-pre-wrap">{run.output}</pre>}
+				{run.output !== "" && (
+					<CodeBlock size="sm">
+						<CodeBlockContent className="max-h-64">{run.output}</CodeBlockContent>
+					</CodeBlock>
+				)}
 			</div>
 		);
 	}
 
 	if (run.output === "" && run.args === undefined) return null;
+	const text = [run.args === undefined ? "" : JSON.stringify(run.args, null, 2), run.output]
+		.filter((part) => part !== "")
+		.join("\n\n");
 	return (
-		<pre className="whitespace-pre-wrap">
-			{run.args === undefined ? "" : JSON.stringify(run.args, null, 2)}
-			{run.output === "" ? "" : `\n\n${run.output}`}
-		</pre>
+		<CodeBlock size="sm">
+			<CodeBlockContent className="max-h-64">{text}</CodeBlockContent>
+		</CodeBlock>
 	);
 }
 
@@ -166,12 +172,12 @@ function DiffBlock({ oldText, newText }: { oldText: string; newText: string }) {
 	return (
 		<div>
 			{oldText.split("\n").map((line, index) => (
-				<div key={`o${index}`} className="whitespace-pre-wrap bg-red-500/10">
+				<div key={`o${index}`} className="whitespace-pre-wrap bg-destructive/10">
 					{`- ${line}`}
 				</div>
 			))}
 			{newText.split("\n").map((line, index) => (
-				<div key={`n${index}`} className="whitespace-pre-wrap bg-emerald-500/10">
+				<div key={`n${index}`} className="whitespace-pre-wrap bg-success/10">
 					{`+ ${line}`}
 				</div>
 			))}

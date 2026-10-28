@@ -1,5 +1,10 @@
 {
 	"extends": "../tsconfig.base.json",
+	"compilerOptions": {
+		// The shadcn CLI reads aliases from this file; the app reads tsconfig.app.json.
+		"baseUrl": ".",
+		"paths": { "@/*": ["./src/*"] }
+	},
 	"files": [],
 	"references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.app.json" }]
 }

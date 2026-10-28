@@ -1,3 +1,5 @@
+import type { SessionSummary } from "shared";
+
 const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
@@ -15,3 +17,10 @@ export function formatWhen(iso: string): string {
 	if (elapsed < RECENT_DAYS * DAY_MS) return relative.format(-Math.round(elapsed / DAY_MS), "day");
 	return absolute.format(when);
 }
+
+/** The first line of the first user message, or the name the user set. */
+export const sessionLabel = (session: SessionSummary): string => {
+	if (session.name !== undefined) return session.name;
+	const firstLine = session.firstMessage.split("\n")[0]?.trim() ?? "";
+	return firstLine === "" ? "Untitled session" : firstLine;
+};
