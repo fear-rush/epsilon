@@ -280,3 +280,8 @@ false, delete it rather than adding a correction below it.
 - The not-ready notice replaces the routed page in `client/src/routes/__root.tsx`
   when the answer is `ready: false`, so no session is attached and no engine is
   built while the deployment is unconfigured.
+- The transcript renders a tool result inside a collapsed card, so its text is not in
+  the DOM until the card is expanded. A check that reads a result has to open it
+  first ([note](../notes/2026-10-28-browser-checks-assert-ui-not-prose.md)).
+- `readiness` strings are plain text in an `Alert`: a markdown backtick renders
+  literally, so the copy carries none.

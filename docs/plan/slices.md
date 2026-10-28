@@ -97,8 +97,13 @@ from [../deploy.md](../deploy.md), minus a container.
 - [x] The readiness answer follows the home: `GET /api/readiness` replies
       `{"ready":true}` for the scratch home and `{"ready":false, home, detail,
       fix}` for an empty one, and one call costs about 4 ms
-- [ ] A home with no credential shows that notice centred on every page, with no
-      composer to type into, instead of the model trigger reading `unknown`
+- [x] A browser pass, with Playwright, on the client pointed at the check server:
+      the composer showed a `Strict` control after `/permission strict`, a `bash`
+      turn raised `Allow bash? echo browser-probe`, refusing it left the card marked
+      `failed`, `discuss` opened a dialog with the two presets plus
+      `Type something.`, the answer read back as `User selected: 2. Yolo` once the
+      tool card was expanded, and an empty home replaced every page with the notice
+      and no composer ([note](../notes/2026-10-28-browser-checks-assert-ui-not-prose.md))
 - [ ] The terminal tab shows the same defaults. It does not, and
       [ADR-0010](../adr/0010-defaults-are-engine-only.md) says so: S7 is where the tab
       passes them to the CLI with `-e`
@@ -114,6 +119,9 @@ from [../deploy.md](../deploy.md), minus a container.
 
 - [ ] `pi` itself runs in the terminal tab; `/login` and `/settings` work, which is
       also how a deployment is configured
+- [ ] The tab's `pi` loads Epsilon's defaults through `-e`, so the same edit asks for
+      confirmation there and `/permission` switches the same guard
+      ([ADR-0010](../adr/0010-defaults-are-engine-only.md))
 - [ ] Resize works, and the touch key row types Esc, Tab and Ctrl+C
 - [ ] Closing the tab kills the pty: `pgrep -f pi` shows no orphan
 

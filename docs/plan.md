@@ -67,8 +67,8 @@ without a child process and a socket.
 | S10 | Get pinged when a run needs an answer                           | todo   |
 | S11 | Reach the dashboard from a phone on a machine without `pi`      | todo   |
 | S12 | Run every turn from an engine in the server, with no child      | done   |
-| S13 | Open a fresh home and get a guard, an ask tool and a notice     | active |
-| S14 | Reach the web and delegate on a fresh deployment                | todo   |
+| S13 | Open a fresh home and get a guard, an ask tool and a notice     | done   |
+| S14 | Reach the web and delegate on a fresh deployment                | active |
 | S15 | See what the context is spending, in the browser                | todo   |
 | S16 | Paste an image into the composer                                | todo   |
 
@@ -89,21 +89,22 @@ verified in a browser now.
 
 ## Active slice
 
-**S13: A fresh home is usable.** The defaults ADR-0008 promises are code now, not a
-file an operator copies: `server/src/agent/defaults/` holds them, and the engine
-registers them after the CLI's three built-ins with `replaceable` and `builtin` set.
-The guard, the `discuss` tool and the not-ready notice are built and checked over the
-socket and REST; what is left is the browser pass in
-[plan/slices.md](plan/slices.md).
+**S14: Reach the web and delegate on a fresh deployment.**
+[ADR-0011](adr/0011-third-party-tools-as-dependencies.md) makes `pi-web-access` and
+`pi-subagents` pinned dependencies of `server`, loaded by path with their skills and
+prompts, and requires skipping our copy when the home already provides the package.
 
-Next action: run those checks in a browser against
-`EPSILON_AGENT_HOME=/tmp/eps-defaults bun run dev` (credentials symlinked, no
-`extensions/`), then against an empty home. The terminal gap is decided, not open:
-[ADR-0010](adr/0010-defaults-are-engine-only.md) makes the defaults engine-only and
-puts the `-e` parity requirement on S7.
+Next action: pin the two packages, resolve their entry paths the way the CLI does, and
+hand them to the same `DefaultResourceLoader` that gets Epsilon's defaults. Then the
+skip rule, then the duplicate-name check in [plan/slices.md](plan/slices.md).
 
-S6 waits. It was active and nothing was built for it, so it goes back in the queue
-rather than half-done.
+**S13 is closed and verified in a browser**, with Playwright against a scratch home:
+the permission control read `Strict` after `/permission strict`, a `bash` turn raised
+`Allow bash? echo browser-probe` and refusing it left the card `failed`, `discuss`
+opened a dialog with both presets plus `Type something.` and the answer came back as
+`User selected: 2. Yolo`, and an empty home replaced every page with the notice and no
+composer. The defaults stay engine-only: the terminal gets them in S7
+([ADR-0010](adr/0010-defaults-are-engine-only.md)).
 
 **S12, S5 and S4 are closed and verified in a browser.** The engine runs in the
 server ([ADR-0008](adr/0008-embed-pi-engine-with-opinions.md)), the socket speaks

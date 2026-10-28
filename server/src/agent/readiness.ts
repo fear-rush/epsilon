@@ -20,6 +20,6 @@ export const readReadiness = async (agentHome: string): Promise<Readiness> => {
 		ready: false,
 		home: agentHome,
 		detail: `No model in ${agentHome} can run a turn: the engine found no provider credential.`,
-		fix: "Run `pi` in a shell in this deployment, use `/login`, then reload this page.",
+		fix: "Run pi in a shell in this deployment, use /login, then reload this page.",
 	};
 };
