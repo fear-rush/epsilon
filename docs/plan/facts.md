@@ -297,3 +297,11 @@ false, delete it rather than adding a correction below it.
   cannot tell a live key from a rejected one: a home whose `models.json` carried an
   inline key reported `ready: true` and the turn ended with
   `401: Invalid 'Authorization' header or token.` Only a request can answer that.
+- `bun run dev` runs `scripts/dev.ts`, which points the engine at `.sandbox/agent`
+  and the project at `.sandbox/project`, creates both, and symlinks the operator's
+  `auth.json` and `models.json` so a turn can run. `bun run dev:host` keeps the real
+  home; `bun run sandbox:clean` deletes the sandbox. Only the two `EPSILON_*` values
+  change: `HOME` does not, so `~/.agents/skills` still loads in dev.
+- The sandbox proves the home needs no bootstrap from us: pi writes
+  `sessions/`, `models-store.json` and an empty `auth.json` itself on first use, and a
+  symlinked `auth.json` is not overwritten.

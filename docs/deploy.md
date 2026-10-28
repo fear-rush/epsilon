@@ -90,8 +90,21 @@ bound to the platform ([notes](notes/2026-10-28-packages-are-bound-to-a-platform
 
 ## Development
 
-The dev loop runs in the same container with the repository bind mounted, so the
-host agent home is never touched:
+`bun run dev` is sandboxed on purpose. It points the engine at
+`.sandbox/agent` and the project at `.sandbox/project`, so a turn never writes a
+session, a cache or a credential into the operator's real `~/.pi`. The sandbox
+materializes itself: pi creates `sessions/`, `auth.json` and `models-store.json` on
+first use, and the script symlinks the operator's `auth.json` and `models.json` in so
+the loop can run a turn. Delete those two links to get the unconfigured state the
+not-ready notice describes.
+
+`bun run dev:host` runs the same loop against the real home, for reading sessions the
+terminal created. `bun run sandbox:clean` removes the sandbox.
+
+Only `EPSILON_AGENT_HOME` and `EPSILON_PROJECT` change. `HOME` does not, so pi still
+reads `~/.agents/skills` while developing; that is a read, not clutter.
+
+Inside the container the loop is the same with the repository bind mounted:
 
 - server: `bun --watch run src/serve.ts`
 - client: Vite with HMR, proxying `/api` to the server

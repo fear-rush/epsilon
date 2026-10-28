@@ -20,9 +20,10 @@
 	],
 	"type": "module",
 	"scripts": {
-		"dev": "turbo dev",
-		"dev:client": "turbo dev --filter=client",
-		"dev:server": "turbo dev --filter=server",
+		"dev": "bun run scripts/dev.ts",
+		"dev:host": "bun run scripts/dev.ts --host",
+		"dev:client": "bun run scripts/dev.ts --filter=client",
+		"dev:server": "bun run scripts/dev.ts --filter=server",
 		"build": "turbo build",
 		"build:client": "turbo build --filter=client",
 		"build:server": "turbo build --filter=server",
@@ -35,6 +36,7 @@
 		"format": "oxfmt --write .",
 		"format:check": "oxfmt --check .",
 		"routes:generate": "bun run --cwd client routes:generate",
+		"sandbox:clean": "rm -rf .sandbox",
 		"hooks:install": "prek install",
 		"hooks:run": "prek run --all-files",
 		"hooks:update": "prek update"

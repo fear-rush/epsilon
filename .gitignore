@@ -49,3 +49,6 @@ bun.lockb
 # pi project state, created by running pi in this repository. The user's real
 # settings live in ~/.pi, and this is not source.
 .pi/settings.local.json
+
+# The dev loop's own agent home and project. A deployment uses a volume instead.
+.sandbox
