@@ -303,5 +303,3 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 			return state;
 	}
 };
-
-export { emptyConversation };

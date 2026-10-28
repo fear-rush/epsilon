@@ -24,9 +24,9 @@
 		// Output control
 		"skipLibCheck": true,
 
-		// Optional strict flags (disabled by default)
-		"noUnusedLocals": false,
-		"noUnusedParameters": false,
+		// Dead-code checks: an unused local, parameter or private member is an error.
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
 		"noPropertyAccessFromIndexSignature": false
 	}
 }

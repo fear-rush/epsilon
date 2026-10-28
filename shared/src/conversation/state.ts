@@ -21,9 +21,9 @@ export const isVisibleMessage = (message: SnapshotMessage): message is Conversat
 
 type AssistantContent = Extract<ConversationMessage, { role: "assistant" }>["content"][number];
 
-export type ToolCallArguments = Extract<AssistantContent, { type: "toolCall" }>["arguments"];
+type ToolCallArguments = Extract<AssistantContent, { type: "toolCall" }>["arguments"];
 
-export type ToolResultPart = Extract<
+type ToolResultPart = Extract<
 	Extract<ConversationMessage, { role: "toolResult" }>["content"][number],
 	{ type: "image" }
 >;

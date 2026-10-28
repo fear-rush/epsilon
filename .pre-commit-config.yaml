@@ -23,10 +23,12 @@ repos:
         priority: 10
       - id: check-symlinks
         priority: 10
-      # JSONC files are checked by check-jsonc, not check-json.
+      # JSONC files are checked by check-jsonc, not check-json. knip.jsonc is
+      # excluded: Oxfmt writes trailing commas into JSONC between hooks, and Knip
+      # rejects a broken config on its own.
       - id: check-json
         priority: 10
-        exclude: '(^|/)(tsconfig[^/]*\.json|\.oxlintrc\.json)$'
+        exclude: '(^|/)(tsconfig[^/]*\.json|\.oxlintrc\.json|knip\.jsonc)$'
       - id: check-jsonc
         priority: 10
         files: '(^|/)(tsconfig[^/]*\.json|\.oxlintrc\.json)$'
@@ -57,6 +59,13 @@ repos:
         entry: bun --bun run oxlint
         files: '\.[cm]?[jt]sx?$'
         exclude: '(^|/)(dist/|build/|routeTree\.gen\.ts$)|^(?:\.(?:agent|agents|claude|codex|continue|cursor|gemini|opencode|pi|roo|windsurf)/|tools/oxlint/anti-slop/)'
+        priority: 10
+      - id: dead-code
+        name: Check for dead files and exports
+        language: system
+        entry: bun run dead-code
+        pass_filenames: false
+        files: '(\.[cm]?[jt]sx?$|(^|/)(package\.json|bun\.lock|knip\.jsonc)$)'
         priority: 10
       - id: type-check
         name: Check workspace types

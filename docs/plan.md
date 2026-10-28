@@ -103,7 +103,7 @@ is still unbuilt, and that is the one engine cost left open.
 Every slice, in this order:
 
 - [ ] Every check above passes, by hand, in a browser
-- [ ] `bun run type-check`, `bun run lint`, `bun run build`
+- [ ] `bun run type-check`, `bun run lint`, `bun run dead-code`, `bun run build`
 - [ ] No file over 300 lines, no route handler over 60
 - [ ] No `@earendil-works/*` leak outside the two allowed modules
 - [ ] Scaffolding from the previous slice is deleted, not commented out

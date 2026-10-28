@@ -1,0 +1,25 @@
+{
+	"$schema": "https://unpkg.com/knip@6/schema.json",
+	// Agent skills and the vendored Oxlint plugin ship their own entry points.
+	"ignore": [".agents/**", "tools/oxlint/anti-slop/**"],
+	// shadcn files export every part of a component on purpose, and the CLI owns
+	// them, so only their whole-file unused state is reported.
+	"ignoreIssues": {
+		"client/src/components/ui/**": ["exports", "types"],
+	},
+	// Used as the `tsr` binary by the client's routes:generate script, and by
+	// the manual socket checks.
+	"ignoreDependencies": ["@tanstack/router-cli"],
+	"ignoreBinaries": ["pgrep"],
+	"workspaces": {
+		"server": {
+			"entry": ["scripts/*.ts"],
+		},
+		"shared": {
+			"entry": ["scripts/*.ts"],
+		},
+		"client": {
+			"entry": ["index.html"],
+		},
+	},
+}

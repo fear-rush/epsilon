@@ -45,13 +45,14 @@ bun run build
 bun run type-check
 bun run lint
 bun run format:check
+bun run dead-code
 bun run test
 ```
 
 ## Workspaces
 
 - `client/`: React, Vite, Tailwind and shadcn components.
-- `server/`: Hono API and, later, the agent children.
+- `server/`: Hono API and the embedded pi engine.
 - `shared/`: browser-safe types, zod schemas and the conversation reducer.
 - `tools/`: local Oxlint plugins.
 
@@ -61,7 +62,11 @@ bun run test
 - `bun run lint:fix` applies the available lint fixes.
 - `bun run format` formats files with Oxfmt.
 - `bun run format:check` checks formatting without a change.
-- `bun run type-check` checks TypeScript separately.
+- `bun run type-check` checks TypeScript separately. It fails on unused locals,
+  parameters and private members.
+- `bun run dead-code` runs Knip over the workspaces and fails on an unused file,
+  export or dependency. Component exports under `client/src/components/ui` are
+  exempt because the shadcn CLI owns those files.
 
 `.oxlintrc.json` enables React Hooks and React Refresh rules. It also enables 15
 anti-slop rules at error severity. The plugin lives in `tools/oxlint/anti-slop`.

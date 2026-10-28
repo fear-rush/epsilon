@@ -42,6 +42,7 @@ Run these commands from the repository root:
 | `bun run build`           | Build every workspace                                  |
 | `bun run test`            | Run the tests                                          |
 | `bun run lint`            | Run Oxlint on every workspace                          |
+| `bun run dead-code`       | Find unused files, exports and dependencies (Knip)     |
 | `bun run format`          | Format the files with Oxfmt                            |
 | `bun run type-check`      | Check TypeScript                                       |
 | `bun run routes:generate` | Generate the route tree                                |

@@ -14,7 +14,7 @@ type StatusHandler = (status: LinkStatus) => void;
 const SOCKET_PATH = "/api/link";
 const RECONNECT_STEPS_MS = [500, 1_000, 2_000, 4_000, 8_000];
 
-export class Link {
+class Link {
 	private readonly tabId = crypto.randomUUID();
 	private readonly frames = new Map<string, Set<FrameHandler>>();
 	private readonly statusListeners = new Set<StatusHandler>();
