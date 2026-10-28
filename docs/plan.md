@@ -68,9 +68,19 @@ without a child process and a socket.
 | S11 | Reach the dashboard from a phone on a machine without `pi`      | todo   |
 | S12 | Run every turn from an engine in the server, with no child      | done   |
 | S13 | Open a fresh home and get a guard, an ask tool and a notice     | active |
+| S14 | Reach the web and delegate on a fresh deployment                | todo   |
+| S15 | See what the context is spending, in the browser                | todo   |
+| S16 | Paste an image into the composer                                | todo   |
 
 S11 serves job 5. It gates nothing on this laptop, where the dashboard already runs
 against the host's own `pi`, and it comes before any deployment on a second machine.
+
+S14 to S16 follow [ADR-0011](adr/0011-third-party-tools-as-dependencies.md): a package
+that provides tools may ship as a dependency, and a package whose value is a terminal
+surface is rebuilt in the browser instead. S14 is the first because a fresh machine
+with web search and subagents is most of what "works really well elsewhere" means.
+S15 and S16 are the two terminals-only features that a browser can do better, and
+neither depends on S14.
 
 S12 ran before S5 because every later slice reads the engine's events, and because
 the defaults Epsilon ships are inline extensions, which a child-process engine

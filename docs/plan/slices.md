@@ -194,3 +194,44 @@ something the page cannot show.
       dialog keeps it alive. Verified: a run grew from 172 to 548 characters across
       a close and reopen, and the session reported `running: false` after twelve
       idle seconds
+
+### S14: Reach the web and delegate
+
+[ADR-0011](../adr/0011-third-party-tools-as-dependencies.md): `pi-web-access` and
+`pi-subagents` become pinned dependencies of `server` and are loaded by path, with
+their skills and prompts, from the same loader that gets Epsilon's defaults.
+
+- [ ] On a fresh home, `web_search` and `fetch_content` answer, and the result lands
+      in the transcript as a tool card
+- [ ] A subagent runs from the browser and its result arrives; its TUI widgets show
+      the "needs the terminal tab" notice instead of breaking the run
+- [ ] `pi-subagents` skills and prompts are in the palette without an install step
+- [ ] The home's own copy wins: a deployment whose `settings.json` names the same
+      package loads one copy, not two, and the resources view says which
+- [ ] The engine keeps no duplicate tool names: `getAllTools()` has one entry per
+      tool, and a second registration would have been skipped by name
+
+### S15: See what the context is spending
+
+The browser replacement for `pi-context-view`, built from the engine rather than the
+extension: `getContextUsage()` and `get_session_stats()`.
+
+- [ ] The page shows the context window used against its limit, and it updates as a
+      run streams
+- [ ] A per-part breakdown (system, tools, messages) matches what the engine reports
+      for the same moment
+- [ ] Nothing is read from `pi-context-view` or its files; removing the package
+      changes nothing on the page
+- [ ] A session with no usage yet shows a state, not a zero
+
+### S16: Paste an image into the composer
+
+The browser replacement for `pi-paster`: the `prompt` frame carries images and
+`agent.prompt(text, images)` receives them.
+
+- [ ] A pasted image becomes an attachment chip in the composer and is sent with the
+      next message
+- [ ] The transcript shows the image the model received, not the path
+- [ ] A message with an image and no text is allowed; an image over the size limit is
+      refused with a notice, never silently dropped
+- [ ] `steer` accepts an image too, with the same rules
