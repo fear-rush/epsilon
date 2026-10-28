@@ -19,6 +19,14 @@ import { Textarea } from "@/components/ui/textarea";
 
 type Question = Exclude<DialogQuestion, { method: "confirm" }>;
 
+/**
+ * pi's permission extension prefixes each option with a colour dot. The choice is
+ * already said in words, so the glyph is dropped instead of carrying pi's palette
+ * into the dialog (docs/ui.md: no glyphs from pi).
+ */
+const DECORATIVE_PREFIX = /^[\p{Extended_Pictographic}\uFE0F\u200D\s]+/u;
+const plainOption = (option: string): string => option.replace(DECORATIVE_PREFIX, "");
+
 export function QuestionDialog({
 	question,
 	onAnswer,
@@ -45,15 +53,15 @@ export function QuestionDialog({
 				</DialogHeader>
 
 				{question.method === "select" && (
-					<div className="flex flex-col gap-1.5">
+					<div className="flex min-w-0 flex-col gap-1.5">
 						{question.options.map((option) => (
 							<Button
 								key={option}
 								variant="outline"
-								className="justify-start"
+								className="h-auto min-w-0 justify-start py-2 text-left break-words whitespace-normal"
 								onClick={() => answer(option)}
 							>
-								{option}
+								{plainOption(option)}
 							</Button>
 						))}
 					</div>
