@@ -60,13 +60,14 @@ without a child process and a socket.
 | S3  | Browse sessions, resume one, close the tab, come back           | done   |
 | S4  | Run a full turn (steer, abort, change model) without a terminal | done   |
 | S5  | Answer a permission prompt from the browser                     | done   |
-| S6  | Open a file, its diff, and insert its path into the composer    | active |
+| S6  | Open a file, its diff, and insert its path into the composer    | todo   |
 | S7  | Use `pi` itself in a terminal tab                               | todo   |
 | S8  | See which skills, packages and MCP servers are loaded           | todo   |
 | S9  | Preview what the agent built, from the phone                    | todo   |
 | S10 | Get pinged when a run needs an answer                           | todo   |
 | S11 | Reach the dashboard from a phone on a machine without `pi`      | todo   |
 | S12 | Run every turn from an engine in the server, with no child      | done   |
+| S13 | Open a fresh home and get a guard, an ask tool and a notice     | active |
 
 S11 serves job 5. It gates nothing on this laptop, where the dashboard already runs
 against the host's own `pi`, and it comes before any deployment on a second machine.
@@ -78,15 +79,19 @@ verified in a browser now.
 
 ## Active slice
 
-**S6: Files and diff.** The first slice that reads more than sessions over REST.
-Open the project tree, view a source file, an image and a CSV, show the diff of the
-file the agent just edited, and insert a path into the composer with `@`. A path
-outside the project is refused with `PATH_NOT_ALLOWED`; the browser never sends an
-unchecked path.
+**S13: A fresh home is usable.** The defaults ADR-0008 promises are code now, not a
+file an operator copies: `server/src/agent/defaults/` holds them, and the engine
+registers them after the CLI's three built-ins with `replaceable` and `builtin` set.
+The permission guard is done and verified below; the `discuss` tool and the
+not-ready notice are not.
 
-Next action: the file routes and the allow-list, then the viewers, then the `@`
-mention. Nothing in it touches the engine, so a run keeps streaming while a file
-is open.
+Next action: port `discuss` onto the dialog bridge (`select`, then `input` for
+"Type something.") instead of `ctx.ui.custom`, which needs a terminal. Then derive
+readiness from the engine, so a home with no credential says which command fixes it
+instead of showing `unknown` in the composer.
+
+S6 waits. It was active and nothing was built for it, so it goes back in the queue
+rather than half-done.
 
 **S12, S5 and S4 are closed and verified in a browser.** The engine runs in the
 server ([ADR-0008](adr/0008-embed-pi-engine-with-opinions.md)), the socket speaks
@@ -97,14 +102,6 @@ reports the terminal tab. A tab that closes mid-run keeps the engine until the r
 settles; ten seconds after the last tab detaches with nothing running, the session
 is disposed and the next attach rebuilds it. The live-session cap named in ADR-0008
 is still unbuilt, and that is the one engine cost left open.
-
-The defaults half of ADR-0008 decision 3 is also unbuilt. `engine.ts` registers the
-CLI's three built-in extensions and nothing of Epsilon's own, so a home without the
-operator's permission extension has no permission control: the composer reads a
-keyed status that only that extension publishes. A home with no credential looks
-worse still, because the snapshot carries pi's `unknown` sentinel model and an empty
-model list ([facts](plan/facts.md)). The not-ready notice in S11 is what replaces
-both, and it is why the defaults can wait without becoming silent.
 
 ## Universal done list
 

@@ -1,6 +1,6 @@
 # Slice checks
 
-Status: **S1 to S5 verified in a browser. S6 is active. S11 is queued.** This page holds the
+Status: **S1 to S5 and S12 verified in a browser. S13 is active.** This page holds the
 checks. [../plan.md](../plan.md) holds the jobs, the slice table and the risks.
 
 A slice ends when you can run its checks yourself, by hand, in a browser. A slice
@@ -67,6 +67,35 @@ nothing overflows at 390px.
       continues after the replayed answer
 - [x] An extension using `ctx.ui.custom` shows the unsupported notice and points
       at the terminal tab: "An extension used custom, which needs the terminal tab."
+
+### S13: A fresh home is usable
+
+Epsilon's own defaults are code in `server/src/agent/defaults/`, registered after the
+CLI's three built-ins ([ADR-0008](../adr/0008-embed-pi-engine-with-opinions.md),
+decision 3). The checks below run against a scratch home: `auth.json` and
+`models.json` symlinked from the operator's home, a `settings.json` naming only the
+provider and the model, and no `extensions/` directory. That is the deployment shape
+from [../deploy.md](../deploy.md), minus a container.
+
+- [x] The permission guard loads and publishes its mode: the snapshot's commands
+      carry `permission` and a `setStatus` arrives with `perm:ask` before any turn
+- [x] `/permission strict` switches it and the status follows: `perm:strict` and a
+      notify, with no run started and no message written
+- [x] Under `strict` a `bash` call waits for a human, and a refused dialog blocks it:
+      the dialog arrived as `confirm Allow bash? echo gate-probe`, and pi's session
+      file records `Blocked by user: echo gate-probe`
+- [x] Under `yolo` the same turn runs with no dialog at all, and its output is in the
+      session file
+- [x] An operator extension registering `/permission` wins instead of colliding: a
+      probe file claiming the command and the status key became the only
+      `permission` command, with no `permission:2`, and its status won
+- [ ] `discuss` is available on the same home, and its popup arrives as the
+      browser's `select` dialog; picking "Type something." opens the `input` dialog
+- [ ] A home with no credential shows a notice that names the command to fix it,
+      instead of the composer reading `unknown`
+- [ ] The terminal tab shows the same defaults. It does not: an inline factory exists
+      only in the server process, which is the gap between ADR-0008's "the same in
+      the browser and in a terminal" and the code
 
 ### S6: Files and diff
 

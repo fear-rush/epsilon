@@ -27,6 +27,8 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import type { DialogAnswer, DialogQuestion, ExtensionDisplay } from "shared";
 
+import { permissionExtension } from "./defaults/permission";
+
 /** What the engine needs from the session that owns the browser sockets. */
 export type UiHost = {
 	ask: (question: DialogQuestion, timeoutMs?: number) => Promise<DialogAnswer>;
@@ -46,6 +48,16 @@ const CLI_BUILTINS: InlineExtension[] = [
 	{ name: "codemode", factory: createCodemodeExtension(), replaceable: true, builtin: true },
 	{ name: "tool-search", factory: createToolSearchExtension(), replaceable: true, builtin: true },
 	{ name: "mcp", factory: createMcpExtension(), replaceable: true, builtin: true },
+];
+
+/**
+ * Epsilon's own defaults (ADR-0008 decision 3): code, not a file to copy, and
+ * `replaceable` so an operator extension using the same command or tool name wins
+ * by rule. `builtin` lets them be disabled by name from a terminal, which is also
+ * the only place a deployment is configured (ADR-0006).
+ */
+const EPSILON_DEFAULTS: InlineExtension[] = [
+	{ name: "permission", factory: permissionExtension, replaceable: true, builtin: true },
 ];
 
 /**
@@ -209,7 +221,7 @@ export const createEngine = async (options: {
 		cwd: options.cwd,
 		agentDir: options.agentHome,
 		settingsManager,
-		extensionFactories: CLI_BUILTINS,
+		extensionFactories: [...CLI_BUILTINS, ...EPSILON_DEFAULTS],
 	});
 	await resourceLoader.reload();
 	const { session } = await createAgentSession({

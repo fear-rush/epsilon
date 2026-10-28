@@ -42,7 +42,8 @@ false, delete it rather than adding a correction below it.
 - The permission control needs an extension that publishes a `perm:` keyed status,
   so a home without the operator's permission extension has no permission control
   at all. The trigger is Epsilon's; the status it reads is a default ADR-0008
-  promises and the engine does not yet register.
+  promises and the engine does not yet register. (The guard is registered now:
+  `server/src/agent/defaults/permission.ts`, see below.)
 - `config.ts` overrides `PI_CODING_AGENT_DIR` and nothing else, so `PI_PACKAGE_DIR`
   and `PI_CODING_AGENT_SESSION_DIR` are still inherited. Verified with
   `PI_PACKAGE_DIR` pointing at a Nix store path: the home was still
@@ -239,3 +240,23 @@ false, delete it rather than adding a correction below it.
 - `JsonAgentSessionEvent` is typed public but the transform that produces it is
   not exported, so the engine carries it
   ([note](../notes/2026-10-28-tojson-is-not-exported.md)).
+
+## Verified for Epsilon's own defaults (S13)
+
+- The defaults are inline factories in `server/src/agent/defaults/`, registered in
+  `engine.ts` after the CLI's three built-ins with `replaceable: true` and
+  `builtin: true`. `builtin` is what lets a terminal disable one by name; an
+  extension the operator installs wins by rule.
+- A factory runs once per engine, so its state belongs in the factory body. Module
+  scope would share one mode across every live session in this process.
+- On a scratch home (credentials and model symlinked, settings naming only the
+  provider, no `extensions/`): `permission` is in the snapshot's commands, `perm:ask`
+  arrives at session start, `/permission strict` switches it, a `bash` call under
+  `strict` waits on a `confirm` and is recorded as `Blocked by user: echo gate-probe`,
+  and the same call under `yolo` runs with no dialog.
+- A probe extension claiming `/permission` and the `permission` status key became the
+  only `permission` command, with no `permission:2`, and its status won. The guard is
+  dropped, not doubled.
+- An inline factory exists only in the server process, so the `pi` in the terminal tab
+  does not have these defaults. ADR-0008's "the same in the browser and in a terminal"
+  is true of the code path, not of the terminal, until the CLI loads them too.
