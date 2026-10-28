@@ -89,8 +89,11 @@ from [../deploy.md](../deploy.md), minus a container.
 - [x] An operator extension registering `/permission` wins instead of colliding: a
       probe file claiming the command and the status key became the only
       `permission` command, with no `permission:2`, and its status won
-- [ ] `discuss` is available on the same home, and its popup arrives as the
-      browser's `select` dialog; picking "Type something." opens the `input` dialog
+- [x] `discuss` is available on the same home, and its popup arrives as the
+      browser's dialogs: the `select` carried `["Strict", "Yolo", "Type something."]`,
+      picking the last one opened the `input` dialog, and the tool result was
+      `User wrote: custom-answer-from-browser`; picking a preset gave
+      `User selected: 1. Strict`
 - [ ] A home with no credential shows a notice that names the command to fix it,
       instead of the composer reading `unknown`
 - [ ] The terminal tab shows the same defaults. It does not: an inline factory exists

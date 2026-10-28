@@ -27,6 +27,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import type { DialogAnswer, DialogQuestion, ExtensionDisplay } from "shared";
 
+import { discussExtension } from "./defaults/discuss";
 import { permissionExtension } from "./defaults/permission";
 
 /** What the engine needs from the session that owns the browser sockets. */
@@ -58,6 +59,7 @@ const CLI_BUILTINS: InlineExtension[] = [
  */
 const EPSILON_DEFAULTS: InlineExtension[] = [
 	{ name: "permission", factory: permissionExtension, replaceable: true, builtin: true },
+	{ name: "discuss", factory: discussExtension, replaceable: true, builtin: true },
 ];
 
 /**

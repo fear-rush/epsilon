@@ -260,3 +260,14 @@ false, delete it rather than adding a correction below it.
 - An inline factory exists only in the server process, so the `pi` in the terminal tab
   does not have these defaults. ADR-0008's "the same in the browser and in a terminal"
   is true of the code path, not of the terminal, until the CLI loads them too.
+- `discuss` registers its parameters as a zod schema converted with
+  `z.toJSONSchema(schema, { io: "input" })`. pi's `ToolDefinition.parameters` is
+  typed as typebox's `TSchema`, which is structurally any object, so a plain JSON
+  Schema is accepted and the repo keeps one schema language. Verified with a real
+  turn: the model called the tool and pi validated the arguments.
+- The tool asks with `ctx.ui.select` and falls through to `ctx.ui.input` for "Type
+  something.". Both branches were answered from the socket: a preset gave
+  `User selected: 1. Strict` and the free-text branch gave `User wrote: …`. It never
+  touches `ctx.ui.custom`, which is what a terminal-only version needs.
+- An unanswered `discuss` or permission dialog has no timeout: it waits until a tab
+  answers or the run is aborted, and a later tab receives it replayed.
