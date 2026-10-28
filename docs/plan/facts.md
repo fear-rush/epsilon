@@ -285,3 +285,15 @@ false, delete it rather than adding a correction below it.
   first ([note](../notes/2026-10-28-browser-checks-assert-ui-not-prose.md)).
 - `readiness` strings are plain text in an `Alert`: a markdown backtick renders
   literally, so the copy carries none.
+- The picker's list is `server/src/agent/models.ts`: `getAllAvailable()` with a 3 s
+  timeout, falling back to pi's cached `getAvailableSnapshot()`. The cache is smaller
+  than the truth: on a home with `auth.json` and `settings.json` alone it answered 420
+  where the checked call answered 514, all of it openrouter
+  ([note](../notes/2026-10-28-model-snapshot-is-not-the-model-list.md)). After the fix
+  the browser listed 514 there and 605 on the operator's full home.
+- `set_model` resolves against that same list, so a pick the browser was offered is
+  always accepted, and an unknown pair still answers `Model not found`.
+- Readiness still uses pi's cached snapshot, which is the conservative answer, and it
+  cannot tell a live key from a rejected one: a home whose `models.json` carried an
+  inline key reported `ready: true` and the turn ended with
+  `401: Invalid 'Authorization' header or token.` Only a request can answer that.

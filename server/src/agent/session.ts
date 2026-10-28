@@ -5,12 +5,13 @@
  * call on the embedded `AgentSession` (ADR-0008, ADR-0009).
  */
 import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
-import type { Command, DialogAnswer, ServerFrame } from "shared";
+import type { Command, DialogAnswer, ServerFrame, SnapshotModel } from "shared";
 
 import { Dialogs } from "./dialogs";
 import type { FrameSink } from "./dialogs";
 import { createEngine, toJsonEvent } from "./engine";
 import type { UiHost } from "./engine";
+import { readModels } from "./models";
 import { buildSnapshot } from "./snapshot";
 
 /**
@@ -37,6 +38,8 @@ export class LiveSession {
 	private readonly earlyUnsupported = new Set<string>();
 	private agent: AgentSession | undefined;
 	private unsubscribe: (() => void) | undefined;
+	/** The models the picker offers, refreshed when the engine's providers change. */
+	private models: SnapshotModel[] = [];
 	private streaming = false;
 	private bashUnsettled = false;
 	private disposed = false;
@@ -62,6 +65,7 @@ export class LiveSession {
 		});
 		session.agent = agent;
 		session.unsubscribe = agent.subscribe((event) => session.receive(event));
+		session.models = await readModels(agent);
 		return session;
 	}
 
@@ -157,17 +161,21 @@ export class LiveSession {
 				return;
 			case "reload":
 				// Re-reads extensions, skills, packages and MCP config in place. The
-				// session object and its transcript stay.
+				// session object and its transcript stay. A package can add a provider, so
+				// the model list is re-read with it.
 				await agent.reload();
+				this.models = await readModels(agent);
 				this.resync();
 				return;
 			case "set_model": {
-				const models = agent.modelRuntime.getAvailableSnapshot();
-				const model = models.find(
+				// Resolve against the list the browser was offered, so a pick can never
+				// name a pair the engine will refuse.
+				const offered = this.models.some(
 					(candidate) =>
 						candidate.provider === command.provider && candidate.id === command.modelId,
 				);
-				if (model === undefined) {
+				const model = agent.modelRuntime.getModel(command.provider, command.modelId);
+				if (!offered || model === undefined) {
 					throw new Error(`Model not found: ${command.provider}/${command.modelId}`);
 				}
 				await agent.setModel(model);
@@ -253,7 +261,11 @@ export class LiveSession {
 	}
 
 	private snapshotFrame(): ServerFrame {
-		return { t: "snapshot", sessionId: this.sessionId, snapshot: buildSnapshot(this.engine) };
+		return {
+			t: "snapshot",
+			sessionId: this.sessionId,
+			snapshot: buildSnapshot(this.engine, this.models),
+		};
 	}
 
 	/** Re-read the snapshot for everyone watching, after the engine changed. */

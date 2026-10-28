@@ -5,7 +5,7 @@
  */
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import { isVisibleMessage } from "shared";
-import type { Snapshot, SnapshotCommand } from "shared";
+import type { Snapshot, SnapshotCommand, SnapshotModel } from "shared";
 
 const commandsOf = (agent: AgentSession): SnapshotCommand[] => {
 	const commands: SnapshotCommand[] = [];
@@ -29,7 +29,7 @@ const commandsOf = (agent: AgentSession): SnapshotCommand[] => {
 	return commands;
 };
 
-export const buildSnapshot = (agent: AgentSession): Snapshot => {
+export const buildSnapshot = (agent: AgentSession, models: SnapshotModel[]): Snapshot => {
 	const model = agent.model;
 	return {
 		state: {
@@ -42,11 +42,9 @@ export const buildSnapshot = (agent: AgentSession): Snapshot => {
 			sessionName: agent.sessionName,
 		},
 		messages: agent.messages.filter(isVisibleMessage),
-		models: agent.modelRuntime.getAvailableSnapshot().map((candidate) => ({
-			provider: candidate.provider,
-			id: candidate.id,
-			name: candidate.name,
-		})),
+		// The list the session carries, so the picker and `set_model` agree
+		// (`models.ts`). Reading pi's cache here is how they drifted apart.
+		models,
 		commands: commandsOf(agent),
 	};
 };
