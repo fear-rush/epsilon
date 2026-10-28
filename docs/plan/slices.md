@@ -99,9 +99,9 @@ from [../deploy.md](../deploy.md), minus a container.
       fix}` for an empty one, and one call costs about 4 ms
 - [ ] A home with no credential shows that notice centred on every page, with no
       composer to type into, instead of the model trigger reading `unknown`
-- [ ] The terminal tab shows the same defaults. It does not: an inline factory exists
-      only in the server process, which is the gap between ADR-0008's "the same in
-      the browser and in a terminal" and the code
+- [ ] The terminal tab shows the same defaults. It does not, and
+      [ADR-0010](../adr/0010-defaults-are-engine-only.md) says so: S7 is where the tab
+      passes them to the CLI with `-e`
 
 ### S6: Files and diff
 

@@ -258,8 +258,8 @@ false, delete it rather than adding a correction below it.
   only `permission` command, with no `permission:2`, and its status won. The guard is
   dropped, not doubled.
 - An inline factory exists only in the server process, so the `pi` in the terminal tab
-  does not have these defaults. ADR-0008's "the same in the browser and in a terminal"
-  is true of the code path, not of the terminal, until the CLI loads them too.
+  does not have these defaults. S7 closes that by launching the tab's `pi` with `-e`
+  ([ADR-0010](../adr/0010-defaults-are-engine-only.md)).
 - `discuss` registers its parameters as a zod schema converted with
   `z.toJSONSchema(schema, { io: "input" })`. pi's `ToolDefinition.parameters` is
   typed as typebox's `TSchema`, which is structurally any object, so a plain JSON

@@ -13,6 +13,7 @@ One file per decision a future contributor (human or agent) could reasonably rev
 | [0007](0007-embed-pi-engine.md)                  | Rejected | Embed pi's engine in a worker of our own. Rejected: RPC is the cheaper contract. |
 | [0008](0008-embed-pi-engine-with-opinions.md)    | Accepted | Embed pi's engine in the server and ship Epsilon's own default extensions.       |
 | [0009](0009-socket-speaks-epsilon.md)            | Accepted | The socket carries Epsilon's commands and zod shapes, not pi's RPC types.        |
+| [0010](0010-defaults-are-engine-only.md)         | Accepted | The defaults are engine-only; S7 restores parity with `-e`, never by seeding.    |
 
 Superseding is how history changes here:
 
@@ -25,6 +26,8 @@ Superseding is how history changes here:
   decision 1 and 0004, and reverses 0007. 0001 decisions 2 to 4 stand.
 - 0009 supersedes 0008 decision 2: embedding removed the RPC envelope, so the
   browser contract became Epsilon's own commands and zod shapes.
+- 0010 narrows 0008's claim that the defaults behave the same in a terminal: they
+  are engine-only until S7 passes them to the CLI with `-e`.
 
 ## Writing one
 

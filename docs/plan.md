@@ -88,10 +88,9 @@ socket and REST; what is left is the browser pass in
 
 Next action: run those checks in a browser against
 `EPSILON_AGENT_HOME=/tmp/eps-defaults bun run dev` (credentials symlinked, no
-`extensions/`), then against an empty home. Two things are open beyond them: the
-terminal parity gap (an inline factory exists only in the server process, so `pi` in
-the terminal tab has no guard) and whether to close it, which is a decision, not a
-slice.
+`extensions/`), then against an empty home. The terminal gap is decided, not open:
+[ADR-0010](adr/0010-defaults-are-engine-only.md) makes the defaults engine-only and
+puts the `-e` parity requirement on S7.
 
 S6 waits. It was active and nothing was built for it, so it goes back in the queue
 rather than half-done.
