@@ -1,5 +1,5 @@
 /** A blocking `confirm`: the agent cannot continue until this is answered. */
-import type { DialogQuestion, RpcExtensionUIResponse } from "shared";
+import type { DialogAnswer, DialogQuestion } from "shared";
 
 import {
 	AlertDialog,
@@ -19,10 +19,9 @@ export function ConfirmDialog({
 	onAnswer,
 }: {
 	question: ConfirmQuestion;
-	onAnswer: (response: RpcExtensionUIResponse) => void;
+	onAnswer: (answer: DialogAnswer) => void;
 }) {
-	const answer = (confirmed: boolean) =>
-		onAnswer({ type: "extension_ui_response", id: question.id, confirmed });
+	const answer = (confirmed: boolean) => onAnswer({ id: question.id, confirmed });
 
 	return (
 		<AlertDialog open onOpenChange={() => {}}>

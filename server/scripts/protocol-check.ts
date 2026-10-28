@@ -1,4 +1,4 @@
-/** S1 scaffolding: the failure paths of the socket, checked by hand. */
+/** The failure paths of the socket, checked by hand against a running server. */
 import { execSync } from "node:child_process";
 import { PROTOCOL_VERSION, clientFrameSchema, serverFrameSchema } from "shared";
 import type { ClientFrame, ServerFrame } from "shared";
@@ -41,7 +41,8 @@ const unsupported = await once((socket) => {
 });
 report("terminal frame", unsupported);
 
-const killed = await new Promise<ServerFrame[]>((resolve) => {
+/** One real turn in this process, then prove no `pi` child was spawned for it. */
+const embedded = await new Promise<ServerFrame[]>((resolve) => {
 	const sessionId = crypto.randomUUID();
 	const socket = new WebSocket(URL);
 	const frames: ServerFrame[] = [];
@@ -54,17 +55,14 @@ const killed = await new Promise<ServerFrame[]>((resolve) => {
 		if (frame.t === "welcome") {
 			send(socket, { t: "attach", sessionId });
 			send(socket, {
-				t: "rpc",
+				t: "command",
 				sessionId,
-				command: { type: "prompt", message: "count to twenty slowly, one number per line" },
+				command: { type: "prompt", text: "Say only: ok" },
 			});
 		}
-		if (frame.t === "event" && frame.event.type === "agent_start") {
-			const serverPid = execSync("pgrep -f 'src/serve.ts' | head -1").toString().trim();
-			const childPid = execSync(`pgrep -P ${serverPid} | tail -1`).toString().trim();
-			process.kill(Number(childPid), "SIGKILL");
-		}
-		if (frame.t === "error") {
+		if (frame.t === "event" && frame.event.type === "agent_settled") {
+			const children = execSync("pgrep -f 'mode rpc' || true").toString().trim();
+			console.log(children === "" ? "embedded turn: no pi child" : `pi children: ${children}`);
 			socket.close();
 			resolve(frames);
 		}
@@ -72,7 +70,7 @@ const killed = await new Promise<ServerFrame[]>((resolve) => {
 	setTimeout(() => {
 		socket.close();
 		resolve(frames);
-	}, 20_000);
+	}, 90_000);
 });
-report("kill mid-stream", killed);
+report("embedded turn", embedded);
 process.exit(0);

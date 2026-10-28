@@ -83,8 +83,6 @@ export type ConversationState = {
 	commands: SnapshotCommand[];
 	/** The model the session uses now, or undefined before the first snapshot. */
 	model: SnapshotModel | undefined;
-	/** The child process behind this session is alive (the socket's `meta`). */
-	running: boolean;
 	needsInput: boolean;
 	nextNoticeId: number;
 };
@@ -101,7 +99,6 @@ export const emptyConversation: ConversationState = {
 	models: [],
 	commands: [],
 	model: undefined,
-	running: false,
 	needsInput: false,
 	nextNoticeId: 0,
 };

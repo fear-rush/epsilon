@@ -1,17 +1,16 @@
 # Architecture
 
-Status: **partly implemented.** The socket, the driver, the transcript page and
-the session list exist. The deployment boundary is decided and the agent home is
-built ([ADR-0005](adr/0005-deployment-owns-agent-home.md)). pi's engine still runs
-outside our process, as a child, and that is the one part this page describes that
-is about to change: [ADR-0008](adr/0008-embed-pi-engine-with-opinions.md) embeds the
-library so Epsilon can ship default extensions, and S12 in [plan.md](plan.md) is the
-migration. Until it lands, the driver and the frame handling below are the reality.
+Status: **partly implemented.** S1 to S3 are verified in a browser, S4 is built
+with its palette unverified, and S12 has moved the engine into the server. The
+browser socket is Epsilon's own protocol 4
+([ADR-0009](adr/0009-socket-speaks-epsilon.md)); the engine runs in this process
+([ADR-0008](adr/0008-embed-pi-engine-with-opinions.md)). The deployment boundary
+is decided ([ADR-0005](adr/0005-deployment-owns-agent-home.md)). Modules named
+below exist; later slices add the rest.
 
 A map of the system: what the parts are, what each owns, and how a request or an
 event travels. Rationale lives in [adr/](adr/); rules live in
-[../AGENTS.md](../AGENTS.md); the socket contract lives in
-[protocol.md](protocol.md).
+[../AGENTS.md](../AGENTS.md); the socket contract lives in [protocol.md](protocol.md).
 
 ## Runtime shape
 
@@ -21,147 +20,130 @@ it, including the agent home, belongs to it and not to the operator's host
 
 ```
                     ┌──────────────────────── browser ────────────────────────┐
-                    │  sidebar · transcript · composer · files · preview       │
+                    │  sidebar · transcript · composer                         │
                     └───────────┬─────────────────────────────┬───────────────┘
                                 │ one WebSocket per tab        │ REST (disk reads)
                     ╭───────────┴─────────────────────────────┴───────────────╮
-                    │  epsilon server (also serves the built client)          │
+                    │  epsilon server                                          │
                     │                                                         │
-                    │  ┌──────────────────┐  ┌────────────────────────────┐   │
-                    │  │ ws/hub → channel │  │ http/routes → sessions/,   │   │
-                    │  │ per-session       │  │ files/, agent, ui-state    │   │
-                    │  │ ordering, cache    │  └────────────┬───────────────┘   │
-                    │  └────────┬─────────┘               │                   │
-                    │           │                         │                   │
-                    │  ┌────────▼─────────┐   ┌───────────▼───────────────┐   │
-                    │  │ agent/registry    │   │ agent/home: which config  │   │
-                    │  │ cap, idle kill    │   │ dir, is it ready, what is │   │
-                    │  └────────┬─────────┘   │ missing                   │   │
-                    │           │             └───────────────────────────┘   │
-                    │  ┌────────▼──────────────────────────────────────────┐  │
-                    │  │ pi --mode rpc (one child per live session, capped) │  │
-                    │  │ loads extensions, skills, MCP, packages from the   │  │
-                    │  │ agent home (ADR-0001, ADR-0004)                    │  │
-                    │  └────────┬──────────────────────────────────────────┘  │
+                    │  ws/chat: handshake, attach, commands, dialogs           │
+                    │  routes: session list and delete                         │
+                    │           │                                              │
+                    │  ┌────────▼─────────┐   ┌────────────────────────────┐   │
+                    │  │ agent/registry   │   │ config.ts: home, project   │   │
+                    │  │ one engine per   │   │ and the published PI_ home │   │
+                    │  │ attached session │   └────────────────────────────┘   │
+                    │  └────────┬─────────┘                                    │
+                    │  ┌────────▼──────────────────────────────────────────┐   │
+                    │  │ agent/engine: AgentSession in this process         │   │
+                    │  │ loads extensions, skills, MCP and packages from    │   │
+                    │  │ the agent home; ExtensionUIContext is a bridge     │   │
+                    │  └────────┬──────────────────────────────────────────┘   │
                     │           │                                             │
                     │  ╭────────▼─────────╮  ╭─────────────────────────────╮    │
-                    │  │ agent home        │  │ the project (bind mount)    │    │
+                    │  │ agent home        │  │ the project                 │    │
                     │  │ volume: settings, │  │ tools read, write and run   │    │
                     │  │ creds, packages,  │  │ commands here               │    │
                     │  │ sessions, trust   │  ╰─────────────────────────────╯    │
                     │  ╰──────────────────╯                                        │
-                    ╰────────────────────────────┬────────────────────────────╯
-                                                 │ second listener, own port
-                                     ┌───────────▼───────────┐
-                                     │ preview origin        │
-                                     │ sandboxed static +    │
-                                     │ dev-server proxy      │
-                                     └───────────────────────┘
+                    ╰─────────────────────────────────────────────────────────╯
 ```
 
-The preview origin is a **second listener**, on its own port, serving agent-written
-content. It never shares an origin with the API (ADR-0003).
+An engine is not a process. It shares the server's heap and its fate: an extension
+or engine bug can take the server down, and the costs of that are accepted in
+ADR-0008. Idle engines do not leak: the last tab to detach disposes the session,
+and the next attach rebuilds it from pi's session file.
 
 The agent home is resolved once, in `config.ts` (`EPSILON_AGENT_HOME`), published
-as `PI_CODING_AGENT_DIR` for the server's own pi calls, and given to every child
-explicitly, so an inherited value cannot choose this deployment's config. The
-session list and delete have to read the same home the children write to, which is
-why the choice is published rather than only passed along. It is pi's own default path inside the deployment
-unless the override says otherwise ([ADR-0005](adr/0005-deployment-owns-agent-home.md)).
-The variable does not cover everything pi reads: `~/.agents/skills` and the
-project's `.pi/` are separate conventions, so a source run on a host still shares
-those with it.
+as `PI_CODING_AGENT_DIR` for the reads pi performs itself, and passed to every
+engine explicitly. An inherited value cannot choose this deployment's config. The
+session list and delete read the same home the engines write to. The variable does
+not cover everything pi reads: `~/.agents/skills` and the project's `.pi/` are
+separate conventions, so a source run on a host still shares those with it.
+
+The preview origin ([ADR-0003](adr/0003-preview-second-origin.md)) is decided and
+not built; it becomes a second listener when S9 starts.
 
 ## Module map
 
 `server/src/`: the host. Node-compatible, no browser code.
 
-| Module               | Owns                                                                                   |
-| -------------------- | -------------------------------------------------------------------------------------- |
-| `index.ts`           | The Hono app and its generated OpenAPI document, exported for tests. No listener.      |
-| `runtime.ts`         | The one live-child registry, shared by the socket and the REST handlers                |
-| `serve.ts`           | `Bun.serve` with `fetch` + `websocket`, plus the preview listener, plus shutdown hooks |
-| `config.ts`          | Ports, paths, caps, env. The only place that reads `process.env`                       |
-| `security.ts`        | Loopback and Host checks, optional token                                               |
-| `agent/driver.ts`    | Spawning `pi --mode rpc`, JSONL framing, `send`, `onFrame`, `onExit`, `kill`           |
-| `agent/sessions.ts`  | pi's session-manager: the only path from REST to session files                         |
-| `agent/registry.ts`  | sessionId → child, cap, idle kill, idle-gated restart                                  |
-| `agent/home.ts`      | Reading the agent home: ready or not, which provider is configured, what is missing    |
-| `agent/normalize.ts` | `JsonAgentSessionEvent` → protocol frames. The only place that knows pi's event shapes |
-| `agent/extui.ts`     | The nine dialog methods, pending-request replay, cancel on abort                       |
-| `ws/upgrade.ts`      | Socket upgrade, origin check, tab identity                                             |
-| `ws/hub.ts`          | Attach/detach, per-session channel registry, meta fan-out                              |
-| `ws/channel.ts`      | Per-session ordering, delta coalescing, backpressure limits                            |
-| `sessions/reader.ts` | Reading a session file through pi's session-manager helpers                            |
-| `sessions/list.ts`   | Joining stored sessions with live children, newest first                               |
-| `sessions/delete.ts` | Removing one session file, refused while a child holds it                              |
-| `sessions/search.ts` | Transcript search                                                                      |
-| `sessions/fork.ts`   | Copying a branch into a new session file                                               |
-| `routes/*.ts`        | Thin handlers: validate, call one function, return                                     |
-| `preview/*.ts`       | Second-origin serving, CSP, dev-server proxy                                           |
-| `terminal.ts`        | Pty sessions for the terminal tab                                                      |
-| `state/ui.ts`        | `~/.epsilon/ui-state.json`: pins, archive, project order                               |
-| `notify.ts`          | Needs-input and turn-end notifications                                                 |
+| Module               | Owns                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------ |
+| `index.ts`           | The Hono app and its generated OpenAPI document, exported for tests. No listener.          |
+| `serve.ts`           | `Bun.serve` with `fetch` + `websocket`, and the shutdown hooks                             |
+| `config.ts`          | Ports, paths, caps, env. The only place that reads `process.env`                           |
+| `runtime.ts`         | The one engine registry, shared by the socket and the REST handlers                        |
+| `agent/engine.ts`    | `createAgentSession`, the CLI built-ins, `ExtensionUIContext` bridge, JSON event transform |
+| `agent/session.ts`   | One live session: commands, snapshot, engine events, dispose                               |
+| `agent/dialogs.ts`   | Pending dialogs, keyed display state, unsupported TUI methods                              |
+| `agent/registry.ts`  | sessionId → engine, creation dedupe, dispose when the last tab leaves                      |
+| `agent/sessions.ts`  | pi's session-manager: the only path from REST to session files                             |
+| `sessions/list.ts`   | Joining stored sessions with live engines, newest first                                    |
+| `sessions/delete.ts` | Removing one session file, refused while an engine holds it                                |
+| `ws/chat.ts`         | Socket upgrade state, hello, attach/detach, commands, dialog answers                       |
+| `routes/*.ts`        | Thin handlers: validate, call one function, return                                         |
+
+Not built yet, and named only so the slices stay findable: the Host check
+(`security.ts`), file and diff routes, the readiness route (`GET /api/agent`), the
+preview listener, the terminal pty, the resources page, notifications, and the
+queue/backpressure channel.
 
 `shared/src/`: browser-safe. No `node:*`, no React.
 
-| Module                      | Owns                                                                    |
-| --------------------------- | ----------------------------------------------------------------------- |
-| `protocol/version.ts`       | `PROTOCOL_VERSION`                                                      |
-| `protocol/frames.ts`        | zod schemas for every socket frame                                      |
-| `conversation/state.ts`     | `ConversationState`                                                     |
-| `conversation/reduce.ts`    | `reduce(state, frame)`: pure, replay-tested                             |
-| `conversation/selectors.ts` | Derived views: messages, running tools, pending dialog, needs-input     |
-| `conversation/fixtures/`    | Recorded event logs, one per hard case                                  |
-| `pi.ts`                     | Type-only re-exports from pi (`RpcCommand`, `JsonAgentSessionEvent`, …) |
-| `schemas/*.ts`              | zod schemas for REST bodies and responses                               |
+| Module                      | Owns                                                                     |
+| --------------------------- | ------------------------------------------------------------------------ |
+| `protocol/version.ts`       | `PROTOCOL_VERSION`                                                       |
+| `protocol/frames.ts`        | zod schemas for every socket frame and the command union                 |
+| `extui.ts`                  | zod schemas for dialog questions, answers and display requests           |
+| `pi.ts`                     | Type-only re-export of pi's `JsonAgentSessionEvent`, the reducer's input |
+| `conversation/state.ts`     | `ConversationState`                                                      |
+| `conversation/reduce.ts`    | `reduce(state, frame)`: pure, replay-tested                              |
+| `conversation/selectors.ts` | Derived views: messages, running tools, pending dialog, needs-input      |
+| `conversation/tools.ts`     | zod schemas for tool arguments the renderers read                        |
+| `conversation/fixtures/`    | Recorded event logs, one per hard case                                   |
+| `schemas/sessions.ts`       | zod schemas for the REST session bodies                                  |
 
 `client/src/`: React and Vite.
 
-| Module                                                            | Owns                                                             |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `link.ts`                                                         | One socket, backoff, hello/welcome, attach/detach                |
-| `conversation/store.ts`                                           | `useSyncExternalStore` over `shared/conversation`                |
-| `conversation/commands.ts`                                        | Typed senders for the 33 RPC commands                            |
-| `routes/*.tsx`                                                    | URL state: new session, session, resources                       |
-| `components/chat/`                                                | Transcript, entry-kind map, per-tool renderers, generic fallback |
-| `components/composer/`                                            | Input, palette, model and reasoning pickers, queue, bash box     |
-| `components/dialogs/`                                             | The nine extension dialog methods                                |
-| `components/{sidebar,files,settings,terminal,preview,resources}/` | Each surface                                                     |
-| `lib/`                                                            | Markdown, Shiki, formatting                                      |
+| Module                      | Owns                                                               |
+| --------------------------- | ------------------------------------------------------------------ |
+| `link.ts`                   | One socket, backoff, hello/welcome, attach/detach                  |
+| `conversation/store.ts`     | `useSyncExternalStore` over `shared/conversation`, command senders |
+| `hooks/use-conversation.ts` | One store per session per tab                                      |
+| `routes/*.tsx`              | The home page and `/sessions/$sessionId`                           |
+| `components/chat/`          | Transcript, markdown, tool trace, confirm and question dialogs     |
+| `components/composer/`      | Input, palette, model and permission menus, `!cmd` and `/reload`   |
+| `components/sessions/`      | The sidebar list                                                   |
+| `components/ui/`            | shadcn primitives                                                  |
+| `lib/`                      | Markdown, Shiki, formatting, permission modes                      |
 
 ## Data flows
 
-**Open a session.** The id comes from `GET /api/sessions` → WS `attach` → server
-ensures a child → snapshot from `get_state`, `get_messages` and
-`get_available_models` → client replaces state → later frames are deltas. REST lives under `/api` and `/sessions/<id>` is
-a client route, so a reload is not swallowed by the dev proxy.
+**Open a session.** The id comes from the sidebar list or a new UUID → WS `attach`
+→ the registry builds an engine, or reuses the live one → a snapshot from the
+engine's own state, messages, models and commands → client replaces state → later
+frames are deltas.
 
-**Send a prompt.** Client sends `rpc { prompt }` → the driver writes it to the agent
-host → pi streams `message_*` and `tool_execution_*` events → normalizer → channel
-→ client reducer.
+**Send a command.** `command { type: "prompt" }` → `LiveSession.run` →
+`AgentSession.prompt` → pi emits session events → `toJsonEvent` → `event` frames →
+the reducer. `steer`, `abort`, `bash`, `set_model` and `reload` map to one
+`AgentSession` method each. `bash`, `set_model`, `reload` and a session rename
+refresh the snapshot because they change what the snapshot reports.
 
-**Not ready.** Any page load asks for the agent home's state (REST `GET /api/agent`)
-→ if a step is missing, the page shows one notice naming the step, the home path and
-the command that fixes it in a terminal inside the deployment
-([ADR-0006](adr/0006-setup-in-the-deployment-terminal.md)). The dashboard writes
-nothing to pi's configuration.
+**Answer an extension dialog.** The engine's `ExtensionUIContext.ask` blocks a tool
+call → `agent/dialogs.ts` stores it and sends `dialog` → the client renders →
+`dialog` answer back → the pending promise resolves. `abort` answers every pending
+dialog as cancelled, and a dialog's own timeout does the same.
 
-**Answer an extension dialog.** `extension_ui_request` in → extui stores it with a
-deadline and sends `dialog` → client renders → `dialog` answer back → driver
-writes `extension_ui_response`. A late-attaching tab gets pending requests in its
-snapshot.
+**Close and return.** The last `detach` on a session disposes its engine. The next
+`attach` rebuilds it from pi's session file, which is why a closed tab loses a
+running turn but not its transcript.
 
-**Read a file.** REST `GET /files?type=read` → allow-list check (realpath inside a
-project or worktree root) → bytes → client viewer.
-
-**Preview.** REST `GET /preview/targets` lists candidate files and listening
-ports → iframe points at the second origin with a sandbox and no
-`allow-same-origin`.
-
-**Restart a session's agent.** WS `rpc`-adjacent pool action, idle-gated → kill the
-child → next `attach` spawns a new one, which re-reads extensions, skills, MCP and
-packages.
+**Not ready.** Not built. The page has no readiness route yet, so a deployment
+without credentials surfaces pi's own error as a notice after the first prompt.
+ADR-0006 fixes what that state must look like: one notice naming the missing step,
+the home path and the terminal command.
 
 ## State ownership
 
@@ -173,28 +155,29 @@ written unless the operator mounts it there
 | --------------------------------------------------- | ---------------------------------- | -------------------------------------- |
 | Transcript, branches, compaction, session name      | pi's JSONL in the agent home       | Forever                                |
 | Settings, credentials, models, MCP, packages, trust | the agent home (`$HOME/.pi/agent`) | Forever                                |
-| Pins, archive, project order                        | `~/.epsilon/ui-state.json`         | Until deleted                          |
-| Live child processes                                | `agent/registry.ts`                | Idle timeout                           |
-| Unanswered extension dialogs                        | `agent/extui.ts`                   | Until answered, cancelled or timed out |
+| Live engines                                        | `agent/registry.ts`                | Until the last tab detaches            |
+| Unanswered extension dialogs, display state         | `agent/dialogs.ts`                 | Until answered, cancelled or timed out |
+| Pins, archive, project order                        | not built                          | —                                      |
 | View state, scroll position, drafts                 | Browser                            | Tab lifetime                           |
 
-Nothing else is persisted. If a piece of state is not in this table, it does not
-exist. The agent home is not recorded anywhere: it is deterministic, so a file
-naming it would be a second source of truth.
+Nothing else is persisted. The agent home is not recorded anywhere: it is
+deterministic, so a file naming it would be a second source of truth.
 
 ## Failure modes
 
-| Failure                        | Behaviour                                                                                                             |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| Agent process crashes mid-turn | Client sees the stream stop; the turn is lost; the next prompt spawns a fresh one. Show it, do not silently reconnect |
-| Socket drops                   | Reconnect with backoff, `attach` again, snapshot replaces state                                                       |
-| Server restarts                | Same as socket drop; in-flight turns are lost (ADR-0001)                                                              |
-| Protocol version mismatch      | `PROTOCOL_MISMATCH` → client reloads                                                                                  |
-| Agent home unconfigured        | Every page names the missing step and the terminal command that fixes it (ADR-0006)                                   |
-| No credential, no model        | The prompt is refused with a message naming the fix, never a silent failed turn                                       |
-| Project not trusted            | Project resources are skipped by pi; the dashboard reports it, because RPC cannot ask (note)                          |
-| pi upgrade changes its surface | Types break at compile time first; re-verify against [reference/pi-rpc.md](reference/pi-rpc.md)                       |
-| Preview content misbehaves     | It cannot reach the API: different origin, sandboxed frame, closed CORS                                               |
+| Failure                        | Behaviour                                                                                                              |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Engine creation fails          | The socket answers `AGENT_START_FAILED`; the page shows it, never a blank session                                      |
+| An extension handler throws    | The engine reports it through `onError`; the page shows `EXTENSION_ERROR`                                              |
+| An engine bug crashes the host | Every live session dies with the server. Accepted in ADR-0008; the session files survive                               |
+| Socket drops                   | Reconnect with backoff, `attach` again, a snapshot replaces state                                                      |
+| Server restarts                | Same as a socket drop; in-flight turns are lost                                                                        |
+| Protocol version mismatch      | `PROTOCOL_MISMATCH` → the page reloads                                                                                 |
+| Agent home unconfigured        | Not built: pi's own error reaches the page as a notice                                                                 |
+| No credential, no model        | The prompt's `command-result` or the engine's error names the problem; never a silent failed turn                      |
+| Project not trusted            | pi skips project resources; the dashboard does not report it yet ([note](notes/2026-10-28-rpc-cannot-answer-trust.md)) |
+| pi upgrade changes its surface | Types break at compile time first; re-verify against [reference/pi-rpc.md](reference/pi-rpc.md)                        |
+| Extension uses TUI-only UI     | One warning per method names the terminal tab; never silence                                                           |
 
 ## Size budgets
 

@@ -1,6 +1,6 @@
 # Verified facts
 
-Status: **current as of S4.** Every line here was checked against the pinned pi
+Status: **current as of S12.** Every line here was checked against the pinned pi
 package or against a browser session, not read from a document. When one becomes
 false, delete it rather than adding a correction below it.
 
@@ -27,12 +27,12 @@ false, delete it rather than adding a correction below it.
   cannot close a working connection
   ([note](../notes/2026-10-28-strictmode-closes-the-socket.md)).
 - The agent home is `config.agentHome`: `EPSILON_AGENT_HOME`, else pi's own
-  `~/.pi/agent`. The driver writes it to `PI_CODING_AGENT_DIR` for every child, so
-  an inherited value loses. Verified with the override set to a temp home and an
-  inherited variable pointing at the operator's: the new session file landed in the
-  temp home, `get_commands` dropped from 63 to 25 (pi's built-in extensions only),
-  and `get_available_models` returned 0, which is what a home without credentials
-  looks like.
+  `~/.pi/agent`. `config.ts` publishes it as `PI_CODING_AGENT_DIR` and every engine
+  is handed it explicitly, so an inherited value loses. Verified with the override
+  set to a temp home and an inherited variable pointing at the operator's: the new
+  session file landed in the temp home, the command palette dropped from 63 to 25
+  entries (pi's built-in extensions only), and the model list was empty, which is
+  what a home without credentials looks like.
 - The session list and delete read pi's home in the server process, so the port was
   also given a planted session file in a temp home: the list showed exactly that
   one, and `DELETE` removed it there while the operator's own file stayed. Before
@@ -63,42 +63,43 @@ false, delete it rather than adding a correction below it.
   writes no file until the first message
   ([note](../notes/2026-10-28-fresh-session-id-writes-no-file.md)).
 - Delete resolves the id with `SessionManager.findById` and refuses while the
-  registry holds a live child. A real id from another project answers `404` and
+  registry holds a live engine. A real id from another project answers `404` and
   leaves the file alone, so the temp-project test could not touch this repo's
   sessions.
-- No idle kill: a child stays alive after its last tab closes, so browsing many
-  sessions leaves one `pi` per session until the server stops.
+- The last `detach` on a session disposes its engine, and the next `attach` rebuilds
+  it from the session file. Verified: a prompt, a detach, a re-attach, and the same
+  messages came back. A tab left open keeps its engine and its heap.
 - The session list polls `/api/sessions` every 5 s for the needs-input badge. Run
   state has no row indicator; a session running only in the terminal could not be
   detected anyway, because pi keeps no lock and appends to the JSONL without one.
-- `meta.running` means the child process is alive; `busy` means a turn is
-  running. `busy` comes from `agent_start`/`agent_end` and from the snapshot's
+- `meta.needsInput` reports whether a dialog blocks the engine; `busy` means a turn
+  is running. `busy` comes from `agent_start`/`agent_end` and from the snapshot's
   `isStreaming`, so a tab that attaches mid-run shows "working" and offers stop
   instead of looking idle.
 - pi's `steer` lands at the next turn boundary, not mid-token: a count that was
   steered at 38 characters still ran to 300 before "steered-ok" appeared. The
   composer says "steer" for that reason.
-- The socket's `rpc-result` carries only `ok`/`error`, so pi's response data (the
-  steer disposition, `get_state`, the chosen model) never reaches the browser. A
-  refused command becomes a notice with its error text.
-- The driver drops replies to the server's own reads, so a snapshot no longer
-  leaves three phantom `rpc-result` frames on the wire.
+- `command-result` carries `ok`, the command name and an error. The engine's other
+  response data (the steer disposition, the chosen model) never reaches the
+  browser; the snapshot carries the model instead. A refused command becomes a
+  notice naming the command.
 - A snapshot carries `models` from `get_available_models`: 510 entries across the
   configured providers here. The picker is a native select grouped by provider
   with the current provider first; a searchable palette is the eventual control.
-- A snapshot carries `commands` from `get_commands`: 63 entries here, split across
-  `extension`, `prompt` and `skill`. It holds only what `prompt` can expand. pi's
-  interactive built-ins (`/model`, `/reload`, `/login`) are absent because they
-  never reach a session, and typing one by hand starts an agent run with that text
-  as the prompt. The palette is the only path that runs a command.
+- A snapshot carries `commands` from the engine's registered commands, prompt
+  templates and skills: 63 entries here, split across `extension`, `prompt` and
+  `skill`. It holds only what `prompt` can expand. pi's interactive built-ins
+  (`/model`, `/login`) are absent because they never reach a session, and typing
+  one by hand starts an agent run with that text as the prompt. `/reload` is the
+  exception: the composer intercepts it and sends the socket's `reload` command.
 - A shell run is a recorded message, not an agent event: `bash` streams
   `bash_execution_update` and records a `bashExecution` message, so the socket
   re-reads the snapshot after the reply and again at `agent_settled`
   ([note](../notes/2026-10-28-bash-result-is-not-an-event.md)).
 - After a successful `set_model`, the server re-reads the snapshot for every
-  subscriber, so the picker shows pi's answer instead of echoing the request. pi
-  validates the pair against `get_available_models` and answers
-  `Model not found: provider/id` otherwise.
+  subscriber, so the picker shows the engine's model instead of echoing the
+  request. The engine looks the pair up in the available models and the command
+  fails with `Model not found: provider/id` otherwise.
 - The shell is the shadcn sidebar: a 16rem column at 1280px and above, a left
   Sheet below, ⌘B to toggle. `useIsMobile` treats anything under 1280px as
   mobile, which is the tablet rule in ui.md. The right panel waits for its first
@@ -165,22 +166,31 @@ false, delete it rather than adding a correction below it.
   `busy`; `abort` produces `message_end`, `turn_end`, `agent_end` and
   `agent_settled`, so a stopped turn keeps its partial text.
 
-## Resolved risks for S1 and S2
+## Verified for the embedded engine (S12)
 
-- pi's shipped `RpcClient` cannot answer an extension dialog and reports no
-  child exit, so the driver is ours ([ADR-0004](../adr/0004-own-the-rpc-driver.md)).
-- A child that dies on its own and a child we stopped are told apart by
-  `onExit.requested`. Verified with SIGKILL and SIGTERM.
-- A spawn failure emits no `exit` event, so the driver reports it as an exit
-  with `code: null`. Verified with a nonexistent `cwd`.
-- Bun runs a full tool-using turn, so `PI_RUNTIME=node` is not needed.
-- A tool call blocks on the permission extension's `confirm` until something
-  answers it
+- No `pi --mode rpc` child exists during a turn: `pgrep -f "mode rpc"` is empty
+  while a prompt streams. Engine creation measured 669 ms with this home's
+  extensions.
+- A tool call blocks on the permission extension's `confirm` until a socket
+  `dialog` answer arrives, and the reply is the same `ExtensionUIContext` result
+  pi's TUI would produce
   ([note](../notes/2026-10-28-rpc-permission-block.md)).
-- `get_messages` returns system messages even though the wire event type excludes
-  them, so the snapshot filters them at the edge and the system prompt never
-  reaches the browser.
-- `--session-id` on an unknown id creates the session in memory, not a file: the
-  JSONL appears on the first message. The driver still takes an explicit
-  `SessionTarget` instead of letting a default decide which file to touch
+- `steer` returns ok and the steered text arrives as a user message. In one run it
+  landed after `agent_settled`, so the queue survives a fast turn.
+- `abort` answers every pending dialog as cancelled and settles the run.
+- `bash` records its result itself, so the server re-reads the snapshot after the
+  reply and again at `agent_settled`
+  ([note](../notes/2026-10-28-bash-result-is-not-an-event.md)).
+- `session.reload()` re-reads resources without replacing the session or its
+  transcript; the socket answers `command-result { command: "reload", ok: true }`.
+- The engine keeps process handles after `dispose()`, so a one-shot script needs
+  `process.exit`
+  ([note](../notes/2026-10-28-engine-keeps-the-process-alive.md)).
+- The engine's `session.messages` includes system messages, so the snapshot filters
+  them at the edge and the system prompt never reaches the browser.
+- `SessionManager.create(cwd, undefined, { id })` on an unknown id keeps the id in
+  memory, not a file: the JSONL appears on the first message
   ([note](../notes/2026-10-28-fresh-session-id-writes-no-file.md)).
+- `JsonAgentSessionEvent` is typed public but the transform that produces it is
+  not exported, so the engine carries it
+  ([note](../notes/2026-10-28-tojson-is-not-exported.md)).

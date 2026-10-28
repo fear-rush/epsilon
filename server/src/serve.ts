@@ -3,8 +3,8 @@
  * browser socket. Bound to loopback: access control is loopback plus the tunnel
  * in front (docs/protocol.md, Non-goals).
  */
-import app from "./index";
 import { config } from "./config";
+import app from "./index";
 import { registry } from "./runtime";
 import { handleClose, handleMessage, handleOpen } from "./ws/chat";
 import type { ChatState } from "./ws/chat";
@@ -17,7 +17,14 @@ const server = Bun.serve<ChatState>({
 		if (pathname !== config.socketPath) return app.fetch(request);
 		const tabId = crypto.randomUUID();
 		const upgraded = bunServer.upgrade(request, {
-			data: { tabId, welcomed: false, unsubscribes: new Map() },
+			data: {
+				tabId,
+				welcomed: false,
+				closed: false,
+				wanted: new Set(),
+				unsubscribes: new Map(),
+				attaching: new Map(),
+			},
 		});
 		return upgraded ? undefined : new Response("Expected a WebSocket upgrade", { status: 400 });
 	},
@@ -35,7 +42,7 @@ console.log(
 );
 
 const shutdown = (): void => {
-	registry.killAll();
+	registry.disposeAll();
 	server.stop(true);
 };
 

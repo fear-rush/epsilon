@@ -12,6 +12,7 @@ One file per decision a future contributor (human or agent) could reasonably rev
 | [0006](0006-setup-in-the-deployment-terminal.md) | Accepted | Setup, login, trust and installs happen in a terminal inside the deployment.     |
 | [0007](0007-embed-pi-engine.md)                  | Rejected | Embed pi's engine in a worker of our own. Rejected: RPC is the cheaper contract. |
 | [0008](0008-embed-pi-engine-with-opinions.md)    | Accepted | Embed pi's engine in the server and ship Epsilon's own default extensions.       |
+| [0009](0009-socket-speaks-epsilon.md)            | Accepted | The socket carries Epsilon's commands and zod shapes, not pi's RPC types.        |
 
 Superseding is how history changes here:
 
@@ -22,6 +23,8 @@ Superseding is how history changes here:
   `ExtensionUIContext`, not RPC frames.
 - 0008 embeds the engine to ship default extensions, so it supersedes 0001
   decision 1 and 0004, and reverses 0007. 0001 decisions 2 to 4 stand.
+- 0009 supersedes 0008 decision 2: embedding removed the RPC envelope, so the
+  browser contract became Epsilon's own commands and zod shapes.
 
 ## Writing one
 

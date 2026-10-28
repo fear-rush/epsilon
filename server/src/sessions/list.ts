@@ -1,6 +1,6 @@
 /**
  * Session files joined with the live state that only this server knows. pi knows
- * a session exists; only the registry knows a child is running it and whether it
+ * a session exists; only the registry knows an engine holds it and whether it
  * waits for an answer.
  */
 import type { SessionSummary } from "shared";

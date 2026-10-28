@@ -276,7 +276,7 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 		case "event":
 			return reduceEvent(state, frame.event);
 		case "meta":
-			return { ...state, running: frame.running };
+			return { ...state, needsInput: frame.needsInput };
 		case "dialog": {
 			const dialogs = state.dialogs.filter((dialog) => dialog.id !== frame.request.id);
 			return { ...state, dialogs: [...dialogs, frame.request], needsInput: true };
@@ -287,12 +287,16 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 		}
 		case "ui":
 			return reduceDisplay(state, frame);
-		case "rpc-result":
-			// A command the child refused must not vanish: it has no command name on the
-			// wire, so the notice quotes the error alone.
+		case "command-result":
+			// A command the engine refused must not vanish. The frame names it, so
+			// the notice can too.
 			return frame.ok
 				? state
-				: withNotice(state, "notice", frame.error ?? "The agent rejected a command");
+				: withNotice(
+						state,
+						"notice",
+						`${frame.command}: ${frame.error ?? "the agent rejected the command"}`,
+					);
 		case "error":
 			return withNotice(state, "error", `${frame.code}: ${frame.message}`);
 		default:

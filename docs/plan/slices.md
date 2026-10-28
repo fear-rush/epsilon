@@ -1,7 +1,7 @@
 # Slice checks
 
-Status: **S1, S2 and S3 verified in a browser. S4 is active and only its palette is
-left; S11 is queued.** This page holds the
+Status: **S1, S2 and S3 verified in a browser. S4 is active and only its palette
+is left. S12's socket checks pass and its browser pass is next. S11 is queued.** This page holds the
 checks. [../plan.md](../plan.md) holds the jobs, the slice table and the risks.
 
 A slice ends when you can run its checks yourself, by hand, in a browser. A slice
@@ -46,13 +46,13 @@ arrow keys are wired, and `Popover` + `Command` came from the registry.
 
 - [x] Steer mid-run and see the message land in the transcript
 - [x] Abort, and the run stops in the CLI as well
-- [x] Change model; the next turn uses it, and `get_state` in the CLI agrees
-      (socket: `set_model` answered ok, the refreshed snapshot is pi's own
-      `get_state` with the new model, and a bogus pair answers `Model not found`;
-      the menu is now a DropdownMenu in the composer footer)
+- [x] Change model; the next turn uses it, and the CLI agrees
+      (socket: `set_model` answered ok, the refreshed snapshot carries the new
+      model, and a bogus pair answers `Model not found`; the menu is a
+      DropdownMenu in the composer footer)
 - [ ] An installed skill or prompt template appears in the palette and runs
-      (socket: `get_commands` replies with 63 entries, `source` set to extension,
-      prompt or skill; picking writes `/name ` into the composer)
+      (socket: the snapshot carries 63 commands, `source` set to extension, prompt
+      or skill; picking writes `/name ` into the composer)
 - [x] `!ls` runs a shell command and its output is in the transcript
       (socket and reducer: the reply is followed by a snapshot carrying the
       `bashExecution` message)
@@ -122,21 +122,31 @@ feature of the dashboard ([ADR-0006](../adr/0006-setup-in-the-deployment-termina
 ### S12: Embedded engine
 
 The engine runs in the server instead of a child process
-([ADR-0008](../adr/0008-embed-pi-engine-with-opinions.md)). The browser contract does
-not change, so every check below is about the same behaviour with no `pi` child.
+([ADR-0008](../adr/0008-embed-pi-engine-with-opinions.md)), and the socket carries
+Epsilon's own commands ([ADR-0009](../adr/0009-socket-speaks-epsilon.md)). Checks
+marked `[x]` were run over the socket; the browser pass is what remains.
 
-- [ ] A prompt streams a real answer with no `pi` child: `pgrep -f "mode rpc"` is
-      empty while the turn runs
-- [ ] Steer, abort, the model picker, `!cmd` and the palette behave as they did on
-      the child
-- [ ] A session written in the terminal opens in the browser, and a turn from the
-      browser is readable in the terminal
-- [ ] `codemode`, `tool_search` and MCP are active when the settings ask for them;
-      `get_commands` and a tool that needs them agree with the CLI
-- [ ] The operator's own extensions load, and their dialogs are answered from the
-      browser
-- [ ] An Epsilon inline extension is dropped when the operator's extension registers
-      the same command or tool name, instead of appearing as `name:2`
-- [ ] `/reload` re-reads resources without restarting the server
-- [ ] A closed tab disposes its session: `session.dispose()` runs, and a second
-      attach rebuilds it from the session file
+- [x] A prompt streams a real answer with no `pi` child: `pgrep -f "mode rpc"` is
+      empty while the turn runs (`server/scripts/protocol-check.ts`)
+- [ ] Steer, abort, the model picker, `!cmd` and the palette behave in the page as
+      they did on the child (socket: steer lands in the transcript, abort settles
+      the run, `set_model` and `bash` answer ok; the palette is not looked at yet)
+- [x] A session written elsewhere opens, and a turn from this engine is readable:
+      attaching to a session that another process wrote returned its transcript,
+      including messages written moments earlier
+- [x] `codemode`, `tool_search` and MCP are active when the settings ask for them:
+      the three built-ins are registered the way the CLI registers them, `codemode`
+      is active in this home, MCP's `/mcp` command is registered, and
+      `tool_search` stays inactive because neither the settings nor an MCP exposure
+      asks for it
+- [x] The operator's own extensions load (permission, fff, subagents) and their
+      dialogs are answered: a tool call blocked on `confirm` and continued from the
+      socket
+- [ ] A replaceable built-in is dropped when the operator's extension registers the
+      same command or tool name, instead of appearing as `name:2` (the entries carry
+      `replaceable: true`; not exercised with a probe yet)
+- [x] `/reload` re-reads resources without restarting the server: the socket's
+      `reload` command answers ok and keeps the transcript; the composer intercepts
+      `/reload` and sends it
+- [x] A closed tab disposes its session, and a second attach rebuilds it from the
+      session file: a detach followed by an attach returned the same messages

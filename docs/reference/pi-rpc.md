@@ -106,7 +106,7 @@ Confirmed on a real trace: `shared/src/conversation/fixtures/bash-turn.jsonl`.
 `bash_execution_update` exists in the union but pi's own UI ignores it. It is the
 only event a shell run sends: `bash` also records a `bashExecution` message in the
 session, which reaches a reader only through `get_messages`
-([note](notes/2026-10-28-bash-result-is-not-an-event.md)).
+([note](../notes/2026-10-28-bash-result-is-not-an-event.md)).
 
 ## Slash commands through `prompt`
 
@@ -191,14 +191,26 @@ configured credentials.
 
 What it does **not** load, and the CLI does: `codemode`, `tool_search` and MCP.
 Add `createCodemodeExtension()`, `createToolSearchExtension()` and
-`createMcpExtension()` as `DefaultResourceLoader` extension factories, enable the
+`createMcpExtension()` to `DefaultResourceLoader`'s `extensionFactories`, enable the
 tool names the settings expect, and call `session.bindExtensions()` so MCP servers
-connect on session start.
+connect on session start. `createCodemodeExtension()` without options reads the
+`codemode.mode` setting; passing `{ mode: "on" }` overrides it. `codemode` and
+`tool_search` are registered inactive until the settings or an MCP exposure
+activates them.
+
+The CLI registers those three as `{ name, factory, replaceable: true, builtin: true }`
+in `dist/extensions/index.js`. `builtin` supplies the code of the
+`builtin:<name>` resource, which loads by default, appears in `pi config` and is
+disabled by `-builtin:<name>` or `--no-extensions`. `replaceable` drops the
+entry when an operator extension registers the same command or tool name. That
+list is not exported; a host that wants CLI parity builds the same entries.
 
 Other facts worth having before embedding:
 
-- `AgentSessionConfig.mode` must be `"rpc"` if extensions should see the same
-  surface they see today; they read it as `ctx.mode`.
+- `mode` is not on `AgentSessionConfig`. It is a field of `ExtensionBindings`,
+  passed as `session.bindExtensions({ mode: "rpc", uiContext })`, and extensions
+  read it as `ctx.mode`. A `uiContext` is required for dialogs; without one a
+  `confirm` has nowhere to go.
 - `NewSessionOptions.id` creates a session with an exact id, and `SessionManager`
   lists, opens, forks and imports. This is how a host keeps pi's own session files.
 - `AgentSessionRuntime` owns `newSession`, `switchSession`, `fork` and
@@ -206,15 +218,18 @@ Other facts worth having before embedding:
   old session and must be rebound.
 - `toJsonEvent` is the only transformation between a live event and the JSON the
   reducer consumes: `message_update` loses its `partial` payload and
-  `toolcall_start` gains `id` and `toolName`.
+  `toolcall_start` gains `id` and `toolName`. It is **not exported**. Only the
+  `JsonAgentSessionEvent` type is public, and `package.json` exports just `.` and
+  `./rpc-entry`, so `dist/modes/json-event.js` cannot be imported. A host carries
+  the transform itself ([note](../notes/2026-10-28-tojson-is-not-exported.md)).
 - `session.dispose()` aborts work, invalidates extension contexts and removes
   listeners. A host that forgets it leaks a running agent.
-- `session.reload()` exists, so an embedder could re-read resources without
-  replacing the session, unlike RPC. What it re-resolves is unverified here.
+- `session.reload()` re-reads resources without replacing the session. Epsilon
+  exposes it as a socket command, not as a slash command.
 
-Sessions still run on `pi --mode rpc` in this codebase, but that is now a migration
-in progress: [ADR-0008](../adr/0008-embed-pi-engine-with-opinions.md) embeds the
-library so Epsilon can ship its own default extensions, and
-[S12](../plan/slices.md) is the slice that moves the engine. The RPC sections above
-stay accurate for pi and for the terminal tab; the library section above is the
-target.
+Epsilon no longer runs `pi --mode rpc`
+([ADR-0009](../adr/0009-socket-speaks-epsilon.md)): `server/src/agent/engine.ts`
+calls `createAgentSession` in its own process. The RPC sections above stay
+accurate for pi, and the terminal tab still runs the CLI. Re-verify the library
+facts against `dist/core/*.d.ts` and `dist/extensions/index.js`, not against
+`dist/modes/rpc/rpc-types.d.ts`, when an upgrade moves the engine.

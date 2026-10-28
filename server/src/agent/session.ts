@@ -1,265 +1,278 @@
 /**
- * One attached pi session: the child plus the state the browser cannot rebuild
- * by itself. The transcript is never kept here; it lives in pi's session file.
- * Two things are: unanswered dialogs, and whether the child is running.
+ * One live engine session and the state the browser cannot rebuild by itself.
+ * The transcript is pi's session file; the dialogs and display state live in
+ * `dialogs.ts`. There is no child and no RPC envelope: a command is a method
+ * call on the embedded `AgentSession` (ADR-0008, ADR-0009).
  */
-import type {
-	RpcCommand,
-	RpcExtensionUIRequest,
-	RpcExtensionUIResponse,
-} from "@earendil-works/pi-coding-agent";
+import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import { isVisibleMessage } from "shared";
-import type { DialogQuestion, ExtensionDisplay, ServerFrame, Snapshot } from "shared";
-import { z } from "zod";
+import type { Command, DialogAnswer, ServerFrame, Snapshot, SnapshotCommand } from "shared";
 
-import { Driver } from "./driver";
-import type { AgentFrame, ExitInfo } from "./driver";
+import { Dialogs } from "./dialogs";
+import type { FrameSink } from "./dialogs";
+import { createEngine, toJsonEvent } from "./engine";
+import type { UiHost } from "./engine";
 
-/** A socket, or anything else that wants this session's frames. */
-export type FrameSink = (frame: ServerFrame) => void;
-
-/**
- * The two reads a snapshot needs, unwrapped from their RPC envelopes. pi owns the
- * inner shapes; the transcript stores them as they arrive.
- */
-const modelSchema = z.looseObject({ provider: z.string(), id: z.string(), name: z.string() });
-
-/** `sourceInfo` is the resources page's business, not the palette's. */
-const commandSchema = z.looseObject({
-	name: z.string(),
-	description: z.string().optional(),
-	source: z.enum(["extension", "prompt", "skill"]),
-});
-
-const repliesSchema = z.tuple([
-	z.looseObject({ data: z.custom<Snapshot["state"]>() }),
-	z.looseObject({
-		data: z.looseObject({ messages: z.array(z.custom<Snapshot["messages"][number]>()) }),
-	}),
-	z.looseObject({ data: z.looseObject({ models: z.array(modelSchema) }) }),
-	z.looseObject({ data: z.looseObject({ commands: z.array(commandSchema) }) }),
-]);
-
-const QUESTION_METHODS = ["select", "confirm", "input", "editor"];
-
-/** The two methods that carry state across attaches, and how to key them. */
-const displayKey = (request: ExtensionDisplay): string | undefined => {
-	if (request.method === "setStatus") return `status:${request.statusKey}`;
-	if (request.method === "setWidget") return `widget:${request.widgetKey}`;
-	return undefined;
+export type LiveSessionOptions = {
+	sessionId: string;
+	cwd: string;
+	agentHome: string;
+	/** Called once this session has disposed itself, so the registry drops it. */
+	onEmpty: () => void;
 };
 
-const isCleared = (request: ExtensionDisplay): boolean =>
-	(request.method === "setStatus" && request.statusText === undefined) ||
-	(request.method === "setWidget" && request.widgetLines === undefined);
+const commandsOf = (agent: AgentSession): SnapshotCommand[] => {
+	const commands: SnapshotCommand[] = [];
+	for (const command of agent.extensionRunner.getRegisteredCommands()) {
+		commands.push({
+			name: command.invocationName,
+			description: command.description,
+			source: "extension",
+		});
+	}
+	for (const template of agent.promptTemplates) {
+		commands.push({ name: template.name, description: template.description, source: "prompt" });
+	}
+	for (const skill of agent.resourceLoader.getSkills().skills) {
+		commands.push({
+			name: `skill:${skill.name}`,
+			description: skill.description,
+			source: "skill",
+		});
+	}
+	return commands;
+};
 
-const isQuestion = (request: RpcExtensionUIRequest): request is DialogQuestion =>
-	QUESTION_METHODS.includes(request.method);
-
-export class AgentSession {
+export class LiveSession {
 	readonly sessionId: string;
-	private readonly driver: Driver;
+	private readonly onEmpty: () => void;
 	private readonly subscribers = new Set<FrameSink>();
-	private readonly pendingDialogs = new Map<string, DialogQuestion>();
-	/**
-	 * Keyed display state an extension set and has not cleared, so a tab that
-	 * attaches later sees the current status and widgets instead of nothing.
-	 */
-	private readonly displayState = new Map<string, ExtensionDisplay>();
-	/**
-	 * True when a `!cmd` ran and pi may still be holding its message. pi appends the
-	 * message at once while idle, but only after the turn when a run was streaming
-	 * (`recordBashResult` in pi's `agent-session`), so the settle re-reads once more.
-	 */
-	private bashUnsettled = false;
-	/** pi's own busy flag, mirrored only to decide whether a bash message is held. */
+	private readonly dialogs: Dialogs;
+	private agent: AgentSession | undefined;
+	private unsubscribe: (() => void) | undefined;
 	private streaming = false;
-	private running = false;
+	private bashUnsettled = false;
+	private disposed = false;
 
-	constructor(options: { sessionId: string; cwd: string; agentHome: string }) {
-		this.sessionId = options.sessionId;
-		this.running = true;
-		this.driver = new Driver({
-			session: { kind: "id", id: options.sessionId },
+	private constructor(sessionId: string, onEmpty: () => void) {
+		this.sessionId = sessionId;
+		this.onEmpty = onEmpty;
+		this.dialogs = new Dialogs(
+			sessionId,
+			(frame) => this.emit(frame),
+			() => this.sendMeta(),
+		);
+	}
+
+	static async open(options: LiveSessionOptions): Promise<LiveSession> {
+		const session = new LiveSession(options.sessionId, options.onEmpty);
+		const agent = await createEngine({
+			sessionId: options.sessionId,
 			cwd: options.cwd,
 			agentHome: options.agentHome,
-			onFrame: (frame) => this.receive(frame),
-			onExit: (info) => this.exited(info),
+			ui: session.ui,
 		});
-		this.sendMeta();
+		session.agent = agent;
+		session.unsubscribe = agent.subscribe((event) => session.receive(event));
+		return session;
 	}
 
-	get isRunning(): boolean {
-		return this.running;
-	}
-
-	/**
-	 * A late subscriber gets the meta and every unanswered dialog, so a dialog
-	 * that blocks the agent is never invisible (docs/protocol.md).
-	 */
-	subscribe(sink: FrameSink): () => void {
-		this.subscribers.add(sink);
-		for (const request of this.pendingDialogs.values()) {
-			sink({ t: "dialog", sessionId: this.sessionId, request });
-		}
-		for (const request of this.displayState.values()) {
-			sink({ t: "ui", sessionId: this.sessionId, request });
-		}
-		this.sendMetaTo(sink);
-		void this.sendSnapshot(sink);
-		return () => this.subscribers.delete(sink);
-	}
-
-	/**
-	 * Forward a display-only request, remembering the keyed ones. `setStatus` and
-	 * `setWidget` clear themselves by sending an undefined value.
-	 */
-	private show(request: ExtensionDisplay): void {
-		const key = displayKey(request);
-		if (key !== undefined) {
-			if (isCleared(request)) this.displayState.delete(key);
-			else this.displayState.set(key, request);
-		}
-		this.emit({ t: "ui", sessionId: this.sessionId, request });
-	}
-
-	/** History comes from pi's session file, never from server memory. */
-	private async sendSnapshot(sink: FrameSink): Promise<void> {
-		try {
-			const [state, messages, models, commands] = await Promise.all([
-				this.driver.request({ type: "get_state" }),
-				this.driver.request({ type: "get_messages" }),
-				this.driver.request({ type: "get_available_models" }),
-				this.driver.request({ type: "get_commands" }),
-			]);
-			const replies = repliesSchema.safeParse([state, messages, models, commands]);
-			if (!replies.success) {
-				this.emit({
-					t: "error",
-					code: "UNSUPPORTED_FRAME",
-					message: "Unreadable snapshot",
-					sessionId: this.sessionId,
-				});
-				return;
-			}
-			const [sessionState, sessionMessages, sessionModels, sessionCommands] = replies.data;
-			sink({
-				t: "snapshot",
-				sessionId: this.sessionId,
-				snapshot: {
-					state: sessionState.data,
-					messages: sessionMessages.data.messages.filter(isVisibleMessage),
-					models: sessionModels.data.models.map((model) => ({
-						provider: model.provider,
-						id: model.id,
-						name: model.name,
-					})),
-					commands: sessionCommands.data.commands.map((command) => ({
-						name: command.name,
-						description: command.description,
-						source: command.source,
-					})),
-				},
-			});
-		} catch (error) {
-			sink({
-				t: "error",
-				code: "AGENT_START_FAILED",
-				message: error instanceof Error ? error.message : "The agent did not answer",
-				sessionId: this.sessionId,
-			});
-		}
-	}
-
-	/** Re-read the snapshot for everyone watching, after pi changed its state. */
-	private resync(): void {
-		for (const sink of this.subscribers) void this.sendSnapshot(sink);
-	}
-
-	get dialogs(): DialogQuestion[] {
-		return [...this.pendingDialogs.values()];
+	get isOpen(): boolean {
+		return this.agent !== undefined && !this.disposed;
 	}
 
 	get needsInput(): boolean {
-		return this.pendingDialogs.size > 0;
+		return this.dialogs.needsInput;
 	}
 
-	send(command: RpcCommand): void {
-		this.driver.send(command);
+	/**
+	 * A late subscriber gets the meta, every unanswered dialog, the keyed display
+	 * state and the snapshot, so a blocking dialog is never invisible.
+	 */
+	subscribe(sink: FrameSink): () => void {
+		this.subscribers.add(sink);
+		this.dialogs.replay(sink);
+		this.sendMetaTo(sink);
+		sink(this.snapshotFrame());
+		return () => {
+			this.subscribers.delete(sink);
+			if (this.subscribers.size === 0) this.dispose();
+		};
 	}
 
 	/** Answer one dialog. The first answer wins; a repeat is ignored. */
-	answerDialog(answer: RpcExtensionUIResponse): boolean {
-		if (!this.pendingDialogs.delete(answer.id)) return false;
-		this.driver.send(answer);
-		this.emit({ t: "dialog-closed", sessionId: this.sessionId, id: answer.id });
-		this.sendMeta();
-		return true;
+	answerDialog(answer: DialogAnswer): boolean {
+		return this.dialogs.answer(answer);
 	}
 
-	kill(): void {
-		this.driver.kill();
-	}
-
-	private receive(frame: AgentFrame): void {
-		switch (frame.type) {
-			case "extension_ui_request":
-				// Only these four ask and wait. The other five display something and
-				// never block, so they must not enter pendingDialogs: that would leave
-				// needsInput stuck true from the first millisecond.
-				if (!isQuestion(frame)) {
-					this.show(frame);
-					return;
-				}
-				this.pendingDialogs.set(frame.id, frame);
-				this.emit({ t: "dialog", sessionId: this.sessionId, request: frame });
-				this.sendMeta();
-				return;
-			case "response":
-				this.emit({
-					t: "rpc-result",
-					sessionId: this.sessionId,
-					id: frame.id,
-					ok: frame.success,
-					error: frame.success ? undefined : frame.error,
-				});
-				// The chosen model lives in pi, so read it back instead of echoing the
-				// request: the picker shows pi's answer, not the browser's guess.
-				if (frame.success && frame.command === "set_model") this.resync();
-				// A shell run is a message in pi's session file and never an agent event,
-				// so without this read the card would only appear on the next attach.
-				if (frame.success && frame.command === "bash") {
-					if (this.streaming) this.bashUnsettled = true;
-					this.resync();
-				}
-				return;
-			default:
-				if (frame.type === "agent_start") this.streaming = true;
-				// pi flushes a bash message held during a run just before it settles.
-				if (frame.type === "agent_settled") {
-					this.streaming = false;
-					if (this.bashUnsettled) {
-						this.bashUnsettled = false;
-						this.resync();
-					}
-				}
-				this.emit({ t: "event", sessionId: this.sessionId, event: frame });
-		}
-	}
-
-	private exited(info: ExitInfo): void {
-		this.running = false;
-		if (!info.requested) {
-			const cause = info.signal === null ? `code ${info.code ?? "unknown"}` : info.signal;
-			const stderr = info.stderr === "" ? "" : ` stderr: ${info.stderr}`;
+	/** Run one command and report it to every tab watching this session. */
+	async run(command: Command): Promise<void> {
+		try {
+			await this.dispatch(command);
 			this.emit({
-				t: "error",
-				code: "CHILD_EXITED",
-				message: `The agent exited (${cause}).${stderr}`,
+				t: "command-result",
 				sessionId: this.sessionId,
+				command: command.type,
+				ok: true,
+			});
+		} catch (error) {
+			this.emit({
+				t: "command-result",
+				sessionId: this.sessionId,
+				command: command.type,
+				ok: false,
+				error: error instanceof Error ? error.message : String(error),
 			});
 		}
-		this.sendMeta();
+	}
+
+	/** Drop the engine. A later attach rebuilds it from the session file. */
+	dispose(): void {
+		if (this.disposed) return;
+		this.disposed = true;
+		this.dialogs.cancelAll();
+		this.unsubscribe?.();
+		this.agent?.dispose();
+		this.agent = undefined;
+		this.onEmpty();
+	}
+
+	private async dispatch(command: Command): Promise<void> {
+		const agent = this.engine;
+		switch (command.type) {
+			case "prompt":
+				await this.prompt(command.text);
+				return;
+			case "steer":
+				await agent.steer(command.text, undefined, { source: "rpc" });
+				return;
+			case "abort":
+				this.dialogs.cancelAll();
+				await agent.abort();
+				return;
+			case "bash":
+				await agent.executeBash(command.command, undefined, {
+					excludeFromContext: command.excludeFromContext,
+				});
+				if (this.streaming) this.bashUnsettled = true;
+				this.resync();
+				return;
+			case "reload":
+				// Re-reads extensions, skills, packages and MCP config in place. The
+				// session object and its transcript stay.
+				await agent.reload();
+				this.resync();
+				return;
+			case "set_model": {
+				const models = agent.modelRuntime.getAvailableSnapshot();
+				const model = models.find(
+					(candidate) =>
+						candidate.provider === command.provider && candidate.id === command.modelId,
+				);
+				if (model === undefined) {
+					throw new Error(`Model not found: ${command.provider}/${command.modelId}`);
+				}
+				await agent.setModel(model);
+				this.resync();
+				return;
+			}
+		}
+	}
+
+	/**
+	 * `prompt` resolves when the run finishes, but the browser only needs to know
+	 * that pi accepted it. The preflight hook gives that answer before streaming.
+	 */
+	private prompt(text: string): Promise<void> {
+		return new Promise((resolve, reject) => {
+			let accepted = false;
+			void this.engine
+				.prompt(text, {
+					source: "rpc",
+					preflightResult: () => {
+						accepted = true;
+						resolve();
+					},
+				})
+				.catch((error) => {
+					if (accepted) this.fail(error instanceof Error ? error : new Error(String(error)));
+					else reject(error);
+				});
+		});
+	}
+
+	private get engine(): AgentSession {
+		if (this.agent === undefined) throw new Error("This session has no live engine");
+		return this.agent;
+	}
+
+	/** The bridge the engine's `ExtensionUIContext` calls. */
+	private get ui(): UiHost {
+		return {
+			ask: this.dialogs.ask,
+			display: this.dialogs.display,
+			unsupported: this.dialogs.unsupported,
+			fail: (error) => this.fail(error),
+		};
+	}
+
+	private fail(error: Error): void {
+		this.emit({
+			t: "error",
+			code: "AGENT_FAILED",
+			message: error.message,
+			sessionId: this.sessionId,
+		});
+	}
+
+	private receive(event: AgentSessionEvent): void {
+		if (event.type === "agent_start") this.streaming = true;
+		if (event.type === "agent_settled") {
+			this.streaming = false;
+			if (this.bashUnsettled) {
+				this.bashUnsettled = false;
+				this.resync();
+			}
+		}
+		try {
+			this.emit({ t: "event", sessionId: this.sessionId, event: toJsonEvent(event) });
+		} catch (error) {
+			this.fail(error instanceof Error ? error : new Error(String(error)));
+			return;
+		}
+		// A rename reaches the session file and the event, but the sidebar reads
+		// the snapshot, so refresh it.
+		if (event.type === "session_info_changed") this.resync();
+	}
+
+	private snapshotFrame(): ServerFrame {
+		const agent = this.engine;
+		const model = agent.model;
+		const snapshot: Snapshot = {
+			state: {
+				model:
+					model === undefined
+						? undefined
+						: { provider: model.provider, id: model.id, name: model.name },
+				isStreaming: agent.isStreaming,
+				isCompacting: agent.isCompacting,
+				sessionName: agent.sessionName,
+			},
+			messages: agent.messages.filter(isVisibleMessage),
+			models: agent.modelRuntime.getAvailableSnapshot().map((candidate) => ({
+				provider: candidate.provider,
+				id: candidate.id,
+				name: candidate.name,
+			})),
+			commands: commandsOf(agent),
+		};
+		return { t: "snapshot", sessionId: this.sessionId, snapshot };
+	}
+
+	/** Re-read the snapshot for everyone watching, after the engine changed. */
+	private resync(): void {
+		if (!this.isOpen) return;
+		for (const sink of this.subscribers) sink(this.snapshotFrame());
 	}
 
 	private sendMeta(): void {
@@ -267,12 +280,7 @@ export class AgentSession {
 	}
 
 	private sendMetaTo(sink: FrameSink): void {
-		sink({
-			t: "meta",
-			sessionId: this.sessionId,
-			running: this.running,
-			needsInput: this.needsInput,
-		});
+		sink({ t: "meta", sessionId: this.sessionId, needsInput: this.dialogs.needsInput });
 	}
 
 	private emit(frame: ServerFrame): void {

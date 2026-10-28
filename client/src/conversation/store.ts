@@ -3,7 +3,7 @@
  * so this store holds only what frames reduced to: a remount reuses it instead of
  * rebuilding the transcript from a snapshot.
  */
-import type { RpcExtensionUIResponse } from "shared";
+import type { Command, DialogAnswer } from "shared";
 import { emptyConversation, reduce } from "shared";
 import type { ConversationState } from "shared";
 
@@ -42,17 +42,22 @@ export class ConversationStore {
 
 	readonly getSnapshot = (): ConversationSnapshot => this.snapshot;
 
-	sendPrompt(message: string): void {
-		link.send({ t: "rpc", sessionId: this.sessionId, command: { type: "prompt", message } });
+	sendPrompt(text: string): void {
+		this.sendCommand({ type: "prompt", text });
 	}
 
 	/** Interrupt the running turn with this message instead of waiting for it. */
-	steer(message: string): void {
-		link.send({ t: "rpc", sessionId: this.sessionId, command: { type: "steer", message } });
+	steer(text: string): void {
+		this.sendCommand({ type: "steer", text });
 	}
 
 	abort(): void {
-		link.send({ t: "rpc", sessionId: this.sessionId, command: { type: "abort" } });
+		this.sendCommand({ type: "abort" });
+	}
+
+	/** Re-read extensions, skills and packages without replacing the session. */
+	reload(): void {
+		this.sendCommand({ type: "reload" });
 	}
 
 	/**
@@ -60,20 +65,12 @@ export class ConversationStore {
 	 * the agent's context, which is why the flag travels with the command.
 	 */
 	runBash(command: string, excludeFromContext: boolean): void {
-		link.send({
-			t: "rpc",
-			sessionId: this.sessionId,
-			command: { type: "bash", command, excludeFromContext },
-		});
+		this.sendCommand({ type: "bash", command, excludeFromContext });
 	}
 
 	/** pi answers with a fresh snapshot, so the menu shows the model it chose. */
 	setModel(provider: string, modelId: string): void {
-		link.send({
-			t: "rpc",
-			sessionId: this.sessionId,
-			command: { type: "set_model", provider, modelId },
-		});
+		this.sendCommand({ type: "set_model", provider, modelId });
 	}
 
 	/**
@@ -82,15 +79,15 @@ export class ConversationStore {
 	 * reply is ok, no agent event runs, and the extension sends a new `setStatus`.
 	 */
 	setPermission(mode: string): void {
-		link.send({
-			t: "rpc",
-			sessionId: this.sessionId,
-			command: { type: "prompt", message: `/permission ${mode}` },
-		});
+		this.sendCommand({ type: "prompt", text: `/permission ${mode}` });
 	}
 
-	answerDialog(answer: RpcExtensionUIResponse): void {
+	answerDialog(answer: DialogAnswer): void {
 		link.send({ t: "dialog", sessionId: this.sessionId, answer });
+	}
+
+	private sendCommand(command: Command): void {
+		link.send({ t: "command", sessionId: this.sessionId, command });
 	}
 
 	private update(change: Partial<ConversationSnapshot>): void {

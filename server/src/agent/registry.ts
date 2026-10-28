@@ -1,44 +1,64 @@
 /**
- * sessionId → live child. The sessions on disk are pi's; this is only a cache
- * of children we have already spawned, so a second tab does not pay for a
- * second process (ADR-0001).
+ * sessionId → live engine. The sessions on disk are pi's; this is only a cache
+ * of engines already built, so a second tab does not create a second one.
+ *
+ * Creation is async, so a concurrent attach awaits the same promise instead of
+ * opening a second writer on one session file.
  */
-import { AgentSession } from "./session";
+import { LiveSession } from "./session";
 
-/** Where a child runs and which pi config it reads, from `config.ts` once. */
+/** Where a session runs and which pi config it reads, from `config.ts` once. */
 export type AgentLocation = { cwd: string; agentHome: string };
 
 export class SessionRegistry {
 	private readonly location: AgentLocation;
-	private readonly sessions = new Map<string, AgentSession>();
+	private readonly sessions = new Map<string, LiveSession>();
+	private readonly loading = new Map<string, Promise<LiveSession>>();
 
 	constructor(location: AgentLocation) {
 		this.location = location;
 	}
 
-	find(sessionId: string): AgentSession | undefined {
+	find(sessionId: string): LiveSession | undefined {
 		const session = this.sessions.get(sessionId);
-		return session?.isRunning === true ? session : undefined;
+		return session?.isOpen === true ? session : undefined;
 	}
 
-	/** Every session this server holds a live child for, for the list badges. */
+	/** Every session this server holds an engine for, for the list badges. */
 	live(): { id: string; needsInput: boolean }[] {
 		return [...this.sessions.values()]
-			.filter((session) => session.isRunning)
+			.filter((session) => session.isOpen)
 			.map((session) => ({ id: session.sessionId, needsInput: session.needsInput }));
 	}
 
-	/** The live child for this session, or a fresh one if it never existed or died. */
-	ensure(sessionId: string): AgentSession {
+	/** The engine for this session, or a new one built from the session file. */
+	async ensure(sessionId: string): Promise<LiveSession> {
 		const existing = this.find(sessionId);
 		if (existing !== undefined) return existing;
-		const session = new AgentSession({ sessionId, ...this.location });
-		this.sessions.set(sessionId, session);
-		return session;
+		const loading = this.loading.get(sessionId);
+		if (loading !== undefined) return loading;
+		const created = this.create(sessionId);
+		this.loading.set(sessionId, created);
+		try {
+			return await created;
+		} finally {
+			this.loading.delete(sessionId);
+		}
 	}
 
-	killAll(): void {
-		for (const session of this.sessions.values()) session.kill();
+	disposeAll(): void {
+		for (const session of [...this.sessions.values()]) session.dispose();
 		this.sessions.clear();
+	}
+
+	private async create(sessionId: string): Promise<LiveSession> {
+		const session = await LiveSession.open({
+			sessionId,
+			...this.location,
+			// The last tab closed: the engine is gone with it.
+			onEmpty: () => this.sessions.delete(sessionId),
+		});
+		this.sessions.set(sessionId, session);
+		return session;
 	}
 }

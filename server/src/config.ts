@@ -23,7 +23,7 @@ const agentHome = resolve(process.env.EPSILON_AGENT_HOME ?? join(homedir(), ".pi
 /**
  * pi resolves its own paths — including the session list this server reads — from
  * its config directory at call time. Publishing the choice here is what keeps
- * those reads on the same home the children are given; without it the list would
+ * those reads on the same home the engine is given; without it the list would
  * come from one home and the turns would write to another.
  */
 process.env.PI_CODING_AGENT_DIR = agentHome;
@@ -34,6 +34,6 @@ export const config = {
 	socketPath: "/api/link",
 	/** Where the agent runs, and therefore which pi sessions belong to this page. */
 	projectDir: resolve(process.env.EPSILON_PROJECT ?? repoRoot),
-	/** The home every child gets, passed explicitly by `agent/driver.ts`. */
+	/** The home every engine gets, passed explicitly by `agent/engine.ts`. */
 	agentHome,
 } as const;

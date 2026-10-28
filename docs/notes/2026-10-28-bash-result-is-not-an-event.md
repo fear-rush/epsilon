@@ -17,13 +17,14 @@ holds the message in `_pendingBashMessages` and appends it when the run settles.
 ## Fix
 
 `server/src/agent/session.ts` re-reads the snapshot after a successful `bash`
-reply, the same way it already did after `set_model`, and re-reads once more at
-`agent_settled` for the message pi held during a run. No protocol change: the
-frame shapes stayed the same.
+command, the same way it does after `set_model` and `reload`, and re-reads once
+more at `agent_settled` for the message pi held during a run. The bug outlived the
+RPC driver: an embedded engine calls `executeBash` directly, and pi still appends
+the message without an event.
 
 ## Check
 
 Run `!echo hi` in a session and watch the frames. A `snapshot` frame with a
-`bashExecution` message follows the `rpc-result`. Driven without a browser by
+`bashExecution` message follows the `command-result`. Driven without a browser by
 attaching a WebSocket to `/api/link` and sending
-`{ "type": "bash", "command": "echo hi" }`.
+`{ "t": "command", "sessionId": "...", "command": { "type": "bash", "command": "echo hi", "excludeFromContext": false } }`.

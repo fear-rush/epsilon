@@ -1,23 +1,29 @@
 // Shared, browser-safe code: the socket contract both sides parse with.
 export type {
 	ClientFrame,
+	Command,
+	CommandName,
 	ProtocolErrorCode,
 	ServerFrame,
 	Snapshot,
 	SnapshotCommand,
 	SnapshotModel,
+	SnapshotState,
 } from "./protocol/frames";
 export {
 	agentEventSchema,
 	clientFrameSchema,
-	dialogAnswerSchema,
-	dialogRequestSchema,
-	extensionDisplaySchema,
+	commandNameSchema,
+	commandSchema,
 	protocolErrorCodeSchema,
-	rpcCommandSchema,
 	serverFrameSchema,
+	snapshotCommandSchema,
+	snapshotModelSchema,
 	snapshotSchema,
+	snapshotStateSchema,
 } from "./protocol/frames";
+export { dialogAnswerSchema, dialogQuestionSchema, extensionDisplaySchema } from "./extui";
+export type { DialogAnswer, DialogQuestion, ExtensionDisplay } from "./extui";
 export { PROTOCOL_VERSION } from "./protocol/version";
 export {
 	sessionErrorCodeSchema,
@@ -52,11 +58,4 @@ export {
 	writeArgsSchema,
 } from "./conversation/tools";
 export type { TranscriptRow } from "./conversation/selectors";
-export type { DialogQuestion, ExtensionDisplay } from "./pi";
-export type {
-	JsonAgentSessionEvent,
-	RpcCommand,
-	RpcExtensionUIRequest,
-	RpcExtensionUIResponse,
-	RpcSessionState,
-} from "./pi";
+export type { JsonAgentSessionEvent } from "./pi";

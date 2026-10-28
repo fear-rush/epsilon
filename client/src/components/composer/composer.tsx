@@ -87,7 +87,10 @@ export function Composer({ store, busy, models, model, statuses, commands }: Com
 			setDraft("");
 			return;
 		}
-		if (busy) store.steer(message);
+		// A reload is a socket command, not a prompt: pi would hand `/reload` to the
+		// model. It works while a run streams because it does not touch the run.
+		if (message === "/reload") store.reload();
+		else if (busy) store.steer(message);
 		else store.sendPrompt(message);
 		setDraft("");
 	};

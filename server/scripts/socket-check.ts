@@ -14,7 +14,7 @@ const show = (frame: ServerFrame) => {
 	if (frame.t === "event") return frame.event.type;
 	if (frame.t === "dialog") return `dialog:${frame.request.method}:${frame.request.id.slice(0, 8)}`;
 	if (frame.t === "error") return `error:${frame.code}`;
-	if (frame.t === "meta") return `meta running=${frame.running} needsInput=${frame.needsInput}`;
+	if (frame.t === "meta") return `meta needsInput=${frame.needsInput}`;
 	return frame.t;
 };
 
@@ -31,9 +31,9 @@ socket.addEventListener("message", (message) => {
 		send({ t: "attach", sessionId });
 		if (!attachOnly) {
 			send({
-				t: "rpc",
+				t: "command",
 				sessionId,
-				command: { type: "prompt", message: "Run bash 'echo s1-ok' and reply with its output." },
+				command: { type: "prompt", text: "Run bash 'echo s1-ok' and reply with its output." },
 			});
 		}
 	}
@@ -53,7 +53,7 @@ socket.addEventListener("message", (message) => {
 		send({
 			t: "dialog",
 			sessionId,
-			answer: { type: "extension_ui_response", id: frame.request.id, confirmed: true },
+			answer: { id: frame.request.id, confirmed: true },
 		});
 	}
 	if (frame.t === "event" && frame.event.type === "agent_settled") {

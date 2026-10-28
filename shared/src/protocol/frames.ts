@@ -2,42 +2,49 @@
  * The socket contract: one zod union per direction, exactly as
  * docs/protocol.md writes it. Both sides parse with these schemas.
  *
- * Payloads pi owns (`RpcCommand`, events, dialog requests and answers) are
- * declared with `z.custom` so the envelope is still checked. Their fields are
- * validated by pi, and `conversation/reduce.ts` is the one place that reads
- * them.
+ * Epsilon owns the command vocabulary: an embedded engine has no RPC envelope,
+ * so `command` names what the page wants and the server maps it onto the SDK.
+ * `event` still carries pi's JSON session event, which is the reducer's input.
  */
 import { z } from "zod";
 
-import type { DialogQuestion, ExtensionDisplay } from "../pi";
 import type { SnapshotMessage } from "../conversation/state";
-import type {
-	JsonAgentSessionEvent,
-	RpcCommand,
-	RpcExtensionUIResponse,
-	RpcResponse,
-	RpcSessionState,
-} from "../pi";
+import { dialogAnswerSchema, dialogQuestionSchema, extensionDisplaySchema } from "../extui";
+import type { JsonAgentSessionEvent } from "../pi";
 
-export const snapshotSchema = z.custom<Snapshot>();
+/** The six commands a tab may send. */
+export const commandNameSchema = z.enum([
+	"prompt",
+	"steer",
+	"abort",
+	"bash",
+	"set_model",
+	"reload",
+]);
 
-/** pi's own vocabulary, never a parallel copy. */
-export const rpcCommandSchema = z.custom<RpcCommand>();
+export type CommandName = z.infer<typeof commandNameSchema>;
+
+export const commandSchema = z.discriminatedUnion("type", [
+	z.object({ type: z.literal("prompt"), text: z.string() }),
+	z.object({ type: z.literal("steer"), text: z.string() }),
+	z.object({ type: z.literal("abort") }),
+	z.object({ type: z.literal("bash"), command: z.string(), excludeFromContext: z.boolean() }),
+	z.object({ type: z.literal("set_model"), provider: z.string(), modelId: z.string() }),
+	z.object({ type: z.literal("reload") }),
+]);
+
+export type Command = z.infer<typeof commandSchema>;
+
 export const agentEventSchema = z.custom<JsonAgentSessionEvent>();
-export const dialogRequestSchema = z.custom<DialogQuestion>();
-
-/** An extension UI method that displays something and never waits for an answer. */
-export const extensionDisplaySchema = z.custom<ExtensionDisplay>();
-export const dialogAnswerSchema = z.custom<RpcExtensionUIResponse>();
-
-export type { DialogQuestion } from "../pi";
+export const snapshotSchema = z.custom<Snapshot>();
 
 export const protocolErrorCodeSchema = z.enum([
 	"PROTOCOL_MISMATCH",
 	"SESSION_NOT_FOUND",
-	"AGENT_BUSY",
 	"AGENT_START_FAILED",
-	"CHILD_EXITED",
+	"AGENT_FAILED",
+	"EXTENSION_ERROR",
+	"HOST_NOT_ALLOWED",
 	"UNSUPPORTED_FRAME",
 ]);
 
@@ -45,7 +52,7 @@ export const clientFrameSchema = z.discriminatedUnion("t", [
 	z.object({ t: z.literal("hello"), protocol: z.number().int(), tabId: z.string() }),
 	z.object({ t: z.literal("attach"), sessionId: z.string() }),
 	z.object({ t: z.literal("detach"), sessionId: z.string() }),
-	z.object({ t: z.literal("rpc"), sessionId: z.string(), command: rpcCommandSchema }),
+	z.object({ t: z.literal("command"), sessionId: z.string(), command: commandSchema }),
 	z.object({ t: z.literal("dialog"), sessionId: z.string(), answer: dialogAnswerSchema }),
 	z.object({ t: z.literal("terminal"), terminalId: z.string(), input: z.string() }),
 	z.object({
@@ -58,32 +65,41 @@ export const clientFrameSchema = z.discriminatedUnion("t", [
 	z.object({ t: z.literal("ping") }),
 ]);
 
-/**
- * A snapshot is built from RPC reads, never from server memory. `stats` lands with
- * the resources page (S8) and travels as its own frame when it does.
- */
-/**
- * One entry of the model picker. pi's `Model` also carries pricing, input limits
- * and headers; the browser needs an identity and a label, nothing else.
- */
-export type SnapshotModel = { provider: string; id: string; name: string };
+/** One entry of the model picker: an identity and a label, nothing else. */
+export const snapshotModelSchema = z.object({
+	provider: z.string(),
+	id: z.string(),
+	name: z.string(),
+});
+
+export type SnapshotModel = z.infer<typeof snapshotModelSchema>;
 
 /**
- * One entry of the slash palette, from `get_commands`. `sourceInfo` and the owning
- * resource belong to the resources page, which lists them with their paths.
+ * One entry of the slash palette: what `prompt` expands. `sourceInfo` and the
+ * owning resource belong to the resources page (S8).
  */
-export type SnapshotCommand = {
-	name: string;
-	description?: string;
-	source: "extension" | "prompt" | "skill";
-};
+export const snapshotCommandSchema = z.object({
+	name: z.string(),
+	description: z.string().optional(),
+	source: z.enum(["extension", "prompt", "skill"]),
+});
+
+export type SnapshotCommand = z.infer<typeof snapshotCommandSchema>;
+
+/** What the transcript page reads from the engine, never from RPC replies. */
+export const snapshotStateSchema = z.object({
+	model: snapshotModelSchema.optional(),
+	isStreaming: z.boolean(),
+	isCompacting: z.boolean(),
+	sessionName: z.string().optional(),
+});
+
+export type SnapshotState = z.infer<typeof snapshotStateSchema>;
 
 export type Snapshot = {
-	state: RpcSessionState;
+	state: SnapshotState;
 	messages: SnapshotMessage[];
-	/** `get_available_models`, mapped down to what the picker shows. */
 	models: SnapshotModel[];
-	/** `get_commands`, what `/` may expand to. */
 	commands: SnapshotCommand[];
 };
 
@@ -95,22 +111,30 @@ export const serverFrameSchema = z.discriminatedUnion("t", [
 	}),
 	z.object({ t: z.literal("snapshot"), sessionId: z.string(), snapshot: snapshotSchema }),
 	z.object({ t: z.literal("event"), sessionId: z.string(), event: agentEventSchema }),
-	z.object({ t: z.literal("dialog"), sessionId: z.string(), request: dialogRequestSchema }),
+	z.object({
+		t: z.literal("dialog"),
+		sessionId: z.string(),
+		request: dialogQuestionSchema,
+	}),
 	z.object({ t: z.literal("dialog-closed"), sessionId: z.string(), id: z.string() }),
 	z.object({ t: z.literal("ui"), sessionId: z.string(), request: extensionDisplaySchema }),
 	z.object({
-		t: z.literal("rpc-result"),
+		t: z.literal("command-result"),
 		sessionId: z.string(),
-		id: z.string().optional(),
+		command: commandNameSchema,
 		ok: z.boolean(),
 		error: z.string().optional(),
 	}),
+	z.object({ t: z.literal("meta"), sessionId: z.string(), needsInput: z.boolean() }),
 	z.object({
-		t: z.literal("meta"),
-		sessionId: z.string(),
-		running: z.boolean(),
-		needsInput: z.boolean(),
-		title: z.string().optional(),
+		t: z.literal("terminal"),
+		terminalId: z.string(),
+		output: z.string(),
+	}),
+	z.object({
+		t: z.literal("terminal-exit"),
+		terminalId: z.string(),
+		code: z.number().nullable(),
 	}),
 	z.object({
 		t: z.literal("error"),
@@ -124,5 +148,3 @@ export const serverFrameSchema = z.discriminatedUnion("t", [
 export type ClientFrame = z.infer<typeof clientFrameSchema>;
 export type ServerFrame = z.infer<typeof serverFrameSchema>;
 export type ProtocolErrorCode = z.infer<typeof protocolErrorCodeSchema>;
-/** Outbound replies pi sends, correlated by `id`. */
-export type PiResponse = RpcResponse;

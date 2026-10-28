@@ -1,20 +1,20 @@
 # Browser protocol
 
-Status: **partly implemented.** This is the contract between `server/` and
+Status: **protocol 4 implemented.** This is the contract between `server/` and
 `client/`. Both sides implement it; neither invents frames.
 
-On the wire today (S4): `hello`, `welcome`, `attach`, `detach`, `rpc`, `dialog`
-and `dialog-closed`, `ui`, `ping`/`pong`, plus `snapshot`, `event`, `rpc-result`,
-`meta` and `error`. Not yet: every `terminal` frame, `stats` inside a snapshot,
-the coalescing and backpressure rules, the heartbeat and the restart action. Those
-belong to later slices in [plan.md](plan.md).
+On the wire today: `hello`, `welcome`, `attach`, `detach`, `command`,
+`command-result`, `dialog`, `dialog-closed`, `ui`, `ping`/`pong`, `snapshot`,
+`event`, `meta` and `error`. The `terminal*` frames are declared and unimplemented
+(S7). The coalescing, backpressure and heartbeat rules below are targets, not
+code.
 
-The REST API is separate. Use REST for reading the disk (sessions, files, git,
-resources, ui-state, agent state) and this socket for everything agent-shaped.
+The REST API is separate. Use REST for reading the disk (sessions, and later
+files, resources and readiness) and this socket for everything agent-shaped.
 
-The zod schemas in `shared/src/protocol/frames.ts` are the source of truth for
-every shape. This document says which frames exist and what they mean; it does not
-restate their fields.
+The zod schemas in `shared/src/protocol/frames.ts` and `shared/src/extui.ts` are
+the source of truth for every shape. This document says which frames exist and
+what they mean; it does not restate their fields.
 
 ## Transport
 
@@ -34,7 +34,9 @@ restate their fields.
    worse than a stale page.
 
 Version history: 1 was the S2 transcript; 2 added `models` to the snapshot for
-the model picker; 3 added `commands` to the snapshot for the `/` palette.
+the model picker; 3 added `commands` to the snapshot for the `/` palette; 4
+replaced pi's RPC vocabulary with Epsilon's commands and zod shapes when the
+engine moved in-process ([ADR-0009](adr/0009-socket-speaks-epsilon.md)).
 
 Version the socket, not the REST paths. A stale tab or an installed PWA can
 outlive a server upgrade; REST requests follow the bundle, because the deployment
@@ -48,16 +50,32 @@ type ClientFrame =
 	| { t: "hello"; protocol: number; tabId: string }
 	| { t: "attach"; sessionId: string }
 	| { t: "detach"; sessionId: string }
-	| { t: "rpc"; sessionId: string; command: RpcCommand } // pi's union, verbatim
-	| { t: "dialog"; sessionId: string; answer: ExtensionUiResponse }
+	| { t: "command"; sessionId: string; command: Command }
+	| { t: "dialog"; sessionId: string; answer: DialogAnswer }
 	| { t: "terminal"; terminalId: string; input: string }
 	| { t: "terminal-resize"; terminalId: string; cols: number; rows: number }
 	| { t: "terminal-close"; terminalId: string }
 	| { t: "ping" };
 ```
 
-`RpcCommand` is pi's own type, re-exported type-only from `shared/src/pi.ts`. Do
-not define a parallel command vocabulary.
+`Command` is Epsilon's union, defined in `shared/src/protocol/frames.ts`:
+
+| Command                                         | Engine call                                  | Result refreshed by |
+| ----------------------------------------------- | -------------------------------------------- | ------------------- |
+| `{ type: "prompt"; text }`                      | `session.prompt(text)`                       | events              |
+| `{ type: "steer"; text }`                       | `session.steer(text)`                        | events              |
+| `{ type: "abort" }`                             | `session.abort()`, pending dialogs cancelled | events              |
+| `{ type: "bash"; command; excludeFromContext }` | `session.executeBash(...)`                   | snapshot            |
+| `{ type: "set_model"; provider; modelId }`      | `session.setModel(model)`                    | snapshot            |
+| `{ type: "reload" }`                            | `session.reload()`                           | snapshot            |
+
+A command attaches the tab to its session first. It carries no id: the answer is
+`command-result` for that command name, and the engine owns ordering.
+
+`prompt` also dispatches extension commands, prompt templates and skills, which is
+how `/permission ask` and a picked palette entry work. `/reload` is the one
+exception: the composer intercepts it and sends the `reload` command, because it
+is Epsilon's addition, not a pi slash command.
 
 ## Server to client
 
@@ -66,11 +84,11 @@ type ServerFrame =
 	| { t: "welcome"; protocol: number; serverVersion: string }
 	| { t: "snapshot"; sessionId: string; snapshot: Snapshot }
 	| { t: "event"; sessionId: string; event: JsonAgentSessionEvent }
-	| { t: "dialog"; sessionId: string; request: ExtensionUiRequest }
+	| { t: "dialog"; sessionId: string; request: DialogQuestion }
 	| { t: "dialog-closed"; sessionId: string; id: string }
 	| { t: "ui"; sessionId: string; request: ExtensionDisplay }
-	| { t: "rpc-result"; sessionId: string; id?: string; ok: boolean; error?: string }
-	| { t: "meta"; sessionId: string; running: boolean; needsInput: boolean; title?: string }
+	| { t: "command-result"; sessionId: string; command: CommandName; ok: boolean; error?: string }
+	| { t: "meta"; sessionId: string; needsInput: boolean }
 	| { t: "terminal"; terminalId: string; output: string }
 	| { t: "terminal-exit"; terminalId: string; code: number | null }
 	| { t: "error"; code: ProtocolErrorCode; message: string; sessionId?: string }
@@ -80,26 +98,36 @@ type ServerFrame =
 Every frame that concerns a session carries its `sessionId`. There is no ambient
 "current session" on the socket.
 
+`event` carries pi's `JsonAgentSessionEvent`, the one shape that stays pi's
+([ADR-0009](adr/0009-socket-speaks-epsilon.md)). It is what
+`shared/conversation/reduce.ts` consumes, and the engine narrows live events with
+the transform it carries (`docs/notes/2026-10-28-tojson-is-not-exported.md`).
+
 ## Snapshot
 
-A snapshot is sent once per `attach`, and again after a command that changes
-pi's own state (`set_model`). It is built from RPC reads, never from server memory:
+A snapshot is sent once per `attach`, and again after `bash`, `set_model`,
+`reload` or a session rename. It is built synchronously from the live engine, not
+from a request/reply:
 
 ```ts
 type Snapshot = {
-	state: RpcSessionState; // get_state
-	messages: AgentMessage[]; // get_messages, system entries filtered out
-	models: { provider: string; id: string; name: string }[]; // get_available_models
-	commands: { name: string; description?: string; source: string }[]; // get_commands
+	state: {
+		model?: { provider; id; name };
+		isStreaming: boolean;
+		isCompacting: boolean;
+		sessionName?: string;
+	};
+	messages: SnapshotMessage[]; // session.messages, system entries filtered out
+	models: { provider; id; name }[];
+	commands: { name; description?; source: "extension" | "prompt" | "skill" }[];
 };
 ```
 
 `commands` feeds the `/` palette and holds only what `prompt` can expand:
 extension commands, prompt templates and skills. pi's interactive built-ins such
-as `/model` and `/reload` are not in it, because they never reach an RPC session
-([reference/pi-rpc.md](reference/pi-rpc.md)). `stats` joins the snapshot with the
-resources page (S8). Dialogs, `running` and `needsInput` travel in their own
-frames. `get_entries` / `get_tree` are used only for full-history and tree views.
+as `/model` and `/settings` are not in it, because they never reach an engine.
+Resources and their paths join the snapshot with the resources page (S8). Dialogs
+and `needsInput` travel in their own frames.
 
 The client reducer must be able to **replace** its state from a snapshot at any
 moment. That is what makes reconnect, tab duplication and server restart
@@ -107,30 +135,37 @@ survivable.
 
 ## Dialogs
 
-- The server keeps unanswered `extension_ui_request`s per session in memory,
-  with their deadlines. RPC does not replay them.
-- A late-attaching client receives the unanswered ones in `pendingDialogs`, so a
-  dialog that blocks the agent is never invisible.
-- Answers are `{ type: "extension_ui_response", … }`, one per request id.
-- `abort` cancels outstanding dialogs: the server answers them as `cancelled`.
-- A dialog answered by a tab that then closes must not be answered again by a
-  second tab; the first answer wins and the entry leaves `pendingDialogs`.
+The engine's `ExtensionUIContext` blocks a tool call until a dialog is answered.
+`agent/dialogs.ts` owns the pending set.
+
+- `select`, `confirm`, `input` and `editor` wait for an answer and travel as
+  `dialog`. An answer is `{ id, value }`, `{ id, confirmed }` or
+  `{ id, cancelled: true }`.
+- a dialog's `timeout`, when the extension passes one, answers it as cancelled.
+  The pending entry is dropped and `dialog-closed` is sent.
+- `abort` answers every pending dialog as cancelled before it aborts the run, so
+  nothing waits forever on a run that no longer exists.
+- a late-attaching client receives the unanswered dialogs immediately after its
+  snapshot, so a blocking dialog is never invisible.
+- the first answer wins. A second tab answering the same id gets `false` from
+  `answerDialog` and no frame is sent.
 - `dialog-closed` tells every attached tab which request left the pending set, so
   a second tab removes it without guessing from `meta`.
-- `needsInput` is exactly `pendingDialogs.length > 0`.
-- Only `select`, `confirm`, `input` and `editor` wait for an answer and travel as
-  `dialog`. The other five display something and travel as `ui`; counting them as
-  pending would leave `needsInput` stuck true from the first millisecond.
+- `needsInput` is exactly `pending.size > 0`.
 - `setStatus` and `setWidget` are keyed state: a value replaces the previous one
   for the same key, an undefined value clears it, and the server replays what is
   still set to every late-attaching tab. `notify`, `setTitle` and
   `set_editor_text` are one-off events and are not replayed.
 - `set_editor_text` has no composer to write into yet, so the client shows a
   notice instead of silently discarding it.
+- extension UI methods with no browser equivalent (`custom`, `setFooter`,
+  `setHeader`, `onTerminalInput`, `theme`, working-indicator methods, editor and
+  autocomplete overrides) produce one warning per method naming the terminal tab.
 
 ## Ordering, coalescing, backpressure
 
-A phone that stops reading must not grow the server's memory.
+Targets, not code yet. A phone that stops reading must not grow the server's
+memory.
 
 - `message_update` events carrying a `*_delta` and `tool_execution_update` events
   are **droppable**: a later event supersedes them.
@@ -154,39 +189,41 @@ reconnect without losing scroll position, that is local UI state, not protocol.
 
 ## Readiness
 
-Readiness is not a socket concern. `GET /api/agent` reports the agent home's path,
-whether it exists, which providers are configured, the default model, installed
-packages and the project's trust state. The page turns a missing step into a notice
-naming the terminal command that fixes it
+Not built. `GET /api/agent` will report the agent home's path, whether it exists,
+which providers are configured, the default model, installed packages and the
+project's trust state. The page turns a missing step into a notice naming the
+terminal command that fixes it
 ([ADR-0006](adr/0006-setup-in-the-deployment-terminal.md)).
 
 The dashboard does not acquire configuration over the socket: no sign-in frames, no
 credential frames, no settings frames.
 
-## Restart semantics
+## Reload and restart semantics
 
-"Restart agent" means: kill this session's child, then spawn a new one on the
-next `attach` or `rpc`. It is allowed only when the session is idle; otherwise
-`rpc-result { ok: false, error: "AGENT_BUSY" }`.
+`/reload` sends the `reload` command: the engine re-reads extensions, skills,
+packages and MCP config in place, and the transcript is untouched.
 
-It is the only way to pick up newly installed packages, skills or MCP servers
-because pi's interactive `/reload` is not an RPC command (see
-[reference/pi-rpc.md](reference/pi-rpc.md)).
+There is no restart action in the page. An engine is disposed when its last tab
+detaches and rebuilt on the next attach, which re-reads the same resources from
+scratch. Deleting a session file is refused while an engine holds it
+(`SESSION_RUNNING`).
 
 ## Error frames
 
-| Code                 | Meaning                                                      |
-| -------------------- | ------------------------------------------------------------ |
-| `PROTOCOL_MISMATCH`  | Client and server speak different protocol versions. Reload. |
-| `SESSION_NOT_FOUND`  | No such session file.                                        |
-| `AGENT_BUSY`         | Command rejected while a run is in flight.                   |
-| `AGENT_START_FAILED` | The child failed to start; message carries pi's stderr tail. |
-| `CHILD_EXITED`       | The child died mid-command.                                  |
-| `HOST_NOT_ALLOWED`   | The request's Host or Origin is not this server.             |
-| `UNSUPPORTED_FRAME`  | Frame the server does not implement at this version.         |
+| Code                 | Meaning                                                          |
+| -------------------- | ---------------------------------------------------------------- |
+| `PROTOCOL_MISMATCH`  | Client and server speak different protocol versions. Reload.     |
+| `SESSION_NOT_FOUND`  | No live engine for a dialog answer.                              |
+| `AGENT_START_FAILED` | The engine could not be created; the message carries pi's error. |
+| `AGENT_FAILED`       | A prompt, extension or event failed after the engine started.    |
+| `EXTENSION_ERROR`    | Reserved for the error listener's per-event reports.             |
+| `HOST_NOT_ALLOWED`   | Reserved: the request's Host or Origin is not this server (S11). |
+| `UNSUPPORTED_FRAME`  | Frame the server does not implement at this version.             |
 
 Errors are never silent. A frame the server does not understand produces
-`UNSUPPORTED_FRAME` and leaves the connection open.
+`UNSUPPORTED_FRAME` and leaves the connection open. A refused command produces
+`command-result { ok: false }`, which the reducer shows as a notice naming the
+command.
 
 ## Non-goals
 
@@ -196,6 +233,6 @@ Errors are never silent. A frame the server does not understand produces
   not this app from driving the API.
 - No credential upload, no configuration import, no code upload over any route
   ([ADR-0006](adr/0006-setup-in-the-deployment-terminal.md)).
-- No binary attachments over the socket. Files go over REST; images arrive as
-  `ImageContent` inside RPC prompts.
+- No attachments over the socket yet. Files go over REST when S6 lands; there is
+  no image prompt path.
 - No replay log. Snapshots replace state; history is read from pi's files.

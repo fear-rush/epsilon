@@ -3,7 +3,7 @@
  * AlertDialog instead (docs/ui.md, Concept to component).
  */
 import { useState } from "react";
-import type { DialogQuestion, RpcExtensionUIResponse } from "shared";
+import type { DialogAnswer, DialogQuestion } from "shared";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -32,13 +32,11 @@ export function QuestionDialog({
 	onAnswer,
 }: {
 	question: Question;
-	onAnswer: (response: RpcExtensionUIResponse) => void;
+	onAnswer: (answer: DialogAnswer) => void;
 }) {
 	const [text, setText] = useState(question.method === "editor" ? (question.prefill ?? "") : "");
-	const answer = (value: string) =>
-		onAnswer({ type: "extension_ui_response", id: question.id, value });
-	const cancel = () =>
-		onAnswer({ type: "extension_ui_response", id: question.id, cancelled: true });
+	const answer = (value: string) => onAnswer({ id: question.id, value });
+	const cancel = () => onAnswer({ id: question.id, cancelled: true });
 
 	return (
 		<Dialog open onOpenChange={() => {}}>

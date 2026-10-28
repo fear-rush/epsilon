@@ -12,7 +12,7 @@ socket and the access rules are built for ([protocol.md](protocol.md), Non-goals
 ```
   phone or laptop ──tunnel──▶ host loopback ──▶ container
                                                  ├── epsilon server + client
-                                                 ├── pi children (rpc mode)
+                                                 ├── embedded pi engine
                                                  └── agent home (named volume)
                        bind mount: the project the agent works on
 ```
@@ -28,9 +28,10 @@ not the operator's host home, which is the point
 - A provider credential, either stored in the home from a `pi` session or supplied
   through the provider's environment variable.
 
-`pi` does not have to be installed on the host. The image pins the CLI and the
-library from `bun.lock`, at one version, and the server resolves it from the
-mounted `node_modules` ([ADR-0001](adr/0001-engine-rpc-child.md)).
+`pi` does not have to be installed on the host. The image pins one version from
+`bun.lock`: the server embeds that package as its engine, and the same version
+provides the `pi` CLI for the terminal tab and setup
+([ADR-0008](adr/0008-embed-pi-engine-with-opinions.md)).
 
 ## Image
 
@@ -47,15 +48,15 @@ different one in the container would not match what the server drives.
 
 ## Run it
 
-| Setting    | Value                                | Note                                                        |
-| ---------- | ------------------------------------ | ----------------------------------------------------------- |
-| volume     | `pi-agent-home:/root/.pi/agent`      | credentials, settings, packages, sessions                   |
-| volume     | `epsilon-state:/root/.epsilon`       | `ui-state.json` only                                        |
-| bind mount | `$PROJECT:/workspace`                | the code the agent works on                                 |
-| env        | `EPSILON_PROJECT=/workspace`         | which project the session list is scoped to                 |
-| env        | `EPSILON_AGENT_HOME=/root/.pi/agent` | the home the server passes to every child; the volume above |
-| env        | `HOST=0.0.0.0`                       | inside the container; publishing decides who can reach it   |
-| ports      | `127.0.0.1:3000:3000`                | loopback publish, then a tunnel                             |
+| Setting    | Value                                | Note                                                         |
+| ---------- | ------------------------------------ | ------------------------------------------------------------ |
+| volume     | `pi-agent-home:/root/.pi/agent`      | credentials, settings, packages, sessions                    |
+| volume     | `epsilon-state:/root/.epsilon`       | `ui-state.json` only                                         |
+| bind mount | `$PROJECT:/workspace`                | the code the agent works on                                  |
+| env        | `EPSILON_PROJECT=/workspace`         | which project the session list is scoped to                  |
+| env        | `EPSILON_AGENT_HOME=/root/.pi/agent` | the home the server passes to every engine; the volume above |
+| env        | `HOST=0.0.0.0`                       | inside the container; publishing decides who can reach it    |
+| ports      | `127.0.0.1:3000:3000`                | loopback publish, then a tunnel                              |
 
 Publishing the port on `0.0.0.0` puts the whole API on the network. There is no
 application authentication, by design: access control is loopback plus the tunnel
@@ -118,8 +119,8 @@ what a wrong command can reach.
 
 1. Rebuild the image. Dependencies and the pinned pi version come from the lockfile.
 2. Restart. The volume keeps settings, credentials, packages and sessions; running
-   turns die with the container, which [ADR-0001](adr/0001-engine-rpc-child.md)
-   already accepts.
+   turns die with the container, which [ADR-0008](adr/0008-embed-pi-engine-with-opinions.md)
+   accepts as the cost of running the engine in-process.
 3. After a pi upgrade, re-run the greps in
    [reference/pi-rpc.md](reference/pi-rpc.md) before trusting the surface again.
 
@@ -137,7 +138,7 @@ inside the container first, so the platform matches.
 
 | Symptom                                                | Cause                                                                                                 | Check                                                   |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| Session runs but project extensions and MCP are absent | project not trusted, and RPC cannot prompt ([note](notes/2026-10-28-rpc-cannot-answer-trust.md))      | run `pi` in the container and answer `/trust`           |
+| Session runs but project extensions and MCP are absent | project not trusted, and no engine event asks ([note](notes/2026-10-28-rpc-cannot-answer-trust.md))   | run `pi` in the container and answer `/trust`           |
 | A package's tools fail though `pi list` shows it       | package installed for another platform ([note](notes/2026-10-28-packages-are-bound-to-a-platform.md)) | reinstall inside the container                          |
 | The page says the agent is not configured              | the volume has no credential or no default model                                                      | `docker compose run --rm -it epsilon pi`, then `/login` |
 | Page loads, socket closes immediately                  | protocol version mismatch after an upgrade                                                            | reload the tab; the notice names it                     |

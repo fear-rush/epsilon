@@ -1,7 +1,7 @@
 /**
- * The browser socket: version handshake, attach/detach, rpc passthrough and
- * dialog answers. The contract is docs/protocol.md; frames are parsed with the
- * shared zod schemas, never with a parallel copy.
+ * The browser socket: version handshake, attach/detach, commands and dialog
+ * answers. The contract is docs/protocol.md; frames are parsed with the shared
+ * zod schemas, never with a parallel copy.
  *
  * One connection may watch several sessions. Frames carry their own
  * `sessionId`, so there is no ambient "current session".
@@ -11,13 +11,19 @@ import type { ClientFrame, ProtocolErrorCode, ServerFrame } from "shared";
 import type { ServerWebSocket } from "bun";
 
 import type { SessionRegistry } from "../agent/registry";
+import type { LiveSession } from "../agent/session";
 
 /** What one browser tab is: its id, whether it said hello, the sessions it watches. */
 export type ChatState = {
 	tabId: string;
 	welcomed: boolean;
+	closed: boolean;
+	/** Sessions this tab asked for, including ones whose engine is still being built. */
+	wanted: Set<string>;
 	/** One unsubscribe per watched session. A tab may watch several at once. */
 	unsubscribes: Map<string, () => void>;
+	/** Engine creation in flight, so an attach and a command await one build. */
+	attaching: Map<string, Promise<LiveSession | undefined>>;
 };
 
 export type ChatSocket = ServerWebSocket<ChatState>;
@@ -41,9 +47,12 @@ const sendError = (
 
 export const handleOpen = (socket: ChatSocket): void => {
 	socket.data.welcomed = false;
+	socket.data.closed = false;
 };
 
 export const handleClose = (socket: ChatSocket): void => {
+	socket.data.closed = true;
+	socket.data.wanted.clear();
 	for (const unsubscribe of socket.data.unsubscribes.values()) unsubscribe();
 	socket.data.unsubscribes.clear();
 };
@@ -63,7 +72,7 @@ export const handleMessage = (registry: SessionRegistry, socket: ChatSocket, raw
 		sendError(socket, "PROTOCOL_MISMATCH", "Send hello first");
 		return;
 	}
-	route(registry, socket, frame);
+	void route(registry, socket, frame);
 };
 
 const issuesOf = (parsed: ReturnType<typeof clientFrameSchema.safeParse>): string =>
@@ -77,21 +86,26 @@ const parseFrame = (raw: string): ReturnType<typeof clientFrameSchema.safeParse>
 	}
 };
 
-const route = (registry: SessionRegistry, socket: ChatSocket, frame: ClientFrame): void => {
+const route = async (
+	registry: SessionRegistry,
+	socket: ChatSocket,
+	frame: ClientFrame,
+): Promise<void> => {
 	switch (frame.t) {
 		case "hello":
 			welcome(socket, frame);
 			return;
 		case "attach":
-			watch(registry, socket, frame.sessionId);
+			await watch(registry, socket, frame.sessionId);
 			return;
 		case "detach":
 			unwatch(socket, frame.sessionId);
 			return;
-		case "rpc":
-			watch(registry, socket, frame.sessionId);
-			runCommand(registry, socket, frame);
+		case "command": {
+			const session = await watch(registry, socket, frame.sessionId);
+			await session?.run(frame.command);
 			return;
+		}
 		case "dialog":
 			answer(registry, socket, frame);
 			return;
@@ -121,39 +135,62 @@ const welcome = (socket: ChatSocket, frame: Extract<ClientFrame, { t: "hello" }>
 	send(socket, { t: "welcome", protocol: PROTOCOL_VERSION, serverVersion: SERVER_VERSION });
 };
 
-/** Watch one session. Repeating the same attach does not stack a second sink. */
-const watch = (registry: SessionRegistry, socket: ChatSocket, sessionId: string): void => {
-	if (socket.data.unsubscribes.has(sessionId)) return;
-	const session = registry.ensure(sessionId);
+/** Watch one session, building its engine once even if two frames ask at once. */
+const watch = (
+	registry: SessionRegistry,
+	socket: ChatSocket,
+	sessionId: string,
+): Promise<LiveSession | undefined> => {
+	socket.data.wanted.add(sessionId);
+	const attaching = socket.data.attaching.get(sessionId);
+	if (attaching !== undefined) return attaching;
+	if (socket.data.unsubscribes.has(sessionId)) return Promise.resolve(registry.find(sessionId));
+	const task = open(registry, socket, sessionId).finally(() => {
+		socket.data.attaching.delete(sessionId);
+	});
+	socket.data.attaching.set(sessionId, task);
+	return task;
+};
+
+const open = async (
+	registry: SessionRegistry,
+	socket: ChatSocket,
+	sessionId: string,
+): Promise<LiveSession | undefined> => {
+	let session: LiveSession;
+	try {
+		session = await registry.ensure(sessionId);
+		// Another tab may have detached, and disposed this engine, while it was
+		// being built. Rebuild from the session file instead of subscribing to it.
+		if (!session.isOpen) session = await registry.ensure(sessionId);
+	} catch (error) {
+		sendError(
+			socket,
+			"AGENT_START_FAILED",
+			error instanceof Error ? error.message : String(error),
+			sessionId,
+		);
+		return undefined;
+	}
+	// The tab may have closed, or detached, while the engine was being built.
+	if (socket.data.closed || !socket.data.wanted.has(sessionId)) {
+		session.dispose();
+		return undefined;
+	}
 	socket.data.unsubscribes.set(
 		sessionId,
 		session.subscribe((out) => send(socket, out)),
 	);
+	return session;
 };
 
 /** Stop watching one session and leave the others alone. */
 const unwatch = (socket: ChatSocket, sessionId: string): void => {
+	socket.data.wanted.delete(sessionId);
 	const unsubscribe = socket.data.unsubscribes.get(sessionId);
 	if (unsubscribe === undefined) return;
 	unsubscribe();
 	socket.data.unsubscribes.delete(sessionId);
-};
-
-const runCommand = (
-	registry: SessionRegistry,
-	socket: ChatSocket,
-	frame: Extract<ClientFrame, { t: "rpc" }>,
-): void => {
-	try {
-		registry.ensure(frame.sessionId).send(frame.command);
-	} catch (error) {
-		sendError(
-			socket,
-			"CHILD_EXITED",
-			error instanceof Error ? error.message : "The agent is gone",
-			frame.sessionId,
-		);
-	}
 };
 
 const answer = (
@@ -163,7 +200,7 @@ const answer = (
 ): void => {
 	const session = registry.find(frame.sessionId);
 	if (session === undefined) {
-		sendError(socket, "SESSION_NOT_FOUND", "No live agent for this session", frame.sessionId);
+		sendError(socket, "SESSION_NOT_FOUND", "No live engine for this session", frame.sessionId);
 		return;
 	}
 	session.answerDialog(frame.answer);

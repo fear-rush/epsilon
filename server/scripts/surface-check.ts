@@ -27,7 +27,7 @@ const openTab = (): Tab => {
 			send(socket, {
 				t: "dialog",
 				sessionId: frame.sessionId,
-				answer: { type: "extension_ui_response", id: frame.request.id, confirmed: true },
+				answer: { id: frame.request.id, confirmed: true },
 			});
 		}
 	});
@@ -83,14 +83,14 @@ const driver = openTab();
 await driver.ready;
 send(driver.socket, { t: "attach", sessionId: sessionA });
 send(driver.socket, {
-	t: "rpc",
+	t: "command",
 	sessionId: sessionA,
-	command: { type: "prompt", message: "Say only: ok" },
+	command: { type: "prompt", text: "Say only: ok" },
 });
 send(driver.socket, {
-	t: "rpc",
+	t: "command",
 	sessionId: sessionB,
-	command: { type: "prompt", message: "Say only: ok" },
+	command: { type: "prompt", text: "Say only: ok" },
 });
 await sleep(9000);
 
