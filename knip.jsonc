@@ -19,7 +19,8 @@
 			"entry": ["scripts/*.ts"],
 		},
 		"client": {
-			"entry": ["index.html"],
+			// utils.ts is the shadcn CLI's utils alias target, not an app import.
+			"entry": ["index.html", "src/lib/utils.ts"],
 		},
 	},
 }

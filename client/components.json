@@ -1,5 +1,5 @@
 {
-	"$schema": "https://ui.shadcn.com/schema.json",
+	"$schema": "./components.schema.json",
 	"style": "base-rhea",
 	"rsc": false,
 	"tsx": true,
