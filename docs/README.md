@@ -9,9 +9,14 @@ Read these documents in order. Each document answers one question.
 | 3     | [protocol.md](protocol.md)                 | Which frames travel over the browser socket?            |
 | 4     | [ui.md](ui.md)                             | Which component renders which concept?                  |
 | 5     | [features.md](features.md)                 | Is a feature in scope, and how is it built?             |
-| 6     | [reference/pi-rpc.md](reference/pi-rpc.md) | What does pi's RPC expose, and what does it not expose? |
-| 7     | [adr/](adr/README.md)                      | Why are the engine and the UI contract what they are?   |
-| 8     | [notes/](notes/README.md)                  | Which traps did we hit, and how did we remove them?     |
+| 6     | [deploy.md](deploy.md)                     | How does this run on a machine that has never had pi?   |
+| 7     | [reference/pi-rpc.md](reference/pi-rpc.md) | What does pi expose, over RPC, its library and its CLI? |
+| 8     | [adr/](adr/README.md)                      | Why are the engine, the home and the UI contract so?    |
+| 9     | [notes/](notes/README.md)                  | Which traps did we hit, and how did we remove them?     |
+
+Two supporting pages hang off the plan: [plan/slices.md](plan/slices.md) holds the
+checks for every slice, and [plan/facts.md](plan/facts.md) holds the facts that were
+verified by hand. Read them when working a slice, not before reading the plan.
 
 The root [README.md](../README.md) covers install, commands and tooling.
 [AGENTS.md](../AGENTS.md) holds the rules for code and for these documents. Read

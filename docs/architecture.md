@@ -1,8 +1,11 @@
 # Architecture
 
 Status: **partly implemented.** The socket, the driver, the transcript page and
-the session list exist. See [plan.md](plan.md) for the slice in progress rather
-than a status here.
+the session list exist. The deployment boundary and the explicit agent home are
+decided and not built ([ADR-0005](adr/0005-deployment-owns-agent-home.md)). pi's
+engine runs outside our process, as a child
+([ADR-0007](adr/0007-embed-pi-engine.md) records why). See [plan.md](plan.md) for the
+slice in progress rather than a status here.
 
 A map of the system: what the parts are, what each owns, and how a request or an
 event travels. Rationale lives in [adr/](adr/); rules live in
@@ -11,37 +14,56 @@ event travels. Rationale lives in [adr/](adr/); rules live in
 
 ## Runtime shape
 
+The dashed box is one deployment, and it is the isolation boundary. What is inside
+it, including the agent home, belongs to it and not to the operator's host
+([deploy.md](deploy.md)).
+
 ```
                     ┌──────────────────────── browser ────────────────────────┐
-                    │  sidebar · transcript · composer · files · preview      │
+                    │  sidebar · transcript · composer · files · preview       │
                     └───────────┬─────────────────────────────┬───────────────┘
                                 │ one WebSocket per tab        │ REST (disk reads)
-                    ┌───────────▼───────────────┐  ┌──────────▼────────────────┐
-                    │ ws/hub → ws/channel       │  │ http/routes → sessions/,  │
-                    │ per-session ordering,     │  │ files/, git, resources,   │
-                    │ coalescing, backpressure  │  │ ui-state                  │
-                    └───────────┬───────────────┘  └──────────┬────────────────┘
-                                │                             │
-                    ┌───────────▼───────────────┐  ┌──────────▼────────────────┐
-                    │ agent/pool                │  │ pi's SessionManager +     │
-                    │ agent/driver (stdin/stdout │ │ plain fs reads            │
-                    │ JSONL) → agent/normalize  │ │ ~/.pi/agent/sessions/**   │
-                    └───────────┬───────────────┘  └───────────────────────────┘
-                                │
-                    ┌───────────▼───────────────┐
-                    │ pi --mode rpc  (one child │  loads extensions, skills,
-                    │ per live session, capped) │  MCP, packages from ~/.pi
-                    └───────────┬───────────────┘
-                                │
-                    ┌───────────▼───────────────┐   ┌───────────────────────────┐
-                    │ tool execution: files,    │   │ preview origin (:preview) │
-                    │ shell, codemode in the    │   │ sandboxed static + proxy  │
-                    │ project directory         │   └───────────────────────────┘
-                    └───────────────────────────┘
+                    ╭───────────┴─────────────────────────────┴───────────────╮
+                    │  epsilon server (also serves the built client)          │
+                    │                                                         │
+                    │  ┌──────────────────┐  ┌────────────────────────────┐   │
+                    │  │ ws/hub → channel │  │ http/routes → sessions/,   │   │
+                    │  │ per-session       │  │ files/, agent, ui-state    │   │
+                    │  │ ordering, cache    │  └────────────┬───────────────┘   │
+                    │  └────────┬─────────┘               │                   │
+                    │           │                         │                   │
+                    │  ┌────────▼─────────┐   ┌───────────▼───────────────┐   │
+                    │  │ agent/registry    │   │ agent/home: which config  │   │
+                    │  │ cap, idle kill    │   │ dir, is it ready, what is │   │
+                    │  └────────┬─────────┘   │ missing                   │   │
+                    │           │             └───────────────────────────┘   │
+                    │  ┌────────▼──────────────────────────────────────────┐  │
+                    │  │ pi --mode rpc (one child per live session, capped) │  │
+                    │  │ loads extensions, skills, MCP, packages from the   │  │
+                    │  │ agent home (ADR-0001, ADR-0004)                    │  │
+                    │  └────────┬──────────────────────────────────────────┘  │
+                    │           │                                             │
+                    │  ╭────────▼─────────╮  ╭─────────────────────────────╮    │
+                    │  │ agent home        │  │ the project (bind mount)    │    │
+                    │  │ volume: settings, │  │ tools read, write and run   │    │
+                    │  │ creds, packages,  │  │ commands here               │    │
+                    │  │ sessions, trust   │  ╰─────────────────────────────╯    │
+                    │  ╰──────────────────╯                                        │
+                    ╰────────────────────────────┬────────────────────────────╯
+                                                 │ second listener, own port
+                                     ┌───────────▼───────────┐
+                                     │ preview origin        │
+                                     │ sandboxed static +    │
+                                     │ dev-server proxy      │
+                                     └───────────────────────┘
 ```
 
 The preview origin is a **second listener**, on its own port, serving agent-written
 content. It never shares an origin with the API (ADR-0003).
+
+The agent home is resolved once, in `config.ts`, and given to every child
+explicitly. It is pi's own default path inside the deployment, unless an override
+says otherwise ([ADR-0005](adr/0005-deployment-owns-agent-home.md)).
 
 ## Module map
 
@@ -56,7 +78,8 @@ content. It never shares an origin with the API (ADR-0003).
 | `security.ts`        | Loopback and Host checks, optional token                                               |
 | `agent/driver.ts`    | Spawning `pi --mode rpc`, JSONL framing, `send`, `onFrame`, `onExit`, `kill`           |
 | `agent/sessions.ts`  | pi's session-manager: the only path from REST to session files                         |
-| `agent/pool.ts`      | sessionId → child, cap, LRU, idle kill, idle-gated restart                             |
+| `agent/registry.ts`  | sessionId → child, cap, idle kill, idle-gated restart                                  |
+| `agent/home.ts`      | Reading the agent home: ready or not, which provider is configured, what is missing    |
 | `agent/normalize.ts` | `JsonAgentSessionEvent` → protocol frames. The only place that knows pi's event shapes |
 | `agent/extui.ts`     | The nine dialog methods, pending-request replay, cancel on abort                       |
 | `ws/upgrade.ts`      | Socket upgrade, origin check, tab identity                                             |
@@ -107,8 +130,15 @@ ensures a child → snapshot from `get_state`, `get_messages` and
 `get_available_models` → client replaces state → later frames are deltas. REST lives under `/api` and `/sessions/<id>` is
 a client route, so a reload is not swallowed by the dev proxy.
 
-**Send a prompt.** Client sends `rpc { prompt }` → driver writes JSON → pi streams
-`message_*` and `tool_execution_*` events → normalizer → channel → client reducer.
+**Send a prompt.** Client sends `rpc { prompt }` → the driver writes it to the agent
+host → pi streams `message_*` and `tool_execution_*` events → normalizer → channel
+→ client reducer.
+
+**Not ready.** Any page load asks for the agent home's state (REST `GET /api/agent`)
+→ if a step is missing, the page shows one notice naming the step, the home path and
+the command that fixes it in a terminal inside the deployment
+([ADR-0006](adr/0006-setup-in-the-deployment-terminal.md)). The dashboard writes
+nothing to pi's configuration.
 
 **Answer an extension dialog.** `extension_ui_request` in → extui stores it with a
 deadline and sends `dialog` → client renders → `dialog` answer back → driver
@@ -128,28 +158,36 @@ packages.
 
 ## State ownership
 
-| State                                                 | Owner                      | Lifetime                               |
-| ----------------------------------------------------- | -------------------------- | -------------------------------------- |
-| Transcript, branches, compaction, session name        | pi's JSONL files           | Forever                                |
-| Extension/server config, models, MCP config, packages | `~/.pi/**`                 | Forever                                |
-| Pins, archive, project order                          | `~/.epsilon/ui-state.json` | Until deleted                          |
-| Live child processes                                  | `agent/pool.ts`            | Idle timeout                           |
-| Unanswered extension dialogs                          | `agent/extui.ts`           | Until answered, cancelled or timed out |
-| View state, scroll position, drafts                   | Browser                    | Tab lifetime                           |
+The deployment boundary owns the first two rows. Nothing outside it is read or
+written unless the operator mounts it there
+([ADR-0005](adr/0005-deployment-owns-agent-home.md)).
+
+| State                                               | Owner                              | Lifetime                               |
+| --------------------------------------------------- | ---------------------------------- | -------------------------------------- |
+| Transcript, branches, compaction, session name      | pi's JSONL in the agent home       | Forever                                |
+| Settings, credentials, models, MCP, packages, trust | the agent home (`$HOME/.pi/agent`) | Forever                                |
+| Pins, archive, project order                        | `~/.epsilon/ui-state.json`         | Until deleted                          |
+| Live child processes                                | `agent/registry.ts`                | Idle timeout                           |
+| Unanswered extension dialogs                        | `agent/extui.ts`                   | Until answered, cancelled or timed out |
+| View state, scroll position, drafts                 | Browser                            | Tab lifetime                           |
 
 Nothing else is persisted. If a piece of state is not in this table, it does not
-exist.
+exist. The agent home is not recorded anywhere: it is deterministic, so a file
+naming it would be a second source of truth.
 
 ## Failure modes
 
-| Failure                            | Behaviour                                                                                                               |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Child crashes mid-turn             | Client sees the stream stop; the turn is lost; the next prompt spawns a fresh child. Show it, do not silently reconnect |
-| Socket drops                       | Reconnect with backoff, `attach` again, snapshot replaces state                                                         |
-| Server restarts                    | Same as socket drop; in-flight turns are lost (ADR-0001)                                                                |
-| Protocol version mismatch          | `PROTOCOL_MISMATCH` → client reloads                                                                                    |
-| pi upgrade changes the RPC surface | Types break at compile time first; re-verify against [reference/pi-rpc.md](reference/pi-rpc.md)                         |
-| Preview content misbehaves         | It cannot reach the API: different origin, sandboxed frame, closed CORS                                                 |
+| Failure                        | Behaviour                                                                                                             |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| Agent process crashes mid-turn | Client sees the stream stop; the turn is lost; the next prompt spawns a fresh one. Show it, do not silently reconnect |
+| Socket drops                   | Reconnect with backoff, `attach` again, snapshot replaces state                                                       |
+| Server restarts                | Same as socket drop; in-flight turns are lost (ADR-0001)                                                              |
+| Protocol version mismatch      | `PROTOCOL_MISMATCH` → client reloads                                                                                  |
+| Agent home unconfigured        | Every page names the missing step and the terminal command that fixes it (ADR-0006)                                   |
+| No credential, no model        | The prompt is refused with a message naming the fix, never a silent failed turn                                       |
+| Project not trusted            | Project resources are skipped by pi; the dashboard reports it, because RPC cannot ask (note)                          |
+| pi upgrade changes its surface | Types break at compile time first; re-verify against [reference/pi-rpc.md](reference/pi-rpc.md)                       |
+| Preview content misbehaves     | It cannot reach the API: different origin, sandboxed frame, closed CORS                                               |
 
 ## Size budgets
 

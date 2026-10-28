@@ -1,0 +1,151 @@
+# Verified facts
+
+Status: **current as of S4.** Every line here was checked against the pinned pi
+package or against a browser session, not read from a document. When one becomes
+false, delete it rather than adding a correction below it.
+
+- `bun run scripts/replay.ts` in `shared/` replays every fixture twice and prints
+  the rows. A `.json` fixture is one frame, such as a snapshot.
+- Rows exist for every message role: `bashExecution` becomes a bash card, a
+  branch or compaction summary becomes a muted block, `custom` names its type.
+  Nothing is skipped silently.
+- Tool output arrives twice: from `tool_execution_end` live, and from the
+  `toolResult` message in a snapshot. Both paths write the same `ToolRun`.
+- A tab keeps one subscription per session: a second `attach` no longer returns
+  early, and `detach` drops only that session. Verified with two sessions on one
+  tab while a second tab drove the detached one.
+- The five display-only extension methods travel as `ui` frames. Keyed status and
+  widget state is replayed to a late attach. Verified: a second tab receives
+  `setStatus` without prompting.
+- `client/src/link.ts` ignores events from a socket it already replaced, so a
+  retry's predecessor cannot report `closed` on a working connection. The tab has
+  one Link for every session it watches: the store subscribes, and frames reach it
+  by `sessionId`, so opening three sessions in one tab keeps one socket.
+- `client/src/hooks/use-conversation.ts` keeps one store per session outside
+  React, so a remount reuses the reduced transcript instead of an empty page. The
+  socket no longer lives there, so the StrictMode race that cost S2 an afternoon
+  cannot close a working connection
+  ([note](../notes/2026-10-28-strictmode-closes-the-socket.md)).
+- The agent's project is `config.projectDir`: `EPSILON_PROJECT` or the repo root,
+  never `process.cwd()`, because `turbo dev` starts the server task inside
+  `server/` and pi reads that as the project
+  ([note](../notes/2026-10-28-turbo-runs-the-agent-in-server.md)).
+- Tool arguments live on the assistant's `toolCall`, not on the `toolResult`.
+  `toolsFromMessages` makes two passes, so a run built from a snapshot still has
+  its command, its path and its diff. Verified at 390px: `bash echo …` shows the
+  command and the output, `edit` shows `- old` / `+ new`.
+- The list is `SessionManager.list(config.projectDir)` behind
+  `server/src/agent/sessions.ts`, joined with `registry.live()` by
+  `server/src/sessions/list.ts`. `listAll()` is not used: it takes 1.5 s for 345
+  sessions across 94 projects, and this server drives one project.
+- REST lives under `/api`. `/sessions/<id>` is a client route, so a dev-server
+  proxy on `/sessions` would swallow a page reload. `/api` is already proxied.
+- Browse writes nothing: only the session page calls `attach`, and a new id
+  writes no file until the first message
+  ([note](../notes/2026-10-28-fresh-session-id-writes-no-file.md)).
+- Delete resolves the id with `SessionManager.findById` and refuses while the
+  registry holds a live child. A real id from another project answers `404` and
+  leaves the file alone, so the temp-project test could not touch this repo's
+  sessions.
+- No idle kill: a child stays alive after its last tab closes, so browsing many
+  sessions leaves one `pi` per session until the server stops.
+- The session list polls `/api/sessions` every 5 s for the needs-input badge. Run
+  state has no row indicator; a session running only in the terminal could not be
+  detected anyway, because pi keeps no lock and appends to the JSONL without one.
+- `meta.running` means the child process is alive; `busy` means a turn is
+  running. `busy` comes from `agent_start`/`agent_end` and from the snapshot's
+  `isStreaming`, so a tab that attaches mid-run shows "working" and offers stop
+  instead of looking idle.
+- pi's `steer` lands at the next turn boundary, not mid-token: a count that was
+  steered at 38 characters still ran to 300 before "steered-ok" appeared. The
+  composer says "steer" for that reason.
+- The socket's `rpc-result` carries only `ok`/`error`, so pi's response data (the
+  steer disposition, `get_state`, the chosen model) never reaches the browser. A
+  refused command becomes a notice with its error text.
+- The driver drops replies to the server's own reads, so a snapshot no longer
+  leaves three phantom `rpc-result` frames on the wire.
+- A snapshot carries `models` from `get_available_models`: 510 entries across the
+  configured providers here. The picker is a native select grouped by provider
+  with the current provider first; a searchable palette is the eventual control.
+- After a successful `set_model`, the server re-reads the snapshot for every
+  subscriber, so the picker shows pi's answer instead of echoing the request. pi
+  validates the pair against `get_available_models` and answers
+  `Model not found: provider/id` otherwise.
+- The shell is the shadcn sidebar: a 16rem column at 1280px and above, a left
+  Sheet below, ⌘B to toggle. `useIsMobile` treats anything under 1280px as
+  mobile, which is the tablet rule in ui.md. The right panel waits for its first
+  surface (files, S6).
+- `client/src/components/ui/sidebar.tsx` is trimmed from the registry to 298
+  lines for the file-size cap: offcanvas only, with no rail, submenus or
+  collapsed tooltips. Add them back from the registry when a screen needs them.
+- `--warning` and `--success` were added to `client/src/index.css`. The needs-input
+  `Badge`, diff lines and error `Alert`s use theme colours; a grep finds no raw
+  palette class in `client/src` outside generated components.
+- The model menu is the AI Elements model selector: a `DropdownMenu` with one
+  `DropdownMenuRadioGroup` per provider, current provider first. 510 models open
+  as one scrolling menu, grouped; `Command` and `Popover` were removed again
+  until the palette needs them.
+- The permission control reads the extension's keyed status (`permission`) but
+  renders its own three labels, Strict, Ask and Yolo, with a shield and no glyph
+  or `perm:` prefix. Switching sends `/permission <mode>` as a `prompt`: pi
+  dispatches an extension command before touching the agent, even mid-run, so it
+  starts no turn and writes no message into the session. Verified over the socket:
+  the reply is ok, the status changes, and a second snapshot has zero messages.
+- Composer controls follow AI Elements Prompt Input: model, permission, stop and
+  an arrow-up submit inside the `block-end` addon. Enter submits, Shift+Enter adds
+  a line, Esc stops a run. The header keeps the title and the run chip only.
+- Animation comes from the shadcn utilities, not new keyframes: the streaming
+  caret pulses, menus use the registry enter/exit animation, and the scroller keeps
+  `scroll-fade-b`. The registry's menu animation was 100ms with a 2px slide, which
+  read as no animation, so `DropdownMenuContent` now runs 200ms with a 16px slide.
+- The header shows only the title. Loading, disconnected and not-ready states are
+  centred: a `Spinner` until the first snapshot, a destructive `Alert` once the
+  socket closes. Switching sessions therefore never flashes "No messages yet".
+- Other loading states: the sidebar list shows a `Spinner` while the query runs, and
+  the delete action shows one while its request is in flight.
+- The composer is a white surface with a `border-foreground/25` border; the model
+  and permission triggers are ghost buttons and submit is the primary round arrow,
+  so the footer follows the surface instead of the old grey fill.
+- Typography has two UI sizes only: `text-sm` for primary content and `text-xs` for
+  secondary detail, with no arbitrary `text-[…]` values. Assistant markdown runs
+  through `typeset` with `typeset-chat`, which styles headings, lists and tables
+  while keeping the transcript size.
+- UI copy avoids middots: durations read `done (1.2s)` and the session meta is two
+  spans. Model names come from pi and keep their own `·`; the UI does not rewrite
+  them.
+- Base UI groups its menu parts: a `DropdownMenuLabel` or item that is not inside a
+  `DropdownMenuGroup`/`RadioGroup` throws "MenuGroupContext is missing" during
+  render. The session actions and the permission menu now wrap their items.
+- Network failures are phrased, not raw: a dropped fetch reads "The server is not
+  reachable. Retrying…". The sidebar does not show the polling error at all (the
+  rows stay, the query retries); a failed delete reports inside its dialog, so the
+  action is never silent.
+- Every blocking prompt is now a component, not a bordered div: `confirm` is an
+  `AlertDialog`, `select`/`input`/`editor` are `Dialog`s that only answer or
+  cancel. Compaction, retry and extension notices are `Marker`s; `error` notices
+  are destructive `Alert`s.
+- The composer is an `InputGroup` with a `block-end` addon for stop and send, as
+  ui.md asks.
+- The tab settles a turn twice: `agent_end` then `agent_settled`. Both clear
+  `busy`; `abort` produces `message_end`, `turn_end`, `agent_end` and
+  `agent_settled`, so a stopped turn keeps its partial text.
+
+## Resolved risks for S1 and S2
+
+- pi's shipped `RpcClient` cannot answer an extension dialog and reports no
+  child exit, so the driver is ours ([ADR-0004](../adr/0004-own-the-rpc-driver.md)).
+- A child that dies on its own and a child we stopped are told apart by
+  `onExit.requested`. Verified with SIGKILL and SIGTERM.
+- A spawn failure emits no `exit` event, so the driver reports it as an exit
+  with `code: null`. Verified with a nonexistent `cwd`.
+- Bun runs a full tool-using turn, so `PI_RUNTIME=node` is not needed.
+- A tool call blocks on the permission extension's `confirm` until something
+  answers it
+  ([note](../notes/2026-10-28-rpc-permission-block.md)).
+- `get_messages` returns system messages even though the wire event type excludes
+  them, so the snapshot filters them at the edge and the system prompt never
+  reaches the browser.
+- `--session-id` on an unknown id creates the session in memory, not a file: the
+  JSONL appears on the first message. The driver still takes an explicit
+  `SessionTarget` instead of letting a default decide which file to touch
+  ([note](../notes/2026-10-28-fresh-session-id-writes-no-file.md)).

@@ -1,11 +1,15 @@
 # epsilon
 
-A web dashboard for one user. It controls the `pi` coding agent and starts the
-`pi` CLI as a child process in `--mode rpc`. The dashboard and the terminal share
-sessions, extensions, tools and credentials.
+A web dashboard for one user. It drives the `pi` coding agent as a child process in
+`--mode rpc`. The deployment it runs in owns that agent's home: config, credentials,
+extensions, packages, sessions and trust
+([ADR-0005](docs/adr/0005-deployment-owns-agent-home.md)). The dashboard and a
+terminal inside the same deployment are therefore one agent, and the dashboard never
+configures pi itself ([ADR-0006](docs/adr/0006-setup-in-the-deployment-terminal.md)).
 
 Status: S1, S2 and S3 work; S4 is in progress. Progress lives in
-[docs/plan.md](docs/plan.md).
+[docs/plan.md](docs/plan.md); the per-slice checks are in
+[docs/plan/slices.md](docs/plan/slices.md).
 
 Start with [docs/README.md](docs/README.md). Read these documents in this order:
 
@@ -16,8 +20,9 @@ Start with [docs/README.md](docs/README.md). Read these documents in this order:
 | [protocol.md](docs/protocol.md)                 | The browser socket contract                          |
 | [ui.md](docs/ui.md)                             | Component choice, layout, visual states, interaction |
 | [features.md](docs/features.md)                 | Every feature, its scope and how to build it         |
-| [reference/pi-rpc.md](docs/reference/pi-rpc.md) | What pi's RPC exposes, and what it does not          |
-| [adr/](docs/adr/README.md)                      | Why the engine and the UI contract are what they are |
+| [deploy.md](docs/deploy.md)                     | How it runs where `pi` was never installed           |
+| [reference/pi-rpc.md](docs/reference/pi-rpc.md) | What pi exposes: RPC, its library, and its CLI       |
+| [adr/](docs/adr/README.md)                      | Why the engine, the home and the UI contract are so  |
 | [notes/](docs/notes/README.md)                  | How to record a trap that cost time                  |
 
 ## Workspaces
@@ -49,15 +54,25 @@ Run these commands from the repository root:
 2. `shared/` imports no `node:*` module and no React. `client/src/conversation/`
    imports no React. The reducer stays pure and testable by replay.
 3. Do not invent a capability. If [pi-rpc.md](docs/reference/pi-rpc.md) does not
-   list it, pi does not expose it. Examples: no `/reload`, no in-session branch
-   switch, no login form.
+   list it, pi does not expose it. That file records pi's RPC surface, its exported
+   library and its CLI, because a feature may be missing from one and present in
+   another: login has no RPC command and does have a library call. Examples that
+   exist nowhere: no `/reload` over RPC, no in-session branch switch over RPC, no
+   command that writes a credential.
 4. Use one schema language (`zod`) and one styling system (Tailwind with shadcn
    variants).
 5. Keep every file under 300 lines. Keep every route handler under 60 lines. A
    route handler rejects bad input, calls one function and returns.
 6. Do not keep state that lives only in server memory or only in the browser.
 7. Show a visible notice when the UI is unsupported or unknown. Silence is not an
-   acceptable result.
+   acceptable result. A deployment that is not configured is an unsupported state.
+8. pi's files are pi's. The dashboard does not write settings, credentials or trust.
+   Setup happens in a terminal inside the deployment
+   ([ADR-0006](docs/adr/0006-setup-in-the-deployment-terminal.md)); the dashboard
+   reports what is missing and says which command fixes it.
+9. The agent home is chosen once, in `config.ts`, and passed to every child
+   explicitly. Never let an inherited `PI_*` variable decide which config a
+   deployment runs on.
 
 ## Truth and drift
 
@@ -85,7 +100,7 @@ Ask before you act when one of these is true:
 - Two documents disagree.
 - A document and the code disagree.
 - The request names a capability that [reference/pi-rpc.md](docs/reference/pi-rpc.md)
-  does not list.
+  does not list, over RPC, in the library or in the CLI.
 - The change breaks a rule above: import boundary, size cap, one schema language
   or one styling system.
 - A check fails for a reason you do not understand.

@@ -10,7 +10,11 @@ a snapshot, the coalescing and backpressure rules, the heartbeat and the restart
 action. Those belong to later slices in [plan.md](plan.md).
 
 The REST API is separate. Use REST for reading the disk (sessions, files, git,
-resources, ui-state) and this socket for everything agent-shaped.
+resources, ui-state, agent state) and this socket for everything agent-shaped.
+
+The zod schemas in `shared/src/protocol/frames.ts` are the source of truth for
+every shape. This document says which frames exist and what they mean; it does not
+restate their fields.
 
 ## Transport
 
@@ -33,8 +37,9 @@ Version history: 1 was the S2 transcript; 2 added `models` to the snapshot for
 the model picker.
 
 Version the socket, not the REST paths. A stale tab or an installed PWA can
-outlive a server upgrade; REST requests cannot, because the bundle is served by
-the same server.
+outlive a server upgrade; REST requests follow the bundle, because the deployment
+serves the client and the API from one listener ([deploy.md](deploy.md)). A dev
+run has two processes and two ports, which is a dev-only detail.
 
 ## Client to server
 
@@ -143,13 +148,24 @@ A phone that stops reading must not grow the server's memory.
 Nothing is replayed from the client's side. If a client wants to survive a
 reconnect without losing scroll position, that is local UI state, not protocol.
 
+## Readiness
+
+Readiness is not a socket concern. `GET /api/agent` reports the agent home's path,
+whether it exists, which providers are configured, the default model, installed
+packages and the project's trust state. The page turns a missing step into a notice
+naming the terminal command that fixes it
+([ADR-0006](adr/0006-setup-in-the-deployment-terminal.md)).
+
+The dashboard does not acquire configuration over the socket: no sign-in frames, no
+credential frames, no settings frames.
+
 ## Restart semantics
 
 "Restart agent" means: kill this session's child, then spawn a new one on the
 next `attach` or `rpc`. It is allowed only when the session is idle; otherwise
 `rpc-result { ok: false, error: "AGENT_BUSY" }`.
 
-It is the only way to pick up newly installed packages, skills or MCP servers,
+It is the only way to pick up newly installed packages, skills or MCP servers
 because pi's interactive `/reload` is not an RPC command (see
 [reference/pi-rpc.md](reference/pi-rpc.md)).
 
@@ -162,6 +178,7 @@ because pi's interactive `/reload` is not an RPC command (see
 | `AGENT_BUSY`         | Command rejected while a run is in flight.                   |
 | `AGENT_START_FAILED` | The child failed to start; message carries pi's stderr tail. |
 | `CHILD_EXITED`       | The child died mid-command.                                  |
+| `HOST_NOT_ALLOWED`   | The request's Host or Origin is not this server.             |
 | `UNSUPPORTED_FRAME`  | Frame the server does not implement at this version.         |
 
 Errors are never silent. A frame the server does not understand produces
@@ -169,8 +186,12 @@ Errors are never silent. A frame the server does not understand produces
 
 ## Non-goals
 
-- No bidirectional multiplexing across machines. One server, one machine.
-- No authentication frames. Access control is loopback plus the tunnel in front.
+- No bidirectional multiplexing across machines. One deployment, one agent home.
+- No authentication frames. Access control is a loopback publish plus the tunnel in
+  front. The Host and Origin check is not authentication; it stops a page that is
+  not this app from driving the API.
+- No credential upload, no configuration import, no code upload over any route
+  ([ADR-0006](adr/0006-setup-in-the-deployment-terminal.md)).
 - No binary attachments over the socket. Files go over REST; images arrive as
   `ImageContent` inside RPC prompts.
 - No replay log. Snapshots replace state; history is read from pi's files.

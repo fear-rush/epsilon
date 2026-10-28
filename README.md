@@ -1,17 +1,31 @@
 # epsilon
 
-A web dashboard for one user. It controls the `pi` coding agent and starts it as
-a child process in `--mode rpc`. The dashboard shares sessions, extensions, tools
-and credentials with the terminal `pi`.
+A web dashboard for one user. It drives the `pi` coding agent, and the deployment it
+runs in owns that agent's config, credentials, extensions and sessions, so the
+dashboard and a terminal inside the same deployment are one agent
+([ADR-0005](docs/adr/0005-deployment-owns-agent-home.md)).
 
-Status: design, not implemented. Start with [docs/README.md](docs/README.md), then
-[docs/plan.md](docs/plan.md).
+Status: S1, S2 and S3 work; S4 is in progress. Start with
+[docs/README.md](docs/README.md), then [docs/plan.md](docs/plan.md).
 
 ## Requirements
 
-- Bun 1.4.4 or newer.
-- Node.js 22.22 or newer.
-- `pi` installed and configured on the same machine.
+- Bun 1.4.4 or newer, for the server and the client.
+- Node.js 22.19 or newer, for the agent. Both runtimes are in the deployment image.
+- A project directory for the agent to work on.
+- `pi` does **not** have to be installed. The version epsilon drives is pinned in
+  `server/package.json` and installed with the rest of the dependency tree.
+
+The agent's config directory, its "home", lives inside the deployment. A fresh one
+has no credentials: you configure it once with `pi` in a terminal there, and the
+dashboard says so when it has not been done
+([docs/deploy.md](docs/deploy.md)).
+
+## Deploy
+
+A container, a volume for the agent home, a bind mount for the project, and one
+port published on loopback behind a tunnel. [docs/deploy.md](docs/deploy.md) has the
+settings, and what the isolation does and does not cover.
 
 ## Development
 

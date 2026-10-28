@@ -17,8 +17,11 @@ not laws.
    around cards, no colour that does not carry meaning.
 4. **Colour carries state only.** Running, needs-input, error, selected. Everything
    else is foreground and muted foreground.
-5. **Unsupported means visible.** A capability that pi does not expose over RPC
-   gets a notice, never a dead control.
+5. **Unsupported means visible.** A capability that pi does not expose gets a
+   notice, never a dead control. The same rule covers a deployment that is not
+   ready: no credential, no model and an untrusted project are shown on the page,
+   never as an empty transcript
+   ([ADR-0006](adr/0006-setup-in-the-deployment-terminal.md)).
 
 ## Component inventory
 
@@ -83,6 +86,7 @@ with it.
 | Toasts, errors                     | `sonner`, `Alert variant="destructive"`                                                                                                |                                                                             |
 | Keyboard hints                     | `kbd`                                                                                                                                  | In menus and the palette footer                                             |
 | Loading                            | `spinner`                                                                                                                              | For attach and file load, not for streaming                                 |
+| Not ready                          | centre, `Alert` with one action                                                                                                        | Names the missing step and the terminal command that fixes it               |
 
 ## Layout
 
@@ -106,23 +110,24 @@ composer controls.
 
 ## Visual states
 
-| State                            | Where it shows                    | Treatment                                                                    |
-| -------------------------------- | --------------------------------- | ---------------------------------------------------------------------------- |
-| Idle                             | nowhere                           | No header indicator; the transcript says what happened                       |
-| Running                          | last `TraceLine status="running"` | pulsing line, `shimmer` title only while it runs                             |
-| Loading a session                | centre                            | `Spinner` + "Loading the session…"                                           |
-| Disconnected                     | centre                            | destructive `Alert`, "Reconnecting…"                                         |
-| Permission                       | composer footer                   | `DropdownMenu` trigger: shield, current label; no glyphs from pi             |
-| Needs input                      | dialog, session row               | The blocking dialog is the prompt; the row keeps a `Badge variant="warning"` |
-| Streaming                        | last assistant turn               | text appends; no spinner, no layout shift                                    |
-| Compacting                       | header chip                       | "Compacting…" with a stop control                                            |
-| Retrying                         | header chip                       | attempt count from `auto_retry_*` events                                     |
-| Error                            | last turn + toast                 | `Alert variant="destructive"`, never a silent stop                           |
-| Child exited                     | transcript notice                 | states that the turn was lost, offers reattach                               |
-| Disconnected                     | top banner                        | reconnect in progress, no modal                                              |
-| Unsupported UI (`ctx.ui.custom`) | transcript notice                 | names the extension, points at the terminal tab                              |
-| Empty session                    | centre                            | `Empty` with three suggestions                                               |
-| No project                       | sidebar                           | `Empty` with a project picker                                                |
+| State                            | Where it shows                    | Treatment                                                                                                      |
+| -------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Idle                             | nowhere                           | No header indicator; the transcript says what happened                                                         |
+| Running                          | last `TraceLine status="running"` | pulsing line, `shimmer` title only while it runs                                                               |
+| Loading a session                | centre                            | `Spinner` + "Loading the session…"                                                                             |
+| Disconnected                     | centre                            | destructive `Alert`, "Reconnecting…"                                                                           |
+| Permission                       | composer footer                   | `DropdownMenu` trigger: shield, current label; no glyphs from pi                                               |
+| Needs input                      | dialog, session row               | The blocking dialog is the prompt; the row keeps a `Badge variant="warning"`                                   |
+| Streaming                        | last assistant turn               | text appends; no spinner, no layout shift                                                                      |
+| Compacting                       | header chip                       | "Compacting…" with a stop control                                                                              |
+| Retrying                         | header chip                       | attempt count from `auto_retry_*` events                                                                       |
+| Error                            | last turn + toast                 | `Alert variant="destructive"`, never a silent stop                                                             |
+| Child exited                     | transcript notice                 | states that the turn was lost, offers reattach                                                                 |
+| Not ready                        | centre on every page              | one `Alert` naming the missing step, the home path and the command to run in a shell; the composer is disabled |
+| Disconnected                     | top banner                        | reconnect in progress, no modal                                                                                |
+| Unsupported UI (`ctx.ui.custom`) | transcript notice                 | names the extension, points at the terminal tab                                                                |
+| Empty session                    | centre                            | `Empty` with three suggestions                                                                                 |
+| No project                       | sidebar                           | `Empty` with a project picker                                                                                  |
 
 ## Density and typography
 
@@ -161,6 +166,14 @@ uses a bottom `Sheet`. Destructive items confirm in `AlertDialog`.
 **Enabled states must match capability.** No "Reload" control (not an RPC command);
 no in-session branch switcher (not an RPC command); no settings form for resources.
 See `docs/reference/pi-rpc.md`.
+
+## Not-ready notice
+
+The dashboard never configures pi. When the agent home is unconfigured, every page
+shows one `Alert` naming the missing step, the home path, and the command that fixes
+it in a terminal inside the deployment. It is a notice, not a wizard: no provider
+picker, no credential field, no file drop zone, and nothing written when it is
+dismissed.
 
 ## Open questions from S2
 

@@ -1,12 +1,14 @@
 # Features and how each one is built
 
-Status: **design.** Implemented slices and their checks live in [plan.md](plan.md).
-One row per feature. The "How" column is the point of this page: it records what
-is possible through pi's RPC surface, what needs our own code, and what is
-deliberately left to the terminal.
+Status: **design.** Implemented slices and their checks live in
+[plan.md](plan.md) and [plan/slices.md](plan/slices.md). One row per feature. The
+"How" column is the point of this page: it records what is possible through pi's
+RPC surface, what needs our own code, and what is deliberately left to the
+terminal.
 
 Legend: **RPC** = a pi command or frame · **REST** = our HTTP route ·
-**WS** = our socket · **own** = our own module · **terminal** = the terminal tab.
+**WS** = our socket · **own** = our own module · **terminal** = the terminal tab,
+inside the deployment.
 
 ## Sessions
 
@@ -58,6 +60,21 @@ Legend: **RPC** = a pi command or frame · **REST** = our HTTP route ·
 | Cache-miss and cost notices         | WS events + `get_session_stats`; respect pi's `showCacheMissNotices`             |
 | Skills invocation turns             | parsed from the user message, like pi's TUI does                                 |
 
+## Readiness
+
+The deployment owns its agent home, and setup happens in a terminal inside it
+([ADR-0005](adr/0005-deployment-owns-agent-home.md),
+[ADR-0006](adr/0006-setup-in-the-deployment-terminal.md)). The dashboard reads that
+home and reports it. It never writes pi's configuration.
+
+| Feature                                                                                   | How                                                               |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Report readiness: home path, configured providers, default model, packages, project trust | own `agent/home.ts` behind REST `GET /api/agent`                  |
+| A missing step becomes a notice naming the terminal command that fixes it                 | own, on the not-ready state; never a silently failed turn         |
+| Sign in, choose a model, record trust, enable packages, sign in to MCP                    | **terminal** inside the deployment: `pi`, then `/login`, `/trust` |
+| Install a package                                                                         | **terminal** (`pi install`), then an idle-gated restart           |
+| Credential upload, configuration import, settings forms                                   | **not built, by decision**                                        |
+
 ## Extension surface
 
 | Feature                                                | How                                                       |
@@ -69,13 +86,14 @@ Legend: **RPC** = a pi command or frame · **REST** = our HTTP route ·
 
 ## Resources (read-only)
 
-| Feature                                      | How                                                   |
-| -------------------------------------------- | ----------------------------------------------------- |
-| Loaded skills with scope and source          | REST `GET /resources`                                 |
-| Installed packages and versions              | REST `GET /resources`                                 |
-| MCP servers, enabled state, connection state | REST `GET /resources`                                 |
-| Install, remove, update, enable, sign-in     | **terminal** (`pi install`, `/mcp`, `npx skills add`) |
-| Reload after installing                      | **WS restart** of that session's child, idle-gated    |
+| Feature                                      | How                                                |
+| -------------------------------------------- | -------------------------------------------------- |
+| Loaded skills with scope and source          | REST `GET /resources`                              |
+| Installed packages and versions              | REST `GET /resources`                              |
+| MCP servers, enabled state, connection state | REST `GET /resources`                              |
+| Remove, update, enable, MCP sign-in          | **terminal** (`pi remove`, `pi update`, `pi mcp`)  |
+| Install a package                            | **terminal** (`pi install`, `pi mcp add`)          |
+| Reload after installing                      | **WS restart** of that session's child, idle-gated |
 
 ## Files, git, terminal, preview
 
@@ -92,25 +110,28 @@ Legend: **RPC** = a pi command or frame · **REST** = our HTTP route ·
 
 ## Access and operations
 
-| Feature                    | How                                              |
-| -------------------------- | ------------------------------------------------ |
-| Loopback and Host checks   | own `server/src/security.ts`                     |
-| Remote access from a phone | Tailscale or SSH tunnel; no auth code in the app |
-| REST docs                  | generated OpenAPI + Scalar                       |
-| Socket docs                | `docs/protocol.md`                               |
-| Health                     | `GET /health`                                    |
+| Feature                    | How                                                              |
+| -------------------------- | ---------------------------------------------------------------- |
+| Host and Origin checks     | own `server/src/security.ts`; required before any published port |
+| Agent readiness            | REST `GET /api/agent`                                            |
+| One origin in deployment   | the server serves the built client; [deploy.md](deploy.md)       |
+| Remote access from a phone | Tailscale or SSH tunnel; no auth code in the app                 |
+| REST docs                  | generated OpenAPI + Scalar                                       |
+| Socket docs                | `docs/protocol.md`                                               |
+| Health                     | `GET /health`                                                    |
 
 ## Not building
 
-Auth, accounts, multi-user, npm/git distribution, launcher, update checker,
-i18n, themes beyond light and dark, settings forms for models/MCP/plugins/skills,
-file editing, commit history, plugin or slot system, multi-pane layouts, a second
-engine.
+Auth, accounts, multi-user, npm/git distribution (the deployment is a container
+image), launcher, update checker, i18n, themes beyond light and dark, settings
+settings forms for models, MCP, plugins or skills, file editing, commit history,
+plugin or slot system, multi-pane layouts, a second engine, credential upload and
+configuration import.
 
 ## Scope by milestone
 
-**V1 (the product):** transcripts, composer, sessions, extension dialogs,
-files, terminal, resources page, notifications.
+**V1 (the product):** deployment, readiness, transcripts, composer, sessions,
+extension dialogs, files, terminal, resources page, notifications.
 
 **V2:** preview pane (static, then dev-server proxy), attachments and image
 paste, transcript search, sub-agent side panel (only if a subagent extension is

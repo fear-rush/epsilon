@@ -1,11 +1,13 @@
-# pi's RPC surface
+# pi's surface: RPC, library and CLI
 
-Reference for what `pi --mode rpc` can and cannot do. Everything here was read
-from pi's shipped types and code, not from documentation prose.
+Reference for what pi exposes to a host, and what it does not. Everything here was
+read from pi's shipped types and code, not from documentation prose. The file name
+predates the library sections at the end; keep it, because accepted records link
+to it.
 
 **Re-verify after every pi upgrade.** The sources of truth. Paths are relative to
 the pinned package, `server/node_modules/@earendil-works/pi-coding-agent`, which
-is the copy epsilon spawns. `pi` on `PATH` may be a different version, so grep
+is the copy epsilon drives. `pi` on `PATH` may be a different version, so grep
 the pinned package, not the installed CLI.
 
 | Fact                        | File                                                                     |
@@ -15,6 +17,8 @@ the pinned package, not the installed CLI.
 | Wire events                 | `dist/modes/json-event.d.ts`, `pi-agent-core`'s `dist/types.d.ts`        |
 | Typed client                | `dist/modes/rpc/rpc-client.d.ts`                                         |
 | Interactive-only commands   | `dist/modes/interactive/interactive-mode.js` (the editor submit handler) |
+| Library exports             | `dist/index.d.ts`, `dist/core/sdk.d.ts`, `dist/core/agent-session.d.ts`  |
+| What the CLI itself does    | `dist/main.js` (it is a host over the library, not a second engine)      |
 
 Verified against 1.4.0.
 
@@ -111,25 +115,25 @@ prompt templates and skills. `get_commands` reports that set with
 CLI **built-ins** are different: pi's interactive mode intercepts them before
 any session call, so they never reach RPC.
 
-| Interactive-only                                                                                        | RPC equivalent                                                                     |
-| ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `/model`                                                                                                | `set_model`, `get_available_models`                                                |
-| `/thinking`                                                                                             | `set_thinking_level`, `get_available_thinking_levels`                              |
-| `/export`                                                                                               | `export_html`                                                                      |
-| `/copy`                                                                                                 | `get_last_assistant_text`                                                          |
-| `/name`                                                                                                 | `set_session_name`                                                                 |
-| `/session`                                                                                              | `get_session_stats`                                                                |
-| `/fork`                                                                                                 | `fork`                                                                             |
-| `/clone`                                                                                                | `clone`                                                                            |
-| `/new`                                                                                                  | `new_session`                                                                      |
-| `/resume`                                                                                               | `switch_session`                                                                   |
-| `/compact`                                                                                              | `compact`                                                                          |
-| `!cmd` / `!!cmd`                                                                                        | `bash` (`excludeFromContext`)                                                      |
-| `/reload`                                                                                               | **none.** Restart the child.                                                       |
-| `/tree`                                                                                                 | **none.** `AgentSession.navigateTree` has no RPC command; `get_tree` is read-only. |
-| `/trust`                                                                                                | **none.** Terminal tab.                                                            |
-| `/login`, `/logout`                                                                                     | **none.** Terminal tab.                                                            |
-| `/settings`, `/scoped-models`, `/import`, `/share`, `/bug`, `/changelog`, `/hotkeys`, `/debug`, `/quit` | **none.** Terminal tab.                                                            |
+| Interactive-only                                                                                        | RPC equivalent                                                                                          |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `/model`                                                                                                | `set_model`, `get_available_models`                                                                     |
+| `/thinking`                                                                                             | `set_thinking_level`, `get_available_thinking_levels`                                                   |
+| `/export`                                                                                               | `export_html`                                                                                           |
+| `/copy`                                                                                                 | `get_last_assistant_text`                                                                               |
+| `/name`                                                                                                 | `set_session_name`                                                                                      |
+| `/session`                                                                                              | `get_session_stats`                                                                                     |
+| `/fork`                                                                                                 | `fork`                                                                                                  |
+| `/clone`                                                                                                | `clone`                                                                                                 |
+| `/new`                                                                                                  | `new_session`                                                                                           |
+| `/resume`                                                                                               | `switch_session`                                                                                        |
+| `/compact`                                                                                              | `compact`                                                                                               |
+| `!cmd` / `!!cmd`                                                                                        | `bash` (`excludeFromContext`)                                                                           |
+| `/reload`                                                                                               | **none.** Restart the child.                                                                            |
+| `/tree`                                                                                                 | **none.** `AgentSession.navigateTree` has no RPC command; `get_tree` is read-only.                      |
+| `/trust`                                                                                                | **no command.** A `project_trust` event reaches an extension, else `--approve` or `defaultProjectTrust` |
+| `/login`, `/logout`                                                                                     | **no command.** `ModelRuntime.login`, `logout`, `listCredentials` in-process                            |
+| `/settings`, `/scoped-models`, `/import`, `/share`, `/bug`, `/changelog`, `/hotkeys`, `/debug`, `/quit` | **no command.** `SettingsManager`, `AgentSessionRuntime`, or nothing at all                             |
 
 ## Skills, MCP, packages
 
@@ -143,3 +147,69 @@ any session call, so they never reach RPC.
   also gated by project trust.
 - All three are read at child start. After installing anything, restart the child
   (idle-gated). There is no RPC reload.
+
+## Project trust is not answerable over RPC
+
+Print, JSON and RPC modes cannot show the built-in trust prompt. With no stored
+decision, `defaultProjectTrust: "ask"` **skips** the project's protected resources
+instead of blocking: `.pi/settings.json`, `.pi/mcp.json`, `.pi/extensions`,
+`.pi/skills`, `.pi/prompts`, `.pi/themes`, `.pi/SYSTEM.md`, `.pi/APPEND_SYSTEM.md`
+and project `.agents/skills`. Decisions live in `<agent home>/trust.json`.
+
+The alternatives are: store a decision, pass `--approve`, set
+`defaultProjectTrust: "always"`, or handle the `project_trust` event from an
+extension. See
+[../notes/2026-10-28-rpc-cannot-answer-trust.md](../notes/2026-10-28-rpc-cannot-answer-trust.md).
+
+## The CLI, for what a session cannot do
+
+These run as commands, not over RPC, and they work in a container shell:
+
+| Command                                                  | What it does                                                                                                                |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `pi auth check --provider <p> [--json]`                  | Reads provider readiness: `ready`, `not_ready`, and the source                                                              |
+| `pi auth print-api-key`, `print-bearer-token`            | Reads the stored credential or a refreshed token. Read-only; there is no command that writes a credential                   |
+| `pi mcp add`, `remove`, `list --json`, `login`, `logout` | Configures MCP servers and signs in to OAuth servers outside a session. `login` opens a browser and waits, with `--timeout` |
+| `pi install <source> [-l]`, `remove`, `list`, `update`   | Installs packages and edits the settings that declare them                                                                  |
+| `pi config`                                              | Toggles package resources. TUI only                                                                                         |
+| `pi --list-models [search]`                              | Lists models, but only authenticated ones: with no credential it prints "No models available"                               |
+
+## The library
+
+`@earendil-works/pi-coding-agent` embeds the same engine the CLI runs. The CLI is a
+host over it: `dist/main.js` calls `createAgentSessionServices`,
+`createAgentSessionFromServices` and `createAgentSessionRuntime`.
+
+What `createAgentSession()` gives by default: a `ModelRuntime` on
+`<agent home>/auth.json` and `models.json`, a file-backed `SettingsManager`, a
+persistent `SessionManager`, a `DefaultResourceLoader`, and the configured default
+tools. It applies the working directory, discovered resources, stored settings and
+configured credentials.
+
+What it does **not** load, and the CLI does: `codemode`, `tool_search` and MCP.
+Add `createCodemodeExtension()`, `createToolSearchExtension()` and
+`createMcpExtension()` as `DefaultResourceLoader` extension factories, enable the
+tool names the settings expect, and call `session.bindExtensions()` so MCP servers
+connect on session start.
+
+Other facts worth having before embedding:
+
+- `AgentSessionConfig.mode` must be `"rpc"` if extensions should see the same
+  surface they see today; they read it as `ctx.mode`.
+- `NewSessionOptions.id` creates a session with an exact id, and `SessionManager`
+  lists, opens, forks and imports. This is how a host keeps pi's own session files.
+- `AgentSessionRuntime` owns `newSession`, `switchSession`, `fork` and
+  `importFromJsonl`, and replaces the active session. Subscriptions belong to the
+  old session and must be rebound.
+- `toJsonEvent` is the only transformation between a live event and the JSON the
+  reducer consumes: `message_update` loses its `partial` payload and
+  `toolcall_start` gains `id` and `toolName`.
+- `session.dispose()` aborts work, invalidates extension contexts and removes
+  listeners. A host that forgets it leaks a running agent.
+- `session.reload()` exists, so an embedder could re-read resources without
+  replacing the session, unlike RPC. What it re-resolves is unverified here.
+
+epsilon does not embed the engine: sessions stay on `pi --mode rpc`, and setup uses
+the CLI. [ADR-0007](../adr/0007-embed-pi-engine.md) records why the library option was
+rejected, so the list above is reference material for a future decision rather than
+a plan.
