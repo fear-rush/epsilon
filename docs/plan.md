@@ -261,12 +261,16 @@ composer plus the `bash` command. Then the skill and prompt palette, which needs
   secondary detail, with no arbitrary `text-[…]` values. Assistant markdown runs
   through `typeset` with `typeset-chat`, which styles headings, lists and tables
   while keeping the transcript size.
+- UI copy avoids middots: durations read `done (1.2s)` and the session meta is two
+  spans. Model names come from pi and keep their own `·`; the UI does not rewrite
+  them.
 - Base UI groups its menu parts: a `DropdownMenuLabel` or item that is not inside a
   `DropdownMenuGroup`/`RadioGroup` throws "MenuGroupContext is missing" during
   render. The session actions and the permission menu now wrap their items.
 - Network failures are phrased, not raw: a dropped fetch reads "The server is not
-  reachable. Retrying…", so the sidebar never prints the browser's "Failed to
-  fetch".
+  reachable. Retrying…". The sidebar does not show the polling error at all (the
+  rows stay, the query retries); a failed delete reports inside its dialog, so the
+  action is never silent.
 - Every blocking prompt is now a component, not a bordered div: `confirm` is an
   `AlertDialog`, `select`/`input`/`editor` are `Dialog`s that only answer or
   cancel. Compaction, retry and extension notices are `Marker`s; `error` notices

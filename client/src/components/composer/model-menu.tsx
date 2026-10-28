@@ -11,7 +11,6 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { InputGroupButton } from "@/components/ui/input-group";
-import { modelLabel } from "@/lib/model";
 
 /** A model's identity is the pair pi switches on; the name is only a label. */
 const keyOf = (model: SnapshotModel): string => `${model.provider}/${model.id}`;
@@ -61,7 +60,7 @@ export function ModelMenu({ models, model, onSelect }: ModelMenuProps) {
 					/>
 				}
 			>
-				<span className="truncate">{model === undefined ? "Model" : modelLabel(model.name)}</span>
+				<span className="truncate">{model?.name ?? "Model"}</span>
 				<ChevronDownIcon data-icon="inline-end" />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="start" className="max-h-80 w-80">

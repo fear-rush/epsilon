@@ -9,7 +9,7 @@ import { useState } from "react";
 import type { SessionSummary } from "shared";
 
 import { SessionItem } from "@/components/sessions/session-item";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -62,7 +62,6 @@ export function SessionSidebar() {
 	};
 	const matched = matchRoute({ to: "/sessions/$sessionId" });
 	const activeId = matched === false ? undefined : matched.sessionId;
-	const problem = sessions.error ?? remove.error;
 	const project = sessions.data?.project;
 	const projectLabel = project?.split("/").at(-1) ?? project ?? "Sessions";
 
@@ -81,15 +80,6 @@ export function SessionSidebar() {
 			</div>
 
 			<SidebarContent>
-				{problem !== null && (
-					<div className="px-2">
-						<Alert variant="destructive">
-							<AlertTitle>Sessions</AlertTitle>
-							<AlertDescription>{problem.message}</AlertDescription>
-						</Alert>
-					</div>
-				)}
-
 				<SidebarGroup>
 					<SidebarGroupLabel title={project}>{projectLabel}</SidebarGroupLabel>
 					{sessions.isPending ? (
@@ -106,7 +96,10 @@ export function SessionSidebar() {
 									key={session.id}
 									session={session}
 									active={session.id === activeId}
-									onDelete={setPendingDelete}
+									onDelete={(next) => {
+										remove.reset();
+										setPendingDelete(next);
+									}}
 								/>
 							))}
 						</SidebarMenu>
@@ -117,7 +110,10 @@ export function SessionSidebar() {
 			<AlertDialog
 				open={pendingDelete !== undefined}
 				onOpenChange={(open) => {
-					if (!open) setPendingDelete(undefined);
+					if (!open) {
+						remove.reset();
+						setPendingDelete(undefined);
+					}
 				}}
 			>
 				<AlertDialogContent>
@@ -128,6 +124,11 @@ export function SessionSidebar() {
 							list and its file is deleted.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
+					{remove.error !== null && (
+						<Alert variant="destructive">
+							<AlertDescription>{remove.error.message}</AlertDescription>
+						</Alert>
+					)}
 					<AlertDialogFooter>
 						<AlertDialogCancel>Cancel</AlertDialogCancel>
 						<AlertDialogAction

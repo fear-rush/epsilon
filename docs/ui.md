@@ -138,7 +138,7 @@ Notes:
   lists, tables and quotes, and `typeset-chat` keeps the transcript's own size.
 - `CodeBlock size="sm"` is `text-xs`; the default size is `text-sm`.
 - No `text-[11px]`, `text-[13px]` or other arbitrary values. Pick one of the two.
-- No middots in UI copy. pi's model names are rendered with commas instead.
+- No middots in our copy. pi's model names arrive with `·` and render as received.
 - The composer is a white surface with a `border-foreground/25` border; its footer
   controls are `text-xs`, the submit arrow is the primary round button.
 - Icons 16px in rows, 14px in buttons, one set (lucide).
