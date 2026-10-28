@@ -86,7 +86,7 @@ with it.
 | Toasts, errors                     | `sonner`, `Alert variant="destructive"`                                                                                                |                                                                                                                 |
 | Keyboard hints                     | `kbd`                                                                                                                                  | In menus and the palette footer                                                                                 |
 | Loading                            | `spinner`                                                                                                                              | For attach and file load, not for streaming                                                                     |
-| Not ready                          | centre, `Alert` with one action                                                                                                        | Names the missing step and the terminal command that fixes it                                                   |
+| Not ready                          | centre, `Alert` and nothing else                                                                                                       | Names the missing step and the terminal command that fixes it; no button, because the fix is a terminal command |
 
 ## Layout
 
@@ -110,24 +110,24 @@ composer controls.
 
 ## Visual states
 
-| State                            | Where it shows                    | Treatment                                                                                                      |
-| -------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Idle                             | nowhere                           | No header indicator; the transcript says what happened                                                         |
-| Running                          | last `TraceLine status="running"` | pulsing line, `shimmer` title only while it runs                                                               |
-| Loading a session                | centre                            | `Spinner` + "Loading the session…"                                                                             |
-| Disconnected                     | centre                            | destructive `Alert`, "Reconnecting…"                                                                           |
-| Permission                       | composer footer                   | `DropdownMenu` trigger: shield, current label; no glyphs from pi                                               |
-| Needs input                      | dialog, session row               | The blocking dialog is the prompt; the row keeps a `Badge variant="warning"`                                   |
-| Streaming                        | last assistant turn               | text appends; no spinner, no layout shift                                                                      |
-| Compacting                       | header chip                       | "Compacting…" with a stop control                                                                              |
-| Retrying                         | header chip                       | attempt count from `auto_retry_*` events                                                                       |
-| Error                            | last turn + toast                 | `Alert variant="destructive"`, never a silent stop                                                             |
-| Engine failed                    | transcript notice                 | states that the turn was lost, offers reattach                                                                 |
-| Not ready                        | centre on every page              | one `Alert` naming the missing step, the home path and the command to run in a shell; the composer is disabled |
-| Disconnected                     | top banner                        | reconnect in progress, no modal                                                                                |
-| Unsupported UI (`ctx.ui.custom`) | transcript notice                 | names the extension, points at the terminal tab                                                                |
-| Empty session                    | centre                            | `Empty` with three suggestions                                                                                 |
-| No project                       | sidebar                           | `Empty` with a project picker                                                                                  |
+| State                            | Where it shows                    | Treatment                                                                                                     |
+| -------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Idle                             | nowhere                           | No header indicator; the transcript says what happened                                                        |
+| Running                          | last `TraceLine status="running"` | pulsing line, `shimmer` title only while it runs                                                              |
+| Loading a session                | centre                            | `Spinner` + "Loading the session…"                                                                            |
+| Disconnected                     | centre                            | destructive `Alert`, "Reconnecting…"                                                                          |
+| Permission                       | composer footer                   | `DropdownMenu` trigger: shield, current label; no glyphs from pi                                              |
+| Needs input                      | dialog, session row               | The blocking dialog is the prompt; the row keeps a `Badge variant="warning"`                                  |
+| Streaming                        | last assistant turn               | text appends; no spinner, no layout shift                                                                     |
+| Compacting                       | header chip                       | "Compacting…" with a stop control                                                                             |
+| Retrying                         | header chip                       | attempt count from `auto_retry_*` events                                                                      |
+| Error                            | last turn + toast                 | `Alert variant="destructive"`, never a silent stop                                                            |
+| Engine failed                    | transcript notice                 | states that the turn was lost, offers reattach                                                                |
+| Not ready                        | centre on every page              | one `Alert` naming the missing step, the home path and the command to run in a shell; no composer is rendered |
+| Disconnected                     | top banner                        | reconnect in progress, no modal                                                                               |
+| Unsupported UI (`ctx.ui.custom`) | transcript notice                 | names the extension, points at the terminal tab                                                               |
+| Empty session                    | centre                            | `Empty` with three suggestions                                                                                |
+| No project                       | sidebar                           | `Empty` with a project picker                                                                                 |
 
 ## Density and typography
 
