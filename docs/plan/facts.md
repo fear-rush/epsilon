@@ -33,6 +33,11 @@ false, delete it rather than adding a correction below it.
   temp home, `get_commands` dropped from 63 to 25 (pi's built-in extensions only),
   and `get_available_models` returned 0, which is what a home without credentials
   looks like.
+- The session list and delete read pi's home in the server process, so the port was
+  also given a planted session file in a temp home: the list showed exactly that
+  one, and `DELETE` removed it there while the operator's own file stayed. Before
+  the port was published, the list would have come from one home and the turns
+  would have written to another.
 - pi also reads `~/.agents/skills` and the project's `.pi/`; the home variable does
   not cover them, so a source run on a host still sees that host's skills. The
   container in S11 fixes it from the outside, through its own `$HOME`.

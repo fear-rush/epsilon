@@ -13,18 +13,27 @@ import { join, resolve } from "node:path";
  */
 const repoRoot = resolve(import.meta.dirname, "../..");
 
+/**
+ * The agent home: pi's settings, credentials, extensions, packages and sessions.
+ * Chosen here, from our own variable or pi's default, never from an inherited
+ * `PI_CODING_AGENT_DIR` (AGENTS.md rule 9).
+ */
+const agentHome = resolve(process.env.EPSILON_AGENT_HOME ?? join(homedir(), ".pi", "agent"));
+
+/**
+ * pi resolves its own paths — including the session list this server reads — from
+ * its config directory at call time. Publishing the choice here is what keeps
+ * those reads on the same home the children are given; without it the list would
+ * come from one home and the turns would write to another.
+ */
+process.env.PI_CODING_AGENT_DIR = agentHome;
+
 export const config = {
 	host: "127.0.0.1",
 	port: Number(process.env.PORT ?? 3000),
 	socketPath: "/api/link",
 	/** Where the agent runs, and therefore which pi sessions belong to this page. */
 	projectDir: resolve(process.env.EPSILON_PROJECT ?? repoRoot),
-	/**
-	 * The agent home: pi's settings, credentials, extensions, packages and sessions.
-	 * Chosen here and passed to every child, so an inherited `PI_CODING_AGENT_DIR`
-	 * cannot decide which config this deployment runs on (AGENTS.md rule 9). The
-	 * default is pi's own, which keeps a source run on the operator's home until a
-	 * deployment names a volume (ADR-0005, deploy.md).
-	 */
-	agentHome: resolve(process.env.EPSILON_AGENT_HOME ?? join(homedir(), ".pi", "agent")),
+	/** The home every child gets, passed explicitly by `agent/driver.ts`. */
+	agentHome,
 } as const;
