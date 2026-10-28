@@ -65,6 +65,12 @@ export type ExitInfo = {
 export type DriverOptions = {
 	session: SessionTarget;
 	cwd: string;
+	/**
+	 * The agent home, chosen once in `config.ts`. Written to `PI_CODING_AGENT_DIR`
+	 * for the child, so pi reads this deployment's config and not the one an
+	 * inherited variable or `$HOME` would point at (pi's environment-variables.md).
+	 */
+	agentHome: string;
 	onFrame: (frame: AgentFrame) => void;
 	onExit: (info: ExitInfo) => void;
 };
@@ -90,6 +96,9 @@ export class Driver {
 		this.options = options;
 		this.child = spawn(piBinPath, ["--mode", "rpc", ...sessionArgs(options.session)], {
 			cwd: options.cwd,
+			// Overwrites an inherited value instead of letting the child resolve its own
+			// home: one deployment, one config (ADR-0005).
+			env: { ...process.env, PI_CODING_AGENT_DIR: options.agentHome },
 			stdio: ["pipe", "pipe", "pipe"],
 		});
 		this.child.stdout.setEncoding("utf8");

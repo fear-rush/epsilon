@@ -5,12 +5,15 @@
  */
 import { AgentSession } from "./session";
 
+/** Where a child runs and which pi config it reads, from `config.ts` once. */
+export type AgentLocation = { cwd: string; agentHome: string };
+
 export class SessionRegistry {
-	private readonly cwd: string;
+	private readonly location: AgentLocation;
 	private readonly sessions = new Map<string, AgentSession>();
 
-	constructor(cwd: string) {
-		this.cwd = cwd;
+	constructor(location: AgentLocation) {
+		this.location = location;
 	}
 
 	find(sessionId: string): AgentSession | undefined {
@@ -29,7 +32,7 @@ export class SessionRegistry {
 	ensure(sessionId: string): AgentSession {
 		const existing = this.find(sessionId);
 		if (existing !== undefined) return existing;
-		const session = new AgentSession(sessionId, this.cwd);
+		const session = new AgentSession({ sessionId, ...this.location });
 		this.sessions.set(sessionId, session);
 		return session;
 	}

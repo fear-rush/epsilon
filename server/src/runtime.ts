@@ -5,4 +5,7 @@
 import { SessionRegistry } from "./agent/registry";
 import { config } from "./config";
 
-export const registry = new SessionRegistry(config.projectDir);
+export const registry = new SessionRegistry({
+	cwd: config.projectDir,
+	agentHome: config.agentHome,
+});

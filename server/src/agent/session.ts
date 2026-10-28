@@ -76,12 +76,13 @@ export class AgentSession {
 	private streaming = false;
 	private running = false;
 
-	constructor(sessionId: string, cwd: string) {
-		this.sessionId = sessionId;
+	constructor(options: { sessionId: string; cwd: string; agentHome: string }) {
+		this.sessionId = options.sessionId;
 		this.running = true;
 		this.driver = new Driver({
-			session: { kind: "id", id: sessionId },
-			cwd,
+			session: { kind: "id", id: options.sessionId },
+			cwd: options.cwd,
+			agentHome: options.agentHome,
 			onFrame: (frame) => this.receive(frame),
 			onExit: (info) => this.exited(info),
 		});

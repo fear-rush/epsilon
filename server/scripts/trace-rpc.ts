@@ -12,6 +12,7 @@
 import { appendFileSync, writeFileSync } from "node:fs";
 
 import { Driver } from "../src/agent/driver.ts";
+import { config } from "../src/config.ts";
 
 const prompt = process.env.PROMPT;
 const logPath = process.env.TRACE_LOG;
@@ -26,6 +27,7 @@ const record = (line: string) => {
 const driver = new Driver({
 	session: { kind: "id", id: crypto.randomUUID() },
 	cwd: process.cwd(),
+	agentHome: config.agentHome,
 	onFrame: (frame) => {
 		const line = JSON.stringify(frame);
 		console.log(`< ${line}`);
