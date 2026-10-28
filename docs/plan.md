@@ -82,13 +82,16 @@ verified in a browser now.
 **S13: A fresh home is usable.** The defaults ADR-0008 promises are code now, not a
 file an operator copies: `server/src/agent/defaults/` holds them, and the engine
 registers them after the CLI's three built-ins with `replaceable` and `builtin` set.
-The permission guard is done and verified below; the `discuss` tool and the
-not-ready notice are not.
+The guard, the `discuss` tool and the not-ready notice are built and checked over the
+socket and REST; what is left is the browser pass in
+[plan/slices.md](plan/slices.md).
 
-Next action: port `discuss` onto the dialog bridge (`select`, then `input` for
-"Type something.") instead of `ctx.ui.custom`, which needs a terminal. Then derive
-readiness from the engine, so a home with no credential says which command fixes it
-instead of showing `unknown` in the composer.
+Next action: run those checks in a browser against
+`EPSILON_AGENT_HOME=/tmp/eps-defaults bun run dev` (credentials symlinked, no
+`extensions/`), then against an empty home. Two things are open beyond them: the
+terminal parity gap (an inline factory exists only in the server process, so `pi` in
+the terminal tab has no guard) and whether to close it, which is a decision, not a
+slice.
 
 S6 waits. It was active and nothing was built for it, so it goes back in the queue
 rather than half-done.
