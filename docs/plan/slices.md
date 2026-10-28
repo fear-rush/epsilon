@@ -94,8 +94,11 @@ from [../deploy.md](../deploy.md), minus a container.
       picking the last one opened the `input` dialog, and the tool result was
       `User wrote: custom-answer-from-browser`; picking a preset gave
       `User selected: 1. Strict`
-- [ ] A home with no credential shows a notice that names the command to fix it,
-      instead of the composer reading `unknown`
+- [x] The readiness answer follows the home: `GET /api/readiness` replies
+      `{"ready":true}` for the scratch home and `{"ready":false, home, detail,
+      fix}` for an empty one, and one call costs about 4 ms
+- [ ] A home with no credential shows that notice centred on every page, with no
+      composer to type into, instead of the model trigger reading `unknown`
 - [ ] The terminal tab shows the same defaults. It does not: an inline factory exists
       only in the server process, which is the gap between ADR-0008's "the same in
       the browser and in a terminal" and the code

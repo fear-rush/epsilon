@@ -7,6 +7,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
 
 import { healthBody, healthRoute } from "./routes/health";
+import { readinessHandler, readinessRoute } from "./routes/readiness";
 import {
 	deleteSessionHandler,
 	deleteSessionRoute,
@@ -17,6 +18,7 @@ import {
 const app = new OpenAPIHono();
 
 app.openapi(healthRoute, (c) => c.json(healthBody));
+app.openapi(readinessRoute, readinessHandler);
 app.openapi(listSessionsRoute, listSessionsHandler);
 app.openapi(deleteSessionRoute, deleteSessionHandler);
 

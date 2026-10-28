@@ -271,3 +271,12 @@ false, delete it rather than adding a correction below it.
   touches `ctx.ui.custom`, which is what a terminal-only version needs.
 - An unanswered `discuss` or permission dialog has no timeout: it waits until a tab
   answers or the run is aborted, and a later tab receives it replayed.
+- Readiness is `GET /api/readiness`, answered by `ModelRuntime.create()` with the
+  same `auth.json` and `models.json` paths the engine uses, from `config.agentHome`.
+  Nothing is cached: a `/login` in the deployment's shell changes the next answer,
+  and one call costs about 4 ms. A home with no credential answers
+  `{ready: false, home, detail, fix}`, which is what the browser shows instead of a
+  composer.
+- The not-ready notice replaces the routed page in `client/src/routes/__root.tsx`
+  when the answer is `ready: false`, so no session is attached and no engine is
+  built while the deployment is unconfigured.

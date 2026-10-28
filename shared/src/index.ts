@@ -37,6 +37,8 @@ export type {
 	SessionList,
 	SessionSummary,
 } from "./schemas/sessions";
+export { readinessSchema } from "./schemas/readiness";
+export type { Readiness } from "./schemas/readiness";
 export { emptyConversation } from "./conversation/state";
 export { isVisibleMessage } from "./conversation/state";
 export type {
