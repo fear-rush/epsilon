@@ -6,6 +6,12 @@ holds the checks. [../plan.md](../plan.md) holds the jobs, the slice table and t
 A slice ends when you can run its checks yourself, by hand, in a browser. A slice
 is not done because it compiles.
 
+A check keeps its own state. `bun run dev` already writes to `.sandbox/agent`; a check
+that starts a server, an engine or a browser sets `EPSILON_AGENT_HOME` to a scratch
+directory and `EPSILON_PROJECT` to a scratch project. Nothing here verifies anything
+against the operator's `~/.pi`, and `bun run dev:host` is never a verification path
+(AGENTS.md rule 9).
+
 ### S1: One live turn
 
 Spawn `pi --mode rpc`, frame its stdout, one WebSocket, a textarea and a raw event

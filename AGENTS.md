@@ -77,7 +77,11 @@ Run these commands from the repository root:
    reports what is missing and says which command fixes it.
 9. The agent home is chosen once, in `config.ts`, and passed to every engine
    explicitly. Never let an inherited `PI_*` variable decide which config a
-   deployment runs on.
+   deployment runs on. Development and hand checks keep their own state: `bun run
+   dev` writes to `.sandbox/agent`, and a check that starts its own server or engine
+   sets `EPSILON_AGENT_HOME` to a scratch directory. `bun run dev:host` is the only
+   command that reads and writes the operator's `~/.pi`, and it exists to see the
+   sessions a terminal created, not as a verification path.
 
 ## Truth and drift
 
