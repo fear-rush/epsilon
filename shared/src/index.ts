@@ -4,6 +4,7 @@ export type {
 	ProtocolErrorCode,
 	ServerFrame,
 	Snapshot,
+	SnapshotCommand,
 	SnapshotModel,
 } from "./protocol/frames";
 export {

@@ -59,9 +59,8 @@ export const clientFrameSchema = z.discriminatedUnion("t", [
 ]);
 
 /**
- * A snapshot is built from RPC reads, never from server memory. `commands` and
- * `stats` land with the composer palette (S4) and the resources page (S8), and
- * they travel as their own frames when they do.
+ * A snapshot is built from RPC reads, never from server memory. `stats` lands with
+ * the resources page (S8) and travels as its own frame when it does.
  */
 /**
  * One entry of the model picker. pi's `Model` also carries pricing, input limits
@@ -69,11 +68,23 @@ export const clientFrameSchema = z.discriminatedUnion("t", [
  */
 export type SnapshotModel = { provider: string; id: string; name: string };
 
+/**
+ * One entry of the slash palette, from `get_commands`. `sourceInfo` and the owning
+ * resource belong to the resources page, which lists them with their paths.
+ */
+export type SnapshotCommand = {
+	name: string;
+	description?: string;
+	source: "extension" | "prompt" | "skill";
+};
+
 export type Snapshot = {
 	state: RpcSessionState;
 	messages: SnapshotMessage[];
 	/** `get_available_models`, mapped down to what the picker shows. */
 	models: SnapshotModel[];
+	/** `get_commands`, what `/` may expand to. */
+	commands: SnapshotCommand[];
 };
 
 export const serverFrameSchema = z.discriminatedUnion("t", [

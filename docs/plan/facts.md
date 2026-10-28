@@ -26,6 +26,16 @@ false, delete it rather than adding a correction below it.
   socket no longer lives there, so the StrictMode race that cost S2 an afternoon
   cannot close a working connection
   ([note](../notes/2026-10-28-strictmode-closes-the-socket.md)).
+- The agent home is `config.agentHome`: `EPSILON_AGENT_HOME`, else pi's own
+  `~/.pi/agent`. The driver writes it to `PI_CODING_AGENT_DIR` for every child, so
+  an inherited value loses. Verified with the override set to a temp home and an
+  inherited variable pointing at the operator's: the new session file landed in the
+  temp home, `get_commands` dropped from 63 to 25 (pi's built-in extensions only),
+  and `get_available_models` returned 0, which is what a home without credentials
+  looks like.
+- pi also reads `~/.agents/skills` and the project's `.pi/`; the home variable does
+  not cover them, so a source run on a host still sees that host's skills. The
+  container in S11 fixes it from the outside, through its own `$HOME`.
 - The agent's project is `config.projectDir`: `EPSILON_PROJECT` or the repo root,
   never `process.cwd()`, because `turbo dev` starts the server task inside
   `server/` and pi reads that as the project
@@ -67,6 +77,15 @@ false, delete it rather than adding a correction below it.
 - A snapshot carries `models` from `get_available_models`: 510 entries across the
   configured providers here. The picker is a native select grouped by provider
   with the current provider first; a searchable palette is the eventual control.
+- A snapshot carries `commands` from `get_commands`: 63 entries here, split across
+  `extension`, `prompt` and `skill`. It holds only what `prompt` can expand. pi's
+  interactive built-ins (`/model`, `/reload`, `/login`) are absent because they
+  never reach a session, and typing one by hand starts an agent run with that text
+  as the prompt. The palette is the only path that runs a command.
+- A shell run is a recorded message, not an agent event: `bash` streams
+  `bash_execution_update` and records a `bashExecution` message, so the socket
+  re-reads the snapshot after the reply and again at `agent_settled`
+  ([note](../notes/2026-10-28-bash-result-is-not-an-event.md)).
 - After a successful `set_model`, the server re-reads the snapshot for every
   subscriber, so the picker shows pi's answer instead of echoing the request. pi
   validates the pair against `get_available_models` and answers
@@ -83,8 +102,8 @@ false, delete it rather than adding a correction below it.
   palette class in `client/src` outside generated components.
 - The model menu is the AI Elements model selector: a `DropdownMenu` with one
   `DropdownMenuRadioGroup` per provider, current provider first. 510 models open
-  as one scrolling menu, grouped; `Command` and `Popover` were removed again
-  until the palette needs them.
+  as one scrolling menu, grouped. `Command` and `Popover` came back from the
+  registry for the `/` palette.
 - The permission control reads the extension's keyed status (`permission`) but
   renders its own three labels, Strict, Ask and Yolo, with a shield and no glyph
   or `perm:` prefix. Switching sends `/permission <mode>` as a `prompt`: pi
@@ -116,6 +135,13 @@ false, delete it rather than adding a correction below it.
 - Base UI groups its menu parts: a `DropdownMenuLabel` or item that is not inside a
   `DropdownMenuGroup`/`RadioGroup` throws "MenuGroupContext is missing" during
   render. The session actions and the permission menu now wrap their items.
+- `Button` carries `whitespace-nowrap` from its variants, so an extension option
+  longer than the dialog overflowed it. Select options now set `h-auto
+  whitespace-normal break-words`, and `DialogContent` and `AlertDialogContent`
+  cap their height at `100svh-2rem`, scroll, and wrap long tokens.
+- The permission extension prefixes its options with colour dots. The question
+  dialog strips a leading pictograph, the way the permission menu shows its own
+  labels instead of the extension's `perm:` glyph.
 - Network failures are phrased, not raw: a dropped fetch reads "The server is not
   reachable. Retrying…". The sidebar does not show the polling error at all (the
   rows stay, the query retries); a failed delete reports inside its dialog, so the

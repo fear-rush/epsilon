@@ -41,8 +41,8 @@ Reducer plus renderers, driven by the fixture first, then live.
 ### S4: Composer
 
 Steer, abort, the model picker and `!cmd` are built and verified in a browser. The
-palette is the only check left; it needs `get_commands` in the snapshot and another
-protocol bump.
+palette is built and unverified: a real snapshot carries 63 commands, filtering and
+arrow keys are wired, and `Popover` + `Command` came from the registry.
 
 - [x] Steer mid-run and see the message land in the transcript
 - [x] Abort, and the run stops in the CLI as well
@@ -51,6 +51,8 @@ protocol bump.
       `get_state` with the new model, and a bogus pair answers `Model not found`;
       the menu is now a DropdownMenu in the composer footer)
 - [ ] An installed skill or prompt template appears in the palette and runs
+      (socket: `get_commands` replies with 63 entries, `source` set to extension,
+      prompt or skill; picking writes `/name ` into the composer)
 - [x] `!ls` runs a shell command and its output is in the transcript
       (socket and reducer: the reply is followed by a snapshot carrying the
       `bashExecution` message)

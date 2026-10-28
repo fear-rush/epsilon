@@ -61,9 +61,13 @@ it, including the agent home, belongs to it and not to the operator's host
 The preview origin is a **second listener**, on its own port, serving agent-written
 content. It never shares an origin with the API (ADR-0003).
 
-The agent home is resolved once, in `config.ts`, and given to every child
-explicitly. It is pi's own default path inside the deployment, unless an override
-says otherwise ([ADR-0005](adr/0005-deployment-owns-agent-home.md)).
+The agent home is resolved once, in `config.ts` (`EPSILON_AGENT_HOME`), and given
+to every child explicitly as `PI_CODING_AGENT_DIR`, so an inherited value cannot
+choose this deployment's config. It is pi's own default path inside the deployment
+unless the override says otherwise ([ADR-0005](adr/0005-deployment-owns-agent-home.md)).
+The variable does not cover everything pi reads: `~/.agents/skills` and the
+project's `.pi/` are separate conventions, so a source run on a host still shares
+those with it.
 
 ## Module map
 

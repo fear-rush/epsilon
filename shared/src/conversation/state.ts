@@ -2,7 +2,7 @@
  * What the browser shows. Built only from socket frames, so replaying a fixture
  * twice produces the same state (docs/plan.md, S2).
  */
-import type { DialogQuestion, JsonAgentSessionEvent, SnapshotModel } from "shared";
+import type { DialogQuestion, JsonAgentSessionEvent, SnapshotCommand, SnapshotModel } from "shared";
 
 type EventMessage = Extract<JsonAgentSessionEvent, { type: "message_end" }>["message"];
 
@@ -79,6 +79,8 @@ export type ConversationState = {
 	busy: boolean;
 	/** What the model picker may offer, from the last snapshot. */
 	models: SnapshotModel[];
+	/** What `/` may expand to, from the last snapshot's `get_commands`. */
+	commands: SnapshotCommand[];
 	/** The model the session uses now, or undefined before the first snapshot. */
 	model: SnapshotModel | undefined;
 	/** The child process behind this session is alive (the socket's `meta`). */
@@ -97,6 +99,7 @@ export const emptyConversation: ConversationState = {
 	widgets: [],
 	busy: false,
 	models: [],
+	commands: [],
 	model: undefined,
 	running: false,
 	needsInput: false,

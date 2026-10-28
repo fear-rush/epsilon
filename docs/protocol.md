@@ -5,9 +5,9 @@ Status: **partly implemented.** This is the contract between `server/` and
 
 On the wire today (S4): `hello`, `welcome`, `attach`, `detach`, `rpc`, `dialog`
 and `dialog-closed`, `ui`, `ping`/`pong`, plus `snapshot`, `event`, `rpc-result`,
-`meta` and `error`. Not yet: every `terminal` frame, `commands` and `stats` inside
-a snapshot, the coalescing and backpressure rules, the heartbeat and the restart
-action. Those belong to later slices in [plan.md](plan.md).
+`meta` and `error`. Not yet: every `terminal` frame, `stats` inside a snapshot,
+the coalescing and backpressure rules, the heartbeat and the restart action. Those
+belong to later slices in [plan.md](plan.md).
 
 The REST API is separate. Use REST for reading the disk (sessions, files, git,
 resources, ui-state, agent state) and this socket for everything agent-shaped.
@@ -34,7 +34,7 @@ restate their fields.
    worse than a stale page.
 
 Version history: 1 was the S2 transcript; 2 added `models` to the snapshot for
-the model picker.
+the model picker; 3 added `commands` to the snapshot for the `/` palette.
 
 Version the socket, not the REST paths. A stale tab or an installed PWA can
 outlive a server upgrade; REST requests follow the bundle, because the deployment
@@ -90,12 +90,16 @@ type Snapshot = {
 	state: RpcSessionState; // get_state
 	messages: AgentMessage[]; // get_messages, system entries filtered out
 	models: { provider: string; id: string; name: string }[]; // get_available_models
+	commands: { name: string; description?: string; source: string }[]; // get_commands
 };
 ```
 
-`commands` and `stats` join the snapshot with the palette (S4) and the resources
-page (S8). Dialogs, `running` and `needsInput` travel in their own frames.
-`get_entries` / `get_tree` are used only for full-history and tree views.
+`commands` feeds the `/` palette and holds only what `prompt` can expand:
+extension commands, prompt templates and skills. pi's interactive built-ins such
+as `/model` and `/reload` are not in it, because they never reach an RPC session
+([reference/pi-rpc.md](reference/pi-rpc.md)). `stats` joins the snapshot with the
+resources page (S8). Dialogs, `running` and `needsInput` travel in their own
+frames. `get_entries` / `get_tree` are used only for full-history and tree views.
 
 The client reducer must be able to **replace** its state from a snapshot at any
 moment. That is what makes reconnect, tab duplication and server restart

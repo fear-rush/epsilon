@@ -38,6 +38,7 @@ inside the deployment.
 | Abort, clear the queue                     | RPC `abort`, `clear_queue`                                                               |
 | Queue behaviour modes                      | RPC `set_steering_mode`, `set_follow_up_mode`                                            |
 | `!command` / `!!command`                   | RPC `bash`, `abort_bash`                                                                 |
+| Slash palette: skills, prompts, extensions | RPC `get_commands` in the snapshot; the picked `/name` runs through `prompt`             |
 | Permission policy (strict, ask, yolo)      | extension command `/permission <mode>` via RPC `prompt`; mode read from its keyed status |
 | Change model, reasoning level              | RPC `set_model`, `set_thinking_level`, `cycle_*`, `get_available_*`                      |
 | Compact context, with instructions         | RPC `compact`                                                                            |

@@ -4,8 +4,6 @@
  * same transcript and the same live child.
  */
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowUpIcon, SquareIcon } from "lucide-react";
-import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { transcript } from "shared";
 import type { DialogQuestion } from "shared";
@@ -13,16 +11,9 @@ import type { DialogQuestion } from "shared";
 import { ConfirmDialog } from "@/components/chat/confirm-dialog";
 import { QuestionDialog } from "@/components/chat/question-dialog";
 import { Transcript } from "@/components/chat/transcript";
-import { ModelMenu } from "@/components/composer/model-menu";
-import { PermissionMenu } from "@/components/composer/permission-menu";
+import { Composer } from "@/components/composer/composer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
-import {
-	InputGroup,
-	InputGroupAddon,
-	InputGroupButton,
-	InputGroupTextarea,
-} from "@/components/ui/input-group";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
@@ -36,33 +27,13 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 	component: function Session() {
 		const { sessionId } = Route.useParams();
 		const { store, snapshot } = useConversation(sessionId);
-		const [prompt, setPrompt] = useState("");
-		const formRef = useRef<HTMLFormElement>(null);
 		const rows = transcript(snapshot.state);
-		const { busy, dialogs, statuses, widgets, title, sessionName } = snapshot.state;
+		const { busy, dialogs, statuses, widgets, title, sessionName, commands } = snapshot.state;
 		const { models, model } = snapshot.state;
 		const confirmations = dialogs.filter(isConfirm);
 		const questions = dialogs.filter((dialog) => !isConfirm(dialog));
 		const aboveComposer = widgets.filter((widget) => widget.placement === "aboveEditor");
 		const belowComposer = widgets.filter((widget) => widget.placement === "belowEditor");
-
-		const submit = () => {
-			const message = prompt.trim();
-			if (message === "") return;
-			// `!cmd` runs in the shell, and `!!cmd` hides its output from the agent. A
-			// lone `!` is not a command, so the draft stays instead of being sent.
-			if (message.startsWith("!")) {
-				const excludeFromContext = message.startsWith("!!");
-				const command = message.slice(excludeFromContext ? 2 : 1).trim();
-				if (command === "") return;
-				store.runBash(command, excludeFromContext);
-				setPrompt("");
-				return;
-			}
-			if (busy) store.steer(message);
-			else store.sendPrompt(message);
-			setPrompt("");
-		};
 
 		const header = (content: ReactNode) => (
 			<header className="flex items-center gap-2 border-b px-3 py-1.5">
@@ -141,73 +112,14 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 					</div>
 				)}
 
-				<div className="border-t p-3">
-					<div className="mx-auto w-full max-w-3xl">
-						<form
-							ref={formRef}
-							onSubmit={(event) => {
-								event.preventDefault();
-								submit();
-							}}
-						>
-							<InputGroup>
-								<InputGroupTextarea
-									value={prompt}
-									onChange={(event) => setPrompt(event.target.value)}
-									placeholder={
-										busy
-											? "Steer the run (Enter steers, Esc stops)"
-											: "Message the agent (Enter sends, Shift+Enter is a newline)"
-									}
-									className="max-h-40 min-h-11 p-3"
-									onKeyDown={(event) => {
-										if (event.key === "Escape" && busy) {
-											event.preventDefault();
-											store.abort();
-											return;
-										}
-										if (event.key === "Enter" && !event.shiftKey) {
-											event.preventDefault();
-											formRef.current?.requestSubmit();
-										}
-									}}
-								/>
-								<InputGroupAddon align="block-end">
-									<ModelMenu
-										models={models}
-										model={model}
-										onSelect={(next) => store.setModel(next.provider, next.id)}
-									/>
-									<PermissionMenu
-										statuses={statuses}
-										onSelect={(mode) => store.setPermission(mode)}
-									/>
-									{busy && (
-										<InputGroupButton
-											size="icon-sm"
-											variant="outline"
-											className="rounded-full"
-											aria-label="Stop the run"
-											onClick={() => store.abort()}
-										>
-											<SquareIcon />
-										</InputGroupButton>
-									)}
-									<InputGroupButton
-										type="submit"
-										size="icon-sm"
-										variant="default"
-										className="rounded-full"
-										disabled={prompt.trim() === ""}
-										aria-label={busy ? "Steer" : "Send"}
-									>
-										<ArrowUpIcon />
-									</InputGroupButton>
-								</InputGroupAddon>
-							</InputGroup>
-						</form>
-					</div>
-				</div>
+				<Composer
+					store={store}
+					busy={busy}
+					models={models}
+					model={model}
+					statuses={statuses}
+					commands={commands}
+				/>
 			</div>
 		);
 	},

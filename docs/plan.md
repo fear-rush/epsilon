@@ -73,20 +73,25 @@ against the host's own `pi`, and it comes before any deployment on a second mach
 
 ## Active slice
 
-**S4: Composer.** Steer, abort, the model picker and `!cmd` are built and verified
-in a browser. Only the palette is left. The shell from ui.md now exists: the session
-list lives in a sidebar, and `/` is the empty state it leaves behind.
+**S4: Composer.** Steer, abort, the model picker, `!cmd` and the `/` palette are
+built; all but the palette are verified in a browser. The shell from ui.md now
+exists: the session list lives in a sidebar, and `/` is the empty state it leaves
+behind.
 
-Next action: the skill and prompt palette, which needs `get_commands` in the
-snapshot and another protocol bump.
+Next action: the palette check in a browser, then S5, the extension dialogs. The
+palette raised the protocol to 3: `commands` from `get_commands` now travels in the
+snapshot, and it holds 63 entries on this machine's home, extension commands,
+prompt templates and skills alike.
 
 `!cmd` needed one server change beyond the composer: pi records a shell run as a
 session message and sends no event for it, so the socket re-reads the snapshot
 after the reply ([note](notes/2026-10-28-bash-result-is-not-an-event.md)).
 
-S11 is queued behind it because it only matters once there is a second machine. When
-it starts, its first step is the same one that protects this laptop today: the Host
-and Origin check, including on the socket upgrade.
+S11 is queued behind it because it only matters once there is a second machine. Its
+home isolation is done already: `config.agentHome` is passed to every child, so a
+source run stops depending on an inherited `PI_CODING_AGENT_DIR`. What S11 still
+owes is the container, the volume, one origin, and the Host and Origin check on the
+socket upgrade.
 
 ## Universal done list
 

@@ -24,12 +24,20 @@ export type FrameSink = (frame: ServerFrame) => void;
  */
 const modelSchema = z.looseObject({ provider: z.string(), id: z.string(), name: z.string() });
 
+/** `sourceInfo` is the resources page's business, not the palette's. */
+const commandSchema = z.looseObject({
+	name: z.string(),
+	description: z.string().optional(),
+	source: z.enum(["extension", "prompt", "skill"]),
+});
+
 const repliesSchema = z.tuple([
 	z.looseObject({ data: z.custom<Snapshot["state"]>() }),
 	z.looseObject({
 		data: z.looseObject({ messages: z.array(z.custom<Snapshot["messages"][number]>()) }),
 	}),
 	z.looseObject({ data: z.looseObject({ models: z.array(modelSchema) }) }),
+	z.looseObject({ data: z.looseObject({ commands: z.array(commandSchema) }) }),
 ]);
 
 const QUESTION_METHODS = ["select", "confirm", "input", "editor"];
@@ -117,12 +125,13 @@ export class AgentSession {
 	/** History comes from pi's session file, never from server memory. */
 	private async sendSnapshot(sink: FrameSink): Promise<void> {
 		try {
-			const [state, messages, models] = await Promise.all([
+			const [state, messages, models, commands] = await Promise.all([
 				this.driver.request({ type: "get_state" }),
 				this.driver.request({ type: "get_messages" }),
 				this.driver.request({ type: "get_available_models" }),
+				this.driver.request({ type: "get_commands" }),
 			]);
-			const replies = repliesSchema.safeParse([state, messages, models]);
+			const replies = repliesSchema.safeParse([state, messages, models, commands]);
 			if (!replies.success) {
 				this.emit({
 					t: "error",
@@ -132,7 +141,7 @@ export class AgentSession {
 				});
 				return;
 			}
-			const [sessionState, sessionMessages, sessionModels] = replies.data;
+			const [sessionState, sessionMessages, sessionModels, sessionCommands] = replies.data;
 			sink({
 				t: "snapshot",
 				sessionId: this.sessionId,
@@ -143,6 +152,11 @@ export class AgentSession {
 						provider: model.provider,
 						id: model.id,
 						name: model.name,
+					})),
+					commands: sessionCommands.data.commands.map((command) => ({
+						name: command.name,
+						description: command.description,
+						source: command.source,
 					})),
 				},
 			});

@@ -47,14 +47,15 @@ different one in the container would not match what the server drives.
 
 ## Run it
 
-| Setting    | Value                           | Note                                                      |
-| ---------- | ------------------------------- | --------------------------------------------------------- |
-| volume     | `pi-agent-home:/root/.pi/agent` | credentials, settings, packages, sessions                 |
-| volume     | `epsilon-state:/root/.epsilon`  | `ui-state.json` only                                      |
-| bind mount | `$PROJECT:/workspace`           | the code the agent works on                               |
-| env        | `EPSILON_PROJECT=/workspace`    | which project the session list is scoped to               |
-| env        | `HOST=0.0.0.0`                  | inside the container; publishing decides who can reach it |
-| ports      | `127.0.0.1:3000:3000`           | loopback publish, then a tunnel                           |
+| Setting    | Value                                | Note                                                        |
+| ---------- | ------------------------------------ | ----------------------------------------------------------- |
+| volume     | `pi-agent-home:/root/.pi/agent`      | credentials, settings, packages, sessions                   |
+| volume     | `epsilon-state:/root/.epsilon`       | `ui-state.json` only                                        |
+| bind mount | `$PROJECT:/workspace`                | the code the agent works on                                 |
+| env        | `EPSILON_PROJECT=/workspace`         | which project the session list is scoped to                 |
+| env        | `EPSILON_AGENT_HOME=/root/.pi/agent` | the home the server passes to every child; the volume above |
+| env        | `HOST=0.0.0.0`                       | inside the container; publishing decides who can reach it   |
+| ports      | `127.0.0.1:3000:3000`                | loopback publish, then a tunnel                             |
 
 Publishing the port on `0.0.0.0` puts the whole API on the network. There is no
 application authentication, by design: access control is loopback plus the tunnel

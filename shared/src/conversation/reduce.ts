@@ -266,6 +266,7 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				// `agent_start`, which has already happened.
 				busy: frame.snapshot.state.isStreaming,
 				models: frame.snapshot.models,
+				commands: frame.snapshot.commands,
 				sessionName: frame.snapshot.state.sessionName,
 				model:
 					current === undefined
