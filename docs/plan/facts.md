@@ -33,6 +33,23 @@ false, delete it rather than adding a correction below it.
   session file landed in the temp home, the command palette dropped from 63 to 25
   entries (pi's built-in extensions only), and the model list was empty, which is
   what a home without credentials looks like.
+- In that home the engine's model is pi's sentinel: `provider`, `id` and `api` are
+  all `unknown`. The snapshot passes it through unchanged, so the composer trigger
+  reads `unknown` and the menu opens with nothing to pick. The string is pi's, not
+  Epsilon's: pi's CLI treats the same triple as "no model" (`isUnknownModel` in
+  `dist/modes/interactive/interactive-mode.js`). Nothing on the page says the home
+  is unconfigured, which is what the S11 notice is for.
+- The permission control needs an extension that publishes a `perm:` keyed status,
+  so a home without the operator's permission extension has no permission control
+  at all. The trigger is Epsilon's; the status it reads is a default ADR-0008
+  promises and the engine does not yet register.
+- `config.ts` overrides `PI_CODING_AGENT_DIR` and nothing else, so `PI_PACKAGE_DIR`
+  and `PI_CODING_AGENT_SESSION_DIR` are still inherited. Verified with
+  `PI_PACKAGE_DIR` pointing at a Nix store path: the home was still
+  `config.agentHome`, because the SDK reads the session directory from the home's
+  `settings.json` and only the CLI reads the session-dir variable. The first
+  variable still moves bundled asset paths, which ADR-0005 decision 3 asks for and
+  the code does not do.
 - The session list and delete read pi's home in the server process, so the port was
   also given a planted session file in a temp home: the list showed exactly that
   one, and `DELETE` removed it there while the operator's own file stayed. Before
