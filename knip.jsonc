@@ -1,5 +1,5 @@
 {
-	"$schema": "https://unpkg.com/knip@6/schema.json",
+	"$schema": "./node_modules/knip/schema-jsonc.json",
 	// Agent skills and the vendored Oxlint plugin ship their own entry points.
 	"ignore": [".agents/**", "tools/oxlint/anti-slop/**"],
 	// shadcn files export every part of a component on purpose, and the CLI owns
