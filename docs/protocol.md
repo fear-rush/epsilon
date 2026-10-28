@@ -146,7 +146,8 @@ The engine's `ExtensionUIContext` blocks a tool call until a dialog is answered.
 - `abort` answers every pending dialog as cancelled before it aborts the run, so
   nothing waits forever on a run that no longer exists.
 - a late-attaching client receives the unanswered dialogs immediately after its
-  snapshot, so a blocking dialog is never invisible.
+  snapshot, so a blocking dialog is never invisible. A reload lands inside the idle
+  grace, so it reattaches to the same engine and gets the dialog back.
 - the first answer wins. A second tab answering the same id gets `false` from
   `answerDialog` and no frame is sent.
 - `dialog-closed` tells every attached tab which request left the pending set, so
@@ -160,7 +161,8 @@ The engine's `ExtensionUIContext` blocks a tool call until a dialog is answered.
   notice instead of silently discarding it.
 - extension UI methods with no browser equivalent (`custom`, `setFooter`,
   `setHeader`, `onTerminalInput`, `theme`, working-indicator methods, editor and
-  autocomplete overrides) produce one warning per method naming the terminal tab.
+  autocomplete overrides) produce one warning naming the methods and the terminal
+  tab. Methods used at session start are collected and named in one notice.
 
 ## Ordering, coalescing, backpressure
 
@@ -203,10 +205,11 @@ credential frames, no settings frames.
 `/reload` sends the `reload` command: the engine re-reads extensions, skills,
 packages and MCP config in place, and the transcript is untouched.
 
-There is no restart action in the page. An engine is disposed when its last tab
-detaches and rebuilt on the next attach, which re-reads the same resources from
-scratch. Deleting a session file is refused while an engine holds it
-(`SESSION_RUNNING`).
+There is no restart action in the page. Ten seconds after its last tab detaches, an
+engine that is not running, compacting or waiting on a dialog is disposed, and the
+next attach rebuilds it from scratch. A run or a pending dialog keeps it alive, so a
+reload or a reopen reattaches to the same engine. Deleting a session file is refused
+while an engine holds it (`SESSION_RUNNING`).
 
 ## Error frames
 

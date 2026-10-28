@@ -51,8 +51,10 @@ it, including the agent home, belongs to it and not to the operator's host
 
 An engine is not a process. It shares the server's heap and its fate: an extension
 or engine bug can take the server down, and the costs of that are accepted in
-ADR-0008. Idle engines do not leak: the last tab to detach disposes the session,
-and the next attach rebuilds it from pi's session file.
+ADR-0008. Idle engines do not leak: ten seconds after the last tab detaches, an
+engine that is not running, compacting or waiting on a dialog disposes itself, and
+the next attach rebuilds it from pi's session file. A run or a pending dialog keeps
+it alive, so a reload or a quick reopen reattaches to the same run.
 
 The agent home is resolved once, in `config.ts` (`EPSILON_AGENT_HOME`), published
 as `PI_CODING_AGENT_DIR` for the reads pi performs itself, and passed to every
@@ -136,9 +138,10 @@ call → `agent/dialogs.ts` stores it and sends `dialog` → the client renders 
 `dialog` answer back → the pending promise resolves. `abort` answers every pending
 dialog as cancelled, and a dialog's own timeout does the same.
 
-**Close and return.** The last `detach` on a session disposes its engine. The next
-`attach` rebuilds it from pi's session file, which is why a closed tab loses a
-running turn but not its transcript.
+**Close and return.** The last `detach` starts a ten second idle timer. A new
+`attach` cancels it, so a reload reattaches to the same engine and replays its
+dialogs. When the timer fires, the engine disposes and the next `attach` rebuilds it
+from pi's session file.
 
 **Not ready.** Not built. The page has no readiness route yet, so a deployment
 without credentials surfaces pi's own error as a notice after the first prompt.
@@ -155,7 +158,7 @@ written unless the operator mounts it there
 | --------------------------------------------------- | ---------------------------------- | -------------------------------------- |
 | Transcript, branches, compaction, session name      | pi's JSONL in the agent home       | Forever                                |
 | Settings, credentials, models, MCP, packages, trust | the agent home (`$HOME/.pi/agent`) | Forever                                |
-| Live engines                                        | `agent/registry.ts`                | Until the last tab detaches            |
+| Live engines                                        | `agent/registry.ts`                | 10s after the last detach, unless busy |
 | Unanswered extension dialogs, display state         | `agent/dialogs.ts`                 | Until answered, cancelled or timed out |
 | Pins, archive, project order                        | not built                          | —                                      |
 | View state, scroll position, drafts                 | Browser                            | Tab lifetime                           |
@@ -171,19 +174,20 @@ deterministic, so a file naming it would be a second source of truth.
 | An extension handler throws    | The engine reports it through `onError`; the page shows `EXTENSION_ERROR`                                              |
 | An engine bug crashes the host | Every live session dies with the server. Accepted in ADR-0008; the session files survive                               |
 | Socket drops                   | Reconnect with backoff, `attach` again, a snapshot replaces state                                                      |
+| A tab closes mid-run           | The engine keeps running with no tab; a reopen reattaches and sees the turn in progress                                |
 | Server restarts                | Same as a socket drop; in-flight turns are lost                                                                        |
 | Protocol version mismatch      | `PROTOCOL_MISMATCH` → the page reloads                                                                                 |
 | Agent home unconfigured        | Not built: pi's own error reaches the page as a notice                                                                 |
 | No credential, no model        | The prompt's `command-result` or the engine's error names the problem; never a silent failed turn                      |
 | Project not trusted            | pi skips project resources; the dashboard does not report it yet ([note](notes/2026-10-28-rpc-cannot-answer-trust.md)) |
 | pi upgrade changes its surface | Types break at compile time first; re-verify against [reference/pi-rpc.md](reference/pi-rpc.md)                        |
-| Extension uses TUI-only UI     | One warning per method names the terminal tab; never silence                                                           |
+| Extension uses TUI-only UI     | One warning names the methods that need the terminal tab; never silence                                                |
 
 ## Size budgets
 
 | Area                       | Target                                                                                         |
 | -------------------------- | ---------------------------------------------------------------------------------------------- |
-| `server/src/agent/`        | under 800 lines total                                                                          |
+| `server/src/agent/`        | under 900 lines total; the UI bridge pi's RPC mode used to carry lives here now                |
 | `shared/src/conversation/` | under 500 lines                                                                                |
 | `server/src/routes/`       | under 60 lines per file                                                                        |
 | Any single file            | under 300 lines                                                                                |

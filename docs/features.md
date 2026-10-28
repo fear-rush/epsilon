@@ -77,12 +77,12 @@ home and reports it. It never writes pi's configuration.
 
 ## Extension surface
 
-| Feature                                                | How                                                                      |
-| ------------------------------------------------------ | ------------------------------------------------------------------------ |
-| `select`, `confirm`, `input`, `editor` dialogs         | WS `dialog` frames, answered from the page                               |
-| Toasts, status bar, widgets, window title, editor text | WS `ui` frames; keyed status and widgets replay on attach                |
-| Approvals and permission prompts                       | extension dialog flow; not a pi core feature                             |
-| `ctx.ui.custom` and other TUI-only methods             | **unsupported. One notice per method names the terminal tab** (ADR-0008) |
+| Feature                                                | How                                                                           |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| `select`, `confirm`, `input`, `editor` dialogs         | WS `dialog` frames, answered from the page                                    |
+| Toasts, status bar, widgets, window title, editor text | WS `ui` frames; keyed status and widgets replay on attach                     |
+| Approvals and permission prompts                       | extension dialog flow; not a pi core feature                                  |
+| `ctx.ui.custom` and other TUI-only methods             | **unsupported. One notice names the methods and the terminal tab** (ADR-0008) |
 
 ## Resources (read-only)
 

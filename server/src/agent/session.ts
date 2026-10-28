@@ -5,13 +5,20 @@
  * call on the embedded `AgentSession` (ADR-0008, ADR-0009).
  */
 import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
-import { isVisibleMessage } from "shared";
-import type { Command, DialogAnswer, ServerFrame, Snapshot, SnapshotCommand } from "shared";
+import type { Command, DialogAnswer, ServerFrame } from "shared";
 
 import { Dialogs } from "./dialogs";
 import type { FrameSink } from "./dialogs";
 import { createEngine, toJsonEvent } from "./engine";
 import type { UiHost } from "./engine";
+import { buildSnapshot } from "./snapshot";
+
+/**
+ * How long a session with no tab stays alive. A reload, a route change or a
+ * phone locking the screen reattaches inside it; a run or a pending dialog keeps
+ * the session alive for as long as it needs.
+ */
+const IDLE_DISPOSE_MS = 10_000;
 
 export type LiveSessionOptions = {
 	sessionId: string;
@@ -21,38 +28,19 @@ export type LiveSessionOptions = {
 	onEmpty: () => void;
 };
 
-const commandsOf = (agent: AgentSession): SnapshotCommand[] => {
-	const commands: SnapshotCommand[] = [];
-	for (const command of agent.extensionRunner.getRegisteredCommands()) {
-		commands.push({
-			name: command.invocationName,
-			description: command.description,
-			source: "extension",
-		});
-	}
-	for (const template of agent.promptTemplates) {
-		commands.push({ name: template.name, description: template.description, source: "prompt" });
-	}
-	for (const skill of agent.resourceLoader.getSkills().skills) {
-		commands.push({
-			name: `skill:${skill.name}`,
-			description: skill.description,
-			source: "skill",
-		});
-	}
-	return commands;
-};
-
 export class LiveSession {
 	readonly sessionId: string;
 	private readonly onEmpty: () => void;
 	private readonly subscribers = new Set<FrameSink>();
 	private readonly dialogs: Dialogs;
+	/** TUI-only methods seen before the first tab attached, flushed as one notice. */
+	private readonly earlyUnsupported = new Set<string>();
 	private agent: AgentSession | undefined;
 	private unsubscribe: (() => void) | undefined;
 	private streaming = false;
 	private bashUnsettled = false;
 	private disposed = false;
+	private idleTimer: ReturnType<typeof setTimeout> | undefined;
 
 	private constructor(sessionId: string, onEmpty: () => void) {
 		this.sessionId = sessionId;
@@ -90,13 +78,21 @@ export class LiveSession {
 	 * state and the snapshot, so a blocking dialog is never invisible.
 	 */
 	subscribe(sink: FrameSink): () => void {
+		if (this.idleTimer !== undefined) {
+			clearTimeout(this.idleTimer);
+			this.idleTimer = undefined;
+		}
 		this.subscribers.add(sink);
+		if (this.earlyUnsupported.size > 0) {
+			this.dialogs.reportUnsupported(this.earlyUnsupported);
+			this.earlyUnsupported.clear();
+		}
 		this.dialogs.replay(sink);
 		this.sendMetaTo(sink);
 		sink(this.snapshotFrame());
 		return () => {
 			this.subscribers.delete(sink);
-			if (this.subscribers.size === 0) this.dispose();
+			if (this.subscribers.size === 0) this.scheduleIdle();
 		};
 	}
 
@@ -130,6 +126,8 @@ export class LiveSession {
 	dispose(): void {
 		if (this.disposed) return;
 		this.disposed = true;
+		if (this.idleTimer !== undefined) clearTimeout(this.idleTimer);
+		this.idleTimer = undefined;
 		this.dialogs.cancelAll();
 		this.unsubscribe?.();
 		this.agent?.dispose();
@@ -211,9 +209,17 @@ export class LiveSession {
 		return {
 			ask: this.dialogs.ask,
 			display: this.dialogs.display,
-			unsupported: this.dialogs.unsupported,
+			unsupported: (method) => this.reportUnsupported(method),
 			fail: (error) => this.fail(error),
 		};
+	}
+
+	private reportUnsupported(method: string): void {
+		if (this.subscribers.size === 0) {
+			this.earlyUnsupported.add(method);
+			return;
+		}
+		this.dialogs.unsupported(method);
 	}
 
 	private fail(error: Error): void {
@@ -233,6 +239,7 @@ export class LiveSession {
 				this.bashUnsettled = false;
 				this.resync();
 			}
+			this.scheduleIdle();
 		}
 		try {
 			this.emit({ t: "event", sessionId: this.sessionId, event: toJsonEvent(event) });
@@ -246,27 +253,7 @@ export class LiveSession {
 	}
 
 	private snapshotFrame(): ServerFrame {
-		const agent = this.engine;
-		const model = agent.model;
-		const snapshot: Snapshot = {
-			state: {
-				model:
-					model === undefined
-						? undefined
-						: { provider: model.provider, id: model.id, name: model.name },
-				isStreaming: agent.isStreaming,
-				isCompacting: agent.isCompacting,
-				sessionName: agent.sessionName,
-			},
-			messages: agent.messages.filter(isVisibleMessage),
-			models: agent.modelRuntime.getAvailableSnapshot().map((candidate) => ({
-				provider: candidate.provider,
-				id: candidate.id,
-				name: candidate.name,
-			})),
-			commands: commandsOf(agent),
-		};
-		return { t: "snapshot", sessionId: this.sessionId, snapshot };
+		return { t: "snapshot", sessionId: this.sessionId, snapshot: buildSnapshot(this.engine) };
 	}
 
 	/** Re-read the snapshot for everyone watching, after the engine changed. */
@@ -275,8 +262,23 @@ export class LiveSession {
 		for (const sink of this.subscribers) sink(this.snapshotFrame());
 	}
 
+	/** Keep an unwatched session while it runs, waits for an answer or compacts. */
+	private get busy(): boolean {
+		return (
+			this.agent !== undefined &&
+			(this.agent.isStreaming || this.agent.isCompacting || this.dialogs.needsInput)
+		);
+	}
+
+	private scheduleIdle(): void {
+		if (this.disposed || this.subscribers.size > 0 || this.busy) return;
+		if (this.idleTimer !== undefined) return;
+		this.idleTimer = setTimeout(() => this.dispose(), IDLE_DISPOSE_MS);
+	}
+
 	private sendMeta(): void {
 		for (const sink of this.subscribers) this.sendMetaTo(sink);
+		this.scheduleIdle();
 	}
 
 	private sendMetaTo(sink: FrameSink): void {

@@ -1,7 +1,6 @@
 # Slice checks
 
-Status: **S1, S2 and S3 verified in a browser. S4 is active and only its palette
-is left. S12's socket checks pass and its browser pass is next. S11 is queued.** This page holds the
+Status: **S1 to S5 verified in a browser. S6 is active. S11 is queued.** This page holds the
 checks. [../plan.md](../plan.md) holds the jobs, the slice table and the risks.
 
 A slice ends when you can run its checks yourself, by hand, in a browser. A slice
@@ -40,9 +39,10 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 ### S4: Composer
 
-Steer, abort, the model picker and `!cmd` are built and verified in a browser. The
-palette is built and unverified: a real snapshot carries 63 commands, filtering and
-arrow keys are wired, and `Popover` + `Command` came from the registry.
+All four are verified in a browser, including the palette: it carries 64 commands
+in three columns, the arrow keys move the highlight, and picking `skill:find-skills`
+wrote `/skill:find-skills ` and ran it. The palette is as wide as the composer, and
+nothing overflows at 390px.
 
 - [x] Steer mid-run and see the message land in the transcript
 - [x] Abort, and the run stops in the CLI as well
@@ -50,20 +50,23 @@ arrow keys are wired, and `Popover` + `Command` came from the registry.
       (socket: `set_model` answered ok, the refreshed snapshot carries the new
       model, and a bogus pair answers `Model not found`; the menu is a
       DropdownMenu in the composer footer)
-- [ ] An installed skill or prompt template appears in the palette and runs
-      (socket: the snapshot carries 63 commands, `source` set to extension, prompt
-      or skill; picking writes `/name ` into the composer)
+- [x] An installed skill or prompt template appears in the palette and runs
+      (browser: the palette carries 64 commands with `extension`, `prompt` and
+      `skill` sources; picking writes `/name ` into the composer, and
+      `skill:find-skills` ran and answered)
 - [x] `!ls` runs a shell command and its output is in the transcript
       (socket and reducer: the reply is followed by a snapshot carrying the
       `bashExecution` message)
 
 ### S5: Extension dialogs
 
-- [ ] A permission prompt appears in the browser; approving continues the run
-- [ ] A second tab cannot answer the same prompt twice
-- [ ] Reload the page while a prompt is pending: it is shown again
-- [ ] An extension using `ctx.ui.custom` shows the unsupported notice and points
-      at the terminal tab (never silence)
+- [x] A permission prompt appears in the browser; approving continues the run
+- [x] A second tab cannot answer the same prompt twice: both tabs showed the
+      dialog, one answer closed it in both, and the other had nothing left to press
+- [x] Reload the page while a prompt is pending: it is shown again, and the run
+      continues after the replayed answer
+- [x] An extension using `ctx.ui.custom` shows the unsupported notice and points
+      at the terminal tab: "An extension used custom, which needs the terminal tab."
 
 ### S6: Files and diff
 
@@ -123,14 +126,16 @@ feature of the dashboard ([ADR-0006](../adr/0006-setup-in-the-deployment-termina
 
 The engine runs in the server instead of a child process
 ([ADR-0008](../adr/0008-embed-pi-engine-with-opinions.md)), and the socket carries
-Epsilon's own commands ([ADR-0009](../adr/0009-socket-speaks-epsilon.md)). Checks
-marked `[x]` were run over the socket; the browser pass is what remains.
+Epsilon's own commands ([ADR-0009](../adr/0009-socket-speaks-epsilon.md)). Every
+check below was run in a browser; socket evidence is named where it proves
+something the page cannot show.
 
 - [x] A prompt streams a real answer with no `pi` child: `pgrep -f "mode rpc"` is
-      empty while the turn runs (`server/scripts/protocol-check.ts`)
-- [ ] Steer, abort, the model picker, `!cmd` and the palette behave in the page as
-      they did on the child (socket: steer lands in the transcript, abort settles
-      the run, `set_model` and `bash` answer ok; the palette is not looked at yet)
+      empty while the turn runs, in the page and in `server/scripts/protocol-check.ts`
+- [x] Steer, abort, the model picker, `!cmd` and the palette behave in the page as
+      they did on the child: a steer lands as a user message, abort settles the
+      run, a model switch is used by the next turn and survives a reload, `!echo`
+      makes a bash card, and a palette skill ran
 - [x] A session written elsewhere opens, and a turn from this engine is readable:
       attaching to a session that another process wrote returned its transcript,
       including messages written moments earlier
@@ -142,11 +147,15 @@ marked `[x]` were run over the socket; the browser pass is what remains.
 - [x] The operator's own extensions load (permission, fff, subagents) and their
       dialogs are answered: a tool call blocked on `confirm` and continued from the
       socket
-- [ ] A replaceable built-in is dropped when the operator's extension registers the
-      same command or tool name, instead of appearing as `name:2` (the entries carry
-      `replaceable: true`; not exercised with a probe yet)
-- [x] `/reload` re-reads resources without restarting the server: the socket's
-      `reload` command answers ok and keeps the transcript; the composer intercepts
-      `/reload` and sends it
-- [x] A closed tab disposes its session, and a second attach rebuilds it from the
-      session file: a detach followed by an attach returned the same messages
+- [x] A replaceable built-in is dropped when the operator's extension registers the
+      same command or tool name, instead of appearing as `name:2`: a probe extension
+      registering `/mcp` became the only `mcp` entry, with no `mcp:2`, and removing
+      it restored the built-in after `/reload`
+- [x] `/reload` re-reads resources without restarting the server: it answers ok
+      while idle and while a run streams, the run settles, and the probe extension
+      appeared and disappeared only after a reload
+- [x] A tab that closes with nothing running disposes its session after ten seconds,
+      and the next attach rebuilds it from the session file; a run or a pending
+      dialog keeps it alive. Verified: a run grew from 172 to 548 characters across
+      a close and reopen, and the session reported `running: false` after twelve
+      idle seconds

@@ -1,6 +1,6 @@
 # Verified facts
 
-Status: **current as of S12.** Every line here was checked against the pinned pi
+Status: **current as of S5.** Every line here was checked against the pinned pi
 package or against a browser session, not read from a document. When one becomes
 false, delete it rather than adding a correction below it.
 
@@ -66,9 +66,10 @@ false, delete it rather than adding a correction below it.
   registry holds a live engine. A real id from another project answers `404` and
   leaves the file alone, so the temp-project test could not touch this repo's
   sessions.
-- The last `detach` on a session disposes its engine, and the next `attach` rebuilds
-  it from the session file. Verified: a prompt, a detach, a re-attach, and the same
-  messages came back. A tab left open keeps its engine and its heap.
+- A session with no tab disposes ten seconds after the last `detach`, and the next
+  `attach` rebuilds it from the session file. A run, a compaction or a pending dialog
+  keeps it alive with no tab, so a reload or a reopen reattaches to the same engine
+  ([note](../notes/2026-10-28-dispose-on-detach-kills-the-run.md)).
 - The session list polls `/api/sessions` every 5 s for the needs-input badge. Run
   state has no row indicator; a session running only in the terminal could not be
   detected anyway, because pi keeps no lock and appends to the JSONL without one.
@@ -165,6 +166,33 @@ false, delete it rather than adding a correction below it.
 - The tab settles a turn twice: `agent_end` then `agent_settled`. Both clear
   `busy`; `abort` produces `message_end`, `turn_end`, `agent_end` and
   `agent_settled`, so a stopped turn keeps its partial text.
+
+## Verified in a browser for S12 and S5
+
+- A turn streams with no `pi --mode rpc` child and one `src/serve.ts` process.
+- A permission `confirm` appears in the page; a second tab on the same session sees
+  it too; one answer closes it in both. Reloading while it waits replays it, and the
+  run continues after the answer.
+- A steer typed while a run streams lands as a user message, and abort settles the
+  run with the partial answer kept.
+- `!echo shell-ok` makes a bash card with its output.
+- The `/` palette carries 64 commands in three columns, is 730px wide inside a
+  768px composer, moves its highlight with the arrow keys, and runs a picked skill.
+  At 390px neither the palette nor a long permission command overflows.
+- `/reload` answers ok while idle and while a run streams; the run still settles.
+- A run continues with no tab: a close and a reopen four seconds later showed the
+  transcript grow from 172 to 548 characters and reach the end of the count.
+- A model switch is used by the next turn and survives a reload once the session
+  file exists; before the first message it is lost
+  ([note](../notes/2026-10-28-model-switch-waits-for-the-first-message.md)).
+- A CLI-created session opens in the page, the CLI reads a turn written in the page,
+  and the page reads a later turn written by the CLI.
+- A probe extension registering `/mcp` replaced the built-in and produced no
+  `mcp:2`; removing it and `/reload` restored the built-in.
+- The TUI-only methods used at session start arrive as one notice naming them all.
+- A session with a pending dialog shows the `needs input` badge in the sidebar.
+- `DELETE /api/sessions/{id}` answers `409 SESSION_RUNNING` while an engine holds it
+  and `204` after the idle grace.
 
 ## Verified for the embedded engine (S12)
 

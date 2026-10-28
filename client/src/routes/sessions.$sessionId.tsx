@@ -1,7 +1,7 @@
 /**
  * One session: header, transcript, blocking questions, composer. The id comes
  * from the URL, so a reload, a bookmark and a phone reattach all land on the
- * same transcript and the same live child.
+ * same transcript and the same live engine.
  */
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";

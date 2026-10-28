@@ -55,7 +55,7 @@ export class SessionRegistry {
 		const session = await LiveSession.open({
 			sessionId,
 			...this.location,
-			// The last tab closed: the engine is gone with it.
+			// The session disposed itself after the idle grace; drop the reference.
 			onEmpty: () => this.sessions.delete(sessionId),
 		});
 		this.sessions.set(sessionId, session);

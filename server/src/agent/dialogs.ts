@@ -119,4 +119,19 @@ export class Dialogs {
 			notifyType: "warning",
 		});
 	};
+
+	/**
+	 * Report methods that ran before any tab attached, as one notice. An
+	 * extension's session_start often touches several TUI methods at once.
+	 */
+	reportUnsupported = (methods: Iterable<string>): void => {
+		const fresh = [...methods].filter((method) => !this.reported.has(method));
+		if (fresh.length === 0) return;
+		for (const method of fresh) this.reported.add(method);
+		this.display({
+			method: "notify",
+			message: `Extensions use ${fresh.join(", ")}, which need the terminal tab.`,
+			notifyType: "warning",
+		});
+	};
 }
