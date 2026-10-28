@@ -79,8 +79,8 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 ### S3: Sessions and resume
 
-- [x] The project's sessions are listed newest first; a live child shows a
-      running badge and a pending dialog shows a needs-input badge
+- [x] The project's sessions are listed newest first; a pending dialog shows a
+      needs-input badge
 - [x] Open a session the CLI created, steer it, and the CLI shows the same messages
 - [x] Close the tab mid-run, reopen it, and the run has continued
 - [x] Deleting a session from the UI removes it from `pi`'s list too
@@ -199,9 +199,9 @@ composer plus the `bash` command. Then the skill and prompt palette, which needs
   sessions.
 - No idle kill: a child stays alive after its last tab closes, so browsing many
   sessions leaves one `pi` per session until the server stops.
-- The list badges poll `/api/sessions` every 5 s; a session running only in the
-  terminal shows no badge, because pi keeps no lock and appends to the JSONL
-  without one.
+- The session list polls `/api/sessions` every 5 s for the needs-input badge. Run
+  state has no row indicator; a session running only in the terminal could not be
+  detected anyway, because pi keeps no lock and appends to the JSONL without one.
 - `meta.running` means the child process is alive; `busy` means a turn is
   running. `busy` comes from `agent_start`/`agent_end` and from the snapshot's
   `isStreaming`, so a tab that attaches mid-run shows "working" and offers stop
@@ -229,9 +229,8 @@ composer plus the `bash` command. Then the skill and prompt palette, which needs
   lines for the file-size cap: offcanvas only, with no rail, submenus or
   collapsed tooltips. Add them back from the registry when a screen needs them.
 - `--warning` and `--success` were added to `client/src/index.css`. The needs-input
-  `Badge`, the pulsing `Skeleton` dot, diff lines and error `Alert`s use theme
-  colours; a grep finds no raw palette class in `client/src` outside generated
-  components.
+  `Badge`, diff lines and error `Alert`s use theme colours; a grep finds no raw
+  palette class in `client/src` outside generated components.
 - The model menu is the AI Elements model selector: a `DropdownMenu` with one
   `DropdownMenuRadioGroup` per provider, current provider first. 510 models open
   as one scrolling menu, grouped; `Command` and `Popover` were removed again
