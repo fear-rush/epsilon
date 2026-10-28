@@ -32,6 +32,7 @@ Start with [docs/README.md](docs/README.md). Read these documents in this order:
 - `client/`: React, Vite, Tailwind, shadcn.
 - `shared/`: browser-safe types, zod schemas, the conversation reducer.
 - `tools/`: local Oxlint plugins.
+- `scripts/`: repo-level tooling, such as the dev launcher.
 
 ## Commands
 

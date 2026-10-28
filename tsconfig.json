@@ -6,6 +6,7 @@
 		"types": ["bun"]
 	},
 	"include": [
+		"scripts/**/*.ts",
 		"tools/**/*.ts",
 		"server/drizzle.config.ts",
 		"server/scripts/**/*.ts",
