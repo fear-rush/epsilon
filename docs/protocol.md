@@ -191,10 +191,10 @@ reconnect without losing scroll position, that is local UI state, not protocol.
 
 ## Readiness
 
-Not built. `GET /api/agent` will report the agent home's path, whether it exists,
-which providers are configured, the default model, installed packages and the
-project's trust state. The page turns a missing step into a notice naming the
-terminal command that fixes it
+Not part of this contract: readiness is REST, at `GET /api/readiness`, because it
+answers before any session exists. It reports whether the home holds a usable model,
+the home path, and the step that fixes a home without one. The page turns that into
+one notice and renders no composer
 ([ADR-0006](adr/0006-setup-in-the-deployment-terminal.md)).
 
 The dashboard does not acquire configuration over the socket: no sign-in frames, no

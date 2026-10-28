@@ -67,13 +67,14 @@ The deployment owns its agent home, and setup happens in a terminal inside it
 [ADR-0006](adr/0006-setup-in-the-deployment-terminal.md)). The dashboard reads that
 home and reports it. It never writes pi's configuration.
 
-| Feature                                                                                   | How                                                               |
-| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Report readiness: home path, configured providers, default model, packages, project trust | own module behind REST `GET /api/agent`                           |
-| A missing step becomes a notice naming the terminal command that fixes it                 | own, on the not-ready state; never a silently failed turn         |
-| Sign in, choose a model, record trust, enable packages, sign in to MCP                    | **terminal** inside the deployment: `pi`, then `/login`, `/trust` |
-| Install a package                                                                         | **terminal** (`pi install`), then `/reload` in the page           |
-| Credential upload, configuration import, settings forms                                   | **not built, by decision**                                        |
+| Feature                                                                       | How                                                               |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Report readiness: is there a usable model in this home, and where is the home | `agent/readiness.ts` behind REST `GET /api/readiness`             |
+| A missing step becomes a notice naming the terminal command that fixes it     | own, on the not-ready state; never a silently failed turn         |
+| Provider list, package list and trust state in the readiness answer           | **not built**; the resources page (S8) owns the first two         |
+| Sign in, choose a model, record trust, enable packages, sign in to MCP        | **terminal** inside the deployment: `pi`, then `/login`, `/trust` |
+| Install a package                                                             | **terminal** (`pi install`), then `/reload` in the page           |
+| Credential upload, configuration import, settings forms                       | **not built, by decision**                                        |
 
 ## Extension surface
 
@@ -81,7 +82,9 @@ home and reports it. It never writes pi's configuration.
 | ------------------------------------------------------ | ----------------------------------------------------------------------------- |
 | `select`, `confirm`, `input`, `editor` dialogs         | WS `dialog` frames, answered from the page                                    |
 | Toasts, status bar, widgets, window title, editor text | WS `ui` frames; keyed status and widgets replay on attach                     |
-| Approvals and permission prompts                       | extension dialog flow; not a pi core feature                                  |
+| Approvals and permission prompts                       | extension dialog flow; Epsilon ships the guard itself (ADR-0008)              |
+| Epsilon's own defaults: `permission`, `discuss`        | inline factories in `server/src/agent/defaults/`, operator copies win by name |
+| The same defaults in a terminal                        | **not yet**; S7 passes them to the CLI with `-e` (ADR-0010)                   |
 | `ctx.ui.custom` and other TUI-only methods             | **unsupported. One notice names the methods and the terminal tab** (ADR-0008) |
 
 ## Resources (read-only)
@@ -113,7 +116,7 @@ home and reports it. It never writes pi's configuration.
 | Feature                    | How                                                              |
 | -------------------------- | ---------------------------------------------------------------- |
 | Host and Origin checks     | own `server/src/security.ts`; required before any published port |
-| Agent readiness            | REST `GET /api/agent`                                            |
+| Agent readiness            | REST `GET /api/readiness`                                        |
 | One origin in deployment   | the server serves the built client; [deploy.md](deploy.md)       |
 | Remote access from a phone | Tailscale or SSH tunnel; no auth code in the app                 |
 | REST docs                  | generated OpenAPI + Scalar                                       |

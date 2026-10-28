@@ -1,13 +1,14 @@
 # epsilon
 
-A web dashboard for one user. It drives the `pi` coding agent as a child process in
-`--mode rpc`. The deployment it runs in owns that agent's home: config, credentials,
-extensions, packages, sessions and trust
+A web dashboard for one user. It embeds the `pi` coding agent in its own process
+([ADR-0008](docs/adr/0008-embed-pi-engine-with-opinions.md),
+[ADR-0009](docs/adr/0009-socket-speaks-epsilon.md)). The deployment it runs in owns
+that agent's home: config, credentials, extensions, packages, sessions and trust
 ([ADR-0005](docs/adr/0005-deployment-owns-agent-home.md)). The dashboard and a
 terminal inside the same deployment are therefore one agent, and the dashboard never
 configures pi itself ([ADR-0006](docs/adr/0006-setup-in-the-deployment-terminal.md)).
 
-Status: S1, S2 and S3 work; S4 is in progress. Progress lives in
+Status: S1 to S13 are done and S14 is active. Progress lives in
 [docs/plan.md](docs/plan.md); the per-slice checks are in
 [docs/plan/slices.md](docs/plan/slices.md).
 
@@ -27,7 +28,7 @@ Start with [docs/README.md](docs/README.md). Read these documents in this order:
 
 ## Workspaces
 
-- `server/`: Hono API, agent children, disk reads. Node-compatible.
+- `server/`: Hono API, the embedded agent engine, disk reads. Node-compatible.
 - `client/`: React, Vite, Tailwind, shadcn.
 - `shared/`: browser-safe types, zod schemas, the conversation reducer.
 - `tools/`: local Oxlint plugins.
@@ -38,7 +39,9 @@ Run these commands from the repository root:
 
 | Command                   | Result                                                 |
 | ------------------------- | ------------------------------------------------------ |
-| `bun run dev`             | Start the client and the server                        |
+| `bun run dev`             | Start the client and the server, on a sandboxed home   |
+| `bun run dev:host`        | The same, against the operator's real `~/.pi`          |
+| `bun run sandbox:clean`   | Remove the dev sandbox                                 |
 | `bun run build`           | Build every workspace                                  |
 | `bun run test`            | Run the tests                                          |
 | `bun run lint`            | Run Oxlint on every workspace                          |
@@ -71,7 +74,7 @@ Run these commands from the repository root:
    Setup happens in a terminal inside the deployment
    ([ADR-0006](docs/adr/0006-setup-in-the-deployment-terminal.md)); the dashboard
    reports what is missing and says which command fixes it.
-9. The agent home is chosen once, in `config.ts`, and passed to every child
+9. The agent home is chosen once, in `config.ts`, and passed to every engine
    explicitly. Never let an inherited `PI_*` variable decide which config a
    deployment runs on.
 

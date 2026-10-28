@@ -122,7 +122,7 @@ composer controls.
 | Compacting                       | header chip                       | "Compacting…" with a stop control                                                                              |
 | Retrying                         | header chip                       | attempt count from `auto_retry_*` events                                                                       |
 | Error                            | last turn + toast                 | `Alert variant="destructive"`, never a silent stop                                                             |
-| Child exited                     | transcript notice                 | states that the turn was lost, offers reattach                                                                 |
+| Engine failed                    | transcript notice                 | states that the turn was lost, offers reattach                                                                 |
 | Not ready                        | centre on every page              | one `Alert` naming the missing step, the home path and the command to run in a shell; the composer is disabled |
 | Disconnected                     | top banner                        | reconnect in progress, no modal                                                                                |
 | Unsupported UI (`ctx.ui.custom`) | transcript notice                 | names the extension, points at the terminal tab                                                                |

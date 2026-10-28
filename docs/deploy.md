@@ -37,7 +37,7 @@ provides the `pi` CLI for the terminal tab and setup
 
 | Part                                                                                 | Why                                                                                          |
 | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| Node 22.19 or newer (`node:24-bookworm-slim` matches pi's own recipe)                | the agent's runtime                                                                          |
+| Node 22.19 or newer (`node:24-bookworm-slim` matches pi's own recipe)                | the CLI's runtime; the embedded engine uses the server's Bun                                 |
 | Bun                                                                                  | the server                                                                                   |
 | `bash`, `git`, `ripgrep`, `ca-certificates`                                          | the tools the agent and its extensions expect                                                |
 | pinned `@earendil-works/pi-coding-agent`, installed globally with `--ignore-scripts` | so a shell in the container has `pi`, and so extensions that resolve `pi` by name still work |

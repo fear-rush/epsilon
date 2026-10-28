@@ -1,7 +1,7 @@
 # Slice checks
 
-Status: **S1 to S5 and S12 verified in a browser. S13 is active.** This page holds the
-checks. [../plan.md](../plan.md) holds the jobs, the slice table and the risks.
+Status: **S1 to S13 verified, most of them in a browser. S14 is active.** This page
+holds the checks. [../plan.md](../plan.md) holds the jobs, the slice table and the risks.
 
 A slice ends when you can run its checks yourself, by hand, in a browser. A slice
 is not done because it compiles.

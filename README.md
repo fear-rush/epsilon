@@ -5,13 +5,14 @@ runs in owns that agent's config, credentials, extensions and sessions, so the
 dashboard and a terminal inside the same deployment are one agent
 ([ADR-0005](docs/adr/0005-deployment-owns-agent-home.md)).
 
-Status: S1, S2 and S3 work; S4 is in progress. Start with
+Status: S1 to S13 are done and S14 is active. Start with
 [docs/README.md](docs/README.md), then [docs/plan.md](docs/plan.md).
 
 ## Requirements
 
 - Bun 1.4.4 or newer, for the server and the client.
-- Node.js 22.19 or newer, for the agent. Both runtimes are in the deployment image.
+- Node.js 22.19 or newer, for pi's CLI in the terminal tab. The embedded engine runs
+  inside the Bun server, so a dashboard-only run does not need it.
 - A project directory for the agent to work on.
 - `pi` does **not** have to be installed. The version epsilon drives is pinned in
   `server/package.json` and installed with the rest of the dependency tree.
@@ -33,6 +34,13 @@ settings, and what the isolation does and does not cover.
 bun install
 bun run dev
 ```
+
+`bun run dev` keeps the agent's home inside the repository, at `.sandbox/agent`, so a
+turn never writes into your own `~/.pi`. It symlinks your `auth.json` and `models.json`
+in so the loop can run; delete the links to see the unconfigured state. `bun run
+dev:host` uses the real home when you want to read sessions your terminal created, and
+`bun run sandbox:clean` removes the sandbox. [docs/deploy.md](docs/deploy.md) explains
+why a deployment differs.
 
 `bun run dev:client` starts the frontend. `bun run dev:server` starts the API. The
 client listens on `http://localhost:5173`. Vite proxies `/api` to
