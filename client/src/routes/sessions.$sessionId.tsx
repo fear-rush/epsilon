@@ -49,6 +49,16 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 		const submit = () => {
 			const message = prompt.trim();
 			if (message === "") return;
+			// `!cmd` runs in the shell, and `!!cmd` hides its output from the agent. A
+			// lone `!` is not a command, so the draft stays instead of being sent.
+			if (message.startsWith("!")) {
+				const excludeFromContext = message.startsWith("!!");
+				const command = message.slice(excludeFromContext ? 2 : 1).trim();
+				if (command === "") return;
+				store.runBash(command, excludeFromContext);
+				setPrompt("");
+				return;
+			}
 			if (busy) store.steer(message);
 			else store.sendPrompt(message);
 			setPrompt("");

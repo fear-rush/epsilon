@@ -58,6 +58,14 @@ export class AgentSession {
 	 * attaches later sees the current status and widgets instead of nothing.
 	 */
 	private readonly displayState = new Map<string, ExtensionDisplay>();
+	/**
+	 * True when a `!cmd` ran and pi may still be holding its message. pi appends the
+	 * message at once while idle, but only after the turn when a run was streaming
+	 * (`recordBashResult` in pi's `agent-session`), so the settle re-reads once more.
+	 */
+	private bashUnsettled = false;
+	/** pi's own busy flag, mirrored only to decide whether a bash message is held. */
+	private streaming = false;
 	private running = false;
 
 	constructor(sessionId: string, cwd: string) {
@@ -203,8 +211,23 @@ export class AgentSession {
 				// The chosen model lives in pi, so read it back instead of echoing the
 				// request: the picker shows pi's answer, not the browser's guess.
 				if (frame.success && frame.command === "set_model") this.resync();
+				// A shell run is a message in pi's session file and never an agent event,
+				// so without this read the card would only appear on the next attach.
+				if (frame.success && frame.command === "bash") {
+					if (this.streaming) this.bashUnsettled = true;
+					this.resync();
+				}
 				return;
 			default:
+				if (frame.type === "agent_start") this.streaming = true;
+				// pi flushes a bash message held during a run just before it settles.
+				if (frame.type === "agent_settled") {
+					this.streaming = false;
+					if (this.bashUnsettled) {
+						this.bashUnsettled = false;
+						this.resync();
+					}
+				}
 				this.emit({ t: "event", sessionId: this.sessionId, event: frame });
 		}
 	}

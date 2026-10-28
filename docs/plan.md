@@ -1,6 +1,7 @@
 # Plan
 
-Status: **S1, S2 and S3 verified in a browser. S4 is active, S11 is queued.** This file answers: what the product does for its user, which slice is
+Status: **S1, S2 and S3 verified in a browser. S4 is active, with only its palette
+left; S11 is queued.** This file answers: what the product does for its user, which slice is
 being built, and whether it is done. Keep "Active slice" honest; that is the only
 part that must never drift.
 
@@ -72,14 +73,16 @@ against the host's own `pi`, and it comes before any deployment on a second mach
 
 ## Active slice
 
-**S4: Composer.** Steer, abort and the model picker are built; the palette and
-`!cmd` remain. The shell from ui.md now exists: the session list lives in a
-sidebar, and `/` is the empty state it leaves behind.
+**S4: Composer.** Steer, abort, the model picker and `!cmd` are built and verified
+in a browser. Only the palette is left. The shell from ui.md now exists: the session
+list lives in a sidebar, and `/` is the empty state it leaves behind.
 
-Next action: `!cmd`. The `bash` RPC records a result and the reducer already turns
-a `bashExecution` message into a bash card, so the work is the `!` prefix in the
-composer plus the `bash` command. Then the skill and prompt palette, which needs
-`get_commands` in the snapshot and another protocol bump.
+Next action: the skill and prompt palette, which needs `get_commands` in the
+snapshot and another protocol bump.
+
+`!cmd` needed one server change beyond the composer: pi records a shell run as a
+session message and sends no event for it, so the socket re-reads the snapshot
+after the reply ([note](notes/2026-10-28-bash-result-is-not-an-event.md)).
 
 S11 is queued behind it because it only matters once there is a second machine. When
 it starts, its first step is the same one that protects this laptop today: the Host

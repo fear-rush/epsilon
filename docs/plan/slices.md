@@ -1,6 +1,7 @@
 # Slice checks
 
-Status: **S1, S2 and S3 verified in a browser. S4 is active.** This page holds the
+Status: **S1, S2 and S3 verified in a browser. S4 is active and only its palette is
+left; S11 is queued.** This page holds the
 checks. [../plan.md](../plan.md) holds the jobs, the slice table and the risks.
 
 A slice ends when you can run its checks yourself, by hand, in a browser. A slice
@@ -39,18 +40,20 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 ### S4: Composer
 
-Steer, abort and the model menu are built; steer and abort are verified. The model
-menu's socket half works and its next-turn half is pending. The palette and `!cmd`
-are not started.
+Steer, abort, the model picker and `!cmd` are built and verified in a browser. The
+palette is the only check left; it needs `get_commands` in the snapshot and another
+protocol bump.
 
 - [x] Steer mid-run and see the message land in the transcript
 - [x] Abort, and the run stops in the CLI as well
-- [ ] Change model; the next turn uses it, and `get_state` in the CLI agrees
+- [x] Change model; the next turn uses it, and `get_state` in the CLI agrees
       (socket: `set_model` answered ok, the refreshed snapshot is pi's own
       `get_state` with the new model, and a bogus pair answers `Model not found`;
       the menu is now a DropdownMenu in the composer footer)
 - [ ] An installed skill or prompt template appears in the palette and runs
-- [ ] `!ls` runs a shell command and its output is in the transcript
+- [x] `!ls` runs a shell command and its output is in the transcript
+      (socket and reducer: the reply is followed by a snapshot carrying the
+      `bashExecution` message)
 
 ### S5: Extension dialogs
 

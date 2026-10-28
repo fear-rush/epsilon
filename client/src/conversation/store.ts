@@ -55,6 +55,18 @@ export class ConversationStore {
 		link.send({ t: "rpc", sessionId: this.sessionId, command: { type: "abort" } });
 	}
 
+	/**
+	 * `!cmd` runs in the shell. `!!cmd` is the same run with its output kept out of
+	 * the agent's context, which is why the flag travels with the command.
+	 */
+	runBash(command: string, excludeFromContext: boolean): void {
+		link.send({
+			t: "rpc",
+			sessionId: this.sessionId,
+			command: { type: "bash", command, excludeFromContext },
+		});
+	}
+
 	/** pi answers with a fresh snapshot, so the menu shows the model it chose. */
 	setModel(provider: string, modelId: string): void {
 		link.send({

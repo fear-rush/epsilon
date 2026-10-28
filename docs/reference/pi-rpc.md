@@ -103,7 +103,10 @@ Plus `extension_ui_request` from RPC mode and `session_shutdown` on teardown.
 Note that `extension_ui_request` is not a member of the event union; see above.
 Confirmed on a real trace: `shared/src/conversation/fixtures/bash-turn.jsonl`.
 
-`bash_execution_update` exists in the union but pi's own UI ignores it.
+`bash_execution_update` exists in the union but pi's own UI ignores it. It is the
+only event a shell run sends: `bash` also records a `bashExecution` message in the
+session, which reaches a reader only through `get_messages`
+([note](notes/2026-10-28-bash-result-is-not-an-event.md)).
 
 ## Slash commands through `prompt`
 
