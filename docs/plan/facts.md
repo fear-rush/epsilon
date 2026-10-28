@@ -38,6 +38,10 @@ false, delete it rather than adding a correction below it.
   one, and `DELETE` removed it there while the operator's own file stayed. Before
   the port was published, the list would have come from one home and the turns
   would have written to another.
+- `bun run dev` is `turbo dev`, and turbo's `envMode` defaults to `"strict"`: a
+  variable reaches the server only if `turbo.json` declares it. The home, project
+  and pi variables are declared on the `dev` task
+  ([note](../notes/2026-10-28-turbo-drops-undeclared-env.md)).
 - pi also reads `~/.agents/skills` and the project's `.pi/`; the home variable does
   not cover them, so a source run on a host still sees that host's skills. The
   container in S11 fixes it from the outside, through its own `$HOME`.

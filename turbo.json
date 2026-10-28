@@ -11,7 +11,14 @@
 		"dev": {
 			"cache": false,
 			"persistent": true,
-			"env": ["NODE_ENV", "PORT", "VITE_*"],
+			"env": [
+				"NODE_ENV",
+				"PORT",
+				"VITE_*",
+				"EPSILON_PROJECT",
+				"EPSILON_AGENT_HOME",
+				"PI_CODING_AGENT_DIR"
+			],
 			"dependsOn": ["^build"]
 		},
 		"type-check": {
