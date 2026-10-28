@@ -67,31 +67,43 @@ without a child process and a socket.
 | S9  | Preview what the agent built, from the phone                    | todo   |
 | S10 | Get pinged when a run needs an answer                           | todo   |
 | S11 | Reach the dashboard from a phone on a machine without `pi`      | todo   |
+| S12 | Run every turn from an engine in the server, with no child      | active |
 
 S11 serves job 5. It gates nothing on this laptop, where the dashboard already runs
 against the host's own `pi`, and it comes before any deployment on a second machine.
 
+S12 runs before S5 because every later slice reads the engine's events, and because
+the defaults Epsilon ships are inline extensions, which the child-process engine
+cannot arbitrate ([ADR-0008](adr/0008-embed-pi-engine-with-opinions.md)).
+
 ## Active slice
 
-**S4: Composer.** Steer, abort, the model picker, `!cmd` and the `/` palette are
-built; all but the palette are verified in a browser. The shell from ui.md now
-exists: the session list lives in a sidebar, and `/` is the empty state it leaves
-behind.
+**S12: Embedded engine.** The engine moves from a child process into the server
+(ADR-0008), because Epsilon ships its own default extensions and a child cannot
+arbitrate them. The browser contract is unchanged, so this is a server-side
+migration: `agent/driver.ts` goes, `agent/session.ts` becomes an adapter over
+`AgentSession`, and the frames stay the same.
 
-Next action: the palette check in a browser, then S5, the extension dialogs. The
-palette raised the protocol to 3: `commands` from `get_commands` now travels in the
-snapshot, and it holds 63 entries on this machine's home, extension commands,
-prompt templates and skills alike.
+Next action: replace the child with an embedded session for one turn, keeping
+`toJsonEvent` as the only bridge into the frames the reducer already consumes, then
+add the three factories the CLI loads and the SDK does not (`codemode`,
+`tool_search`, MCP) and `bindEvents` so the tool set is not quietly smaller.
+
+**S4 is closed except one check.** Steer, abort, the model picker and `!cmd` are
+verified in a browser. The `/` palette is built and unverified by eye: its width,
+its three columns and the permission dialog's wrapping were fixed after the last
+look. The palette raised the protocol to 3, with `commands` from `get_commands` in
+the snapshot.
 
 `!cmd` needed one server change beyond the composer: pi records a shell run as a
 session message and sends no event for it, so the socket re-reads the snapshot
 after the reply ([note](notes/2026-10-28-bash-result-is-not-an-event.md)).
 
-S11 is queued behind it because it only matters once there is a second machine. Its
-home isolation is done already: `config.agentHome` is passed to every child, so a
-source run stops depending on an inherited `PI_CODING_AGENT_DIR`. What S11 still
-owes is the container, the volume, one origin, and the Host and Origin check on the
-socket upgrade.
+S11 stays queued. Its home isolation is done: `config.agentHome` is resolved once,
+published for the server's own pi calls, and passed to every session, so a source
+run stops depending on an inherited `PI_CODING_AGENT_DIR`. What S11 still owes is
+the container, the volume, one origin, and the Host and Origin check on the socket
+upgrade.
 
 ## Universal done list
 
@@ -124,6 +136,7 @@ Every slice, in this order:
 | One child per opened session     | There is no idle kill, so every session ever opened keeps a process until shutdown                                                | Pool and idle timeout (`agent/pool.ts`) is still unbuilt                                                       |
 | Native packages are per platform | A home built on one platform does not run its packages on another                                                                 | Install inside the deployment; `deploy.md` says so                                                             |
 | A published port                 | There is no authentication in the app, by design                                                                                  | Publish on loopback and reach it through a tunnel; Host check in S11                                           |
+| The engine is in-process         | An extension or engine bug can take the whole server down, and every live session shares one heap                                 | Idle disposal and a live-session cap in S12; the session files survive a crash                                 |
 | Scope creep into settings        | The project this replaces accumulated 20k+ lines of settings UI                                                                   | Setup stays in the terminal (ADR-0006); the dashboard only reports readiness                                   |
 
 ## Definition of done for V1

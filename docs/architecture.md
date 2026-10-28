@@ -1,11 +1,12 @@
 # Architecture
 
 Status: **partly implemented.** The socket, the driver, the transcript page and
-the session list exist. The deployment boundary and the explicit agent home are
-decided and not built ([ADR-0005](adr/0005-deployment-owns-agent-home.md)). pi's
-engine runs outside our process, as a child
-([ADR-0007](adr/0007-embed-pi-engine.md) records why). See [plan.md](plan.md) for the
-slice in progress rather than a status here.
+the session list exist. The deployment boundary is decided and the agent home is
+built ([ADR-0005](adr/0005-deployment-owns-agent-home.md)). pi's engine still runs
+outside our process, as a child, and that is the one part this page describes that
+is about to change: [ADR-0008](adr/0008-embed-pi-engine-with-opinions.md) embeds the
+library so Epsilon can ship default extensions, and S12 in [plan.md](plan.md) is the
+migration. Until it lands, the driver and the frame handling below are the reality.
 
 A map of the system: what the parts are, what each owns, and how a request or an
 event travels. Rationale lives in [adr/](adr/); rules live in

@@ -118,3 +118,25 @@ feature of the dashboard ([ADR-0006](../adr/0006-setup-in-the-deployment-termina
       the command to run, instead of a broken session
 - [ ] The notice names the missing step and the home path; an untrusted project
       shows its own notice rather than a silent downgrade
+
+### S12: Embedded engine
+
+The engine runs in the server instead of a child process
+([ADR-0008](../adr/0008-embed-pi-engine-with-opinions.md)). The browser contract does
+not change, so every check below is about the same behaviour with no `pi` child.
+
+- [ ] A prompt streams a real answer with no `pi` child: `pgrep -f "mode rpc"` is
+      empty while the turn runs
+- [ ] Steer, abort, the model picker, `!cmd` and the palette behave as they did on
+      the child
+- [ ] A session written in the terminal opens in the browser, and a turn from the
+      browser is readable in the terminal
+- [ ] `codemode`, `tool_search` and MCP are active when the settings ask for them;
+      `get_commands` and a tool that needs them agree with the CLI
+- [ ] The operator's own extensions load, and their dialogs are answered from the
+      browser
+- [ ] An Epsilon inline extension is dropped when the operator's extension registers
+      the same command or tool name, instead of appearing as `name:2`
+- [ ] `/reload` re-reads resources without restarting the server
+- [ ] A closed tab disposes its session: `session.dispose()` runs, and a second
+      attach rebuilds it from the session file

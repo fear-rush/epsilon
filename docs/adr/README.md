@@ -11,13 +11,17 @@ One file per decision a future contributor (human or agent) could reasonably rev
 | [0005](0005-deployment-owns-agent-home.md)       | Accepted | The deployment owns the agent home, at pi's default path, isolated by default.   |
 | [0006](0006-setup-in-the-deployment-terminal.md) | Accepted | Setup, login, trust and installs happen in a terminal inside the deployment.     |
 | [0007](0007-embed-pi-engine.md)                  | Rejected | Embed pi's engine in a worker of our own. Rejected: RPC is the cheaper contract. |
+| [0008](0008-embed-pi-engine-with-opinions.md)    | Accepted | Embed pi's engine in the server and ship Epsilon's own default extensions.       |
 
 Superseding is how history changes here:
 
 - 0005 narrows 0001's requirement that the machine already has a configured `pi`.
 - 0006 keeps 0002 decision 5 and moves the terminal it refers to inside the
   deployment.
-- 0007 is rejected, so 0001 decision 1 and 0004 stand.
+- 0008 keeps 0002's nine UI methods but they arrive through the SDK's
+  `ExtensionUIContext`, not RPC frames.
+- 0008 embeds the engine to ship default extensions, so it supersedes 0001
+  decision 1 and 0004, and reverses 0007. 0001 decisions 2 to 4 stand.
 
 ## Writing one
 

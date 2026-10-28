@@ -212,7 +212,9 @@ Other facts worth having before embedding:
 - `session.reload()` exists, so an embedder could re-read resources without
   replacing the session, unlike RPC. What it re-resolves is unverified here.
 
-epsilon does not embed the engine: sessions stay on `pi --mode rpc`, and setup uses
-the CLI. [ADR-0007](../adr/0007-embed-pi-engine.md) records why the library option was
-rejected, so the list above is reference material for a future decision rather than
-a plan.
+Sessions still run on `pi --mode rpc` in this codebase, but that is now a migration
+in progress: [ADR-0008](../adr/0008-embed-pi-engine-with-opinions.md) embeds the
+library so Epsilon can ship its own default extensions, and
+[S12](../plan/slices.md) is the slice that moves the engine. The RPC sections above
+stay accurate for pi and for the terminal tab; the library section above is the
+target.
