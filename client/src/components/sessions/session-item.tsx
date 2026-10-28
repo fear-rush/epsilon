@@ -52,7 +52,7 @@ export function SessionItem({ session, active, onDelete }: SessionItemProps) {
 					}
 					className="h-auto flex-col items-start gap-0.5 py-1.5 pr-9"
 				>
-					<span className="truncate">{sessionLabel(session)}</span>
+					<span className="w-full truncate">{sessionLabel(session)}</span>
 					<span className="flex w-full items-center gap-1.5 text-xs font-normal text-muted-foreground">
 						<span className="truncate">{formatWhen(session.modified)}</span>
 						<span className="shrink-0">{session.messageCount} messages</span>
