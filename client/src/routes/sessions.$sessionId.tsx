@@ -6,6 +6,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowUpIcon, SquareIcon } from "lucide-react";
 import { useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { transcript } from "shared";
 import type { DialogQuestion } from "shared";
 
@@ -14,7 +15,7 @@ import { QuestionDialog } from "@/components/chat/question-dialog";
 import { Transcript } from "@/components/chat/transcript";
 import { ModelMenu } from "@/components/composer/model-menu";
 import { PermissionMenu } from "@/components/composer/permission-menu";
-import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import {
 	InputGroup,
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/input-group";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { useConversation } from "@/hooks/use-conversation";
 
 const isConfirm = (
@@ -37,10 +39,8 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 		const [prompt, setPrompt] = useState("");
 		const formRef = useRef<HTMLFormElement>(null);
 		const rows = transcript(snapshot.state);
-		const { busy, running, needsInput, dialogs, statuses, widgets, title, sessionName } =
-			snapshot.state;
+		const { busy, dialogs, statuses, widgets, title, sessionName } = snapshot.state;
 		const { models, model } = snapshot.state;
-		const otherStatuses = statuses.filter((status) => status.key !== "permission");
 		const confirmations = dialogs.filter(isConfirm);
 		const questions = dialogs.filter((dialog) => !isConfirm(dialog));
 		const aboveComposer = widgets.filter((widget) => widget.placement === "aboveEditor");
@@ -54,34 +54,44 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 			setPrompt("");
 		};
 
+		const header = (content: ReactNode) => (
+			<header className="flex items-center gap-2 border-b px-3 py-1.5">
+				<SidebarTrigger />
+				{content}
+			</header>
+		);
+
+		// A session that has no snapshot yet shows a loader, not an empty transcript.
+		if (snapshot.status !== "open" || !snapshot.loaded) {
+			return (
+				<div className="flex min-h-0 flex-1 flex-col">
+					{header(<Skeleton className="h-4 w-40" />)}
+					<div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+						{snapshot.status === "closed" ? (
+							<Alert variant="destructive" className="max-w-md">
+								<AlertTitle>Disconnected</AlertTitle>
+								<AlertDescription>The socket to the server closed. Reconnecting…</AlertDescription>
+							</Alert>
+						) : (
+							<>
+								<Spinner className="size-5 text-muted-foreground" />
+								<p className="text-sm text-muted-foreground">
+									{snapshot.loaded ? "Reconnecting to the agent…" : "Loading the session…"}
+								</p>
+							</>
+						)}
+					</div>
+				</div>
+			);
+		}
+
 		return (
 			<div className="flex min-h-0 flex-1 flex-col">
-				<header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-3 py-1.5 text-xs text-muted-foreground">
-					<SidebarTrigger />
-					<span className="max-w-[45vw] truncate text-sm font-medium text-foreground">
+				{header(
+					<span className="truncate text-sm font-medium text-foreground">
 						{title ?? sessionName ?? "Session"}
-					</span>
-					<span data-status={snapshot.status}>{snapshot.status}</span>
-					{snapshot.status === "open" &&
-						(running ? (
-							<span className="flex items-center gap-1.5">
-								{busy ? (
-									<Skeleton className="size-1.5 rounded-full bg-success" />
-								) : (
-									<span className="size-1.5 rounded-full bg-muted-foreground/40" />
-								)}
-								<span className={busy ? "shimmer" : undefined}>{busy ? "working" : "idle"}</span>
-							</span>
-						) : (
-							<span>agent stopped</span>
-						))}
-					{needsInput && <Badge variant="warning">needs input</Badge>}
-					{otherStatuses.map((status) => (
-						<Badge key={status.key} variant="secondary" className="font-normal">
-							{status.text}
-						</Badge>
-					))}
-				</header>
+					</span>,
+				)}
 
 				{questions.map((question) => (
 					<QuestionDialog

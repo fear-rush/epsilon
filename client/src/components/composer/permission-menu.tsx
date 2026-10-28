@@ -38,9 +38,7 @@ export function PermissionMenu({
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger
-				render={<InputGroupButton size="sm" className="rounded-full text-muted-foreground" />}
-			>
+			<DropdownMenuTrigger render={<InputGroupButton size="sm" className="rounded-full" />}>
 				<ShieldIcon data-icon="inline-start" />
 				{active?.label ?? "Permission"}
 				<ChevronDownIcon data-icon="inline-end" />

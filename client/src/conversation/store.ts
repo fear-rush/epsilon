@@ -13,6 +13,8 @@ import type { LinkStatus } from "@/link";
 export type ConversationSnapshot = {
 	sessionId: string;
 	status: LinkStatus;
+	/** True once a snapshot arrived, so the page can show a loader until then. */
+	loaded: boolean;
 	state: ConversationState;
 };
 
@@ -23,9 +25,14 @@ export class ConversationStore {
 
 	constructor(sessionId: string) {
 		this.sessionId = sessionId;
-		this.snapshot = { sessionId, status: link.current, state: emptyConversation };
+		this.snapshot = { sessionId, status: link.current, loaded: false, state: emptyConversation };
 		link.onStatus((status) => this.update({ status }));
-		link.attach(sessionId, (frame) => this.update({ state: reduce(this.snapshot.state, frame) }));
+		link.attach(sessionId, (frame) =>
+			this.update({
+				state: reduce(this.snapshot.state, frame),
+				loaded: this.snapshot.loaded || frame.t === "snapshot",
+			}),
+		);
 	}
 
 	readonly subscribe = (listener: () => void): (() => void) => {

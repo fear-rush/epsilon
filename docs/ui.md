@@ -50,39 +50,39 @@ with it.
 
 ## Concept to component
 
-| Concept                            | Component                                                                                                     | Notes                                                                       |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Thread                             | `MessageScrollerProvider` → `MessageScroller` → `Viewport` → `Content` → `Item`                               | `autoScroll`; `scrollAnchor` on the user turn; `MessageScrollerButton` last |
-| User turn                          | `Message align="end"` + `Bubble variant="muted"`                                                              | Bubble only here                                                            |
-| Assistant turn                     | `Message align="start"` + `MessageContent`                                                                    | Markdown body, no bubble                                                    |
-| Thinking                           | `Trace` → `TraceLine` with duration in `TraceDescription`                                                     | `shimmer` on the title while running; collapses on finish                   |
-| Tool, running                      | `TraceLine status="running"`                                                                                  | Bare line while there is nothing to open                                    |
-| Tool, finished                     | `TraceCollapsible` → trigger wraps the line → `TraceCollapsibleContent` → `CodeBlock size="sm" wrap max-h-64` | Never `<pre>`                                                               |
-| Diff                               | `CodeBlock` + `CodeBlockLine variant="added"/"removed"`                                                       | One column under 720px, two above                                           |
-| Unknown / MCP tool                 | Same as a tool, generic field rows                                                                            | Name, args, output, status. Never blank                                     |
-| Notice, compaction, branch summary | `Marker variant="separator"`                                                                                  | Not a trace row                                                             |
-| Approval or blocked tool           | `AlertDialog` while it blocks the run                                                                         | Inline `Item` + `ItemActions` when a prompt does not block                  |
-| Extension select                   | `Dialog` with one `Button` per option                                                                         | `Command` search once a list is long                                        |
-| Extension confirm                  | `AlertDialog`                                                                                                 | Destructive variant when pi marks it                                        |
-| Extension input / editor           | `Dialog` + `Input`; monospace `Textarea`                                                                      |                                                                             |
-| Extension status / widget          | `Badge` in the header; widget rows above the composer                                                         | Widget is text, not UI                                                      |
-| Session list                       | `Sidebar` + `SidebarGroup` per project                                                                        | Running: pulsing `Skeleton` dot; needs-input: `Badge variant="warning"`     |
-| Session actions                    | `ContextMenu` and `DropdownMenu` on `…`; on mobile the row is already inside a `Sheet`                        |                                                                             |
-| Search everything                  | `Command` in `Dialog`, ⌘K                                                                                     | Sessions, files, slash commands, actions                                    |
-| Slash palette, `@` files           | `Command` in `Popover` anchored to the composer                                                               | Server-driven from `get_commands`                                           |
-| Model                              | `DropdownMenu` + `DropdownMenuRadioGroup`, one group per provider                                             | 510 models: current provider first, names sorted inside each group          |
-| Permission                         | `DropdownMenu` radio group: Strict, Ask, Yolo                                                                 | The extension's `/permission <mode>` owns it; the UI shows its own labels   |
-| Reasoning                          | `DropdownMenu` + `DropdownMenuRadioGroup`                                                                     | Not built yet                                                               |
-| Context usage                      | `HoverCard` + `Progress`                                                                                      |                                                                             |
-| Attachments                        | `Attachment` + `AttachmentGroup` in `InputGroup`                                                              | `state` wired to real progress                                              |
-| Composer                           | `InputGroup` + `InputGroupTextarea`; `block-end` addon holds model, permission, stop and submit               | Arrow-up submit; Enter sends, Shift+Enter adds a line, Esc stops            |
-| File tree                          | nested `Collapsible` per folder, `Button` per file                                                            | A single read file in a turn stays a `TraceLine`                            |
-| Preview                            | `Resizable` + `Tabs` (Preview / Source / Diff) + sandboxed iframe                                             |                                                                             |
-| Terminal                           | `Tabs` + xterm, `Button` row for touch keys                                                                   |                                                                             |
-| Empty state                        | `Empty` + suggestion `Button`s                                                                                |                                                                             |
-| Toasts, errors                     | `sonner`, `Alert variant="destructive"`                                                                       |                                                                             |
-| Keyboard hints                     | `kbd`                                                                                                         | In menus and the palette footer                                             |
-| Loading                            | `spinner`                                                                                                     | For attach and file load, not for streaming                                 |
+| Concept                            | Component                                                                                                                              | Notes                                                                       |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Thread                             | `MessageScrollerProvider` → `MessageScroller` → `Viewport` → `Content` → `Item`                                                        | `autoScroll`; `scrollAnchor` on the user turn; `MessageScrollerButton` last |
+| User turn                          | `Message align="end"` + `Bubble variant="muted"`                                                                                       | Bubble only here                                                            |
+| Assistant turn                     | `Message align="start"` + `MessageContent`                                                                                             | Markdown body, no bubble                                                    |
+| Thinking                           | `Trace` → `TraceLine` with duration in `TraceDescription`                                                                              | `shimmer` on the title while running; collapses on finish                   |
+| Tool, running                      | `TraceLine status="running"`                                                                                                           | Bare line while there is nothing to open                                    |
+| Tool, finished                     | `TraceCollapsible` → trigger wraps the line → `TraceCollapsibleContent` → `CodeBlock size="sm" wrap max-h-64`                          | Never `<pre>`                                                               |
+| Diff                               | `CodeBlock` + `CodeBlockLine variant="added"/"removed"`                                                                                | One column under 720px, two above                                           |
+| Unknown / MCP tool                 | Same as a tool, generic field rows                                                                                                     | Name, args, output, status. Never blank                                     |
+| Notice, compaction, branch summary | `Marker variant="separator"`                                                                                                           | Not a trace row                                                             |
+| Approval or blocked tool           | `AlertDialog` while it blocks the run                                                                                                  | Inline `Item` + `ItemActions` when a prompt does not block                  |
+| Extension select                   | `Dialog` with one `Button` per option                                                                                                  | `Command` search once a list is long                                        |
+| Extension confirm                  | `AlertDialog`                                                                                                                          | Destructive variant when pi marks it                                        |
+| Extension input / editor           | `Dialog` + `Input`; monospace `Textarea`                                                                                               |                                                                             |
+| Extension status / widget          | `Badge` in the header; widget rows above the composer                                                                                  | Widget is text, not UI                                                      |
+| Session list                       | `Sidebar` + `SidebarGroup` per project                                                                                                 | Running: pulsing `Skeleton` dot; needs-input: `Badge variant="warning"`     |
+| Session actions                    | `ContextMenu` and `DropdownMenu` on `…`; on mobile the row is already inside a `Sheet`                                                 |                                                                             |
+| Search everything                  | `Command` in `Dialog`, ⌘K                                                                                                              | Sessions, files, slash commands, actions                                    |
+| Slash palette, `@` files           | `Command` in `Popover` anchored to the composer                                                                                        | Server-driven from `get_commands`                                           |
+| Model                              | `DropdownMenu` + `DropdownMenuRadioGroup`, one group per provider                                                                      | 510 models: current provider first, names sorted inside each group          |
+| Permission                         | `DropdownMenu` radio group: Strict, Ask, Yolo                                                                                          | The extension's `/permission <mode>` owns it; the UI shows its own labels   |
+| Reasoning                          | `DropdownMenu` + `DropdownMenuRadioGroup`                                                                                              | Not built yet                                                               |
+| Context usage                      | `HoverCard` + `Progress`                                                                                                               |                                                                             |
+| Attachments                        | `Attachment` + `AttachmentGroup` in `InputGroup`                                                                                       | `state` wired to real progress                                              |
+| Composer                           | `InputGroup` + `InputGroupTextarea`; white surface, thin foreground border; `block-end` addon holds model, permission, stop and submit | Arrow-up submit; Enter sends, Shift+Enter adds a line, Esc stops            |
+| File tree                          | nested `Collapsible` per folder, `Button` per file                                                                                     | A single read file in a turn stays a `TraceLine`                            |
+| Preview                            | `Resizable` + `Tabs` (Preview / Source / Diff) + sandboxed iframe                                                                      |                                                                             |
+| Terminal                           | `Tabs` + xterm, `Button` row for touch keys                                                                                            |                                                                             |
+| Empty state                        | `Empty` + suggestion `Button`s                                                                                                         |                                                                             |
+| Toasts, errors                     | `sonner`, `Alert variant="destructive"`                                                                                                |                                                                             |
+| Keyboard hints                     | `kbd`                                                                                                                                  | In menus and the palette footer                                             |
+| Loading                            | `spinner`                                                                                                                              | For attach and file load, not for streaming                                 |
 
 ## Layout
 
@@ -99,27 +99,30 @@ the right panel becomes a tab strip over the transcript.
 full-screen `Sheet`; composer pinned to the bottom with `InputGroup`; terminal adds
 a touch key row (Esc, Tab, arrows, Ctrl+C).
 
-**Header.** Session title inline-editable, run state chip, then actions: files,
-preview, terminal, resources, palette. Nothing else. No breadcrumbs, no tabs besides
-the ones above. Model and permission are composer controls, not header controls.
+**Header.** Session title inline-editable, then actions: files, preview, terminal,
+resources, palette. No status chips: a session that is loading, disconnected or not
+ready says so in the middle of the page, not in the header. Model and permission are
+composer controls.
 
 ## Visual states
 
-| State                            | Where it shows                                  | Treatment                                                             |
-| -------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------- |
-| Idle                             | header chip                                     | muted dot, "idle"                                                     |
-| Running                          | header chip + last `TraceLine status="running"` | pulsing dot, `shimmer` text                                           |
-| Permission                       | composer footer                                 | `DropdownMenu` trigger: shield, current label; no glyphs from pi      |
-| Needs input                      | header chip, session row                        | `Badge` with accent colour; this is the state that must catch the eye |
-| Streaming                        | last assistant turn                             | text appends; no spinner, no layout shift                             |
-| Compacting                       | header chip                                     | "Compacting…" with a stop control                                     |
-| Retrying                         | header chip                                     | attempt count from `auto_retry_*` events                              |
-| Error                            | last turn + toast                               | `Alert variant="destructive"`, never a silent stop                    |
-| Child exited                     | transcript notice                               | states that the turn was lost, offers reattach                        |
-| Disconnected                     | top banner                                      | reconnect in progress, no modal                                       |
-| Unsupported UI (`ctx.ui.custom`) | transcript notice                               | names the extension, points at the terminal tab                       |
-| Empty session                    | centre                                          | `Empty` with three suggestions                                        |
-| No project                       | sidebar                                         | `Empty` with a project picker                                         |
+| State                            | Where it shows                    | Treatment                                                                    |
+| -------------------------------- | --------------------------------- | ---------------------------------------------------------------------------- |
+| Idle                             | nowhere                           | No header indicator; the transcript says what happened                       |
+| Running                          | last `TraceLine status="running"` | pulsing line, `shimmer` title only while it runs                             |
+| Loading a session                | centre                            | `Spinner` + "Loading the session…"                                           |
+| Disconnected                     | centre                            | destructive `Alert`, "Reconnecting…"                                         |
+| Permission                       | composer footer                   | `DropdownMenu` trigger: shield, current label; no glyphs from pi             |
+| Needs input                      | dialog, session row               | The blocking dialog is the prompt; the row keeps a `Badge variant="warning"` |
+| Streaming                        | last assistant turn               | text appends; no spinner, no layout shift                                    |
+| Compacting                       | header chip                       | "Compacting…" with a stop control                                            |
+| Retrying                         | header chip                       | attempt count from `auto_retry_*` events                                     |
+| Error                            | last turn + toast                 | `Alert variant="destructive"`, never a silent stop                           |
+| Child exited                     | transcript notice                 | states that the turn was lost, offers reattach                               |
+| Disconnected                     | top banner                        | reconnect in progress, no modal                                              |
+| Unsupported UI (`ctx.ui.custom`) | transcript notice                 | names the extension, points at the terminal tab                              |
+| Empty session                    | centre                            | `Empty` with three suggestions                                               |
+| No project                       | sidebar                           | `Empty` with a project picker                                                |
 
 ## Density and typography
 

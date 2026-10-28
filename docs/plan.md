@@ -245,9 +245,18 @@ composer plus the `bash` command. Then the skill and prompt palette, which needs
 - Composer controls follow AI Elements Prompt Input: model, permission, stop and
   an arrow-up submit inside the `block-end` addon. Enter submits, Shift+Enter adds
   a line, Esc stops a run. The header keeps the title and the run chip only.
-- Animation comes from the shadcn utilities, not new keyframes: `shimmer` on the
-  working chip, the pulsing `Skeleton` dot, the animated streaming caret, and the
-  `scroll-fade-b` viewport the scroller already sets.
+- Animation comes from the shadcn utilities, not new keyframes: the streaming
+  caret pulses, menus use the registry enter/exit animation, and the scroller keeps
+  `scroll-fade-b`. The registry's menu animation was 100ms with a 2px slide, which
+  read as no animation, so `DropdownMenuContent` now runs 200ms with a 16px slide.
+- The header shows only the title. Loading, disconnected and not-ready states are
+  centred: a `Spinner` until the first snapshot, a destructive `Alert` once the
+  socket closes. Switching sessions therefore never flashes "No messages yet".
+- Other loading states: the sidebar list shows a `Spinner` while the query runs, and
+  the delete action shows one while its request is in flight.
+- The composer is a white surface with a thin `border-foreground/60` border; the
+  model and permission triggers are ghost buttons and submit is the primary round
+  arrow, so the footer follows the surface instead of the old grey fill.
 - Every blocking prompt is now a component, not a bordered div: `confirm` is an
   `AlertDialog`, `select`/`input`/`editor` are `Dialog`s that only answer or
   cancel. Compaction, retry and extension notices are `Marker`s; `error` notices

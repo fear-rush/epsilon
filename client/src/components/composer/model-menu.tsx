@@ -52,11 +52,7 @@ export function ModelMenu({ models, model, onSelect }: ModelMenuProps) {
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger
-				render={
-					<InputGroupButton size="sm" className="ml-auto rounded-full text-muted-foreground" />
-				}
-			>
+			<DropdownMenuTrigger render={<InputGroupButton size="sm" className="ml-auto rounded-full" />}>
 				<span className="max-w-44 truncate">{model?.name ?? "Model"}</span>
 				<ChevronDownIcon data-icon="inline-end" />
 			</DropdownMenuTrigger>

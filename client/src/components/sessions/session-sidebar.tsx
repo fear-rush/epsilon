@@ -21,6 +21,7 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
 	Sidebar,
 	SidebarContent,
@@ -90,7 +91,12 @@ export function SessionSidebar() {
 
 				<SidebarGroup>
 					<SidebarGroupLabel title={project}>{projectLabel}</SidebarGroupLabel>
-					{sessions.data !== undefined && sessions.data.sessions.length === 0 ? (
+					{sessions.isPending ? (
+						<div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+							<Spinner />
+							Loading sessions…
+						</div>
+					) : sessions.data !== undefined && sessions.data.sessions.length === 0 ? (
 						<p className="px-2 py-1 text-xs text-muted-foreground">No sessions yet.</p>
 					) : (
 						<SidebarMenu>
@@ -130,6 +136,7 @@ export function SessionSidebar() {
 								if (pendingDelete !== undefined) remove.mutate(pendingDelete.id);
 							}}
 						>
+							{remove.isPending && <Spinner data-icon="inline-start" />}
 							Delete
 						</AlertDialogAction>
 					</AlertDialogFooter>
