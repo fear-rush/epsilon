@@ -74,7 +74,11 @@ function Row({ row }: { row: TranscriptRow }) {
 							</p>
 						)}
 						{row.text !== "" && <Markdown>{row.text}</Markdown>}
-						{row.streaming && <span className="text-muted-foreground">▍</span>}
+						{row.streaming && (
+							<span className="animate-pulse text-muted-foreground motion-reduce:animate-none">
+								▍
+							</span>
+						)}
 					</MessageContent>
 				</Message>
 			);

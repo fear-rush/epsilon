@@ -4,14 +4,16 @@
  * same transcript and the same live child.
  */
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { ArrowUpIcon, SquareIcon } from "lucide-react";
+import { useRef, useState } from "react";
 import { transcript } from "shared";
 import type { DialogQuestion } from "shared";
 
 import { ConfirmDialog } from "@/components/chat/confirm-dialog";
 import { QuestionDialog } from "@/components/chat/question-dialog";
 import { Transcript } from "@/components/chat/transcript";
-import { ModelPicker } from "@/components/composer/model-picker";
+import { ModelMenu } from "@/components/composer/model-menu";
+import { PermissionMenu } from "@/components/composer/permission-menu";
 import { Badge } from "@/components/ui/badge";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import {
@@ -33,10 +35,12 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 		const { sessionId } = Route.useParams();
 		const { store, snapshot } = useConversation(sessionId);
 		const [prompt, setPrompt] = useState("");
+		const formRef = useRef<HTMLFormElement>(null);
 		const rows = transcript(snapshot.state);
 		const { busy, running, needsInput, dialogs, statuses, widgets, title, sessionName } =
 			snapshot.state;
 		const { models, model } = snapshot.state;
+		const otherStatuses = statuses.filter((status) => status.key !== "permission");
 		const confirmations = dialogs.filter(isConfirm);
 		const questions = dialogs.filter((dialog) => !isConfirm(dialog));
 		const aboveComposer = widgets.filter((widget) => widget.placement === "aboveEditor");
@@ -61,31 +65,22 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 					{snapshot.status === "open" &&
 						(running ? (
 							<span className="flex items-center gap-1.5">
-								<Skeleton
-									className={
-										busy
-											? "size-1.5 rounded-full bg-success"
-											: "size-1.5 animate-none rounded-full bg-muted-foreground/40"
-									}
-								/>
-								{busy ? "working" : "idle"}
+								{busy ? (
+									<Skeleton className="size-1.5 rounded-full bg-success" />
+								) : (
+									<span className="size-1.5 rounded-full bg-muted-foreground/40" />
+								)}
+								<span className={busy ? "shimmer" : undefined}>{busy ? "working" : "idle"}</span>
 							</span>
 						) : (
 							<span>agent stopped</span>
 						))}
 					{needsInput && <Badge variant="warning">needs input</Badge>}
-					{statuses.map((status) => (
-						<Badge key={status.key} variant="secondary" className="font-mono font-normal">
+					{otherStatuses.map((status) => (
+						<Badge key={status.key} variant="secondary" className="font-normal">
 							{status.text}
 						</Badge>
 					))}
-					<div className="ml-auto">
-						<ModelPicker
-							models={models}
-							model={model}
-							onSelect={(next) => store.setModel(next.provider, next.id)}
-						/>
-					</div>
 				</header>
 
 				{questions.map((question) => (
@@ -128,39 +123,69 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 
 				<div className="border-t p-3">
 					<div className="mx-auto w-full max-w-3xl">
-						<InputGroup className="h-auto flex-col items-stretch">
-							<InputGroupTextarea
-								value={prompt}
-								onChange={(event) => setPrompt(event.target.value)}
-								placeholder={
-									busy
-										? "Steer the run (Enter steers, Esc stops)"
-										: "Message the agent (Enter sends, Shift+Enter is a newline)"
-								}
-								className="max-h-40 min-h-11"
-								onKeyDown={(event) => {
-									if (event.key === "Escape" && busy) {
-										event.preventDefault();
-										store.abort();
-										return;
+						<form
+							ref={formRef}
+							onSubmit={(event) => {
+								event.preventDefault();
+								submit();
+							}}
+						>
+							<InputGroup>
+								<InputGroupTextarea
+									value={prompt}
+									onChange={(event) => setPrompt(event.target.value)}
+									placeholder={
+										busy
+											? "Steer the run (Enter steers, Esc stops)"
+											: "Message the agent (Enter sends, Shift+Enter is a newline)"
 									}
-									if (event.key === "Enter" && !event.shiftKey) {
-										event.preventDefault();
-										submit();
-									}
-								}}
-							/>
-							<InputGroupAddon align="block-end" className="justify-end gap-1">
-								{busy && (
-									<InputGroupButton variant="outline" onClick={() => store.abort()}>
-										stop
+									className="max-h-40 min-h-11 p-3"
+									onKeyDown={(event) => {
+										if (event.key === "Escape" && busy) {
+											event.preventDefault();
+											store.abort();
+											return;
+										}
+										if (event.key === "Enter" && !event.shiftKey) {
+											event.preventDefault();
+											formRef.current?.requestSubmit();
+										}
+									}}
+								/>
+								<InputGroupAddon align="block-end">
+									<ModelMenu
+										models={models}
+										model={model}
+										onSelect={(next) => store.setModel(next.provider, next.id)}
+									/>
+									<PermissionMenu
+										statuses={statuses}
+										onSelect={(mode) => store.setPermission(mode)}
+									/>
+									{busy && (
+										<InputGroupButton
+											size="icon-sm"
+											variant="outline"
+											className="rounded-full"
+											aria-label="Stop the run"
+											onClick={() => store.abort()}
+										>
+											<SquareIcon />
+										</InputGroupButton>
+									)}
+									<InputGroupButton
+										type="submit"
+										size="icon-sm"
+										variant="default"
+										className="rounded-full"
+										disabled={prompt.trim() === ""}
+										aria-label={busy ? "Steer" : "Send"}
+									>
+										<ArrowUpIcon />
 									</InputGroupButton>
-								)}
-								<InputGroupButton variant="default" onClick={submit}>
-									{busy ? "steer" : "send"}
-								</InputGroupButton>
-							</InputGroupAddon>
-						</InputGroup>
+								</InputGroupAddon>
+							</InputGroup>
+						</form>
 					</div>
 				</div>
 			</div>

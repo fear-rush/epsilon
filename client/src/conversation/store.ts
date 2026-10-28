@@ -48,12 +48,25 @@ export class ConversationStore {
 		link.send({ t: "rpc", sessionId: this.sessionId, command: { type: "abort" } });
 	}
 
-	/** pi answers with a fresh snapshot, so the picker shows the model it chose. */
+	/** pi answers with a fresh snapshot, so the menu shows the model it chose. */
 	setModel(provider: string, modelId: string): void {
 		link.send({
 			t: "rpc",
 			sessionId: this.sessionId,
 			command: { type: "set_model", provider, modelId },
+		});
+	}
+
+	/**
+	 * `/permission` is the extension's own command, and pi dispatches an extension
+	 * command from a prompt without starting a turn. Verified over the socket: the
+	 * reply is ok, no agent event runs, and the extension sends a new `setStatus`.
+	 */
+	setPermission(mode: string): void {
+		link.send({
+			t: "rpc",
+			sessionId: this.sessionId,
+			command: { type: "prompt", message: `/permission ${mode}` },
 		});
 	}
 

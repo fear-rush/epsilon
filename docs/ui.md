@@ -25,14 +25,13 @@ not laws.
 Installed: `message`, `message-scroller`, `bubble`, `trace`, `code-block`,
 `questionnaire`, `empty`, `input-group`, `collapsible`, `select`, `tooltip`,
 `alert`, `button`, `input`, `textarea`, `sidebar`, `sheet`, `badge`, `skeleton`,
-`command`, `popover`, `dropdown-menu`, `context-menu`, `dialog`, `alert-dialog`,
-`marker`.
+`dropdown-menu`, `context-menu`, `dialog`, `alert-dialog`, `marker`.
 
 Add when the slice that needs it lands, all verified present in the registry:
 
 ```sh
-bunx --bun shadcn@latest add drawer hover-card progress item attachment resizable \
-  tabs sonner switch avatar table radio-group kbd spinner
+bunx --bun shadcn@latest add command popover drawer hover-card progress item \
+  attachment resizable tabs sonner switch avatar table radio-group kbd spinner
 ```
 
 `sidebar.tsx` is trimmed to the parts epsilon uses (offcanvas column, Sheet below
@@ -68,13 +67,15 @@ with it.
 | Extension input / editor           | `Dialog` + `Input`; monospace `Textarea`                                                                      |                                                                             |
 | Extension status / widget          | `Badge` in the header; widget rows above the composer                                                         | Widget is text, not UI                                                      |
 | Session list                       | `Sidebar` + `SidebarGroup` per project                                                                        | Running: pulsing `Skeleton` dot; needs-input: `Badge variant="warning"`     |
-| Session actions                    | `ContextMenu` (desktop), mirrored `DropdownMenu` on `…`, `Sheet` menu on mobile                               |                                                                             |
+| Session actions                    | `ContextMenu` and `DropdownMenu` on `…`; on mobile the row is already inside a `Sheet`                        |                                                                             |
 | Search everything                  | `Command` in `Dialog`, ⌘K                                                                                     | Sessions, files, slash commands, actions                                    |
 | Slash palette, `@` files           | `Command` in `Popover` anchored to the composer                                                               | Server-driven from `get_commands`                                           |
-| Model, reasoning                   | native `select` grouped by provider today; searchable palette when one exists                                 | 510 models available, so the list needs grouping                            |
+| Model                              | `DropdownMenu` + `DropdownMenuRadioGroup`, one group per provider                                             | 510 models: current provider first, names sorted inside each group          |
+| Permission                         | `DropdownMenu` radio group: Strict, Ask, Yolo                                                                 | The extension's `/permission <mode>` owns it; the UI shows its own labels   |
+| Reasoning                          | `DropdownMenu` + `DropdownMenuRadioGroup`                                                                     | Not built yet                                                               |
 | Context usage                      | `HoverCard` + `Progress`                                                                                      |                                                                             |
 | Attachments                        | `Attachment` + `AttachmentGroup` in `InputGroup`                                                              | `state` wired to real progress                                              |
-| Composer                           | `InputGroup` + `InputGroupTextarea`, addons at `block-start` and `block-end`                                  |                                                                             |
+| Composer                           | `InputGroup` + `InputGroupTextarea`; `block-end` addon holds model, permission, stop and submit               | Arrow-up submit; Enter sends, Shift+Enter adds a line, Esc stops            |
 | File tree                          | nested `Collapsible` per folder, `Button` per file                                                            | A single read file in a turn stays a `TraceLine`                            |
 | Preview                            | `Resizable` + `Tabs` (Preview / Source / Diff) + sandboxed iframe                                             |                                                                             |
 | Terminal                           | `Tabs` + xterm, `Button` row for touch keys                                                                   |                                                                             |
@@ -100,7 +101,7 @@ a touch key row (Esc, Tab, arrows, Ctrl+C).
 
 **Header.** Session title inline-editable, run state chip, then actions: files,
 preview, terminal, resources, palette. Nothing else. No breadcrumbs, no tabs besides
-the ones above.
+the ones above. Model and permission are composer controls, not header controls.
 
 ## Visual states
 
@@ -108,6 +109,7 @@ the ones above.
 | -------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------- |
 | Idle                             | header chip                                     | muted dot, "idle"                                                     |
 | Running                          | header chip + last `TraceLine status="running"` | pulsing dot, `shimmer` text                                           |
+| Permission                       | composer footer                                 | `DropdownMenu` trigger: shield, current label; no glyphs from pi      |
 | Needs input                      | header chip, session row                        | `Badge` with accent colour; this is the state that must catch the eye |
 | Streaming                        | last assistant turn                             | text appends; no spinner, no layout shift                             |
 | Compacting                       | header chip                                     | "Compacting…" with a stop control                                     |

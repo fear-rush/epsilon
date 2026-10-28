@@ -29,19 +29,20 @@ Legend: **RPC** = a pi command or frame · **REST** = our HTTP route ·
 
 ## Running a turn
 
-| Feature                                    | How                                                                 |
-| ------------------------------------------ | ------------------------------------------------------------------- |
-| Send a prompt, with images                 | RPC `prompt`                                                        |
-| Steer mid-run, queue a follow-up           | RPC `steer`, `follow_up`                                            |
-| Abort, clear the queue                     | RPC `abort`, `clear_queue`                                          |
-| Queue behaviour modes                      | RPC `set_steering_mode`, `set_follow_up_mode`                       |
-| `!command` / `!!command`                   | RPC `bash`, `abort_bash`                                            |
-| Change model, reasoning level              | RPC `set_model`, `set_thinking_level`, `cycle_*`, `get_available_*` |
-| Compact context, with instructions         | RPC `compact`                                                       |
-| Auto-compaction, auto-retry                | RPC `set_auto_compaction`, `set_auto_retry`, `abort_retry`          |
-| Context usage, tokens, cost, tool counts   | RPC `get_session_stats` + derived from events                       |
-| Stop compaction or retry mid-flight        | RPC `abort` path + `abort_retry`                                    |
-| Completion sound, needs-input notification | own, on `agent_settled` / dialog open                               |
+| Feature                                    | How                                                                                      |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Send a prompt, with images                 | RPC `prompt`                                                                             |
+| Steer mid-run, queue a follow-up           | RPC `steer`, `follow_up`                                                                 |
+| Abort, clear the queue                     | RPC `abort`, `clear_queue`                                                               |
+| Queue behaviour modes                      | RPC `set_steering_mode`, `set_follow_up_mode`                                            |
+| `!command` / `!!command`                   | RPC `bash`, `abort_bash`                                                                 |
+| Permission policy (strict, ask, yolo)      | extension command `/permission <mode>` via RPC `prompt`; mode read from its keyed status |
+| Change model, reasoning level              | RPC `set_model`, `set_thinking_level`, `cycle_*`, `get_available_*`                      |
+| Compact context, with instructions         | RPC `compact`                                                                            |
+| Auto-compaction, auto-retry                | RPC `set_auto_compaction`, `set_auto_retry`, `abort_retry`                               |
+| Context usage, tokens, cost, tool counts   | RPC `get_session_stats` + derived from events                                            |
+| Stop compaction or retry mid-flight        | RPC `abort` path + `abort_retry`                                                         |
+| Completion sound, needs-input notification | own, on `agent_settled` / dialog open                                                    |
 
 ## Transcript rendering
 

@@ -87,15 +87,16 @@ Reducer plus renderers, driven by the fixture first, then live.
 
 ### S4: Composer
 
-Steer, abort and the model picker are built; steer and abort are verified. The
-picker's socket half works and its next-turn half is pending. The palette and
-`!cmd` are not started.
+Steer, abort and the model menu are built; steer and abort are verified. The model
+menu's socket half works and its next-turn half is pending. The palette and `!cmd`
+are not started.
 
 - [x] Steer mid-run and see the message land in the transcript
 - [x] Abort, and the run stops in the CLI as well
 - [ ] Change model; the next turn uses it, and `get_state` in the CLI agrees
       (socket: `set_model` answered ok, the refreshed snapshot is pi's own
-      `get_state` with the new model, and a bogus pair answers `Model not found`)
+      `get_state` with the new model, and a bogus pair answers `Model not found`;
+      the menu is now a DropdownMenu in the composer footer)
 - [ ] An installed skill or prompt template appears in the palette and runs
 - [ ] `!ls` runs a shell command and its output is in the transcript
 
@@ -231,8 +232,22 @@ composer plus the `bash` command. Then the skill and prompt palette, which needs
   `Badge`, the pulsing `Skeleton` dot, diff lines and error `Alert`s use theme
   colours; a grep finds no raw palette class in `client/src` outside generated
   components.
-- The model picker is a `Command` in a `Popover`: the current provider's models
-  while the search is empty, then 60 results across all providers.
+- The model menu is the AI Elements model selector: a `DropdownMenu` with one
+  `DropdownMenuRadioGroup` per provider, current provider first. 510 models open
+  as one scrolling menu, grouped; `Command` and `Popover` were removed again
+  until the palette needs them.
+- The permission control reads the extension's keyed status (`permission`) but
+  renders its own three labels, Strict, Ask and Yolo, with a shield and no glyph
+  or `perm:` prefix. Switching sends `/permission <mode>` as a `prompt`: pi
+  dispatches an extension command before touching the agent, even mid-run, so it
+  starts no turn and writes no message into the session. Verified over the socket:
+  the reply is ok, the status changes, and a second snapshot has zero messages.
+- Composer controls follow AI Elements Prompt Input: model, permission, stop and
+  an arrow-up submit inside the `block-end` addon. Enter submits, Shift+Enter adds
+  a line, Esc stops a run. The header keeps the title and the run chip only.
+- Animation comes from the shadcn utilities, not new keyframes: `shimmer` on the
+  working chip, the pulsing `Skeleton` dot, the animated streaming caret, and the
+  `scroll-fade-b` viewport the scroller already sets.
 - Every blocking prompt is now a component, not a bordered div: `confirm` is an
   `AlertDialog`, `select`/`input`/`editor` are `Dialog`s that only answer or
   cancel. Compaction, retry and extension notices are `Marker`s; `error` notices
