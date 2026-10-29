@@ -9,9 +9,10 @@ yield an identical transcript.
 One complete agent run: a prompt, a `bash` tool call, and the closing assistant
 message. 50 events, two turns, ends with `agent_settled`.
 
-Captured from pi 1.4.0 by spawning the pinned package as `--mode rpc`,
-answering the permission extension's `confirm` with yes, then keeping only
-stdout.
+Captured from pi 1.4.0 by running the pinned package as a child in its JSON event
+mode, answering the permission extension's `confirm` with yes, then keeping only
+the event stream. The embedded engine produces the same shape through
+`toJsonEvent`.
 
 Two edits were applied to the raw trace, and `replay` does not depend on either:
 

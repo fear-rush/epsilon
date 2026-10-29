@@ -46,6 +46,13 @@ export class SessionRegistry {
 		}
 	}
 
+	/** Re-read config in every live engine, after the settings panel wrote it. */
+	reloadAll(): void {
+		for (const session of this.sessions.values()) {
+			if (session.isOpen) void session.reload();
+		}
+	}
+
 	disposeAll(): void {
 		for (const session of [...this.sessions.values()]) session.dispose();
 		this.sessions.clear();

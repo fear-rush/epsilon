@@ -1,13 +1,14 @@
+import { Link } from "@tanstack/react-router";
 import { TriangleAlertIcon } from "lucide-react";
 import type { Readiness } from "shared";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { buttonVariants } from "@/components/ui/button";
 
 /**
  * The unsupported state, centred on every page: a deployment with no usable model
- * says which step is missing and which command fixes it, and offers no composer to
- * type into. Silence here is what made a fresh home look broken (AGENTS.md rule 7,
- * docs/ui.md "Not ready").
+ * names the missing step and links to the settings page that fixes it. Silence
+ * here is what made a fresh home look broken (AGENTS.md rule 7, docs/ui.md).
  */
 export function NotReady({ state }: { state: Extract<Readiness, { ready: false }> }) {
 	return (
@@ -21,6 +22,11 @@ export function NotReady({ state }: { state: Extract<Readiness, { ready: false }
 					<code className="block truncate rounded-md bg-muted px-2 py-1 font-mono text-xs">
 						{state.home}
 					</code>
+					<div>
+						<Link to="/settings/providers" className={buttonVariants()}>
+							Open Settings
+						</Link>
+					</div>
 				</AlertDescription>
 			</Alert>
 		</div>

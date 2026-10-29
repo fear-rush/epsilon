@@ -120,8 +120,9 @@ false, delete it rather than adding a correction below it.
   subscriber, so the picker shows the engine's model instead of echoing the
   request. The engine looks the pair up in the available models and the command
   fails with `Model not found: provider/id` otherwise.
-- The shell is the shadcn sidebar: a 16rem column at 1280px and above, a left
-  Sheet below, ⌘B to toggle. `useIsMobile` treats anything under 1280px as
+- The shell is the shadcn sidebar: an 18rem column at 1280px and above, a left
+  Sheet below, ⌘B to toggle. The settings navigation uses the same exported
+  `SIDEBAR_WIDTH`, so the column edge does not move between the two surfaces. `useIsMobile` treats anything under 1280px as
   mobile, which is the tablet rule in ui.md. The right panel waits for its first
   surface (files, S6).
 - `client/src/components/ui/sidebar.tsx` is trimmed from the registry to 298
@@ -221,7 +222,7 @@ false, delete it rather than adding a correction below it.
 - A tool call blocks on the permission extension's `confirm` until a socket
   `dialog` answer arrives, and the reply is the same `ExtensionUIContext` result
   pi's TUI would produce
-  ([note](../notes/2026-10-28-rpc-permission-block.md)).
+  ([note](../notes/2026-10-28-extension-confirm-blocks-a-turn.md)).
 - `steer` returns ok and the steered text arrives as a user message. In one run it
   landed after `agent_settled`, so the queue survives a fast turn.
 - `abort` answers every pending dialog as cancelled and settles the run.
@@ -299,10 +300,77 @@ false, delete it rather than adding a correction below it.
   inline key reported `ready: true` and the turn ended with
   `401: Invalid 'Authorization' header or token.` Only a request can answer that.
 - `bun run dev` runs `scripts/dev.ts`, which points the engine at `.sandbox/agent`
-  and the project at `.sandbox/project`, creates both, and symlinks the operator's
-  `auth.json` and `models.json` so a turn can run. `bun run dev:host` keeps the real
-  home; `bun run sandbox:clean` deletes the sandbox. Only the two `EPSILON_*` values
-  change: `HOME` does not, so `~/.agents/skills` still loads in dev.
-- The sandbox proves the home needs no bootstrap from us: pi writes
-  `sessions/`, `models-store.json` and an empty `auth.json` itself on first use, and a
-  symlinked `auth.json` is not overwritten.
+  and the project at `.sandbox/project`, creates both, and copies the operator's
+  `auth.json` and `models.json` so a turn can run. Both are copies, not links:
+  Settings writes `models.json`, and deleting a provider logs it out, which writes
+  `auth.json`. A link would write the operator's real file. `bun run dev:host` keeps
+  the real home; `bun run sandbox:clean` deletes the sandbox. Only the two
+  `EPSILON_*` values change: `HOME` does not, so `~/.agents/skills` still loads in
+  dev.
+- The sandbox proves the home needs no bootstrap from us: pi writes `sessions/`,
+  `models-store.json` and an empty `auth.json` itself on first use.
+
+## Verified for S17 (settings, against a scratch home)
+
+- `GET /api/settings` on an empty home answers `ready: false`, 42 built-in providers,
+  no models. Every provider reports `configured: false`.
+- `POST /api/settings/providers` with a base URL, `openai-completions`, a key and one
+  model writes the documented `models.json` entry, mode `0600`. The next read lists
+  the provider with `source: "models_json_key"`, one model, and `ready: true`.
+- `PUT /api/settings/default-model` writes `defaultProvider` and `defaultModel` into
+  `settings.json` and answers 204.
+- `POST /api/settings/mcp` writes `mcpServers` and keeps the documented header
+  value. Deleting it leaves `{ "mcpServers": {} }`.
+- `POST /api/settings/skills` writes `skills/<name>/SKILL.md` with the description in
+  frontmatter; `GET` returns name, description and body; `DELETE` removes only the
+  directory.
+- An unknown package removal answers 400 with one sentence, and readiness returns to
+  `false` once the provider is removed.
+- An entry pi cannot compose surfaces in the panel from `ModelRuntime.getError()`:
+  `Provider "broken", model x: no "api" specified. Set at provider or model level.`
+- A real failed turn recorded as `stopReason: "error"` now yields a transcript
+  `notice` row carrying pi's `errorMessage`, both live and after a replay.
+
+## Verified for the provider editor (S17)
+
+- An empty home lists no providers and 43 built-ins. `GET
+  /api/settings/providers/openrouter` answers `builtin: true`, no `api`, and a
+  401-model catalog.
+- A key-only write for that built-in stores `{ "apiKey": "…" }`; the catalog stays
+  401 models and the provider appears in the configured list as `models_json_key`.
+- A custom provider write with `models`, `modelOverrides`, headers and a key returns
+  them from the detail route; header values are absent, only their names.
+- A later header write with a blank value keeps the stored value: `{A: "1"}` then
+  `{A: "", B: "2"}` leaves `{A: "1", B: "2"}` in `models.json`.
+- Import against a local endpoint reads `{base}/models` with `Authorization:
+  Bearer` and `{base}/v1/models` with `x-api-key` and `anthropic-version`; a stored
+  provider key is resolved server-side for the request.
+
+## Verified for the settings surface (S17, browser pass)
+
+- Deleting a provider writes the `models.json` entry removal and then asks
+  `ModelRuntime.getProviderAuthStatus()` what is left. A `stored` answer calls
+  `ModelRuntime.logout()`, so the key in `auth.json` goes too and the row leaves the
+  list. On a scratch home, a built-in with both an entry and a stored key lost both;
+  a custom provider whose key lives in `models.json` lost only the entry.
+- The provider list row is the id and "N models"; the credential source is not shown
+  there, because the source is a short pi key ("stored") that reads as jargon.
+- The API family picker names each family with the path it appends
+  (`Anthropic Messages (/v1/messages)`), and the request-path preview, the "all
+  families" list and `providerEndpoint` are gone. `PROVIDER_APIS` now carries only
+  the label, the path and the model-list path; the remaining test pins
+  `providerModelsEndpoint`.
+- The registry hardcodes `cursor-default` on menu, command and select items, and
+  cmdk writes `data-disabled="false"` on every enabled row, so a
+  `[role="option"]:not([data-disabled])` rule never matches. The pointer rule keys on
+  `aria-disabled="true"` and the `cursor-default` classes are removed from the
+  components.
+- The registry checkbox has no motion: `transition-shadow` on the box and
+  `transition-none` on the tick, which is rendered only while checked. The local copy
+  keeps the indicator mounted and transitions scale and opacity, and it must keep
+  `[&>svg]:size-3.5`, or the tick renders at its 24px default inside a 16px box.
+- The provider editor footer is not sticky inside the page scroller: the right column
+  is a flex column whose form scrolls above a footer pinned to the bottom, so Delete
+  and Save sit at the panel edge on a short form too.
+- A form submit inside a grid stretches to the grid width, which is why `.justify-self-start`
+  or `-end` decides its width. The settings forms put it at the right edge.

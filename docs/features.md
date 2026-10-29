@@ -7,6 +7,7 @@ needs our own code, and what is deliberately left to the terminal.
 
 Legend: **engine** = an `AgentSession` method in this process · **REST** = our HTTP
 route · **WS** = our socket command or frame · **own** = our own module ·
+**settings** = the settings page, which writes through REST ·
 **terminal** = the terminal tab, inside the deployment.
 
 ## Sessions
@@ -60,21 +61,33 @@ route · **WS** = our socket command or frame · **own** = our own module ·
 | Cache-miss and cost notices         | WS events + `getSessionStats()`; respect pi's `showCacheMissNotices`             |
 | Skills invocation turns             | parsed from the user message, like pi's TUI does                                 |
 
-## Readiness
+## Configuration
 
-The deployment owns its agent home, and setup happens in a terminal inside it
-([ADR-0005](adr/0005-deployment-owns-agent-home.md),
-[ADR-0006](adr/0006-setup-in-the-deployment-terminal.md)). The dashboard reads that
-home and reports it. It never writes pi's configuration.
+The deployment owns its agent home ([ADR-0005](adr/0005-deployment-owns-agent-home.md)).
+The dashboard configures it through pi's SDK and its documented files
+([ADR-0012](adr/0012-configure-in-the-dashboard.md)). What stays in the terminal is
+only what pi does not expose to a host.
 
-| Feature                                                                       | How                                                               |
-| ----------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Report readiness: is there a usable model in this home, and where is the home | `agent/readiness.ts` behind REST `GET /api/readiness`             |
-| A missing step becomes a notice naming the terminal command that fixes it     | own, on the not-ready state; never a silently failed turn         |
-| Provider list, package list and trust state in the readiness answer           | **not built**; the resources page (S8) owns the first two         |
-| Sign in, choose a model, record trust, enable packages, sign in to MCP        | **terminal** inside the deployment: `pi`, then `/login`, `/trust` |
-| Install a package                                                             | **terminal** (`pi install`), then `/reload` in the page           |
-| Credential upload, configuration import, settings forms                       | **not built, by decision**                                        |
+| Feature                                                                       | How                                                                                                                                                  |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Report readiness: is there a usable model in this home, and where is the home | `agent/readiness.ts` behind REST `GET /api/readiness`                                                                                                |
+| A missing provider becomes a notice that opens Settings                       | own, on the not-ready state; never a silently failed turn                                                                                            |
+| Provider list with the id and model count                                     | `settings/providers.ts` + `ModelRuntime`, REST `GET /api/settings`                                                                                   |
+| Two-pane editor: configured providers and their models left, one form right   | Routes `/settings/providers/$providerId` and `/new`                                                                                                  |
+| Add a provider pi ships, or a custom one, from a searchable picker            | `builtins` in the snapshot; `components/settings/providers/`                                                                                         |
+| Read one provider's detail, with header names but no secret values            | REST `GET /api/settings/providers/{id}`                                                                                                              |
+| Name each API family with the path it appends, in the picker                  | `PROVIDER_APIS` in `shared/src/provider-endpoints.ts`                                                                                                |
+| Add, edit or remove a model; override a model pi ships                        | **settings** page → `models` / `modelOverrides`, with an explicit replace warning                                                                    |
+| Fetch a provider's model list, then add the ones you pick                     | REST `POST /api/settings/providers/models`; Epsilon's own bounded GET                                                                                |
+| Add, edit or remove a provider endpoint, its key, headers and models          | **settings** page → `models.json`, zod-parsed and validated in the form, unknown keys kept; removing a provider logs a stored key out of `auth.json` |
+| Choose the default provider and model                                         | **settings** → `SettingsManager.setDefaultModelAndProvider`                                                                                          |
+| Add, replace or remove an MCP server                                          | **settings** → `mcp.json`                                                                                                                            |
+| Create, edit or remove a user skill                                           | **settings** → `<agent home>/skills/<name>/SKILL.md`                                                                                                 |
+| Install or remove a package                                                   | **settings** → `DefaultPackageManager.installAndPersist` / `removeAndPersist`                                                                        |
+| Apply a change to live sessions                                               | `registry.reloadAll()` → `session.reload()`                                                                                                          |
+| Readiness detail, package versions, trust state on a resources page           | **not built**; S8 owns the read-only page                                                                                                            |
+| OAuth or subscription login, project trust, MCP sign-in, TUI-only settings    | **terminal**: `pi`, then `/login`, `/trust`, `/mcp login`, `/settings`                                                                               |
+| Update a package, clear MCP credentials, configuration import                 | **not built**                                                                                                                                        |
 
 ## Extension surface
 
@@ -89,14 +102,14 @@ home and reports it. It never writes pi's configuration.
 
 ## Resources (read-only)
 
-| Feature                                      | How                                               |
-| -------------------------------------------- | ------------------------------------------------- |
-| Loaded skills with scope and source          | REST `GET /resources`                             |
-| Installed packages and versions              | REST `GET /resources`                             |
-| MCP servers, enabled state, connection state | REST `GET /resources`                             |
-| Remove, update, enable, MCP sign-in          | **terminal** (`pi remove`, `pi update`, `pi mcp`) |
-| Install a package                            | **terminal** (`pi install`, `pi mcp add`)         |
-| Reload after installing                      | WS `reload` → `session.reload()`, in place        |
+| Feature                                                 | How                                        |
+| ------------------------------------------------------- | ------------------------------------------ |
+| Loaded skills with scope and source                     | REST `GET /resources`                      |
+| Installed packages and versions                         | REST `GET /resources`                      |
+| MCP servers, enabled state, connection state            | REST `GET /resources`                      |
+| Enable or remove a package, add or remove an MCP server | **settings**                               |
+| Update a package, MCP sign-in                           | **terminal** (`pi update`, `pi mcp login`) |
+| Reload after installing                                 | WS `reload` → `session.reload()`, in place |
 
 ## Files, git, terminal, preview
 
@@ -126,10 +139,9 @@ home and reports it. It never writes pi's configuration.
 ## Not building
 
 Auth, accounts, multi-user, npm/git distribution (the deployment is a container
-image), launcher, update checker, i18n, themes beyond light and dark, settings
-settings forms for models, MCP, plugins or skills, file editing, commit history,
-plugin or slot system, multi-pane layouts, a second engine, credential upload and
-configuration import.
+image), launcher, update checker, i18n, themes beyond light and dark, a settings
+screen for every pi setting, configuration import, file editing, commit history,
+plugin or slot system, multi-pane layouts, a second engine.
 
 ## Scope by milestone
 

@@ -1,8 +1,8 @@
 /**
  * One live engine session and the state the browser cannot rebuild by itself.
  * The transcript is pi's session file; the dialogs and display state live in
- * `dialogs.ts`. There is no child and no RPC envelope: a command is a method
- * call on the embedded `AgentSession` (ADR-0008, ADR-0009).
+ * `dialogs.ts`. Nothing here speaks a protocol to a child: a command is a method
+ * call on the embedded `AgentSession` (ADR-0008).
  */
 import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import type { Command, DialogAnswer, ServerFrame, SnapshotModel } from "shared";
@@ -11,7 +11,7 @@ import { Dialogs } from "./dialogs";
 import type { FrameSink } from "./dialogs";
 import { createEngine, toJsonEvent } from "./engine";
 import type { UiHost } from "./engine";
-import { readModels } from "./models";
+import { readModelsFrom } from "./models";
 import { buildSnapshot } from "./snapshot";
 
 /**
@@ -65,7 +65,7 @@ export class LiveSession {
 		});
 		session.agent = agent;
 		session.unsubscribe = agent.subscribe((event) => session.receive(event));
-		session.models = await readModels(agent);
+		session.models = await readModelsFrom(agent.modelRuntime);
 		return session;
 	}
 
@@ -146,7 +146,7 @@ export class LiveSession {
 				await this.prompt(command.text);
 				return;
 			case "steer":
-				await agent.steer(command.text, undefined, { source: "rpc" });
+				await agent.steer(command.text, undefined, { source: "interactive" });
 				return;
 			case "abort":
 				this.dialogs.cancelAll();
@@ -160,12 +160,7 @@ export class LiveSession {
 				this.resync();
 				return;
 			case "reload":
-				// Re-reads extensions, skills, packages and MCP config in place. The
-				// session object and its transcript stay. A package can add a provider, so
-				// the model list is re-read with it.
-				await agent.reload();
-				this.models = await readModels(agent);
-				this.resync();
+				await this.reload();
 				return;
 			case "set_model": {
 				// Resolve against the list the browser was offered, so a pick can never
@@ -186,6 +181,18 @@ export class LiveSession {
 	}
 
 	/**
+	 * Re-read extensions, skills, packages, MCP config and the model catalog in
+	 * place. The session object and its transcript stay. Settings changes call it
+	 * so a live tab sees what the settings panel just wrote.
+	 */
+	async reload(): Promise<void> {
+		const agent = this.engine;
+		await agent.reload();
+		this.models = await readModelsFrom(agent.modelRuntime);
+		this.resync();
+	}
+
+	/**
 	 * `prompt` resolves when the run finishes, but the browser only needs to know
 	 * that pi accepted it. The preflight hook gives that answer before streaming.
 	 */
@@ -194,7 +201,7 @@ export class LiveSession {
 			let accepted = false;
 			void this.engine
 				.prompt(text, {
-					source: "rpc",
+					source: "interactive",
 					preflightResult: () => {
 						accepted = true;
 						resolve();

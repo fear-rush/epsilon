@@ -2,7 +2,7 @@
  * The socket contract: one zod union per direction, exactly as
  * docs/protocol.md writes it. Both sides parse with these schemas.
  *
- * Epsilon owns the command vocabulary: an embedded engine has no RPC envelope,
+ * Epsilon owns the command vocabulary: an embedded engine has no wire envelope,
  * so `command` names what the page wants and the server maps it onto the SDK.
  * `event` still carries pi's JSON session event, which is the reducer's input.
  */
@@ -86,7 +86,7 @@ export const snapshotCommandSchema = z.object({
 
 export type SnapshotCommand = z.infer<typeof snapshotCommandSchema>;
 
-/** What the transcript page reads from the engine, never from RPC replies. */
+/** What the transcript page reads from the engine, never from command replies. */
 export const snapshotStateSchema = z.object({
 	model: snapshotModelSchema.optional(),
 	isStreaming: z.boolean(),

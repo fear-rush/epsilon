@@ -5,11 +5,12 @@ A web dashboard for one user. It embeds the `pi` coding agent in its own process
 [ADR-0009](docs/adr/0009-socket-speaks-epsilon.md)). The deployment it runs in owns
 that agent's home: config, credentials, extensions, packages, sessions and trust
 ([ADR-0005](docs/adr/0005-deployment-owns-agent-home.md)). The dashboard and a
-terminal inside the same deployment are therefore one agent, and the dashboard never
-configures pi itself ([ADR-0006](docs/adr/0006-setup-in-the-deployment-terminal.md)).
+terminal inside the same deployment are therefore one agent, and the dashboard
+configures it there: providers, default model, MCP servers, skills and packages, in
+Settings ([ADR-0012](docs/adr/0012-configure-in-the-dashboard.md)).
 
-Status: S1 to S13 are done and S14 is active. Progress lives in
-[docs/plan.md](docs/plan.md); the per-slice checks are in
+Status: S1 to S5, S12, S13 and S17 are done. S14 is active; S6 to S11, S15 and S16
+are open. Progress lives in [docs/plan.md](docs/plan.md); the per-slice checks are in
 [docs/plan/slices.md](docs/plan/slices.md).
 
 Start with [docs/README.md](docs/README.md). Read these documents in this order:
@@ -22,7 +23,7 @@ Start with [docs/README.md](docs/README.md). Read these documents in this order:
 | [ui.md](docs/ui.md)                             | Component choice, layout, visual states, interaction |
 | [features.md](docs/features.md)                 | Every feature, its scope and how to build it         |
 | [deploy.md](docs/deploy.md)                     | How it runs where `pi` was never installed           |
-| [reference/pi-rpc.md](docs/reference/pi-rpc.md) | What pi exposes: RPC, its library, and its CLI       |
+| [reference/pi-sdk.md](docs/reference/pi-sdk.md) | What pi exposes: its SDK, files and CLI              |
 | [adr/](docs/adr/README.md)                      | Why the engine, the home and the UI contract are so  |
 | [notes/](docs/notes/README.md)                  | How to record a trap that cost time                  |
 
@@ -58,12 +59,13 @@ Run these commands from the repository root:
    `shared/src/pi.ts` for types. Everywhere else, use the exports of those modules.
 2. `shared/` imports no `node:*` module and no React. `client/src/conversation/`
    imports no React. The reducer stays pure and testable by replay.
-3. Do not invent a capability. If [pi-rpc.md](docs/reference/pi-rpc.md) does not
-   list it, pi does not expose it. That file records pi's RPC surface, its exported
-   library and its CLI, because a feature may be missing from one and present in
-   another: login has no RPC command and does have a library call. Examples that
-   exist nowhere: no `/reload` over RPC, no in-session branch switch over RPC, no
-   command that writes a credential.
+3. Do not invent a capability. If [pi-sdk.md](docs/reference/pi-sdk.md) does not
+   list it, pi does not expose it. That file records pi's SDK exports, its
+   documented files and its CLI, because a feature may be present in one and
+   missing from another: a custom provider has no login method while a built-in
+   one does, and packages have an exported installer while MCP configuration does
+   not. Examples that exist nowhere: no in-session branch switch, no writer for
+   `auth.json` outside `ModelRuntime.login()`.
 4. Use one schema language (`zod`) and one styling system (Tailwind with shadcn
    variants).
 5. Keep every file under 300 lines. Keep every route handler under 60 lines. A
@@ -71,10 +73,16 @@ Run these commands from the repository root:
 6. Do not keep state that lives only in server memory or only in the browser.
 7. Show a visible notice when the UI is unsupported or unknown. Silence is not an
    acceptable result. A deployment that is not configured is an unsupported state.
-8. pi's files are pi's. The dashboard does not write settings, credentials or trust.
-   Setup happens in a terminal inside the deployment
-   ([ADR-0006](docs/adr/0006-setup-in-the-deployment-terminal.md)); the dashboard
-   reports what is missing and says which command fixes it.
+8. The dashboard configures this deployment through pi's SDK and its documented
+   files ([ADR-0012](docs/adr/0012-configure-in-the-dashboard.md)). Write through an
+   exported writer when one exists (`SettingsManager`, `DefaultPackageManager`).
+   Otherwise merge the documented shape, keep unknown keys, and refuse to write a
+   file you cannot parse. Never hand-write `auth.json` or `trust.json`: a credential
+   changes only through `ModelRuntime.login()`/`logout()`. A key typed in Settings
+   goes to the documented `apiKey` field of `models.json` and is never sent back to
+   the browser. Deleting a provider calls `logout()` for a key that is stored in
+   `auth.json`, because the provider list shows an entry or a credential and the row
+   would otherwise return. OAuth login, MCP sign-in and trust stay in the terminal.
 9. The agent home is chosen once, in `config.ts`, and passed to every engine
    explicitly. Never let an inherited `PI_*` variable decide which config a
    deployment runs on. Development and hand checks keep their own state: `bun run
@@ -90,7 +98,7 @@ Correct the document in the same commit.
 
 - Check a fact by reading the file, running the command or searching pi's `dist`
   folder. Do not answer from memory. Do not answer from these documents alone.
-- [reference/pi-rpc.md](docs/reference/pi-rpc.md) becomes stale when pi changes.
+- [reference/pi-sdk.md](docs/reference/pi-sdk.md) becomes stale when pi changes.
   Run the greps in its header before you trust it.
 - Do not copy code into a document. Do not list files, types or routes. Name the
   file or the command.
@@ -108,16 +116,37 @@ Ask before you act when one of these is true:
 
 - Two documents disagree.
 - A document and the code disagree.
-- The request names a capability that [reference/pi-rpc.md](docs/reference/pi-rpc.md)
-  does not list, over RPC, in the library or in the CLI.
+- The request names a capability that [reference/pi-sdk.md](docs/reference/pi-sdk.md)
+  does not list, in the SDK, its files or the CLI.
 - The change breaks a rule above: import boundary, size cap, one schema language
   or one styling system.
 - A check fails for a reason you do not understand.
 - A result looks unusual.
 - Two readings of the requirement produce different code.
+- The engine would stop being an embedded SDK call: no child process, no RPC mode,
+  no RPC envelope.
 
 State what is inconsistent, what you checked and the options. Do not guess. Do not
 rewrite a document to match a bug. Do not continue without an answer.
+
+## Interface rules
+
+1. Compose the shadcn components that are installed. Forms are `FieldGroup` →
+   `Field` → `FieldLabel` + control + `FieldDescription`; option sets are `Select`,
+   booleans are `Checkbox`, a long list is `Command` in a `Popover`. Never hand-roll
+   a form control, a native `<select>` or a bare `<input type="checkbox">`.
+2. Registry defaults are source. When the product needs different behaviour,
+   change the file in `client/src/components/ui` and say why in `docs/ui.md`.
+   `cursor-default` on menu and command items is removed, and the checkbox carries
+   its own colour transition, for that reason.
+3. Surfaces rest white. A muted fill is a state (hover, selected, code, icon tile),
+   never a resting surface for a control.
+4. Destructive actions use `variant="destructive"`; a form submit is as wide as its
+   label and sits at the right edge of its card. A control that needs the whole row
+   stacks below the title.
+5. Validate a form with `zod` from `shared` plus the rules only the form knows, and
+   put the first message per field under that field with `FieldError`. Never send a
+   blank optional value.
 
 ## Integrations
 

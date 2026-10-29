@@ -15,7 +15,7 @@ Three requirements rule it out, checked against 1.4.0:
    `confirm` request until something answers it. `RpcClient` exposes no way to
    write an `extension_ui_response`, and ignores the incoming request, so a
    tool-using turn would hang with no error. See
-   [../notes/2026-10-28-rpc-permission-block.md](../notes/2026-10-28-rpc-permission-block.md).
+   [../notes/2026-10-28-extension-confirm-blocks-a-turn.md](../notes/2026-10-28-extension-confirm-blocks-a-turn.md).
 2. **Child exit.** `RpcClient` turns an exit into a rejected request. It never
    reports the exit itself, and an idle child has no pending request, so a
    crashed child would be silent. The UI must say "the agent exited".

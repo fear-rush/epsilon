@@ -1,0 +1,90 @@
+/**
+ * The bottom-left deployment card. It opens a menu the way a chat app opens its
+ * account menu: a header naming the deployment, then the sections of the settings
+ * page, so a phone reaches them without the sidebar.
+ */
+import { useNavigate } from "@tanstack/react-router";
+import { PackageIcon, PlugIcon, ServerIcon, SettingsIcon, SparklesIcon } from "lucide-react";
+
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuGroup,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useSidebar } from "@/components/ui/sidebar";
+
+const AVATAR = "ε";
+
+export function SidebarAccount() {
+	const navigate = useNavigate();
+	const { isMobile, setOpenMobile } = useSidebar();
+
+	const go = (to: string) => {
+		if (isMobile) setOpenMobile(false);
+		void navigate({ to });
+	};
+
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger
+				render={
+					<button
+						type="button"
+						aria-label="Deployment menu"
+						className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left hover:bg-sidebar-accent"
+					/>
+				}
+			>
+				<span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
+					{AVATAR}
+				</span>
+				<span className="grid min-w-0 flex-1 text-left leading-tight">
+					<span className="truncate text-sm font-medium">epsilon</span>
+					<span className="truncate text-xs font-normal text-muted-foreground">
+						This deployment
+					</span>
+				</span>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent side="top" align="start" sideOffset={8} className="w-64">
+				<div className="flex items-center gap-3 px-2 py-2">
+					<span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
+						{AVATAR}
+					</span>
+					<div className="min-w-0">
+						<p className="truncate text-sm font-medium">epsilon</p>
+						<p className="truncate text-xs text-muted-foreground">Local deployment</p>
+					</div>
+				</div>
+				<DropdownMenuSeparator />
+				<DropdownMenuGroup>
+					<DropdownMenuItem onClick={() => go("/settings/general")}>
+						<SettingsIcon />
+						Settings
+					</DropdownMenuItem>
+					<DropdownMenuItem onClick={() => go("/settings/providers")}>
+						<PlugIcon />
+						Providers
+					</DropdownMenuItem>
+				</DropdownMenuGroup>
+				<DropdownMenuSeparator />
+				<DropdownMenuGroup>
+					<DropdownMenuItem onClick={() => go("/settings/mcp")}>
+						<ServerIcon />
+						MCP servers
+					</DropdownMenuItem>
+					<DropdownMenuItem onClick={() => go("/settings/skills")}>
+						<SparklesIcon />
+						Skills
+					</DropdownMenuItem>
+					<DropdownMenuItem onClick={() => go("/settings/packages")}>
+						<PackageIcon />
+						Packages
+					</DropdownMenuItem>
+				</DropdownMenuGroup>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}

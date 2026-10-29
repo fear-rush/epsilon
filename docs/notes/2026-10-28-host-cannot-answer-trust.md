@@ -1,4 +1,4 @@
-# RPC cannot answer the project-trust prompt
+# An embedding host cannot answer the project-trust prompt
 
 ## Symptom
 
@@ -17,12 +17,12 @@ pi requires a decision before it loads resources supplied by the working folder
 
 pi's `docs/security.md` states the trap directly: "Print, JSON, and RPC modes
 cannot show the built-in trust prompt." An embedded engine can receive the
-`project_trust` event from an extension, but Epsilon does not answer it: that
-would make the dashboard the place where a project is trusted
-([ADR-0006](../adr/0006-setup-in-the-deployment-terminal.md)). With no stored
-decision and no `--approve`, the default `defaultProjectTrust: "ask"` skips the
-protected resources instead of blocking. An empty trust store, which every fresh home and
-every new container volume has, therefore means silently reduced capability.
+`project_trust` event from an extension, but Epsilon does not answer it: trust is a
+per-project decision, and a browser dialog that appears once would be easy to click
+through. With no stored decision and no `--approve`, the default
+`defaultProjectTrust: "ask"` skips the protected resources instead of blocking. An
+empty trust store, which every fresh home and every new container volume has,
+therefore means silently reduced capability.
 
 A `pi` process started from a terminal on the same host does show the prompt, so
 the same project works there and fails here.
@@ -31,10 +31,11 @@ the same project works there and fails here.
 
 Report the trust state instead of guessing. The dashboard must show "this project's
 `.pi` resources are skipped because the project is not trusted", naming the
-directory, and the fix is `/trust` in a terminal inside the deployment. Storing a decision is a deliberate action, either recorded
-once by `pi` in the deployment or answered by a future trust surface. Do not set
-`defaultProjectTrust: "always"` as a convenience: it turns a per-project decision
-into a permanent yes for every project the agent is ever pointed at.
+directory, and the fix is `/trust` in a terminal inside the deployment. Storing a
+decision is a deliberate action, either recorded once by `pi` in the deployment or
+answered by a future trust surface. Do not set `defaultProjectTrust: "always"` as a
+convenience: it turns a per-project decision into a permanent yes for every project
+the agent is ever pointed at.
 
 ## Check
 

@@ -1,7 +1,8 @@
 # Slice checks
 
-Status: **S1 to S13 verified, most of them in a browser. S14 is active.** This page
-holds the checks. [../plan.md](../plan.md) holds the jobs, the slice table and the risks.
+Status: **S1 to S5, S12, S13 and S17 are verified. S14 is active; S6 to S11, S15 and
+S16 are open.** This page holds the checks. [../plan.md](../plan.md) holds the jobs,
+the slice table and the risks.
 
 A slice ends when you can run its checks yourself, by hand, in a browser. A slice
 is not done because it compiles.
@@ -249,3 +250,72 @@ The browser replacement for `pi-paster`: the `prompt` frame carries images and
 - [ ] A message with an image and no text is allowed; an image over the size limit is
       refused with a notice, never silently dropped
 - [ ] `steer` accepts an image too, with the same rules
+
+### S17: Configure providers, MCP, skills and packages in Settings
+
+[ADR-0012](../adr/0012-configure-in-the-dashboard.md): the dashboard writes pi's
+documented files and calls its exported writers. The not-ready notice opens the
+panel instead of naming a terminal command.
+
+Server and reducer checks, run over HTTP against a scratch home:
+
+- [x] A home with no credential answers `ready: false`, and the fix names Settings
+- [x] `POST /api/settings/providers` writes the documented `models.json` entry with
+      mode 0600; the next snapshot lists it, marks it configured from
+      `models_json_key`, and readiness flips to ready
+- [x] `PUT /api/settings/default-model` writes `defaultProvider` and `defaultModel`
+      into `settings.json`
+- [x] MCP add and delete, skill create, read and delete, and package refusal all
+      return the documented answer and restore the empty shape when removed
+- [x] A write refuses a file it cannot parse instead of replacing it
+- [x] An entry pi cannot compose (a provider with no `api`) arrives as one sentence in
+      the panel, from `ModelRuntime.getError()`
+- [x] A failed provider call renders as an `Alert` with pi's `errorMessage`, rebuilt
+      from the assistant message in a real session file
+- [x] The list carries only configured providers (plus 43 built-ins for the picker),
+      and a built-in detail reports `builtin: true` with its catalog
+- [x] Saving only an API key for a built-in writes `{ "apiKey": … }` and leaves the
+      401-model catalog intact; the entry then lists as configured
+- [x] A provider detail exposes header names but no values, full model entries and
+      `modelOverrides`
+- [x] A header write with a blank value keeps the stored value and removes headers
+      left out of the record
+- [x] Fetch returns ids from `/models` for the OpenAI family and `/v1/models` for
+      Anthropic; the stored key is used server-side and is withheld from the page
+- [x] The API table pins each family's path and the model-list path: commandcode's
+      `/provider/v1` is followed by `/chat/completions` and `/responses`, Anthropic
+      adds `/v1/models`, and Google has no shared list
+- [x] Removing a provider drops its `models.json` entry and, when the key is stored
+      in `auth.json`, logs the provider out, so the row does not come back
+- [x] A provider write refuses a blank required field, an unsafe id and a relative
+      base URL, and a model refuses a non-numeric token count and a half-filled cost
+
+Browser checks, confirmed by the operator:
+
+- [x] The bottom-left deployment card opens a menu, and Settings from it opens the
+      full page; the not-ready notice links to the same page
+- [x] The Providers page lists only configured providers, with the id and the model
+      count. Selecting one shows the list on the left and its form on the right;
+      Add provider opens the built-in picker and the custom draft
+- [x] The API picker names each family with the path it appends, and the model count
+      sits in the group title ("Models pi ships (29)")
+- [x] A built-in catalog is read-only; Override writes `modelOverrides`; Add model or
+      Fetch models from provider asks before replacing the catalog, and Use pi's
+      catalog undoes the draft
+- [x] A header row with a blank value keeps the stored header after save; removing
+      the row removes the header
+- [x] Fetch models from provider returns ids for an OpenAI base and an Anthropic
+      base, and is disabled for Google
+- [x] A provider added on the page is visible without a reload, its key stays hidden,
+      and the General default-model picker searches and offers its models
+- [x] Leaving the editor with unsaved changes asks to discard; saving a new provider
+      navigates to its route without the prompt; Delete and Save stay pinned to the
+      bottom of the column
+- [x] MCP, skill and package sections add, edit and remove their entries, and error
+      text appears in the form; MCP reads "Add MCP"
+- [x] Settings is a full page with its own navigation, not a modal; Search filters
+      the sections, Back to app returns to the session list, the phone layout keeps
+      every section reachable, and both columns use the same width
+- [x] A live session picks up a new provider, MCP server or skill without a restart
+- [x] `rg -i rpc server shared client` finds no engine path that enters pi's RPC mode
+      or speaks its envelope; `mode` is `"json"` and a prompt source is `"interactive"`

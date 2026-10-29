@@ -9,6 +9,42 @@ import { Scalar } from "@scalar/hono-api-reference";
 import { healthBody, healthRoute } from "./routes/health";
 import { readinessHandler, readinessRoute } from "./routes/readiness";
 import {
+	deleteMcpHandler,
+	deleteMcpRoute,
+	writeMcpHandler,
+	writeMcpRoute,
+} from "./routes/settings-mcp";
+import {
+	installPackageHandler,
+	installPackageRoute,
+	removePackageHandler,
+	removePackageRoute,
+} from "./routes/settings-packages";
+import {
+	defaultModelHandler,
+	defaultModelRoute,
+	settingsHandler,
+	settingsRoute,
+} from "./routes/settings";
+import {
+	deleteProviderHandler,
+	deleteProviderRoute,
+	importModelsHandler,
+	importModelsRoute,
+	readProviderHandler,
+	readProviderRoute,
+	writeProviderHandler,
+	writeProviderRoute,
+} from "./routes/settings-providers";
+import {
+	deleteSkillHandler,
+	deleteSkillRoute,
+	readSkillHandler,
+	readSkillRoute,
+	writeSkillHandler,
+	writeSkillRoute,
+} from "./routes/settings-skills";
+import {
 	deleteSessionHandler,
 	deleteSessionRoute,
 	listSessionsHandler,
@@ -21,6 +57,19 @@ app.openapi(healthRoute, (c) => c.json(healthBody));
 app.openapi(readinessRoute, readinessHandler);
 app.openapi(listSessionsRoute, listSessionsHandler);
 app.openapi(deleteSessionRoute, deleteSessionHandler);
+app.openapi(settingsRoute, settingsHandler);
+app.openapi(defaultModelRoute, defaultModelHandler);
+app.openapi(readProviderRoute, readProviderHandler);
+app.openapi(importModelsRoute, importModelsHandler);
+app.openapi(writeProviderRoute, writeProviderHandler);
+app.openapi(deleteProviderRoute, deleteProviderHandler);
+app.openapi(writeMcpRoute, writeMcpHandler);
+app.openapi(deleteMcpRoute, deleteMcpHandler);
+app.openapi(readSkillRoute, readSkillHandler);
+app.openapi(writeSkillRoute, writeSkillHandler);
+app.openapi(deleteSkillRoute, deleteSkillHandler);
+app.openapi(installPackageRoute, installPackageHandler);
+app.openapi(removePackageRoute, removePackageHandler);
 
 app.get("/openapi.json", (c) =>
 	c.json(
@@ -29,7 +78,7 @@ app.get("/openapi.json", (c) =>
 			info: {
 				title: "epsilon API",
 				version: "0.0.1",
-				description: "Local REST surface for reading and removing sessions.",
+				description: "Local REST surface for sessions and for configuring this deployment.",
 			},
 		}),
 	),

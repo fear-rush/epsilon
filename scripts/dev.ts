@@ -6,11 +6,13 @@
  *
  * pi creates the home's layout itself on first use (`sessions/`, `auth.json`,
  * `models-store.json`), so this script creates no pi file it could get wrong. The one
- * concession is a pair of symlinks: a fresh sandbox has no credential, and a dev loop
- * that cannot run a turn is not a dev loop. They point at the operator's files and
- * copy nothing; delete them to test the unconfigured state.
+ * concession is the operator's credentials: a fresh sandbox has none, and a dev loop
+ * that cannot run a turn is not a dev loop. Both `auth.json` and `models.json` are
+ * copied, not linked: Settings writes providers, and deleting one logs the provider
+ * out, which writes `auth.json`. A link would write the operator's real file. Delete
+ * both to test the unconfigured state.
  */
-import { existsSync, mkdirSync, symlinkSync } from "node:fs";
+import { copyFileSync, existsSync, lstatSync, mkdirSync, unlinkSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -19,8 +21,8 @@ const sandbox = join(repoRoot, ".sandbox");
 const agentHome = join(sandbox, "agent");
 const projectDir = join(sandbox, "project");
 
-/** Files read through from the operator's home: credentials and the model catalog. */
-const LINKED = ["auth.json", "models.json"];
+/** Both files are writable through Settings, so the sandbox owns copies. */
+const COPIED = ["auth.json", "models.json"];
 
 const hostAgentHome = join(homedir(), ".pi", "agent");
 
@@ -28,13 +30,17 @@ const useHost = process.argv.includes("--host");
 /** Anything else goes to turbo, so `--filter=server` works through this script too. */
 const passthrough = process.argv.slice(2).filter((argument) => argument !== "--host");
 
-const linkSandboxCredential = (): void => {
-	for (const name of LINKED) {
+const prepareSandboxConfig = (): void => {
+	for (const name of COPIED) {
 		const target = join(hostAgentHome, name);
-		const link = join(agentHome, name);
-		if (existsSync(link) || !existsSync(target)) continue;
-		symlinkSync(target, link);
-		console.log(`dev: linked ${link} -> ${target}`);
+		const copy = join(agentHome, name);
+		if (!existsSync(target)) continue;
+		// An older sandbox linked this file; replace the link so Settings cannot
+		// write through to the operator's home.
+		if (existsSync(copy) && lstatSync(copy).isSymbolicLink()) unlinkSync(copy);
+		if (existsSync(copy)) continue;
+		copyFileSync(target, copy);
+		console.log(`dev: copied ${target} -> ${copy}`);
 	}
 };
 
@@ -48,7 +54,7 @@ if (useHost) {
 } else {
 	mkdirSync(agentHome, { recursive: true });
 	mkdirSync(projectDir, { recursive: true });
-	linkSandboxCredential();
+	prepareSandboxConfig();
 	environment.EPSILON_AGENT_HOME = agentHome;
 	environment.EPSILON_PROJECT = projectDir;
 	// An inherited value must not decide which config a deployment runs on

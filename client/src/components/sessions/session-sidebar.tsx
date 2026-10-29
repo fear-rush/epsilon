@@ -28,8 +28,10 @@ import {
 	SidebarGroup,
 	SidebarGroupLabel,
 	SidebarMenu,
+	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
+import { SidebarAccount } from "@/components/sessions/sidebar-account";
 import { deleteSession, fetchSessions } from "@/lib/api";
 import { sessionLabel } from "@/lib/format";
 
@@ -106,6 +108,14 @@ export function SessionSidebar() {
 					)}
 				</SidebarGroup>
 			</SidebarContent>
+
+			<div className="mt-auto border-t p-2">
+				<SidebarMenu>
+					<SidebarMenuItem>
+						<SidebarAccount />
+					</SidebarMenuItem>
+				</SidebarMenu>
+			</div>
 
 			<AlertDialog
 				open={pendingDelete !== undefined}

@@ -138,7 +138,7 @@ export function Composer({ store, busy, models, model, statuses, commands }: Com
 						submit();
 					}}
 				>
-					<InputGroup>
+					<InputGroup className="border-foreground/25">
 						<InputGroupTextarea
 							ref={textareaRef}
 							value={draft}

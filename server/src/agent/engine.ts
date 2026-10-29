@@ -1,7 +1,6 @@
 /**
  * The embedded engine: one `AgentSession` per open session id, created in this
- * process instead of as a `pi --mode rpc` child
- * (docs/adr/0008-embed-pi-engine-with-opinions.md).
+ * process through pi's SDK (docs/adr/0008-embed-pi-engine-with-opinions.md).
  *
  * Three things live here because they are engine wiring, not session state: the
  * resource loader that adds the CLI's built-in extensions, the
@@ -235,7 +234,9 @@ export const createEngine = async (options: {
 	});
 	await session.bindExtensions({
 		uiContext: createUiContext(options.ui),
-		mode: "rpc",
+		// "json" is pi's name for a headless host that reads events, which is what
+		// this server is. Extensions guard terminal-only UI with `mode === "tui"`.
+		mode: "json",
 		onError: (error) => {
 			options.ui.fail(
 				new Error(`extension ${error.extensionPath} failed in ${error.event}: ${error.error}`),

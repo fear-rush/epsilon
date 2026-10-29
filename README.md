@@ -1,50 +1,73 @@
-# epsilon
+# Epsilon
 
-A web dashboard for one user. It drives the `pi` coding agent, and the deployment it
-runs in owns that agent's config, credentials, extensions and sessions, so the
-dashboard and a terminal inside the same deployment are one agent
-([ADR-0005](docs/adr/0005-deployment-owns-agent-home.md)).
+Epsilon is a self-hosted web workspace for the `pi` coding agent. It runs the agent
+in its own deployment, keeps that agent's home (config, credentials, skills,
+packages and sessions) in the deployment, and puts the whole thing in a browser, so
+a run started at a desk can be continued, steered or answered from anywhere.
 
-Status: S1 to S13 are done and S14 is active. Start with
-[docs/README.md](docs/README.md), then [docs/plan.md](docs/plan.md).
+There is one agent, not two: the dashboard and a `pi` terminal inside the same
+deployment read the same home, so they share sessions, providers and permissions.
+Epsilon is built for one operator. It has no accounts, no multi-user model and no
+tenancy, by design: you put it behind a private network or a tunnel and it is yours.
+
+## What it does
+
+- **Continue.** A session list, a live transcript, and a composer that sends,
+  steers mid-run and aborts, with the model and permission controls beside it.
+- **Read the run.** Streaming text, thinking, tool calls with their arguments and
+  output, bash output, image results and errors, rendered as a conversation instead
+  of a terminal scrollback.
+- **Answer.** Permission approvals and extension questions arrive as dialogs and
+  hold the run until you answer, from whichever device is in front of you.
+- **Configure.** Providers and their models, the default model, MCP servers, skills
+  and packages are edited in Settings and written to the agent home, so a machine
+  that has never had `pi` configured becomes usable from the browser.
+- **Notice what is missing.** A home with no usable model replaces every page with
+  one notice that says what to do and links to Settings, never a silently failed
+  turn.
 
 ## Requirements
 
-- Bun 1.4.4 or newer, for the server and the client.
-- Node.js 22.19 or newer, for pi's CLI in the terminal tab. The embedded engine runs
-  inside the Bun server, so a dashboard-only run does not need it.
-- A project directory for the agent to work on.
-- `pi` does **not** have to be installed. The version epsilon drives is pinned in
+- Bun 1.4.4 or newer.
+- A project directory for the agent to work in.
+- `pi` does not have to be installed. The version Epsilon drives is pinned in
   `server/package.json` and installed with the rest of the dependency tree.
 
-The agent's config directory, its "home", lives inside the deployment. A fresh one
-has no credentials: you configure it once with `pi` in a terminal there, and the
-dashboard says so when it has not been done
-([docs/deploy.md](docs/deploy.md)).
-
-## Deploy
-
-A container, a volume for the agent home, a bind mount for the project, and one
-port published on loopback behind a tunnel. [docs/deploy.md](docs/deploy.md) has the
-settings, and what the isolation does and does not cover.
-
-## Development
+## Run it
 
 ```bash
 bun install
 bun run dev
 ```
 
-`bun run dev` keeps the agent's home inside the repository, at `.sandbox/agent`, so a
-turn never writes into your own `~/.pi`. It symlinks your `auth.json` and `models.json`
-in so the loop can run; delete the links to see the unconfigured state. `bun run
-dev:host` uses the real home when you want to read sessions your terminal created, and
-`bun run sandbox:clean` removes the sandbox. [docs/deploy.md](docs/deploy.md) explains
-why a deployment differs.
-
-`bun run dev:client` starts the frontend. `bun run dev:server` starts the API. The
-client listens on `http://localhost:5173`. Vite proxies `/api` to
+The client listens on `http://localhost:5173` and proxies `/api` to the server on
 `http://localhost:3000`.
+
+`bun run dev` keeps the agent's home inside the repository, at `.sandbox/agent`, so a
+turn never writes into your own `~/.pi`. It copies `auth.json` and `models.json` into
+the sandbox, so the loop can run a turn and Settings writes the copies. Delete both,
+or run `bun run sandbox:clean`, to see the unconfigured state. `bun run dev:host`
+runs the same loop against the real `~/.pi` when you want to read sessions your
+terminal created.
+
+## Configure
+
+Configuration lives in the agent home, not in Epsilon's own files. Settings writes
+providers and their models to `models.json`, the default model through pi's settings
+manager, MCP servers to `mcp.json`, skills as `<home>/skills/<name>/SKILL.md`, and
+packages through pi's package manager. A write reloads live sessions.
+
+Two things stay in a terminal inside the deployment, because pi only exposes them
+there: OAuth login and project trust. An API key typed in Settings goes to the
+documented `apiKey` field of `models.json` and is never sent back to the browser.
+
+## Deploy
+
+Epsilon is built for one deployment per person: one service, a volume for the agent
+home, a bind mount for the project, and one port published on loopback. Reach it
+through Tailscale or an SSH tunnel. The app has no authentication, so the network is
+the boundary. Running it where a terminal's `pi` never was is the point, because a
+fresh home is configured from Settings.
 
 ## Checks
 
@@ -64,66 +87,21 @@ bun run test
 - `shared/`: browser-safe types, zod schemas and the conversation reducer.
 - `tools/`: local Oxlint plugins.
 
-## Oxlint and Oxfmt
+## Tooling notes
 
-- `bun run lint` checks all workspaces with Oxlint.
-- `bun run lint:fix` applies the available lint fixes.
-- `bun run format` formats files with Oxfmt.
-- `bun run format:check` checks formatting without a change.
-- `bun run type-check` checks TypeScript separately. It fails on unused locals,
-  parameters and private members.
-- `bun run dead-code` runs Knip over the workspaces and fails on an unused file,
-  export or dependency. Component exports under `client/src/components/ui` are
-  exempt because the shadcn CLI owns those files.
+`bun run lint` checks every workspace with Oxlint and `bun run format` formats with
+Oxfmt. `bun run type-check` fails on unused locals, parameters and private members,
+and `bun run dead-code` fails on an unused file, export or dependency.
 
-`.oxlintrc.json` enables React Hooks and React Refresh rules. It also enables 15
-anti-slop rules at error severity. The plugin lives in `tools/oxlint/anti-slop`.
-The configuration ignores build output, the generated route tree, migration
-output and agent tooling directories. Formatting options live in `.oxfmtrc.json`.
-
-`client/src/components/ui` holds components that `shadcn add` writes. An override
-turns off two anti-slop rules for that folder, because registry code trips them
-and `shadcn add` would overwrite a local rewrite. Run
-`bunx --bun shadcn@latest add <component>` from `client/` to add a component.
-
-## Commit checks with prek
-
-`@j178/prek` is a root development dependency, equivalent to
-`bun add -D @j178/prek`. The project generator installs the Git hook. For an
-existing clone, run:
-
-```sh
-bun install
-git init # only when the repository has no Git directory
-bun run hooks:install
-```
-
-The hook formats staged files, lints staged code, checks workspace types and
-scans staged changes with Gitleaks. It detects private keys and blocks `.env`
-files, except `.env.example`. It checks merge conflicts, file size, case
-conflicts, symlinks, JSON/JSONC, YAML, TOML, whitespace, final newlines and line
-endings. Formatting uses the Oxc configuration. Restage the files that the
-formatter changes, then commit again.
-
-```sh
-bun run hooks:run    # check all tracked files
-bun run hooks:update # update pinned remote hook revisions
-```
-
-Gitleaks output is redacted. The first run downloads and builds the pinned hook
-with prek's managed Go toolchain. Hook environments live in the prek cache, not in
-project dependencies. `.pre-commit-config.yaml` controls the checks. The hooks
-need Bun and the installed project dependencies. Git hooks are local, so install
-them in each clone.
-
-## Package resolution
+`.oxlintrc.json` enables the React Hooks and React Refresh rules and the anti-slop
+rules in `tools/oxlint/anti-slop`. `client/src/components/ui` holds the components
+`shadcn add` writes, with two anti-slop rules off for that folder because registry
+code trips them and an add would overwrite a local rewrite.
 
 `bunfig.toml` requires a newly resolved package version to be at least three days
 old. Versions in `bun.lock` do not change.
 
 ## API reference
 
-Scalar serves the API reference at `/scalar`. The OpenAPI document is at
-`/openapi.json`. The document is generated from `createRoute` schemas. Until the
-REST surface lands, `server/src/openapi.ts` holds the current document, which
-describes `/health` only.
+Scalar serves the API reference at `/scalar`, and the OpenAPI document is at
+`/openapi.json`. The document is generated from `createRoute` schemas.

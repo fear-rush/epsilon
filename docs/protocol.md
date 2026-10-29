@@ -35,8 +35,8 @@ what they mean; it does not restate their fields.
 
 Version history: 1 was the S2 transcript; 2 added `models` to the snapshot for
 the model picker; 3 added `commands` to the snapshot for the `/` palette; 4
-replaced pi's RPC vocabulary with Epsilon's commands and zod shapes when the
-engine moved in-process ([ADR-0009](adr/0009-socket-speaks-epsilon.md)).
+replaced pi's command vocabulary with Epsilon's own commands and zod shapes when
+the engine moved in-process ([ADR-0009](adr/0009-socket-speaks-epsilon.md)).
 
 Version the socket, not the REST paths. A stale tab or an installed PWA can
 outlive a server upgrade; REST requests follow the bundle, because the deployment

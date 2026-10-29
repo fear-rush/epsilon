@@ -35,6 +35,7 @@
         "shared": "workspace:*",
         "shiki": "4.5.0",
         "tailwindcss": "4.3.3",
+        "zod": "4.6.7",
       },
       "devDependencies": {
         "@tanstack/router-cli": "1.167.40",

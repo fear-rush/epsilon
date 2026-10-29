@@ -65,25 +65,30 @@ in front ([features.md](features.md), Access and operations). Bind the publish t
 
 ## First run
 
-Enter the deployment and use `pi` itself. The image installs the pinned CLI for
-this reason:
+Open the dashboard, choose **Settings** at the bottom of the sidebar, and add a
+provider: its base URL, API family, key and models. That writes the documented
+`models.json` entry in the deployment's agent home
+([ADR-0012](adr/0012-configure-in-the-dashboard.md)). The same panel adds MCP
+servers, skills and packages.
+
+The image also installs the pinned CLI, for what a host cannot do:
 
 ```
 docker compose run --rm -it epsilon pi
 ```
 
-`/login`, `/settings`, `/trust`, `pi config`, `pi mcp login` and `pi install` all
-work there, because it is the real TUI on the real agent home. The dashboard never
-writes pi's configuration
-([ADR-0006](adr/0006-setup-in-the-deployment-terminal.md)).
+`/login` for an OAuth or subscription account, `/trust` for a project, and
+`/mcp login` for remote servers that need a browser all work there, because it is
+the real TUI on the real agent home. `/settings` remains the place for pi settings
+the panel does not cover.
 
 A provider key in the environment is the alternative when nothing else can be
 configured: pi reads `ANTHROPIC_API_KEY` and its peers directly, with no stored
 credential. The key then lives in the deployment's environment, which is a
 different trade-off, not a better one.
 
-Either way the dashboard reads the home and, if it is not configured, says so on
-the page and names the step. It does not offer a sign-in form.
+A home with no usable model shows one notice on every page, naming the home and
+opening Settings.
 
 Packages must be installed inside the deployment, because native dependencies are
 bound to the platform ([notes](notes/2026-10-28-packages-are-bound-to-a-platform.md)).
@@ -92,11 +97,13 @@ bound to the platform ([notes](notes/2026-10-28-packages-are-bound-to-a-platform
 
 `bun run dev` is sandboxed on purpose. It points the engine at
 `.sandbox/agent` and the project at `.sandbox/project`, so a turn never writes a
-session, a cache or a credential into the operator's real `~/.pi`. The sandbox
-materializes itself: pi creates `sessions/`, `auth.json` and `models-store.json` on
-first use, and the script symlinks the operator's `auth.json` and `models.json` in so
-the loop can run a turn. Delete those two links to get the unconfigured state the
-not-ready notice describes.
+session, a cache or a credential into the operator's real `~/.pi`. It copies the
+host's `auth.json` and `models.json` into the sandbox, so a dev turn can run and
+Settings writes the copy rather than the operator's file. Both are copies, not links,
+because deleting a provider logs it out and that writes `auth.json`. That is why a
+fresh sandbox may look configured: remove both, or run `bun run sandbox:clean`, to
+see the unconfigured state. The sandbox materializes itself: pi creates `sessions/`,
+`auth.json` and `models-store.json` on first use.
 
 `bun run dev:host` runs the same loop against the real home, for reading sessions the
 terminal created. `bun run sandbox:clean` removes the sandbox.
@@ -135,7 +142,7 @@ what a wrong command can reach.
    turns die with the container, which [ADR-0008](adr/0008-embed-pi-engine-with-opinions.md)
    accepts as the cost of running the engine in-process.
 3. After a pi upgrade, re-run the greps in
-   [reference/pi-rpc.md](reference/pi-rpc.md) before trusting the surface again.
+   [reference/pi-sdk.md](reference/pi-sdk.md) before trusting the surface again.
 
 `docker compose down -v` deletes the volume, and with it the credentials and every
 session. That is the reset button, not the update button.
@@ -149,10 +156,10 @@ inside the container first, so the platform matches.
 
 ## Troubleshooting
 
-| Symptom                                                | Cause                                                                                                 | Check                                                   |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| Session runs but project extensions and MCP are absent | project not trusted, and no engine event asks ([note](notes/2026-10-28-rpc-cannot-answer-trust.md))   | run `pi` in the container and answer `/trust`           |
-| A package's tools fail though `pi list` shows it       | package installed for another platform ([note](notes/2026-10-28-packages-are-bound-to-a-platform.md)) | reinstall inside the container                          |
-| The page says the agent is not configured              | the volume has no credential or no default model                                                      | `docker compose run --rm -it epsilon pi`, then `/login` |
-| Page loads, socket closes immediately                  | protocol version mismatch after an upgrade                                                            | reload the tab; the notice names it                     |
-| `EACCES` on a bind mount                               | container user does not match the host file owner                                                     | run with the host uid                                   |
+| Symptom                                                | Cause                                                                                                 | Check                                         |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Session runs but project extensions and MCP are absent | project not trusted, and no engine event asks ([note](notes/2026-10-28-host-cannot-answer-trust.md))  | run `pi` in the container and answer `/trust` |
+| A package's tools fail though `pi list` shows it       | package installed for another platform ([note](notes/2026-10-28-packages-are-bound-to-a-platform.md)) | reinstall inside the container                |
+| The page says the agent is not configured              | the volume has no provider with a usable credential                                                   | open Settings and add a provider              |
+| Page loads, socket closes immediately                  | protocol version mismatch after an upgrade                                                            | reload the tab; the notice names it           |
+| `EACCES` on a bind mount                               | container user does not match the host file owner                                                     | run with the host uid                         |

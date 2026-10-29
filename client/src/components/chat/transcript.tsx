@@ -97,7 +97,9 @@ function Row({ row }: { row: TranscriptRow }) {
 			if (row.notice.kind === "error") {
 				return (
 					<Alert variant="destructive">
-						<AlertDescription>{row.notice.text}</AlertDescription>
+						<AlertDescription className="max-h-48 overflow-auto whitespace-pre-wrap">
+							{row.notice.text}
+						</AlertDescription>
 					</Alert>
 				);
 			}

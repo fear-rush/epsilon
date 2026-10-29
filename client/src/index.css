@@ -80,7 +80,7 @@
 	--success: oklch(0.627 0.194 149.214);
 	--success-foreground: oklch(0.985 0 0);
 	--border: oklch(0.922 0 0);
-	--input: oklch(0.922 0 0);
+	--input: oklch(0.885 0 0);
 	--ring: oklch(0.708 0 0);
 	--chart-1: oklch(0.87 0 0);
 	--chart-2: oklch(0.556 0 0);
@@ -88,7 +88,7 @@
 	--chart-4: oklch(0.371 0 0);
 	--chart-5: oklch(0.269 0 0);
 	--radius: 0.625rem;
-	--sidebar: oklch(0.985 0 0);
+	--sidebar: oklch(1 0 0);
 	--sidebar-foreground: oklch(0.145 0 0);
 	--sidebar-primary: oklch(0.205 0 0);
 	--sidebar-primary-foreground: oklch(0.985 0 0);
@@ -126,7 +126,7 @@
 	--chart-3: oklch(0.439 0 0);
 	--chart-4: oklch(0.371 0 0);
 	--chart-5: oklch(0.269 0 0);
-	--sidebar: oklch(0.205 0 0);
+	--sidebar: oklch(0.145 0 0);
 	--sidebar-foreground: oklch(0.985 0 0);
 	--sidebar-primary: oklch(0.488 0.243 264.376);
 	--sidebar-primary-foreground: oklch(0.985 0 0);
@@ -147,14 +147,24 @@
 	html {
 		@apply font-sans;
 	}
-	/* Tailwind preflight leaves buttons on the default arrow cursor. */
+	/* Tailwind preflight leaves interactive elements on the default arrow cursor,
+	   and the registry's menu and command items hardcode `cursor-default`. Base UI
+	   renders several controls as spans with a role, so the roles are listed here.
+	   Disabled items are excluded by `aria-disabled`, not by the presence of
+	   `data-disabled`: cmdk emits `data-disabled="false"` on enabled rows. */
 	button:not(:disabled),
-	[role="button"]:not([aria-disabled="true"]),
-	[role="option"]:not([data-disabled]),
-	[role="menuitem"]:not([data-disabled]),
-	[role="tab"]:not([data-disabled]),
 	select:not(:disabled),
-	summary {
+	summary,
+	label[for],
+	[role="button"]:not([aria-disabled="true"]),
+	[role="checkbox"]:not([aria-disabled="true"]),
+	[role="combobox"]:not([aria-disabled="true"]),
+	[role="link"],
+	[role="menuitem"]:not([aria-disabled="true"]),
+	[role="option"]:not([aria-disabled="true"]),
+	[role="radio"]:not([aria-disabled="true"]),
+	[role="switch"]:not([aria-disabled="true"]),
+	[role="tab"]:not([aria-disabled="true"]) {
 		cursor: pointer;
 	}
 }

@@ -60,6 +60,22 @@ const assistantRows = (
 	if (text.trim() !== "" || thinking.trim() !== "") {
 		rows.push({ kind: "assistant", key: `a${index}`, text, thinking, streaming: false });
 	}
+	// pi records a failed provider call as an assistant message with no content and
+	// `stopReason: "error"`. Nothing else carries that message, so without this row
+	// a refused turn ends in silence (docs/ui.md, "Error"). Deriving it from the
+	// message also makes it survive a reload and a reattach.
+	if (message.stopReason === "error") {
+		rows.push({
+			kind: "notice",
+			key: `a${index}-error`,
+			notice: {
+				id: index,
+				kind: "error",
+				text: `${message.provider}/${message.model}: ${message.errorMessage ?? "the request failed"}`,
+				afterMessages: 0,
+			},
+		});
+	}
 	message.content
 		.filter((part) => part.type === "toolCall")
 		.forEach((call, callIndex) => {

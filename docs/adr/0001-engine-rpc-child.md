@@ -43,7 +43,7 @@ durable harness library with its own storage, its own task model and
 - **Interactive-only commands are unavailable.** `/reload`, `/tree`, `/trust`,
   `/login`, `/logout`, `/settings`, `/scoped-models`, `/import`, `/share`, `/bug`,
   `/changelog`, `/hotkeys`, `/debug`, `/quit` are handled by pi's interactive
-  mode before any session call. See [../reference/pi-rpc.md](../reference/pi-rpc.md).
+  mode before any session call. See [../reference/pi-sdk.md](../reference/pi-sdk.md).
   They live in epsilon's terminal tab.
 - **Epsilon owns the stream layer**: normalizing RPC events, reconnect
   reconciliation, backpressure, and replaying unanswered extension dialogs.
