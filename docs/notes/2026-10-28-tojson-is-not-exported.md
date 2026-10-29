@@ -3,7 +3,7 @@
 ## Symptom
 
 An embedded host cannot import `toJsonEvent` from
-`@earendil-works/pi-coding-agent`, although `docs/json.md` and the library notes
+`@earendil-works/pi-coding-agent`, although pi's `docs/json.md` and the library notes
 name it as the transform between an `AgentSessionEvent` and the JSON event the
 reducer consumes.
 

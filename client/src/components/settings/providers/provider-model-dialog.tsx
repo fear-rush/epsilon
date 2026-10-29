@@ -4,7 +4,7 @@
  * (useful when one gateway exposes several families).
  */
 import { useState } from "react";
-import { providerApiSchema } from "shared";
+import { parseProviderApi } from "shared";
 import type { ProviderModelInput } from "shared";
 
 import {
@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { ProviderApiSelect } from "./provider-api-select";
+import { keepUntouched } from "./field-errors";
 import { modelFieldErrors, modelFields } from "./provider-validation";
 import type { ModelFieldErrors } from "./provider-validation";
 
@@ -84,17 +85,9 @@ export function ProviderModelDialog({
 	const [errors, setErrors] = useState<ModelFieldErrors>({});
 	const update = (patch: Partial<ModelForm>) => {
 		setForm((current) => ({ ...current, ...patch }));
-		setErrors((current) => {
-			const touched = new Set(Object.keys(patch));
-			const next: ModelFieldErrors = {};
-			for (const field of modelFields) {
-				const message = current[field];
-				if (message !== undefined && !touched.has(field)) next[field] = message;
-			}
-			return next;
-		});
+		setErrors((current) => keepUntouched(current, modelFields, Object.keys(patch)));
 	};
-	const api = providerApiSchema.safeParse(form.api);
+	const api = parseProviderApi(form.api);
 	const cost =
 		optionalCost(form.costInput) !== undefined &&
 		optionalCost(form.costOutput) !== undefined &&
@@ -130,7 +123,7 @@ export function ProviderModelDialog({
 						onSave({
 							id: form.id.trim(),
 							name: form.name.trim() || undefined,
-							api: api.success ? api.data : undefined,
+							api,
 							baseUrl: form.baseUrl.trim() || undefined,
 							reasoning: form.reasoning,
 							input: form.images ? ["text", "image"] : undefined,

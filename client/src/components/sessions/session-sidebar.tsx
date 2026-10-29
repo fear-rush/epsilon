@@ -9,17 +9,6 @@ import { useState } from "react";
 import type { SessionSummary } from "shared";
 
 import { SessionItem } from "@/components/sessions/session-item";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -32,6 +21,7 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { SidebarAccount } from "@/components/sessions/sidebar-account";
+import { DeleteDialog } from "@/components/settings/delete-dialog";
 import { deleteSession, fetchSessions } from "@/lib/api";
 import { sessionLabel } from "@/lib/format";
 
@@ -117,43 +107,27 @@ export function SessionSidebar() {
 				</SidebarMenu>
 			</div>
 
-			<AlertDialog
+			<DeleteDialog
 				open={pendingDelete !== undefined}
+				title="Delete this session?"
+				description={
+					pendingDelete === undefined
+						? ""
+						: `${sessionLabel(pendingDelete)} is removed from pi's list and its file is deleted.`
+				}
+				error={remove.error}
+				pending={remove.isPending}
+				confirmLabel="Delete"
 				onOpenChange={(open) => {
 					if (!open) {
 						remove.reset();
 						setPendingDelete(undefined);
 					}
 				}}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Delete this session?</AlertDialogTitle>
-						<AlertDialogDescription>
-							{pendingDelete === undefined ? "" : sessionLabel(pendingDelete)} is removed from pi's
-							list and its file is deleted.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					{remove.error !== null && (
-						<Alert variant="destructive">
-							<AlertDescription>{remove.error.message}</AlertDescription>
-						</Alert>
-					)}
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							disabled={remove.isPending}
-							onClick={() => {
-								if (pendingDelete !== undefined) remove.mutate(pendingDelete.id);
-							}}
-						>
-							{remove.isPending && <Spinner data-icon="inline-start" />}
-							Delete
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				onConfirm={() => {
+					if (pendingDelete !== undefined) remove.mutate(pendingDelete.id);
+				}}
+			/>
 		</Sidebar>
 	);
 }

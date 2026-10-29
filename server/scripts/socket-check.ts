@@ -1,7 +1,6 @@
-import { PROTOCOL_VERSION, clientFrameSchema, serverFrameSchema } from "shared";
-import type { ClientFrame, ServerFrame } from "shared";
+import type { ServerFrame } from "shared";
 
-const url = "ws://127.0.0.1:3000/api/link";
+import { SOCKET_URL as url, answerTo, hello, parseFrame, send as sendFrame } from "./socket";
 const sessionId = process.argv[2] ?? crypto.randomUUID();
 /** With an argument this script only attaches, to prove an existing session reads back. */
 const attachOnly = process.argv[2] !== undefined;
@@ -9,20 +8,19 @@ const socket = new WebSocket(url);
 const seen: string[] = [];
 let answered = 0;
 
-const send = (frame: ClientFrame) => socket.send(JSON.stringify(clientFrameSchema.parse(frame)));
+const send = (frame: Parameters<typeof sendFrame>[1]) => sendFrame(socket, frame);
 const show = (frame: ServerFrame) => {
 	if (frame.t === "event") return frame.event.type;
 	if (frame.t === "dialog") return `dialog:${frame.request.method}:${frame.request.id.slice(0, 8)}`;
 	if (frame.t === "error") return `error:${frame.code}`;
-	if (frame.t === "meta") return `meta needsInput=${frame.needsInput}`;
 	return frame.t;
 };
 
 socket.addEventListener("open", () => {
-	send({ t: "hello", protocol: PROTOCOL_VERSION, tabId: "check" });
+	send(hello("check"));
 });
 socket.addEventListener("message", (message) => {
-	const frame = serverFrameSchema.parse(JSON.parse(String(message.data)));
+	const frame = parseFrame(message.data);
 	const label = show(frame);
 	seen.push(label);
 	console.log("<-", label);
@@ -53,7 +51,7 @@ socket.addEventListener("message", (message) => {
 		send({
 			t: "dialog",
 			sessionId,
-			answer: { id: frame.request.id, confirmed: true },
+			answer: answerTo(frame.request),
 		});
 	}
 	if (frame.t === "event" && frame.event.type === "agent_settled") {

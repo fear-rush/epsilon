@@ -25,6 +25,9 @@ import { useProviderDetail } from "@/hooks/use-provider-detail";
 import { deleteProvider, saveProvider } from "@/lib/api";
 import { useSettingsRefresh } from "@/components/settings/settings-refresh";
 
+import { DeleteDialog } from "@/components/settings/delete-dialog";
+
+import { keepUntouched } from "./field-errors";
 import { draftOf, inputOf } from "./provider-draft";
 import { providerFieldErrors, providerFields } from "./provider-validation";
 import type { ProviderFieldErrors } from "./provider-validation";
@@ -76,15 +79,7 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 		allowLeave.current = false;
 		setDraft((current) => ({ ...current, ...patch }));
 		setDirty(true);
-		setErrors((current) => {
-			const touched = new Set(Object.keys(patch));
-			const next: ProviderFieldErrors = {};
-			for (const field of providerFields) {
-				const message = current[field];
-				if (message !== undefined && !touched.has(field)) next[field] = message;
-			}
-			return next;
-		});
+		setErrors((current) => keepUntouched(current, providerFields, Object.keys(patch)));
 	};
 
 	const save = useMutation({
@@ -214,35 +209,17 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 				}
 			</Block>
 
-			<AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Remove {detail?.name ?? draft.name}?</AlertDialogTitle>
-						<AlertDialogDescription>
-							The entry leaves models.json, and a credential stored in auth.json on the agent host
-							is removed with it. A key that comes from the environment stays there.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					{remove.error !== null && (
-						<Alert variant="destructive">
-							<AlertDescription>{remove.error.message}</AlertDescription>
-						</Alert>
-					)}
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							disabled={remove.isPending}
-							onClick={() => {
-								if (detail !== undefined) remove.mutate(detail.id);
-							}}
-						>
-							{remove.isPending && <Spinner data-icon="inline-start" />}
-							Remove
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			<DeleteDialog
+				open={deleteOpen}
+				title={`Remove ${detail?.name ?? draft.name}?`}
+				description="The entry leaves models.json, and a credential stored in auth.json on the agent host is removed with it. A key that comes from the environment stays there."
+				error={remove.error}
+				pending={remove.isPending}
+				onOpenChange={setDeleteOpen}
+				onConfirm={() => {
+					if (detail !== undefined) remove.mutate(detail.id);
+				}}
+			/>
 		</div>
 	);
 }

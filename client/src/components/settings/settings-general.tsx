@@ -5,6 +5,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { useState } from "react";
+import { modelKey } from "shared";
 import type { SettingsSnapshot, SnapshotModel } from "shared";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -23,8 +24,6 @@ import { setDefaultModel } from "@/lib/api";
 
 import { useSettingsRefresh } from "./settings-refresh";
 import { SettingsGroup, SettingsPage, SettingsRow } from "./settings-section";
-
-const keyOf = (provider: string, id: string) => `${provider}\u0000${id}`;
 
 const labelOf = (model: SnapshotModel) => `${model.provider}: ${model.name}`;
 
@@ -46,7 +45,8 @@ export function SettingsGeneral({ snapshot }: { snapshot: SettingsSnapshot }) {
 	const refresh = useSettingsRefresh();
 	const defaults = useMutation({ mutationFn: setDefaultModel, onSuccess: refresh });
 	const current = snapshot.defaultModel;
-	const selected = current === null ? "" : keyOf(current.provider, current.modelId);
+	const selected =
+		current === null ? "" : modelKey({ provider: current.provider, id: current.modelId });
 	const models = [...snapshot.models].sort((left, right) =>
 		`${left.provider}/${left.name}`.localeCompare(`${right.provider}/${right.name}`),
 	);
@@ -118,7 +118,7 @@ function DefaultModelPicker({
 	onPick: (model: SnapshotModel) => void;
 }) {
 	const [open, setOpen] = useState(false);
-	const current = models.find((model) => keyOf(model.provider, model.id) === selected);
+	const current = models.find((model) => modelKey(model) === selected);
 
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
@@ -146,7 +146,7 @@ function DefaultModelPicker({
 						{groupsOf(models).map(([provider, entries]) => (
 							<CommandGroup key={provider} heading={provider}>
 								{entries.map((model) => {
-									const value = keyOf(model.provider, model.id);
+									const value = modelKey(model);
 									return (
 										<CommandItem
 											key={value}

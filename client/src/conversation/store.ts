@@ -1,7 +1,7 @@
 /**
  * One session's transcript in this tab. The socket belongs to the tab (link.ts),
  * so this store holds only what frames reduced to: a remount reuses it instead of
- * rebuilding the transcript from a snapshot.
+ * rebuilding the transcript from a snapshot, and leaving the route releases it.
  */
 import type { Command, DialogAnswer } from "shared";
 import { emptyConversation, reduce } from "shared";
@@ -21,18 +21,37 @@ export type ConversationSnapshot = {
 export class ConversationStore {
 	private snapshot: ConversationSnapshot;
 	private readonly listeners = new Set<() => void>();
+	private readonly detach: () => void;
+	private readonly stopStatus: () => void;
+	private readonly stopProblem: () => void;
 	readonly sessionId: string;
 
 	constructor(sessionId: string) {
 		this.sessionId = sessionId;
 		this.snapshot = { sessionId, status: link.current, loaded: false, state: emptyConversation };
-		link.onStatus((status) => this.update({ status }));
-		link.attach(sessionId, (frame) =>
+		this.stopStatus = link.onStatus((status) => this.update({ status }));
+		this.stopProblem = link.onProblem((message) =>
+			this.update({
+				state: reduce(this.snapshot.state, { t: "error", code: "UNSUPPORTED_FRAME", message }),
+			}),
+		);
+		this.detach = link.attach(sessionId, (frame) =>
 			this.update({
 				state: reduce(this.snapshot.state, frame),
 				loaded: this.snapshot.loaded || frame.t === "snapshot",
 			}),
 		);
+	}
+
+	/**
+	 * Leave this session. The detach starts the server's idle grace, so a quick
+	 * return reattaches to the same engine instead of rebuilding it from the file.
+	 */
+	dispose(): void {
+		this.detach();
+		this.stopStatus();
+		this.stopProblem();
+		this.listeners.clear();
 	}
 
 	readonly subscribe = (listener: () => void): (() => void) => {

@@ -6,20 +6,39 @@
 import type { SettingsSnapshot } from "shared";
 
 import { readModelsFrom } from "../agent/models";
-import { readDefaultModel } from "./defaults";
-import { listMcpServers } from "./mcp";
+import { listMcpServers, mcpFileSchema } from "./mcp";
+import { modelsFileSchema } from "./models-file";
 import { listPackages } from "./packages";
 import { createRuntime, listBuiltins, listProviders } from "./providers";
 import { listSkills } from "./skills";
+import { mcpPath, modelsPath, unreadableFile } from "./store";
+import { readDefaultModel } from "./defaults";
+
+/** A file the panel had to skip, plus what pi's runtime could not compose. */
+const problemText = async (
+	home: string,
+	runtimeError: string | undefined,
+): Promise<string | undefined> => {
+	const problems = [
+		...(await Promise.all([
+			unreadableFile(modelsPath(home), modelsFileSchema),
+			unreadableFile(mcpPath(home), mcpFileSchema),
+		])),
+	];
+	const text = [runtimeError, ...problems].filter((part) => part !== undefined).join("\n\n");
+	return text === "" ? undefined : text;
+};
 
 export const readSettings = async (cwd: string, home: string): Promise<SettingsSnapshot> => {
 	const runtime = await createRuntime(home);
-	const [providers, builtins, models, mcp, skills] = await Promise.all([
+	const [providers, builtins, models, mcp, skills, packages, error] = await Promise.all([
 		listProviders(home, runtime),
 		listBuiltins(home, runtime),
 		readModelsFrom(runtime),
 		listMcpServers(home),
 		listSkills(home),
+		listPackages(cwd, home),
+		problemText(home, runtime.getError()),
 	]);
 	return {
 		home,
@@ -29,8 +48,8 @@ export const readSettings = async (cwd: string, home: string): Promise<SettingsS
 		models,
 		mcp,
 		skills,
-		packages: listPackages(cwd, home),
+		packages,
 		ready: models.length > 0,
-		error: runtime.getError(),
+		error,
 	};
 };

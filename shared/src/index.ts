@@ -26,6 +26,17 @@ export { dialogAnswerSchema, dialogQuestionSchema, extensionDisplaySchema } from
 export type { DialogAnswer, DialogQuestion, ExtensionDisplay } from "./extui";
 export { PROTOCOL_VERSION } from "./protocol/version";
 export {
+	PERMISSION_MODE_VALUES,
+	PERMISSION_STATUS_KEY,
+	parsePermissionStatus,
+	permissionModeSchema,
+	permissionStatusText,
+} from "./permission";
+export type { PermissionMode } from "./permission";
+export { modelKey } from "./model-key";
+export { problemSchema } from "./schemas/problem";
+export type { Problem } from "./schemas/problem";
+export {
 	sessionErrorCodeSchema,
 	sessionErrorSchema,
 	sessionListSchema,
@@ -42,6 +53,7 @@ export type { Readiness } from "./schemas/readiness";
 export {
 	builtinProviderSchema,
 	defaultModelSchema,
+	mcpNameSchema,
 	mcpServerInputSchema,
 	mcpServerViewSchema,
 	mcpTransportSchema,
@@ -49,15 +61,16 @@ export {
 	packageViewSchema,
 	providerApiSchema,
 	providerDetailSchema,
+	providerIdSchema,
 	providerImportInputSchema,
 	providerImportResultSchema,
 	providerInputSchema,
 	providerModelCostSchema,
 	providerModelInputSchema,
 	providerViewSchema,
-	settingsErrorSchema,
 	settingsSnapshotSchema,
 	skillInputSchema,
+	skillNameSchema,
 	skillViewSchema,
 } from "./schemas/settings";
 export type {
@@ -76,12 +89,11 @@ export type {
 	ProviderModelCost,
 	ProviderModelInput,
 	ProviderView,
-	SettingsError,
 	SettingsSnapshot,
 	SkillInput,
 	SkillView,
 } from "./schemas/settings";
-export { PROVIDER_APIS, providerModelsEndpoint } from "./provider-endpoints";
+export { PROVIDER_APIS, parseProviderApi, providerModelsEndpoint } from "./provider-endpoints";
 export type { ProviderApiInfo } from "./provider-endpoints";
 export { emptyConversation } from "./conversation/state";
 export { isVisibleMessage } from "./conversation/state";

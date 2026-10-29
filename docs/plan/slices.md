@@ -15,15 +15,17 @@ against the operator's `~/.pi`, and `bun run dev:host` is never a verification p
 
 ### S1: One live turn
 
-Spawn `pi --mode rpc`, frame its stdout, one WebSocket, a textarea and a raw event
-list. Ugly on purpose.
+**Historical.** S1 drove `pi --mode rpc` and framed its stdout. S12 replaced the
+child with an embedded engine ([ADR-0008](../adr/0008-embed-pi-engine-with-opinions.md)),
+so the spawn and kill checks below describe what was done, not what the code does
+now. Do not rebuild a child to repeat them.
 
 - [x] A prompt sent from the browser streams a real answer back, incrementally
 - [x] Kill the child mid-stream: the page reports the agent exited, no silence
 - [x] A tool-using turn is recorded and committed to
       `shared/src/conversation/fixtures/`
 - [x] `@earendil-works/*` is imported only in `server/src/agent/` and
-      `shared/src/pi.ts` (a `grep` proves it; no lint rule exists yet)
+      `shared/src/pi.ts` (`rg` proves it; no lint rule enforces it)
 
 ### S2: Transcript
 
@@ -80,7 +82,7 @@ nothing overflows at 390px.
 Epsilon's own defaults are code in `server/src/agent/defaults/`, registered after the
 CLI's three built-ins ([ADR-0008](../adr/0008-embed-pi-engine-with-opinions.md),
 decision 3). The checks below run against a scratch home: `auth.json` and
-`models.json` symlinked from the operator's home, a `settings.json` naming only the
+`models.json` copied from the operator's home, a `settings.json` naming only the
 provider and the model, and no `extensions/` directory. That is the deployment shape
 from [../deploy.md](../deploy.md), minus a container.
 
@@ -118,14 +120,14 @@ from [../deploy.md](../deploy.md), minus a container.
 ### S6: Files and diff
 
 - [ ] Browse the project tree; open a source file, an image and a CSV
-- [ ] A path outside the project is refused with `PATH_NOT_ALLOWED`
+- [ ] A path outside the project is refused with a path error, never read
 - [ ] Open the diff of the file the agent just edited
 - [ ] Insert a file path into the composer with `@`
 
 ### S7: Terminal
 
-- [ ] `pi` itself runs in the terminal tab; `/login` and `/settings` work, which is
-      also how a deployment is configured
+- [ ] `pi` itself runs in the terminal tab; `/login` works for OAuth, while the
+      dashboard covers provider, MCP, skill and package configuration (ADR-0012)
 - [ ] The tab's `pi` loads Epsilon's defaults through `-e`, so the same edit asks for
       confirmation there and `/permission` switches the same guard
       ([ADR-0010](../adr/0010-defaults-are-engine-only.md))
@@ -155,8 +157,9 @@ from [../deploy.md](../deploy.md), minus a container.
 ### S11: A deployment you can reach from a phone
 
 The container, the volume and the single origin. Details in
-[../deploy.md](../deploy.md). Setup inside the container is one `pi` session, not a
-feature of the dashboard ([ADR-0006](../adr/0006-setup-in-the-deployment-terminal.md)).
+[../deploy.md](../deploy.md). Setup is the dashboard, except OAuth login, MCP sign-in
+and trust, which stay in a terminal inside the deployment
+([ADR-0012](../adr/0012-configure-in-the-dashboard.md)).
 
 - [ ] One published port serves the client and the API; a page reload works
 - [ ] The agent home is the container's volume; the host `~/.pi/agent` is untouched
@@ -168,7 +171,7 @@ feature of the dashboard ([ADR-0006](../adr/0006-setup-in-the-deployment-termina
       refused, and the error names the reason
 - [ ] `EPSILON_PROJECT` decides the session list, and the agent's `pwd` agrees
 - [ ] Deleting the volume and starting over reaches a not-ready notice that names
-      the command to run, instead of a broken session
+      the missing step and opens Settings, instead of a broken session
 - [ ] The notice names the missing step and the home path; an untrusted project
       shows its own notice rather than a silent downgrade
 
@@ -229,7 +232,7 @@ their skills and prompts, from the same loader that gets Epsilon's defaults.
 ### S15: See what the context is spending
 
 The browser replacement for `pi-context-view`, built from the engine rather than the
-extension: `getContextUsage()` and `get_session_stats()`.
+extension: `AgentSession.getContextUsage()` and `AgentSession.getSessionStats()`.
 
 - [ ] The page shows the context window used against its limit, and it updates as a
       run streams
@@ -242,7 +245,7 @@ extension: `getContextUsage()` and `get_session_stats()`.
 ### S16: Paste an image into the composer
 
 The browser replacement for `pi-paster`: the `prompt` frame carries images and
-`agent.prompt(text, images)` receives them.
+`AgentSession.prompt(text, { images })` receives them.
 
 - [ ] A pasted image becomes an attachment chip in the composer and is sent with the
       next message
@@ -272,10 +275,10 @@ Server and reducer checks, run over HTTP against a scratch home:
       the panel, from `ModelRuntime.getError()`
 - [x] A failed provider call renders as an `Alert` with pi's `errorMessage`, rebuilt
       from the assistant message in a real session file
-- [x] The list carries only configured providers (plus 43 built-ins for the picker),
-      and a built-in detail reports `builtin: true` with its catalog
-- [x] Saving only an API key for a built-in writes `{ "apiKey": … }` and leaves the
-      401-model catalog intact; the entry then lists as configured
+- [x] The list carries only configured providers (plus every built-in for the
+      picker), and a built-in detail reports `builtin: true` with its catalog
+- [x] Saving only an API key for a built-in writes `{ "apiKey": … }` and leaves pi's
+      catalog intact; the entry then lists as configured
 - [x] A provider detail exposes header names but no values, full model entries and
       `modelOverrides`
 - [x] A header write with a blank value keeps the stored value and removes headers
@@ -314,8 +317,8 @@ Browser checks, confirmed by the operator:
 - [x] MCP, skill and package sections add, edit and remove their entries, and error
       text appears in the form; MCP reads "Add MCP"
 - [x] Settings is a full page with its own navigation, not a modal; Search filters
-      the sections, Back to app returns to the session list, the phone layout keeps
-      every section reachable, and both columns use the same width
+      the sections, Back to app returns to the session list, and the phone layout
+      keeps every section reachable
 - [x] A live session picks up a new provider, MCP server or skill without a restart
 - [x] `rg -i rpc server shared client` finds no engine path that enters pi's RPC mode
       or speaks its envelope; `mode` is `"json"` and a prompt source is `"interactive"`

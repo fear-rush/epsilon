@@ -20,7 +20,7 @@ const serverEntrySchema = z.looseObject({
 	enabled: z.boolean().optional(),
 });
 
-const mcpFileSchema = z.looseObject({
+export const mcpFileSchema = z.looseObject({
 	mcpServers: z.record(z.string(), serverEntrySchema).optional(),
 });
 
@@ -57,10 +57,9 @@ export const writeMcpServer = async (home: string, input: McpServerInput): Promi
 	if (input.enabled === false) next.enabled = false;
 	else delete next.enabled;
 
+	// The transport decides which fields exist, so switching one clears the
+	// other's target instead of leaving a server with two of them.
 	if (input.transport === "stdio") {
-		if (input.command === undefined || input.command === "") {
-			throw new Error("A stdio server needs a command");
-		}
 		delete next.url;
 		delete next.headers;
 		next.command = input.command;
@@ -69,9 +68,6 @@ export const writeMcpServer = async (home: string, input: McpServerInput): Promi
 		if (input.env !== undefined && Object.keys(input.env).length > 0) next.env = input.env;
 		else delete next.env;
 	} else {
-		if (input.url === undefined || input.url === "") {
-			throw new Error("An HTTP server needs a URL");
-		}
 		delete next.command;
 		delete next.args;
 		delete next.env;

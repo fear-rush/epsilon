@@ -34,6 +34,15 @@ Superseding is how history changes here:
 - 0011 accepts third-party package dependencies for their tools and keeps 0008's
   defaults rule. Installation moved to Settings with 0012.
 
+## Reading one
+
+An ADR records the decision and the tree at its date. It is not current-state
+documentation: a path in an old record may name a module that has since moved or
+been removed, and an early record may name a `pi` RPC command where the SDK now has
+a method. Use [../architecture.md](../architecture.md) for what exists now, and
+[../reference/pi-sdk.md](../reference/pi-sdk.md) for the SDK equivalent of an RPC
+command. Epsilon does not speak RPC.
+
 ## Writing one
 
 - `NNNN-short-slug.md`, next number, never reuse.

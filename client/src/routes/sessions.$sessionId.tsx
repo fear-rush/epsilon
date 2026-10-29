@@ -13,6 +13,7 @@ import { QuestionDialog } from "@/components/chat/question-dialog";
 import { Transcript } from "@/components/chat/transcript";
 import { Composer } from "@/components/composer/composer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -48,7 +49,17 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 				<div className="flex min-h-0 flex-1 flex-col">
 					{header(<Skeleton className="h-4 w-40" />)}
 					<div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-						{snapshot.status === "closed" ? (
+						{snapshot.status === "blocked" ? (
+							<Alert variant="destructive" className="max-w-md">
+								<AlertTitle>Version mismatch</AlertTitle>
+								<AlertDescription>
+									<p>This tab was loaded from a different build than the server speaks.</p>
+									<Button variant="outline" onClick={() => window.location.reload()}>
+										Reload
+									</Button>
+								</AlertDescription>
+							</Alert>
+						) : snapshot.status === "closed" ? (
 							<Alert variant="destructive" className="max-w-md">
 								<AlertTitle>Disconnected</AlertTitle>
 								<AlertDescription>The socket to the server closed. Reconnecting…</AlertDescription>

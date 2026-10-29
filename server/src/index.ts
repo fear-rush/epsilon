@@ -51,7 +51,20 @@ import {
 	listSessionsRoute,
 } from "./routes/sessions";
 
-const app = new OpenAPIHono();
+/**
+ * A refused request is the one sentence the panel shows, in the same shape every
+ * route documents. Without this the validator answers with its own envelope, and
+ * the browser has to guess which of two refusal shapes it received.
+ */
+const app = new OpenAPIHono({
+	defaultHook: (result, c) => {
+		if (result.success) return undefined;
+		const message = result.error.issues
+			.map((issue) => `${issue.path.join(".") || "input"}: ${issue.message}`)
+			.join("; ");
+		return c.json({ message }, 400);
+	},
+});
 
 app.openapi(healthRoute, (c) => c.json(healthBody));
 app.openapi(readinessRoute, readinessHandler);

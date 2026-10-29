@@ -2,7 +2,9 @@
  * What the browser shows. Built only from socket frames, so replaying a fixture
  * twice produces the same state (docs/plan.md, S2).
  */
-import type { DialogQuestion, JsonAgentSessionEvent, SnapshotCommand, SnapshotModel } from "shared";
+import type { DialogQuestion } from "../extui";
+import type { JsonAgentSessionEvent } from "../pi";
+import type { SnapshotCommand, SnapshotModel } from "../protocol/frames";
 
 type EventMessage = Extract<JsonAgentSessionEvent, { type: "message_end" }>["message"];
 
@@ -74,8 +76,8 @@ export type ConversationState = {
 	title?: string;
 	/** pi's own session name, from `set_session_name` or the terminal. */
 	sessionName?: string;
-	/** A turn is in progress. `agent_start` and `agent_end` carry this; a child that
-	 * is merely alive does not. */
+	/** A turn is in progress. `agent_start` and `agent_end` carry this; a live
+	 * engine that is merely idle does not. */
 	busy: boolean;
 	/** What the model picker may offer, from the last snapshot. */
 	models: SnapshotModel[];
@@ -83,7 +85,6 @@ export type ConversationState = {
 	commands: SnapshotCommand[];
 	/** The model the session uses now, or undefined before the first snapshot. */
 	model: SnapshotModel | undefined;
-	needsInput: boolean;
 	nextNoticeId: number;
 };
 
@@ -99,6 +100,5 @@ export const emptyConversation: ConversationState = {
 	models: [],
 	commands: [],
 	model: undefined,
-	needsInput: false,
 	nextNoticeId: 0,
 };

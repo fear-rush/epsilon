@@ -1,14 +1,12 @@
 import { createRoute } from "@hono/zod-openapi";
 import type { RouteHandler } from "@hono/zod-openapi";
-import { settingsErrorSchema } from "shared";
 import { z } from "zod";
 
 import { config } from "../config";
-import { registry } from "../runtime";
 import { installPackage, removePackage } from "../settings/packages";
-import { failure } from "./failure";
+import { errorContent } from "./failure";
+import { settingsWrite } from "./write";
 
-const errorContent = { "application/json": { schema: settingsErrorSchema } };
 const sourceSchema = z.object({ source: z.string().min(1) });
 
 export const installPackageRoute = createRoute({
@@ -38,27 +36,15 @@ export const removePackageRoute = createRoute({
 	},
 });
 
-export const installPackageHandler: RouteHandler<typeof installPackageRoute> = async (c) => {
-	try {
-		await installPackage(config.projectDir, config.agentHome, c.req.valid("json").source);
-		registry.reloadAll();
-		return c.body(null, 204);
-	} catch (error) {
-		return failure(c, error instanceof Error ? error : new Error("The settings change failed"));
-	}
-};
+export const installPackageHandler: RouteHandler<typeof installPackageRoute> = async (c) =>
+	settingsWrite(c, () =>
+		installPackage(config.projectDir, config.agentHome, c.req.valid("json").source),
+	);
 
 export const removePackageHandler: RouteHandler<typeof removePackageRoute> = async (c) => {
-	try {
-		const removed = await removePackage(
-			config.projectDir,
-			config.agentHome,
-			c.req.valid("query").source,
-		);
-		if (!removed) return failure(c, new Error("No declared package matched that source"));
-		registry.reloadAll();
-		return c.body(null, 204);
-	} catch (error) {
-		return failure(c, error instanceof Error ? error : new Error("The settings change failed"));
-	}
+	const { source } = c.req.valid("query");
+	return settingsWrite(c, async () => {
+		const removed = await removePackage(config.projectDir, config.agentHome, source);
+		if (!removed) throw new Error("No declared package matched that source");
+	});
 };

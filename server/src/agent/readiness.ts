@@ -4,15 +4,15 @@
  * cannot drift from what a session would see. It reads pi's files and writes none;
  * a login in the deployment's shell changes the next answer.
  */
-import { join } from "node:path";
-
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { Readiness } from "shared";
 
+import { authPath, modelsPath } from "../settings/store";
+
 export const readReadiness = async (agentHome: string): Promise<Readiness> => {
 	const runtime = await ModelRuntime.create({
-		authPath: join(agentHome, "auth.json"),
-		modelsPath: join(agentHome, "models.json"),
+		authPath: authPath(agentHome),
+		modelsPath: modelsPath(agentHome),
 	});
 	const usable = runtime.getAvailableSnapshot();
 	if (usable.length > 0) return { ready: true };

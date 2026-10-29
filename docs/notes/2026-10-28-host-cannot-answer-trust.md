@@ -15,7 +15,7 @@ pi requires a decision before it loads resources supplied by the working folder
 `.pi/prompts`, `.pi/themes`, `.pi/SYSTEM.md`, `.pi/APPEND_SYSTEM.md`, and project
 `.agents/skills`). The decision is stored in `<agent home>/trust.json`.
 
-pi's `docs/security.md` states the trap directly: "Print, JSON, and RPC modes
+pi's pi's `docs/security.md` states the trap directly: "Print, JSON, and RPC modes
 cannot show the built-in trust prompt." An embedded engine can receive the
 `project_trust` event from an extension, but Epsilon does not answer it: trust is a
 per-project decision, and a browser dialog that appears once would be easy to click

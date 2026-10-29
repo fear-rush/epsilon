@@ -21,7 +21,8 @@ export function ConfirmDialog({
 	question: ConfirmQuestion;
 	onAnswer: (answer: DialogAnswer) => void;
 }) {
-	const answer = (confirmed: boolean) => onAnswer({ id: question.id, confirmed });
+	const answer = (confirmed: boolean) =>
+		onAnswer({ id: question.id, method: "confirm", confirmed });
 
 	return (
 		<AlertDialog open onOpenChange={() => {}}>

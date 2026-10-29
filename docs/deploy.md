@@ -35,28 +35,28 @@ provides the `pi` CLI for the terminal tab and setup
 
 ## Image
 
-| Part                                                                                 | Why                                                                                          |
-| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| Node 22.19 or newer (`node:24-bookworm-slim` matches pi's own recipe)                | the CLI's runtime; the embedded engine uses the server's Bun                                 |
-| Bun                                                                                  | the server                                                                                   |
-| `bash`, `git`, `ripgrep`, `ca-certificates`                                          | the tools the agent and its extensions expect                                                |
-| pinned `@earendil-works/pi-coding-agent`, installed globally with `--ignore-scripts` | so a shell in the container has `pi`, and so extensions that resolve `pi` by name still work |
-| glibc, not musl                                                                      | native packages ship both, but the glibc build is the tested one                             |
+| Part                                                                                        | Why                                                                                          |
+| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Node 22.22 or newer (`node:24-bookworm-slim` matches pi's own recipe; pi itself asks 22.19) | the CLI's runtime; the embedded engine uses the server's Bun                                 |
+| Bun                                                                                         | the server                                                                                   |
+| `bash`, `git`, `ripgrep`, `ca-certificates`                                                 | the tools the agent and its extensions expect                                                |
+| pinned `@earendil-works/pi-coding-agent`, installed globally with `--ignore-scripts`        | so a shell in the container has `pi`, and so extensions that resolve `pi` by name still work |
+| glibc, not musl                                                                             | native packages ship both, but the glibc build is the tested one                             |
 
 Do not install `pi` with `npm i -g latest`. The version is pinned with epsilon; a
 different one in the container would not match what the server drives.
 
 ## Run it
 
-| Setting    | Value                                | Note                                                         |
-| ---------- | ------------------------------------ | ------------------------------------------------------------ |
-| volume     | `pi-agent-home:/root/.pi/agent`      | credentials, settings, packages, sessions                    |
-| volume     | `epsilon-state:/root/.epsilon`       | `ui-state.json` only                                         |
-| bind mount | `$PROJECT:/workspace`                | the code the agent works on                                  |
-| env        | `EPSILON_PROJECT=/workspace`         | which project the session list is scoped to                  |
-| env        | `EPSILON_AGENT_HOME=/root/.pi/agent` | the home the server passes to every engine; the volume above |
-| env        | `HOST=0.0.0.0`                       | inside the container; publishing decides who can reach it    |
-| ports      | `127.0.0.1:3000:3000`                | loopback publish, then a tunnel                              |
+| Setting    | Value                                | Note                                                                               |
+| ---------- | ------------------------------------ | ---------------------------------------------------------------------------------- |
+| volume     | `pi-agent-home:/root/.pi/agent`      | credentials, settings, packages, sessions                                          |
+| volume     | `epsilon-state:/root/.epsilon`       | `ui-state.json` only                                                               |
+| bind mount | `$PROJECT:/workspace`                | the code the agent works on                                                        |
+| env        | `EPSILON_PROJECT=/workspace`         | which project the session list is scoped to                                        |
+| env        | `EPSILON_AGENT_HOME=/root/.pi/agent` | the home the server passes to every engine; the volume above                       |
+| env        | `HOST=0.0.0.0`                       | **planned (S11)**: the server binds `127.0.0.1` today; a published port needs this |
+| ports      | `127.0.0.1:3000:3000`                | loopback publish, then a tunnel                                                    |
 
 Publishing the port on `0.0.0.0` puts the whole API on the network. There is no
 application authentication, by design: access control is loopback plus the tunnel
@@ -108,8 +108,10 @@ see the unconfigured state. The sandbox materializes itself: pi creates `session
 `bun run dev:host` runs the same loop against the real home, for reading sessions the
 terminal created. `bun run sandbox:clean` removes the sandbox.
 
-Only `EPSILON_AGENT_HOME` and `EPSILON_PROJECT` change. `HOME` does not, so pi still
-reads `~/.agents/skills` while developing; that is a read, not clutter.
+The two `EPSILON_*` values are set, and two inherited pi variables
+(`PI_PACKAGE_DIR`, `PI_CODING_AGENT_SESSION_DIR`) are cleared so the sandbox decides
+its own paths. `HOME` does not change, so pi still reads `~/.agents/skills` while
+developing; that is a read, not clutter.
 
 Inside the container the loop is the same with the repository bind mounted:
 
@@ -160,6 +162,6 @@ inside the container first, so the platform matches.
 | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | --------------------------------------------- |
 | Session runs but project extensions and MCP are absent | project not trusted, and no engine event asks ([note](notes/2026-10-28-host-cannot-answer-trust.md))  | run `pi` in the container and answer `/trust` |
 | A package's tools fail though `pi list` shows it       | package installed for another platform ([note](notes/2026-10-28-packages-are-bound-to-a-platform.md)) | reinstall inside the container                |
-| The page says the agent is not configured              | the volume has no provider with a usable credential                                                   | open Settings and add a provider              |
-| Page loads, socket closes immediately                  | protocol version mismatch after an upgrade                                                            | reload the tab; the notice names it           |
+| The page shows the not-ready notice                    | the volume has no provider with a usable credential                                                   | open Settings and add a provider              |
+| Page shows a version-mismatch notice with Reload       | the tab was loaded from a different build than the server speaks                                      | press Reload; the page names the mismatch     |
 | `EACCES` on a bind mount                               | container user does not match the host file owner                                                     | run with the host uid                         |

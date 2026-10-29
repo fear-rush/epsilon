@@ -50,7 +50,7 @@ One slice at a time. A slice is finished when its checks pass **and** the
 [universal done list](#universal-done-list) passes. Then commit and mark it done.
 
 The only horizontal work allowed is folded into S1: you cannot demo anything
-without a child process and a socket.
+without an engine and a socket.
 
 ## Slices
 
@@ -118,11 +118,6 @@ readiness, a default model lands in `settings.json`, MCP and skill files are wri
 every delete restores the empty shape, and a failed turn renders its `errorMessage`.
 The slice also removes pi's RPC vocabulary from the engine: `mode` is `"json"`, a
 prompt's source is `"interactive"`, and no RPC command table remains.
-
-Follow-up: `client/src/components/settings/settings-mcp.tsx` and
-`server/src/settings/providers.ts` sit just over the 300-line target. Split the MCP
-form and the provider write path out when either grows; do it before the next
-settings feature.
 
 **S13 is closed and verified in a browser**, with Playwright against a scratch home:
 the permission control read `Strict` after `/permission strict`, a `bash` turn raised

@@ -6,7 +6,7 @@
  */
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
-import { PROVIDER_APIS, providerApiSchema } from "shared";
+import { PROVIDER_APIS, parseProviderApi } from "shared";
 import type { ModelOverride, ProviderDetail, ProviderModelInput } from "shared";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -56,9 +56,9 @@ export function ProviderModels({
 	const [overriding, setOverriding] = useState<ProviderModelInput | undefined>(undefined);
 	const [importOpen, setImportOpen] = useState(false);
 	const [replacing, setReplacing] = useState<"add" | "import" | undefined>(undefined);
-	const api = providerApiSchema.safeParse(draft.api);
+	const api = parseProviderApi(draft.api);
 	const importable =
-		api.success && PROVIDER_APIS.some((entry) => entry.id === api.data && entry.modelsPath);
+		api !== undefined && PROVIDER_APIS.some((entry) => entry.id === api && entry.modelsPath);
 	const custom = !builtin || draft.customCatalog;
 	const catalog = detail?.catalog ?? [];
 	const count = custom ? draft.models.length : catalog.length;
@@ -248,13 +248,13 @@ export function ProviderModels({
 				/>
 			)}
 
-			{importOpen && api.success && (
+			{importOpen && api !== undefined && (
 				<ProviderImportDialog
 					open
 					onOpenChange={() => setImportOpen(false)}
 					providerId={detail?.id}
 					baseUrl={draft.baseUrl}
-					api={api.data}
+					api={api}
 					apiKey={draft.apiKey}
 					onAdd={(models) => {
 						const existing = new Set(draft.models.map((model) => model.id));

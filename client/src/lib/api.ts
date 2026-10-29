@@ -1,14 +1,14 @@
 /**
- * REST reads for the session list. Responses are parsed with the shared zod
- * schemas, so a server change that the client cannot read is an error the page
- * shows, never a blank list.
+ * REST reads and writes. Responses are parsed with the shared zod schemas, so a
+ * server change this page cannot read is an error it shows, never a blank list,
+ * and every refusal becomes the one sentence the route sent.
  */
 import {
+	problemSchema,
 	providerDetailSchema,
 	providerImportResultSchema,
-	settingsErrorSchema,
+	readinessSchema,
 	settingsSnapshotSchema,
-	sessionErrorSchema,
 	sessionListSchema,
 	skillInputSchema,
 } from "shared";
@@ -19,157 +19,152 @@ import type {
 	ProviderImportInput,
 	ProviderInput,
 	ProviderModelInput,
+	Readiness,
 	SessionList,
 	SettingsSnapshot,
 	SkillInput,
 } from "shared";
+import type { z } from "zod";
 
 const OFFLINE = "The server is not reachable. Retrying…";
 
 /** A dropped connection is a phrase, not the browser's "Failed to fetch". */
-const request = async (input: string, init?: RequestInit): Promise<Response> => {
+const request = async (path: string, init?: RequestInit): Promise<Response> => {
 	try {
-		return await fetch(input, init);
+		return await fetch(path, init);
 	} catch {
 		throw new Error(OFFLINE);
 	}
 };
 
-export async function fetchSessions(): Promise<SessionList> {
-	const response = await request("/api/sessions");
-	if (!response.ok) throw new Error(`The session list did not load (${response.status}).`);
-	const parsed = sessionListSchema.safeParse(await response.json());
-	if (!parsed.success) throw new Error("The server sent a session list this page cannot read.");
-	return parsed.data;
-}
-
-export async function deleteSession(id: string): Promise<void> {
-	const response = await request(`/api/sessions/${encodeURIComponent(id)}`, { method: "DELETE" });
-	if (response.ok) return;
-	const parsed = sessionErrorSchema.safeParse(await response.json().catch(() => null));
-	throw new Error(parsed.success ? parsed.data.message : `Delete failed (${response.status}).`);
-}
-
-/** Settings responses are either the snapshot or a refusal with one sentence. */
-const expectNoContent = async (response: Response, fallback: string): Promise<void> => {
-	if (response.ok) return;
-	const parsed = settingsErrorSchema.safeParse(await response.json().catch(() => null));
+/** The route's own sentence, or a fallback naming what failed. */
+const refuse = async (response: Response, fallback: string): Promise<never> => {
+	const parsed = problemSchema.safeParse(await response.json().catch(() => null));
 	throw new Error(parsed.success ? parsed.data.message : `${fallback} (${response.status}).`);
 };
 
-export async function fetchSettings(): Promise<SettingsSnapshot> {
-	const response = await request("/api/settings");
-	if (!response.ok) throw new Error(`Settings did not load (${response.status}).`);
-	const parsed = settingsSnapshotSchema.safeParse(await response.json());
-	if (!parsed.success) throw new Error("The server sent settings this page cannot read.");
-	return parsed.data;
-}
+type Text = { failure: string; unreadable: string };
 
-export async function fetchProviderDetail(id: string): Promise<ProviderDetail> {
-	const response = await request(`/api/settings/providers/${encodeURIComponent(id)}`);
-	if (response.status === 404) throw new Error("No provider or models.json entry with this id.");
-	if (!response.ok) throw new Error(`The provider did not load (${response.status}).`);
-	const parsed = providerDetailSchema.safeParse(await response.json());
-	if (!parsed.success) throw new Error("The server sent a provider this page cannot read.");
+/** The bodies this page sends; each caller has already typed its own input. */
+type RequestBody =
+	| DefaultModel
+	| McpServerInput
+	| ProviderImportInput
+	| ProviderInput
+	| SkillInput
+	| { source: string };
+
+const readJson = async <T>(path: string, schema: z.ZodType<T>, text: Text): Promise<T> => {
+	const response = await request(path);
+	if (!response.ok) return refuse(response, text.failure);
+	const parsed = schema.safeParse(await response.json());
+	if (!parsed.success) throw new Error(text.unreadable);
 	return parsed.data;
-}
+};
+
+const writeJson = async (
+	method: string,
+	path: string,
+	body: RequestBody,
+	failure: string,
+): Promise<Response> => {
+	const response = await request(path, {
+		method,
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify(body),
+	});
+	if (!response.ok) return refuse(response, failure);
+	return response;
+};
+
+const send = async (method: string, path: string, failure: string): Promise<void> => {
+	const response = await request(path, { method });
+	if (!response.ok) await refuse(response, failure);
+};
+
+export const fetchSessions = (): Promise<SessionList> =>
+	readJson("/api/sessions", sessionListSchema, {
+		failure: "The session list did not load",
+		unreadable: "The server sent a session list this page cannot read.",
+	});
+
+export const deleteSession = (id: string): Promise<void> =>
+	send("DELETE", `/api/sessions/${encodeURIComponent(id)}`, "Delete failed");
+
+export const fetchSettings = (): Promise<SettingsSnapshot> =>
+	readJson("/api/settings", settingsSnapshotSchema, {
+		failure: "Settings did not load",
+		unreadable: "The server sent settings this page cannot read.",
+	});
+
+export const fetchReadiness = (): Promise<Readiness> =>
+	readJson("/api/readiness", readinessSchema, {
+		failure: "Readiness did not load",
+		unreadable: "The server sent a readiness answer this page cannot read.",
+	});
+
+export const fetchProviderDetail = (id: string): Promise<ProviderDetail> =>
+	readJson(`/api/settings/providers/${encodeURIComponent(id)}`, providerDetailSchema, {
+		failure: "The provider did not load",
+		unreadable: "The server sent a provider this page cannot read.",
+	});
 
 export async function importProviderModels(
 	input: ProviderImportInput,
 ): Promise<ProviderModelInput[]> {
-	const response = await request("/api/settings/providers/models", {
-		method: "POST",
-		headers: { "content-type": "application/json" },
-		body: JSON.stringify(input),
-	});
-	if (!response.ok) {
-		const parsed = settingsErrorSchema.safeParse(await response.json().catch(() => null));
-		throw new Error(
-			parsed.success ? parsed.data.message : `The models did not load (${response.status}).`,
-		);
-	}
+	const response = await writeJson(
+		"POST",
+		"/api/settings/providers/models",
+		input,
+		"The models did not load",
+	);
 	const parsed = providerImportResultSchema.safeParse(await response.json());
 	if (!parsed.success) throw new Error("The server sent a model list this page cannot read.");
 	return parsed.data.models;
 }
 
-export async function saveProvider(input: ProviderInput): Promise<void> {
-	const response = await request("/api/settings/providers", {
-		method: "POST",
-		headers: { "content-type": "application/json" },
-		body: JSON.stringify(input),
-	});
-	await expectNoContent(response, "The provider was not saved");
-}
+export const saveProvider = async (input: ProviderInput): Promise<void> => {
+	await writeJson("POST", "/api/settings/providers", input, "The provider was not saved");
+};
 
-export async function deleteProvider(id: string): Promise<void> {
-	const response = await request(`/api/settings/providers/${encodeURIComponent(id)}`, {
-		method: "DELETE",
-	});
-	await expectNoContent(response, "The provider was not removed");
-}
+export const deleteProvider = (id: string): Promise<void> =>
+	send(
+		"DELETE",
+		`/api/settings/providers/${encodeURIComponent(id)}`,
+		"The provider was not removed",
+	);
 
-export async function setDefaultModel(model: DefaultModel): Promise<void> {
-	const response = await request("/api/settings/default-model", {
-		method: "PUT",
-		headers: { "content-type": "application/json" },
-		body: JSON.stringify(model),
-	});
-	await expectNoContent(response, "The default model was not saved");
-}
+export const setDefaultModel = async (model: DefaultModel): Promise<void> => {
+	await writeJson("PUT", "/api/settings/default-model", model, "The default model was not saved");
+};
 
-export async function saveMcpServer(input: McpServerInput): Promise<void> {
-	const response = await request("/api/settings/mcp", {
-		method: "POST",
-		headers: { "content-type": "application/json" },
-		body: JSON.stringify(input),
-	});
-	await expectNoContent(response, "The MCP server was not saved");
-}
+export const saveMcpServer = async (input: McpServerInput): Promise<void> => {
+	await writeJson("POST", "/api/settings/mcp", input, "The MCP server was not saved");
+};
 
-export async function deleteMcpServer(name: string): Promise<void> {
-	const response = await request(`/api/settings/mcp/${encodeURIComponent(name)}`, {
-		method: "DELETE",
-	});
-	await expectNoContent(response, "The MCP server was not removed");
-}
+export const deleteMcpServer = (name: string): Promise<void> =>
+	send("DELETE", `/api/settings/mcp/${encodeURIComponent(name)}`, "The MCP server was not removed");
 
-export async function fetchSkill(name: string): Promise<SkillInput> {
-	const response = await request(`/api/settings/skills/${encodeURIComponent(name)}`);
-	if (!response.ok) throw new Error(`The skill did not load (${response.status}).`);
-	const parsed = skillInputSchema.safeParse(await response.json());
-	if (!parsed.success) throw new Error("The server sent a skill this page cannot read.");
-	return parsed.data;
-}
-
-export async function saveSkill(input: SkillInput): Promise<void> {
-	const response = await request("/api/settings/skills", {
-		method: "POST",
-		headers: { "content-type": "application/json" },
-		body: JSON.stringify(input),
+export const fetchSkill = (name: string): Promise<SkillInput> =>
+	readJson(`/api/settings/skills/${encodeURIComponent(name)}`, skillInputSchema, {
+		failure: "The skill did not load",
+		unreadable: "The server sent a skill this page cannot read.",
 	});
-	await expectNoContent(response, "The skill was not saved");
-}
 
-export async function deleteSkill(name: string): Promise<void> {
-	const response = await request(`/api/settings/skills/${encodeURIComponent(name)}`, {
-		method: "DELETE",
-	});
-	await expectNoContent(response, "The skill was not removed");
-}
+export const saveSkill = async (input: SkillInput): Promise<void> => {
+	await writeJson("POST", "/api/settings/skills", input, "The skill was not saved");
+};
 
-export async function installPackage(source: string): Promise<void> {
-	const response = await request("/api/settings/packages", {
-		method: "POST",
-		headers: { "content-type": "application/json" },
-		body: JSON.stringify({ source }),
-	});
-	await expectNoContent(response, "The package was not installed");
-}
+export const deleteSkill = (name: string): Promise<void> =>
+	send("DELETE", `/api/settings/skills/${encodeURIComponent(name)}`, "The skill was not removed");
 
-export async function removePackage(source: string): Promise<void> {
-	const response = await request(`/api/settings/packages?source=${encodeURIComponent(source)}`, {
-		method: "DELETE",
-	});
-	await expectNoContent(response, "The package was not removed");
-}
+export const installPackage = async (source: string): Promise<void> => {
+	await writeJson("POST", "/api/settings/packages", { source }, "The package was not installed");
+};
+
+export const removePackage = (source: string): Promise<void> =>
+	send(
+		"DELETE",
+		`/api/settings/packages?source=${encodeURIComponent(source)}`,
+		"The package was not removed",
+	);

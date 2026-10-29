@@ -57,9 +57,10 @@ providers and their models to `models.json`, the default model through pi's sett
 manager, MCP servers to `mcp.json`, skills as `<home>/skills/<name>/SKILL.md`, and
 packages through pi's package manager. A write reloads live sessions.
 
-Two things stay in a terminal inside the deployment, because pi only exposes them
-there: OAuth login and project trust. An API key typed in Settings goes to the
-documented `apiKey` field of `models.json` and is never sent back to the browser.
+Three things stay in a terminal inside the deployment, because pi only exposes them
+there: OAuth login, MCP sign-in and project trust. An API key typed in Settings goes
+to the documented `apiKey` field of `models.json` and is never sent back to the
+browser.
 
 ## Deploy
 

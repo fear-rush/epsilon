@@ -16,13 +16,16 @@ import type {
 	ExtensionContext,
 	ToolCallEvent,
 } from "@earendil-works/pi-coding-agent";
+import {
+	PERMISSION_MODE_VALUES,
+	PERMISSION_STATUS_KEY,
+	permissionModeSchema,
+	permissionStatusText,
+} from "shared";
+import type { PermissionMode } from "shared";
 import { z } from "zod";
 
-const modeSchema = z.enum(["strict", "ask", "yolo"]);
-
-type PermissionMode = z.infer<typeof modeSchema>;
-
-const MODES = modeSchema.options;
+const MODES = PERMISSION_MODE_VALUES;
 
 /** `ask` is the shipped default: commands wait for a human, edits do not. */
 const DEFAULT_MODE: PermissionMode = "ask";
@@ -33,15 +36,14 @@ const MODE_DESC: Record<PermissionMode, string> = {
 	yolo: "Auto-approve everything; never prompts",
 };
 
-/** The keyed status the browser reads, and the custom entry the mode survives in. */
-const STATUS_KEY = "permission";
+/** The custom entry the mode survives in; the status key comes from `shared`. */
 const ENTRY_TYPE = "permission-state";
 
 /** Read back what an earlier turn wrote; anything else leaves the default alone. */
 const entrySchema = z.object({
 	type: z.literal("custom"),
 	customType: z.literal(ENTRY_TYPE),
-	data: z.object({ mode: modeSchema }),
+	data: z.object({ mode: permissionModeSchema }),
 });
 
 /** The one argument worth showing, whatever tool the call belongs to. */
@@ -73,7 +75,7 @@ export const permissionExtension = (pi: ExtensionAPI): void => {
 		mode = next;
 		// The browser strips this prefix and renders its own labels; the prefix is what
 		// tells one keyed status apart from another extension's.
-		ctx.ui.setStatus(STATUS_KEY, `perm:${next}`);
+		ctx.ui.setStatus(PERMISSION_STATUS_KEY, permissionStatusText(next));
 		pi.events.emit("permission:mode", { mode: next });
 	};
 
@@ -92,7 +94,7 @@ export const permissionExtension = (pi: ExtensionAPI): void => {
 		handler: async (args, ctx) => {
 			const asked = args.trim().toLowerCase();
 			if (asked !== "") {
-				const requested = modeSchema.safeParse(asked);
+				const requested = permissionModeSchema.safeParse(asked);
 				if (!requested.success) {
 					ctx.ui.notify(`Unknown mode "${asked}". Use: ${MODES.join(", ")}`, "error");
 					return;
@@ -113,7 +115,7 @@ export const permissionExtension = (pi: ExtensionAPI): void => {
 	});
 
 	pi.on("session_start", async (_event, ctx) => {
-		const fromFlag = modeSchema.safeParse(pi.getFlag("permission"));
+		const fromFlag = permissionModeSchema.safeParse(pi.getFlag("permission"));
 		if (fromFlag.success) {
 			// A flag beats what the session recorded, as it does in the terminal.
 			mode = fromFlag.data;

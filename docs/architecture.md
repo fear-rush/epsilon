@@ -2,7 +2,7 @@
 
 Status: **partly implemented.** S1 to S5, S12, S13 and S17 are verified in a
 browser. S14 is active; S6 to S11, S15 and S16 are open.
-The browser socket is Epsilon's own protocol 4
+The browser socket is Epsilon's own protocol 5
 ([ADR-0009](adr/0009-socket-speaks-epsilon.md)); the engine runs in this process
 ([ADR-0008](adr/0008-embed-pi-engine-with-opinions.md)). The deployment boundary is
 decided ([ADR-0005](adr/0005-deployment-owns-agent-home.md)) and not built. Modules
@@ -70,48 +70,58 @@ not built; it becomes a second listener when S9 starts.
 
 `server/src/`: the host. Node-compatible, no browser code.
 
-| Module                      | Owns                                                                                                                          |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `index.ts`                  | The Hono app and its generated OpenAPI document, exported for tests. No listener.                                             |
-| `serve.ts`                  | `Bun.serve` with `fetch` + `websocket`, and the shutdown hooks                                                                |
-| `config.ts`                 | Ports, paths, caps, env. The only place that reads `process.env`                                                              |
-| `runtime.ts`                | The one engine registry, shared by the socket and the REST handlers                                                           |
-| `agent/engine.ts`           | `createAgentSession`, the CLI built-ins and Epsilon's defaults, `ExtensionUIContext` bridge, JSON event transform             |
-| `agent/defaults/`           | The guard and the ask-question tool Epsilon ships, as inline factories (ADR-0008, ADR-0010)                                   |
-| `agent/models.ts`           | The model list the picker offers and `set_model` resolves against                                                             |
-| `agent/sdk.ts`              | The one re-export of the SDK classes the settings modules call (rule 1)                                                       |
-| `agent/readiness.ts`        | Whether a home holds a usable model, asked of pi's own runtime                                                                |
-| `agent/session.ts`          | One live session: commands, snapshot, engine events, dispose                                                                  |
-| `agent/dialogs.ts`          | Pending dialogs, keyed display state, unsupported TUI methods                                                                 |
-| `agent/registry.ts`         | sessionId → engine, creation dedupe, dispose when the last tab leaves                                                         |
-| `agent/sessions.ts`         | pi's session-manager: the only path from REST to session files                                                                |
-| `settings/read.ts`          | One settings snapshot: providers, models, defaults, MCP, skills, packages                                                     |
-| `settings/providers.ts`     | Provider entries in `models.json`, detail, built-in ids, a key-preserving merge, and a stored credential logged out on remove |
-| `settings/import-models.ts` | Bounded model-list reads for the OpenAI families and Anthropic                                                                |
-| `settings/mcp.ts`           | MCP servers in `mcp.json`, with the same merge                                                                                |
-| `settings/skills.ts`        | User skills as `<agent home>/skills/<name>/SKILL.md`                                                                          |
-| `settings/defaults.ts`      | The default model, through `SettingsManager`                                                                                  |
-| `settings/packages.ts`      | Packages, through `DefaultPackageManager`                                                                                     |
-| `settings/store.ts`         | JSON read/write, one queue per path, 0600, unknown keys kept                                                                  |
-| `sessions/list.ts`          | Joining stored sessions with live engines, newest first                                                                       |
-| `sessions/delete.ts`        | Removing one session file, refused while an engine holds it                                                                   |
-| `ws/chat.ts`                | Socket upgrade state, hello, attach/detach, commands, dialog answers                                                          |
-| `routes/*.ts`               | Thin handlers: validate, call one function, return. `settings-*.ts` is one resource per file                                  |
+| Module                       | Owns                                                                                                                         |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`                   | The Hono app and its generated OpenAPI document, exported for tests. No listener.                                            |
+| `serve.ts`                   | `Bun.serve` with `fetch` + `websocket`, and the shutdown hooks                                                               |
+| `config.ts`                  | Ports, paths, caps, env. The only place that reads `process.env`                                                             |
+| `runtime.ts`                 | The one engine registry, shared by the socket and the REST handlers                                                          |
+| `agent/engine.ts`            | `createAgentSession`, the CLI built-ins and Epsilon's defaults, and the JSON event transform                                 |
+| `agent/ui-context.ts`        | pi's `ExtensionUIContext`, mapped onto dialogs and notices; TUI-only methods say so once                                     |
+| `agent/ui-bridge.ts`         | The `UiHost` the engine gets, holding back the TUI methods used before the first tab attaches                                |
+| `agent/frames.ts`            | The tabs watching one session: add, remove, fan out                                                                          |
+| `agent/defaults/`            | The guard and the ask-question tool Epsilon ships, as inline factories (ADR-0008, ADR-0010)                                  |
+| `agent/models.ts`            | The model list the picker offers and `set_model` resolves against                                                            |
+| `agent/sdk.ts`               | The one re-export of the SDK classes the settings modules call (rule 1)                                                      |
+| `agent/readiness.ts`         | Whether a home holds a usable model, asked of pi's own runtime                                                               |
+| `agent/session.ts`           | One live session: commands, snapshot, engine events, idle lifetime, dispose                                                  |
+| `agent/dialogs.ts`           | Pending dialogs, method-matched answers, keyed display state, unsupported TUI methods                                        |
+| `agent/registry.ts`          | sessionId → engine, creation dedupe, dispose when the last tab leaves                                                        |
+| `agent/sessions.ts`          | pi's session-manager: the only path from REST to session files                                                               |
+| `settings/read.ts`           | One settings snapshot, including a file the panel had to skip                                                                |
+| `settings/models-file.ts`    | The `models.json` shape, the field merge that keeps unknown keys, and the path helpers                                       |
+| `settings/providers.ts`      | Provider views and detail, built-in ids, and the runtime the panel reads them through                                        |
+| `settings/provider-write.ts` | Upsert and remove, the partial-field policy, and the credential logged out with a stored one                                 |
+| `settings/import-models.ts`  | Bounded model-list reads for the OpenAI families and Anthropic, and the stored credential they may use                       |
+| `settings/mcp.ts`            | MCP servers in `mcp.json`: list, write, remove, and the transport switch that clears the other target                        |
+| `settings/skills.ts`         | User skills as `<agent home>/skills/<name>/SKILL.md`                                                                         |
+| `settings/defaults.ts`       | The default model, through `SettingsManager`                                                                                 |
+| `settings/packages.ts`       | Packages, through `DefaultPackageManager`                                                                                    |
+| `settings/store.ts`          | Documented paths, JSON read/write, one queue per path, 0600, and the unreadable file the panel must name                     |
+| `sessions/list.ts`           | Joining stored sessions with live engines, newest first                                                                      |
+| `sessions/delete.ts`         | Removing one session file, refused while an engine holds it                                                                  |
+| `ws/chat.ts`                 | Socket upgrade state, hello, attach/detach, commands, dialog answers, one checked send                                       |
+| `routes/*.ts`                | Thin handlers: validate, call one function, return. `write.ts` is the one settings write; `failure.ts` the one refusal shape |
 
-Not built yet, and named only so the slices stay findable: the Host check
-(`security.ts`), file and diff routes, the preview listener, the terminal pty, the
-resources page, notifications, and the queue/backpressure channel.
+Not built yet, and named only so the slices stay findable: the Host check, file and
+diff routes, the preview listener, the terminal pty, the resources page,
+notifications, and the queue/backpressure channel.
 
 `shared/src/`: browser-safe. No `node:*`, no React.
 
 | Module                      | Owns                                                                     |
 | --------------------------- | ------------------------------------------------------------------------ |
 | `protocol/version.ts`       | `PROTOCOL_VERSION`                                                       |
-| `protocol/frames.ts`        | zod schemas for every socket frame and the command union                 |
+| `protocol/frames.ts`        | zod schemas for every socket frame, the command union and the snapshot   |
+| `permission.ts`             | The permission mode values and the keyed-status text both sides read     |
+| `model-key.ts`              | One model key for the composer menu and the settings picker              |
+| `schemas/problem.ts`        | The one refusal body every route documents and every read parses         |
 | `extui.ts`                  | zod schemas for dialog questions, answers and display requests           |
 | `pi.ts`                     | Type-only re-export of pi's `JsonAgentSessionEvent`, the reducer's input |
 | `conversation/state.ts`     | `ConversationState`                                                      |
-| `conversation/reduce.ts`    | `reduce(state, frame)`: pure, replay-tested                              |
+| `conversation/reduce.ts`    | `reduce(state, frame)`: pure, replay-tested; the frame vocabulary        |
+| `conversation/events.ts`    | pi's event half of the reducer: streaming, tool runs, notices            |
+| `conversation/content.ts`   | The content-part parse the reducer and the transcript share              |
 | `conversation/selectors.ts` | Derived views: messages, running tools, pending dialog, needs-input      |
 | `conversation/tools.ts`     | zod schemas for tool arguments the renderers read                        |
 | `conversation/fixtures/`    | Recorded event logs, one per hard case                                   |
@@ -121,22 +131,23 @@ resources page, notifications, and the queue/backpressure channel.
 
 `client/src/`: React and Vite.
 
-| Module                           | Owns                                                                     |
-| -------------------------------- | ------------------------------------------------------------------------ |
-| `link.ts`                        | One socket, backoff, hello/welcome, attach/detach                        |
-| `conversation/store.ts`          | `useSyncExternalStore` over `shared/conversation`, command senders       |
-| `hooks/use-conversation.ts`      | One store per session per tab                                            |
-| `routes/*.tsx`                   | The home page and `/sessions/$sessionId`; the root gates on readiness    |
-| `hooks/use-readiness.ts`         | REST readiness, re-read on an interval so the notice clears itself       |
-| `hooks/use-settings.ts`          | The settings snapshot query shared by every section                      |
-| `components/settings/`           | Settings shell, one page per section, forms, grouped-card primitives     |
-| `components/settings/providers/` | The two-pane provider editor: panel, connection, headers, models, import |
-| `components/not-ready.tsx`       | The unsupported state: one `Alert`, no composer                          |
-| `components/chat/`               | Transcript, markdown, tool trace, confirm and question dialogs           |
-| `components/composer/`           | Input, palette, model and permission menus, `!cmd` and `/reload`         |
-| `components/sessions/`           | The sidebar list                                                         |
-| `components/ui/`                 | shadcn primitives                                                        |
-| `lib/`                           | Markdown, Shiki, formatting, permission modes                            |
+| Module                           | Owns                                                                                |
+| -------------------------------- | ----------------------------------------------------------------------------------- |
+| `link.ts`                        | One socket, backoff, hello/welcome, attach/detach, unreadable-frame report          |
+| `conversation/store.ts`          | `useSyncExternalStore` over the shared conversation state, command senders, dispose |
+| `hooks/use-conversation.ts`      | One store per session per tab, released when the route leaves                       |
+| `components/route-error.tsx`     | What a render error shows: one sentence and a way back                              |
+| `routes/*.tsx`                   | The home page and `/sessions/$sessionId`; the root gates on readiness               |
+| `hooks/use-readiness.ts`         | REST readiness, re-read on an interval so the notice clears itself                  |
+| `hooks/use-settings.ts`          | The settings snapshot query shared by every section                                 |
+| `components/settings/`           | Sections list, shell, one page per section, shared delete dialog and field errors   |
+| `components/settings/providers/` | The two-pane provider editor: panel, connection, headers, models, import            |
+| `components/not-ready.tsx`       | The unsupported state: one `Alert`, no composer                                     |
+| `components/chat/`               | Transcript, markdown, tool trace, confirm and question dialogs                      |
+| `components/composer/`           | Input, palette, model and permission menus, `!cmd` and `/reload`                    |
+| `components/sessions/`           | The sidebar list                                                                    |
+| `components/ui/`                 | shadcn primitives                                                                   |
+| `lib/`                           | Markdown, Shiki, formatting, permission modes                                       |
 
 ## Data flows
 
@@ -156,10 +167,12 @@ call → `agent/dialogs.ts` stores it and sends `dialog` → the client renders 
 `dialog` answer back → the pending promise resolves. `abort` answers every pending
 dialog as cancelled, and a dialog's own timeout does the same.
 
-**Close and return.** The last `detach` starts a ten second idle timer. A new
-`attach` cancels it, so a reload reattaches to the same engine and replays its
-dialogs. When the timer fires, the engine disposes and the next `attach` rebuilds it
-from pi's session file.
+**Close and return.** The session page releases its store when it unmounts, and the
+store detaches. The last `detach` starts a ten second idle timer (the store's
+release waits one tick so StrictMode's double mount reuses it). A new `attach`
+cancels the timer, so a reload, a route change or a phone locking the screen
+reattaches to the same engine and replays its dialogs. When the timer fires, the
+engine disposes and the next `attach` rebuilds it from pi's session file.
 
 **Configure.** `GET /api/settings` reads the home and pi's runtime, and each write
 route parses its body, writes one file or calls one SDK writer, then reloads every
@@ -193,20 +206,23 @@ deterministic, so a file naming it would be a second source of truth.
 
 ## Failure modes
 
-| Failure                         | Behaviour                                                                                                               |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Engine creation fails           | The socket answers `AGENT_START_FAILED`; the page shows it, never a blank session                                       |
-| An extension handler throws     | The engine reports it through `onError`; the page shows `EXTENSION_ERROR`                                               |
-| An engine bug crashes the host  | Every live session dies with the server. Accepted in ADR-0008; the session files survive                                |
-| Socket drops                    | Reconnect with backoff, `attach` again, a snapshot replaces state                                                       |
-| A tab closes mid-run            | The engine keeps running with no tab; a reopen reattaches and sees the turn in progress                                 |
-| Server restarts                 | Same as a socket drop; in-flight turns are lost                                                                         |
-| Protocol version mismatch       | `PROTOCOL_MISMATCH` → the page reloads                                                                                  |
-| Agent home unconfigured         | The not-ready notice names the home and opens Settings; a turn cannot be sent                                           |
-| Credential present but rejected | The turn fails with pi's own error (a 401, for example), which the transcript shows; readiness cannot tell in advance   |
-| Project not trusted             | pi skips project resources; the dashboard does not report it yet ([note](notes/2026-10-28-host-cannot-answer-trust.md)) |
-| pi upgrade changes its surface  | Types break at compile time first; re-verify against [reference/pi-sdk.md](reference/pi-sdk.md)                         |
-| Extension uses TUI-only UI      | One warning names the methods that need the terminal tab; never silence                                                 |
+| Failure                                 | Behaviour                                                                                                                  |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Engine creation fails                   | The socket answers `AGENT_START_FAILED`; the page shows it, never a blank session                                          |
+| An extension handler throws             | The engine reports it through `onError`; the page shows `EXTENSION_ERROR`                                                  |
+| An engine bug crashes the host          | Every live session dies with the server. Accepted in ADR-0008; the session files survive                                   |
+| Socket drops                            | Reconnect with backoff, `attach` again, a snapshot replaces state                                                          |
+| A tab closes mid-run                    | The engine keeps running with no tab; a reopen reattaches and sees the turn in progress                                    |
+| Server restarts                         | Same as a socket drop; in-flight turns are lost                                                                            |
+| Protocol version mismatch               | `PROTOCOL_MISMATCH` → the session page shows a reload notice and stops attaching                                           |
+| Agent home unconfigured                 | The not-ready notice names the home and opens Settings; a turn cannot be sent                                              |
+| Credential present but rejected         | The turn fails with pi's own error (a 401, for example), which the transcript shows; readiness cannot tell in advance      |
+| `models.json` or `mcp.json` unparseable | The settings snapshot carries a sentence naming the file; neither list pretends it is empty, and every write refuses       |
+| A dialog answer names another method    | The server answers `UNSUPPORTED_FRAME`; a stale answer for an already-settled dialog is ignored, because two tabs may race |
+| The browser cannot read a frame         | The store shows one notice per connection instead of dropping it in silence                                                |
+| Project not trusted                     | pi skips project resources; the dashboard does not report it yet ([note](notes/2026-10-28-host-cannot-answer-trust.md))    |
+| pi upgrade changes its surface          | Types break at compile time first; re-verify against [reference/pi-sdk.md](reference/pi-sdk.md)                            |
+| Extension uses TUI-only UI              | One warning names the methods that need the terminal tab; never silence                                                    |
 
 ## Size budgets
 
@@ -214,12 +230,13 @@ deterministic, so a file naming it would be a second source of truth.
 | -------------------------- | ---------------------------------------------------------------------------------------------- |
 | `server/src/agent/`        | under 900 lines total; the SDK wiring and the UI bridge live here                              |
 | `shared/src/conversation/` | under 500 lines                                                                                |
-| `server/src/routes/`       | under 60 lines per file                                                                        |
+| `server/src/routes/`       | one handler under 60 lines; one resource per file                                              |
 | Any single file            | under 300 lines                                                                                |
 | Client components          | one concept per file; if it needs more than ~10 state values, the state belongs in the reducer |
 
-Both totals are over target today (about 1200 and 600), and two files are over the
-per-file cap: `server/src/agent/session.ts` and
-`shared/src/conversation/reduce.ts`. Splitting is owed before anything new is added to
-either area; the seams are the command dispatch in `session.ts` and the per-frame
-handlers in `reduce.ts`.
+Every file is under the 300-line cap. The two area totals are still over target:
+`server/src/agent/` is about 1350 lines and `shared/src/conversation/` about 660.
+Both are large because the engine wiring and the transcript are one concept each;
+the seams that keep them readable are `session.ts` (commands, lifetime, events),
+`frames.ts` (fan-out), `ui-context.ts` (the pi surface), and on the shared side
+`reduce.ts` (frames), `events.ts` (pi's events) and `selectors.ts` (what renders).

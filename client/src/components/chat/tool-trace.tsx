@@ -1,7 +1,7 @@
 /**
- * One tool call, whatever the tool is. The name picks the body; a name with no
- * renderer falls back to its arguments and output, so a tool is never blank
- * (docs/ui.md, Principle 5).
+ * One tool call, whatever the tool is. The name decides which arguments to read
+ * and which body to draw; a name with no renderer falls back to its arguments and
+ * output, so a tool is never blank (docs/ui.md, Principle 5).
  */
 import type { ReactNode } from "react";
 import {
@@ -19,6 +19,7 @@ import {
 	CodeBlock,
 	CodeBlockContent,
 	CodeBlockHeader,
+	CodeBlockLine,
 	CodeBlockTitle,
 } from "@/components/ui/code-block";
 import {
@@ -42,6 +43,43 @@ const ICONS = new Map<string, ReactNode>([
 	["grep", <SearchIcon key="grep" />],
 ]);
 
+/** The arguments of a known tool, read through the schema for that tool only. */
+type ToolArgs =
+	| { kind: "bash"; command: string }
+	| { kind: "edit"; path: string; edits: { oldText: string; newText: string }[] }
+	| { kind: "write"; path: string; content: string }
+	| { kind: "read"; path: string };
+
+const argsOf = (run: ToolRun): ToolArgs | undefined => {
+	switch (run.toolName) {
+		case "bash":
+		case "ls": {
+			const parsed = bashArgsSchema.safeParse(run.args);
+			return parsed.success ? { kind: "bash", command: parsed.data.command } : undefined;
+		}
+		case "edit": {
+			const parsed = editArgsSchema.safeParse(run.args);
+			return parsed.success
+				? { kind: "edit", path: parsed.data.path, edits: parsed.data.edits }
+				: undefined;
+		}
+		case "write": {
+			const parsed = writeArgsSchema.safeParse(run.args);
+			return parsed.success
+				? { kind: "write", path: parsed.data.path, content: parsed.data.content }
+				: undefined;
+		}
+		case "read":
+		case "find":
+		case "grep": {
+			const parsed = readArgsSchema.safeParse(run.args);
+			return parsed.success ? { kind: "read", path: parsed.data.path } : undefined;
+		}
+		default:
+			return undefined;
+	}
+};
+
 const statusWord = (run: ToolRun): string => {
 	if (run.status === "error") return "failed";
 	if (run.status === "running") return "running";
@@ -54,14 +92,32 @@ const detail = (run: ToolRun): string => {
 	return `${statusWord(run)}${seconds}`;
 };
 
+const toolTitle = (run: ToolRun, args: ToolArgs | undefined): string => {
+	switch (args?.kind) {
+		case "bash": {
+			const first = args.command.split("\n")[0] ?? "";
+			return `${run.toolName} ${first}`;
+		}
+		case "edit":
+			return `edit ${args.path}`;
+		case "write":
+			return `write ${args.path}`;
+		case "read":
+			return `${run.toolName} ${args.path}`;
+		default:
+			return run.toolName;
+	}
+};
+
 export function ToolTrace({ run }: { run: ToolRun }) {
-	const body = toolBody(run);
+	const args = argsOf(run);
+	const body = toolBody(run, args);
 	const line = (
 		<TraceLine
 			status={run.status === "error" ? "error" : run.status === "running" ? "running" : undefined}
 		>
 			<TraceIcon>{ICONS.get(run.toolName) ?? <WrenchIcon />}</TraceIcon>
-			<TraceTitle>{toolTitle(run)}</TraceTitle>
+			<TraceTitle>{toolTitle(run, args)}</TraceTitle>
 			<TraceDescription>{detail(run)}</TraceDescription>
 		</TraceLine>
 	);
@@ -78,40 +134,26 @@ export function ToolTrace({ run }: { run: ToolRun }) {
 	);
 }
 
-const toolTitle = (run: ToolRun): string => {
-	const edit = editArgsSchema.safeParse(run.args);
-	if (run.toolName === "edit" && edit.success) return `edit ${edit.data.path}`;
-	const write = writeArgsSchema.safeParse(run.args);
-	if (run.toolName === "write" && write.success) return `write ${write.data.path}`;
-	const read = readArgsSchema.safeParse(run.args);
-	if (read.success) return `${run.toolName} ${read.data.path}`;
-	const bash = bashArgsSchema.safeParse(run.args);
-	if (bash.success) return `bash ${bash.data.command.split("\n")[0] ?? ""}`;
-	return run.toolName;
-};
-
-function toolBody(run: ToolRun): ReactNode {
-	const bash = bashArgsSchema.safeParse(run.args);
-	if (bash.success) {
+function toolBody(run: ToolRun, args: ToolArgs | undefined): ReactNode {
+	if (args?.kind === "bash") {
 		return (
 			<CodeBlock size="sm">
 				<CodeBlockHeader>
-					<CodeBlockTitle>{bash.data.command}</CodeBlockTitle>
+					<CodeBlockTitle>{args.command}</CodeBlockTitle>
 				</CodeBlockHeader>
 				<CodeBlockContent className="max-h-64">{run.output || "(no output yet)"}</CodeBlockContent>
 			</CodeBlock>
 		);
 	}
 
-	const edit = editArgsSchema.safeParse(run.args);
-	if (edit.success) {
+	if (args?.kind === "edit") {
 		return (
 			<CodeBlock size="sm">
 				<CodeBlockHeader>
-					<CodeBlockTitle>{edit.data.path}</CodeBlockTitle>
+					<CodeBlockTitle>{args.path}</CodeBlockTitle>
 				</CodeBlockHeader>
 				<CodeBlockContent className="max-h-64">
-					{edit.data.edits.map((change, index) => (
+					{args.edits.map((change, index) => (
 						<DiffBlock key={index} oldText={change.oldText} newText={change.newText} />
 					))}
 				</CodeBlockContent>
@@ -119,18 +161,17 @@ function toolBody(run: ToolRun): ReactNode {
 		);
 	}
 
-	const write = writeArgsSchema.safeParse(run.args);
-	if (write.success) {
+	if (args?.kind === "write") {
 		return (
 			<CodeBlock size="sm">
 				<CodeBlockHeader>
-					<CodeBlockTitle>{write.data.path}</CodeBlockTitle>
+					<CodeBlockTitle>{args.path}</CodeBlockTitle>
 				</CodeBlockHeader>
 				<CodeBlockContent className="max-h-64">
-					{write.data.content.split("\n").map((line, index) => (
-						<div key={index} className="whitespace-pre-wrap bg-success/10">
-							{`+ ${line}`}
-						</div>
+					{args.content.split("\n").map((line, index) => (
+						<CodeBlockLine key={index} variant="added">
+							{line}
+						</CodeBlockLine>
 					))}
 				</CodeBlockContent>
 			</CodeBlock>
@@ -170,17 +211,17 @@ function toolBody(run: ToolRun): ReactNode {
 
 function DiffBlock({ oldText, newText }: { oldText: string; newText: string }) {
 	return (
-		<div>
+		<>
 			{oldText.split("\n").map((line, index) => (
-				<div key={`o${index}`} className="whitespace-pre-wrap bg-destructive/10">
-					{`- ${line}`}
-				</div>
+				<CodeBlockLine key={`o${index}`} variant="removed">
+					{line}
+				</CodeBlockLine>
 			))}
 			{newText.split("\n").map((line, index) => (
-				<div key={`n${index}`} className="whitespace-pre-wrap bg-success/10">
-					{`+ ${line}`}
-				</div>
+				<CodeBlockLine key={`n${index}`} variant="added">
+					{line}
+				</CodeBlockLine>
 			))}
-		</div>
+		</>
 	);
 }

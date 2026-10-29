@@ -3,7 +3,7 @@
  * the detail the server sends, and back to the write-shaped input. A blank
  * secret field means "keep", an empty header value means "keep that header".
  */
-import { providerApiSchema } from "shared";
+import { parseProviderApi } from "shared";
 import type { ModelOverride, ProviderDetail, ProviderInput, ProviderModelInput } from "shared";
 
 /**
@@ -49,14 +49,17 @@ export const draftOf = (detail: ProviderDetail | undefined): ProviderDraft => {
 	};
 };
 
-/** A blank key or header value keeps the stored one; the server applies that. */
+/**
+ * A blank key or header value keeps the stored one; the server applies that. The
+ * name, base URL and API are the fields the form shows, so an empty one clears
+ * the stored value instead of keeping it.
+ */
 export const inputOf = (draft: ProviderDraft, builtin: boolean): ProviderInput => {
-	const api = providerApiSchema.safeParse(draft.api);
 	return {
 		id: draft.id.trim(),
-		name: draft.name.trim() || undefined,
+		name: draft.name.trim(),
 		baseUrl: draft.baseUrl.trim(),
-		api: api.success ? api.data : undefined,
+		api: parseProviderApi(draft.api) ?? "",
 		apiKey: draft.apiKey.trim() || undefined,
 		headers: Object.fromEntries(
 			draft.headers

@@ -3,6 +3,7 @@
  * the clients pi uses (docs/reference/pi-sdk.md). The API picker labels each family
  * with its path, and the model list knows where a compatible `/models` lives.
  */
+import { providerApiSchema } from "./schemas/settings";
 import type { ProviderApi } from "./schemas/settings";
 
 export type ProviderApiInfo = {
@@ -39,6 +40,12 @@ export const PROVIDER_APIS: readonly ProviderApiInfo[] = [
 		path: "/models/{model}:generateContent",
 	},
 ];
+
+/** The API family a stored string names, or undefined when it names none. */
+export const parseProviderApi = (value: string): ProviderApi | undefined => {
+	const parsed = providerApiSchema.safeParse(value);
+	return parsed.success ? parsed.data : undefined;
+};
 
 const withoutTrailingSlash = (baseUrl: string): string => baseUrl.replace(/\/+$/u, "");
 

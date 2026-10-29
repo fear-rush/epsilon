@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 
+import { contentParts, imagesOf, textOf } from "./content";
 import type { ConversationMessage, ConversationState, Notice, ToolRun } from "./state";
 
 export type TranscriptRow =
@@ -16,31 +17,12 @@ export type TranscriptRow =
 type UserMessage = Extract<ConversationMessage, { role: "user" }>;
 type AssistantMessage = Extract<ConversationMessage, { role: "assistant" }>;
 
-const contentPartSchema = z.looseObject({
-	type: z.string(),
-	text: z.string().optional(),
-	data: z.string().optional(),
-	mimeType: z.string().optional(),
-});
-
 const userRow = (message: UserMessage, key: string): TranscriptRow => {
 	const whole = z.string().safeParse(message.content);
 	if (whole.success) return { kind: "user", key, text: whole.data, images: [] };
 
-	const parts = z.array(contentPartSchema).safeParse(message.content);
-	if (!parts.success) return { kind: "user", key, text: "", images: [] };
-
-	const text = parts.data
-		.filter((part) => part.type === "text")
-		.map((part) => part.text ?? "")
-		.join("");
-	const images = parts.data
-		.filter((part) => part.type === "image" && part.data !== undefined)
-		.map((part) => ({
-			data: part.data ?? "",
-			mimeType: part.mimeType ?? "application/octet-stream",
-		}));
-	return { kind: "user", key, text, images };
+	const parts = contentParts(message.content);
+	return { kind: "user", key, text: textOf(parts), images: imagesOf(parts) };
 };
 
 const assistantRows = (
@@ -126,7 +108,7 @@ const otherRow = (message: OtherMessage, key: string): TranscriptRow => {
 				kind: "summary",
 				key,
 				label: message.customType,
-				text: content.success ? content.data : "",
+				text: content.success ? content.data : textOf(contentParts(message.content)),
 			};
 		}
 	}

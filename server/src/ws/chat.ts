@@ -28,10 +28,25 @@ export type ChatState = {
 
 export type ChatSocket = ServerWebSocket<ChatState>;
 
-const SERVER_VERSION = "0.0.0";
-
+/**
+ * Send one frame. A frame this build cannot describe is a bug in the engine, not
+ * in the tab, so it is logged and the tab gets a sentence instead of a silent
+ * half-written stream.
+ */
 const send = (socket: ChatSocket, frame: ServerFrame): void => {
-	socket.send(JSON.stringify(serverFrameSchema.parse(frame)));
+	const checked = serverFrameSchema.safeParse(frame);
+	if (!checked.success) {
+		console.error("epsilon: refusing to send an invalid frame", frame.t, checked.error.issues);
+		socket.send(
+			JSON.stringify({
+				t: "error",
+				code: "AGENT_FAILED",
+				message: "The agent produced a frame this deployment cannot send.",
+			}),
+		);
+		return;
+	}
+	socket.send(JSON.stringify(checked.data));
 };
 
 const sendError = (
@@ -75,15 +90,18 @@ export const handleMessage = (registry: SessionRegistry, socket: ChatSocket, raw
 	void route(registry, socket, frame);
 };
 
-const issuesOf = (parsed: ReturnType<typeof clientFrameSchema.safeParse>): string =>
-	parsed.success ? "" : parsed.error.issues.map((issue) => issue.message).join("; ");
+const issuesOf = (
+	parsed: Extract<ReturnType<typeof clientFrameSchema.safeParse>, { success: false }>,
+): string => parsed.error.issues.map((issue) => issue.message).join("; ");
 
 const parseFrame = (raw: string): ReturnType<typeof clientFrameSchema.safeParse> | undefined => {
+	let value: unknown;
 	try {
-		return clientFrameSchema.safeParse(JSON.parse(raw));
+		value = JSON.parse(raw);
 	} catch {
 		return undefined;
 	}
+	return clientFrameSchema.safeParse(value);
 };
 
 const route = async (
@@ -132,7 +150,7 @@ const welcome = (socket: ChatSocket, frame: Extract<ClientFrame, { t: "hello" }>
 	}
 	socket.data.tabId = frame.tabId;
 	socket.data.welcomed = true;
-	send(socket, { t: "welcome", protocol: PROTOCOL_VERSION, serverVersion: SERVER_VERSION });
+	send(socket, { t: "welcome", protocol: PROTOCOL_VERSION });
 };
 
 /** Watch one session, building its engine once even if two frames ask at once. */
@@ -203,5 +221,14 @@ const answer = (
 		sendError(socket, "SESSION_NOT_FOUND", "No live engine for this session", frame.sessionId);
 		return;
 	}
-	session.answerDialog(frame.answer);
+	// A stale answer is a race between two tabs, not an error: the dialog is
+	// already settled, and the frame that closed it is on its way.
+	if (session.answerDialog(frame.answer) === "mismatch") {
+		sendError(
+			socket,
+			"UNSUPPORTED_FRAME",
+			"That answer does not match the question it names",
+			frame.sessionId,
+		);
+	}
 };

@@ -2,25 +2,21 @@ import { createRoute } from "@hono/zod-openapi";
 import type { RouteHandler } from "@hono/zod-openapi";
 import {
 	providerDetailSchema,
+	providerIdSchema,
 	providerImportInputSchema,
 	providerImportResultSchema,
 	providerInputSchema,
-	settingsErrorSchema,
 } from "shared";
 import { z } from "zod";
 
 import { config } from "../config";
-import { registry } from "../runtime";
-import { importModels } from "../settings/import-models";
-import {
-	createRuntime,
-	readProviderDetail,
-	removeProvider,
-	writeProvider,
-} from "../settings/providers";
-import { failure } from "./failure";
+import { importModelsForHome } from "../settings/import-models";
+import { removeProvider, writeProvider } from "../settings/provider-write";
+import { createRuntime, readProviderDetail } from "../settings/providers";
+import { errorContent, failure, toError } from "./failure";
+import { settingsWrite } from "./write";
 
-const errorContent = { "application/json": { schema: settingsErrorSchema } };
+const providerParams = z.object({ id: providerIdSchema });
 
 export const readProviderRoute = createRoute({
 	method: "get",
@@ -28,7 +24,7 @@ export const readProviderRoute = createRoute({
 	tags: ["settings"],
 	operationId: "readProvider",
 	description: "The editable detail of one provider, with header names but no secrets",
-	request: { params: z.object({ id: z.string().min(1) }) },
+	request: { params: providerParams },
 	responses: {
 		200: {
 			description: "Provider fields, declared models, overrides and the live catalog",
@@ -80,7 +76,7 @@ export const deleteProviderRoute = createRoute({
 	path: "/api/settings/providers/{id}",
 	tags: ["settings"],
 	operationId: "deleteProvider",
-	request: { params: z.object({ id: z.string().min(1) }) },
+	request: { params: providerParams },
 	responses: {
 		204: {
 			description: "The provider entry and its stored credential are gone from the agent home",
@@ -93,61 +89,24 @@ export const readProviderHandler: RouteHandler<typeof readProviderRoute> = async
 	try {
 		const runtime = await createRuntime(config.agentHome);
 		const detail = await readProviderDetail(config.agentHome, runtime, c.req.valid("param").id);
-		if (detail === undefined) return c.json({ message: "No such provider" }, 404);
+		if (detail === undefined) return failure(c, new Error("No such provider"), 404);
 		return c.json(detail, 200);
 	} catch (error) {
-		return c.json(
-			{ message: error instanceof Error ? error.message : "The provider did not load" },
-			400,
-		);
+		return failure(c, toError(error, "The provider did not load"), 400);
 	}
 };
 
 export const importModelsHandler: RouteHandler<typeof importModelsRoute> = async (c) => {
-	const input = c.req.valid("json");
 	try {
-		const runtime = await createRuntime(config.agentHome);
-		const typedKey = input.apiKey?.trim();
-		const stored =
-			typedKey === undefined && input.providerId !== undefined
-				? await runtime.getAuth(input.providerId)
-				: undefined;
-		const entries: [string, string][] = [];
-		for (const [key, value] of Object.entries(stored?.auth.headers ?? {})) {
-			if (value !== null) entries.push([key, value]);
-		}
-		const headers = Object.fromEntries(entries);
-		const models = await importModels({
-			api: input.api,
-			baseUrl: input.baseUrl,
-			apiKey: typedKey ?? stored?.auth.apiKey,
-			headers,
-		});
+		const models = await importModelsForHome(config.agentHome, c.req.valid("json"));
 		return c.json({ models }, 200);
 	} catch (error) {
-		return c.json(
-			{ message: error instanceof Error ? error.message : "The models did not load" },
-			400,
-		);
+		return failure(c, toError(error, "The models did not load"), 400);
 	}
 };
 
-export const writeProviderHandler: RouteHandler<typeof writeProviderRoute> = async (c) => {
-	try {
-		await writeProvider(config.agentHome, c.req.valid("json"));
-		registry.reloadAll();
-		return c.body(null, 204);
-	} catch (error) {
-		return failure(c, error instanceof Error ? error : new Error("The settings change failed"));
-	}
-};
+export const writeProviderHandler: RouteHandler<typeof writeProviderRoute> = async (c) =>
+	settingsWrite(c, () => writeProvider(config.agentHome, c.req.valid("json")));
 
-export const deleteProviderHandler: RouteHandler<typeof deleteProviderRoute> = async (c) => {
-	try {
-		await removeProvider(config.agentHome, c.req.valid("param").id);
-		registry.reloadAll();
-		return c.body(null, 204);
-	} catch (error) {
-		return failure(c, error instanceof Error ? error : new Error("The settings change failed"));
-	}
-};
+export const deleteProviderHandler: RouteHandler<typeof deleteProviderRoute> = async (c) =>
+	settingsWrite(c, () => removeProvider(config.agentHome, c.req.valid("param").id));

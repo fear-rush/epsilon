@@ -19,6 +19,30 @@ export const readJson = async <T>(path: string, schema: ZodType<T>, empty: T): P
 };
 
 /**
+ * A file a list read had to treat as empty. The read path stays tolerant so the
+ * panel renders, and this names the file so the panel can say why a list is
+ * empty instead of pretending it is the truth (AGENTS.md rule 7).
+ */
+export const unreadableFile = async (
+	path: string,
+	schema: ZodType<unknown>,
+): Promise<string | undefined> => {
+	let raw: string;
+	try {
+		raw = await readFile(path, "utf8");
+	} catch {
+		// An absent file is not a problem: pi creates it on first use.
+		return undefined;
+	}
+	try {
+		schema.parse(JSON.parse(raw));
+		return undefined;
+	} catch {
+		return `${basename(path)} cannot be read by this version of Settings. Fix it in a terminal inside this deployment, then reload.`;
+	}
+};
+
+/**
  * A write must never clobber a file it cannot read: pi may have written a shape
  * this version does not parse, and replacing it would lose the operator's config.
  */
@@ -57,6 +81,8 @@ export const writeJson = <T>(path: string, value: T): Promise<void> => {
 	return next;
 };
 
+/** The credential file `ModelRuntime.login()` and `logout()` own. */
+export const authPath = (home: string): string => join(home, "auth.json");
 export const modelsPath = (home: string): string => join(home, "models.json");
 export const mcpPath = (home: string): string => join(home, "mcp.json");
 export const skillsPath = (home: string): string => join(home, "skills");

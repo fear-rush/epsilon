@@ -3,42 +3,39 @@
  * own subscription, and the extension's display-only methods reach the page,
  * including on a late attach.
  */
-import { PROTOCOL_VERSION, clientFrameSchema, serverFrameSchema } from "shared";
-import type { ClientFrame, ServerFrame } from "shared";
+import type { ServerFrame } from "shared";
 
-const URL = "ws://127.0.0.1:3000/api/link";
+import { SOCKET_URL, answerTo, hello, parseFrame, send as sendFrame } from "./socket";
 const sessionA = crypto.randomUUID();
 const sessionB = crypto.randomUUID();
 
 type Tab = { socket: WebSocket; frames: ServerFrame[]; ready: Promise<void> };
 
 const openTab = (): Tab => {
-	const socket = new WebSocket(URL);
+	const socket = new WebSocket(SOCKET_URL);
 	const frames: ServerFrame[] = [];
 	let markReady: () => void = () => undefined;
 	const ready = new Promise<void>((resolve) => {
 		markReady = resolve;
 	});
 	socket.addEventListener("message", (message) => {
-		const frame = serverFrameSchema.parse(JSON.parse(String(message.data)));
+		const frame = parseFrame(message.data);
 		frames.push(frame);
 		if (frame.t === "welcome") markReady();
 		if (frame.t === "dialog") {
 			send(socket, {
 				t: "dialog",
 				sessionId: frame.sessionId,
-				answer: { id: frame.request.id, confirmed: true },
+				answer: answerTo(frame.request),
 			});
 		}
 	});
-	socket.addEventListener("open", () =>
-		send(socket, { t: "hello", protocol: PROTOCOL_VERSION, tabId: "check" }),
-	);
+	socket.addEventListener("open", () => send(socket, hello("check")));
 	return { socket, frames, ready };
 };
 
-const send = (socket: WebSocket, frame: ClientFrame) =>
-	socket.send(JSON.stringify(clientFrameSchema.parse(frame)));
+const send = (socket: WebSocket, frame: Parameters<typeof sendFrame>[1]) =>
+	sendFrame(socket, frame);
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -53,9 +50,7 @@ await tabA.ready;
 send(tabA.socket, { t: "attach", sessionId: sessionA });
 await sleep(5000);
 console.log(`first attach, ui frames: ${uiMethods(tabA.frames)}`);
-console.log(
-	`first attach, meta/snapshot: ${tabA.frames.filter((f) => f.t === "meta").length} meta, ${tabA.frames.filter((f) => f.t === "snapshot").length} snapshot`,
-);
+console.log(`first attach, snapshots: ${tabA.frames.filter((f) => f.t === "snapshot").length}`);
 
 const tabLate = openTab();
 await tabLate.ready;
@@ -69,9 +64,9 @@ await tabTwo.ready;
 send(tabTwo.socket, { t: "attach", sessionId: sessionA });
 send(tabTwo.socket, { t: "attach", sessionId: sessionB });
 await sleep(2500);
-const metas = tabTwo.frames.filter((frame) => frame.t === "meta");
+const snapshots = tabTwo.frames.filter((f) => f.t === "snapshot");
 console.log(
-	`two attaches: ${new Set(metas.map((frame) => (frame.t === "meta" ? frame.sessionId : ""))).size} sessions with meta, ${tabTwo.frames.filter((f) => f.t === "snapshot").length} snapshots`,
+	`two attaches: ${new Set(snapshots.map((frame) => (frame.t === "snapshot" ? frame.sessionId : ""))).size} sessions with a snapshot, ${snapshots.length} snapshots`,
 );
 
 send(tabTwo.socket, { t: "detach", sessionId: sessionA });

@@ -1,7 +1,7 @@
 /**
  * Removing one session file. pi has no delete: this is our own disk operation, so
- * it resolves the id through pi's own lookup and refuses while a child is live.
- * The browser never sends a path.
+ * it resolves the id through pi's own lookup and refuses while a live engine
+ * holds it. The browser never sends a path.
  */
 import { rm } from "node:fs/promises";
 

@@ -3,7 +3,7 @@
  * selected one, and the add flow. A provider appears here when models.json has an
  * entry or when it has a credential, never just because pi ships it.
  */
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { PlusIcon, SearchIcon } from "lucide-react";
 import { useState } from "react";
 import { cn } from "cn";
@@ -16,17 +16,14 @@ import { useSettings } from "@/hooks/use-settings";
 
 import { AddProviderDialog } from "./add-provider-dialog";
 
-const selectedIdOf = (pathname: string): string | undefined => {
-	const match = /^\/settings\/providers\/([^/]+)$/u.exec(pathname);
-	const encoded = match?.[1];
-	return encoded === undefined ? undefined : decodeURIComponent(encoded);
-};
-
-export function ProvidersPanel() {
+export function ProvidersPanel({
+	selectedId,
+	editing,
+}: {
+	selectedId: string | undefined;
+	editing: boolean;
+}) {
 	const settings = useSettings();
-	const pathname = useLocation({ select: (location) => location.pathname });
-	const selectedId = selectedIdOf(pathname);
-	const editing = selectedId !== undefined;
 	const [query, setQuery] = useState("");
 	const [addOpen, setAddOpen] = useState(false);
 

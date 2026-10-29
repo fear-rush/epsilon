@@ -10,22 +10,13 @@ import type { SettingsSnapshot, SkillInput, SkillView } from "shared";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { deleteSkill, fetchSkill, saveSkill } from "@/lib/api";
 
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { DeleteDialog } from "./delete-dialog";
 import { SettingsBlock, SettingsGroup, SettingsPage, SettingsRow } from "./settings-section";
 import { useSettingsRefresh } from "./settings-refresh";
 
@@ -176,39 +167,19 @@ export function SettingsSkills({ snapshot }: { snapshot: SettingsSnapshot }) {
 				</SettingsBlock>
 			</SettingsGroup>
 
-			<AlertDialog
+			<DeleteDialog
 				open={pendingDelete !== undefined}
+				title={`Remove ${pendingDelete?.name ?? ""}?`}
+				description="The skill directory and every file in it are deleted."
+				error={remove.error}
+				pending={remove.isPending}
 				onOpenChange={(open) => {
 					if (!open) setPendingDelete(undefined);
 				}}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Remove {pendingDelete?.name}?</AlertDialogTitle>
-						<AlertDialogDescription>
-							The skill directory and every file in it are deleted.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					{remove.error !== null && (
-						<Alert variant="destructive">
-							<AlertDescription>{remove.error.message}</AlertDescription>
-						</Alert>
-					)}
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							disabled={remove.isPending}
-							onClick={() => {
-								if (pendingDelete !== undefined) remove.mutate(pendingDelete.name);
-							}}
-						>
-							{remove.isPending && <Spinner data-icon="inline-start" />}
-							Remove
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				onConfirm={() => {
+					if (pendingDelete !== undefined) remove.mutate(pendingDelete.name);
+				}}
+			/>
 		</SettingsPage>
 	);
 }

@@ -10,21 +10,12 @@ import type { PackageView, SettingsSnapshot } from "shared";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { installPackage, removePackage } from "@/lib/api";
 
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { DeleteDialog } from "./delete-dialog";
 import { SettingsBlock, SettingsGroup, SettingsPage, SettingsRow } from "./settings-section";
 import { useSettingsRefresh } from "./settings-refresh";
 
@@ -60,7 +51,7 @@ export function SettingsPackages({ snapshot }: { snapshot: SettingsSnapshot }) {
 							title={entry.source}
 							description={[entry.scope, entry.installedPath]
 								.filter((part) => part !== undefined)
-								.join(" · ")}
+								.join(", ")}
 						>
 							<Badge variant="outline">{entry.scope}</Badge>
 							<Button
@@ -118,39 +109,19 @@ export function SettingsPackages({ snapshot }: { snapshot: SettingsSnapshot }) {
 				</SettingsBlock>
 			</SettingsGroup>
 
-			<AlertDialog
+			<DeleteDialog
 				open={pendingDelete !== undefined}
+				title={`Remove ${pendingDelete?.source ?? ""}?`}
+				description="The package is no longer declared, and its tools, skills and prompts stop loading."
+				error={remove.error}
+				pending={remove.isPending}
 				onOpenChange={(open) => {
 					if (!open) setPendingDelete(undefined);
 				}}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Remove {pendingDelete?.source}?</AlertDialogTitle>
-						<AlertDialogDescription>
-							The package is no longer declared, and its tools, skills and prompts stop loading.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					{remove.error !== null && (
-						<Alert variant="destructive">
-							<AlertDescription>{remove.error.message}</AlertDescription>
-						</Alert>
-					)}
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							disabled={remove.isPending}
-							onClick={() => {
-								if (pendingDelete !== undefined) remove.mutate(pendingDelete.source);
-							}}
-						>
-							{remove.isPending && <Spinner data-icon="inline-start" />}
-							Remove
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				onConfirm={() => {
+					if (pendingDelete !== undefined) remove.mutate(pendingDelete.source);
+				}}
+			/>
 		</SettingsPage>
 	);
 }

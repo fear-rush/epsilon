@@ -6,8 +6,10 @@
  * the panel asks for those models by hand.
  */
 import { providerModelsEndpoint } from "shared";
-import type { ProviderApi, ProviderModelInput } from "shared";
+import type { ProviderApi, ProviderImportInput, ProviderModelInput } from "shared";
 import { z } from "zod";
+
+import { createRuntime } from "./providers";
 
 const TIMEOUT_MS = 10_000;
 const MAX_BYTES = 2_000_000;
@@ -41,7 +43,7 @@ const authHeaders = (
 	return Object.fromEntries(entries);
 };
 
-export const importModels = async (options: {
+const importModels = async (options: {
 	api: ProviderApi;
 	baseUrl: string;
 	apiKey?: string;
@@ -89,4 +91,30 @@ export const importModels = async (options: {
 	} catch {
 		throw new Error("The endpoint did not return a model list");
 	}
+};
+
+/**
+ * Read a provider's model list for the settings panel. A key typed in the form
+ * wins; otherwise the provider's stored credential (auth.json) is used, which is
+ * what makes an import work right after a login in the deployment's terminal.
+ */
+export const importModelsForHome = async (
+	home: string,
+	input: ProviderImportInput,
+): Promise<ProviderModelInput[]> => {
+	const typedKey = input.apiKey?.trim();
+	const stored =
+		typedKey === undefined && input.providerId !== undefined
+			? await (await createRuntime(home)).getAuth(input.providerId)
+			: undefined;
+	const headers: Record<string, string> = {};
+	for (const [key, value] of Object.entries(stored?.auth.headers ?? {})) {
+		if (value !== null) headers[key] = value;
+	}
+	return importModels({
+		api: input.api,
+		baseUrl: input.baseUrl,
+		apiKey: typedKey ?? stored?.auth.apiKey,
+		headers,
+	});
 };

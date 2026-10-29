@@ -1,4 +1,5 @@
 import { ChevronDownIcon } from "lucide-react";
+import { modelKey } from "shared";
 import type { SnapshotModel } from "shared";
 
 import {
@@ -11,9 +12,6 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { InputGroupButton } from "@/components/ui/input-group";
-
-/** A model's identity is the pair pi switches on; the name is only a label. */
-const keyOf = (model: SnapshotModel): string => `${model.provider}/${model.id}`;
 
 type ModelMenuProps = {
 	models: SnapshotModel[];
@@ -47,7 +45,7 @@ const byProvider = (
  * the rest follow alphabetically inside one scrolling menu.
  */
 export function ModelMenu({ models, model, onSelect }: ModelMenuProps) {
-	const current = model === undefined ? "" : keyOf(model);
+	const current = model === undefined ? "" : modelKey(model);
 	const groups = byProvider(models, model?.provider);
 
 	return (
@@ -67,7 +65,7 @@ export function ModelMenu({ models, model, onSelect }: ModelMenuProps) {
 				<DropdownMenuRadioGroup
 					value={current}
 					onValueChange={(value: string) => {
-						const next = models.find((candidate) => keyOf(candidate) === value);
+						const next = models.find((candidate) => modelKey(candidate) === value);
 						if (next !== undefined) onSelect(next);
 					}}
 				>
@@ -75,7 +73,11 @@ export function ModelMenu({ models, model, onSelect }: ModelMenuProps) {
 						<DropdownMenuGroup key={group.provider}>
 							<DropdownMenuLabel>{group.provider}</DropdownMenuLabel>
 							{group.models.map((candidate) => (
-								<DropdownMenuRadioItem key={keyOf(candidate)} value={keyOf(candidate)} closeOnClick>
+								<DropdownMenuRadioItem
+									key={modelKey(candidate)}
+									value={modelKey(candidate)}
+									closeOnClick
+								>
 									{candidate.name}
 								</DropdownMenuRadioItem>
 							))}

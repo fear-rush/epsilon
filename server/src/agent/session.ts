@@ -1,18 +1,19 @@
 /**
  * One live engine session and the state the browser cannot rebuild by itself.
  * The transcript is pi's session file; the dialogs and display state live in
- * `dialogs.ts`. Nothing here speaks a protocol to a child: a command is a method
- * call on the embedded `AgentSession` (ADR-0008).
+ * `dialogs.ts`, and the fan-out to tabs in `frames.ts`. A command is a method
+ * call on the embedded `AgentSession` (ADR-0008); no process speaks to this one.
  */
 import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
-import type { Command, DialogAnswer, ServerFrame, SnapshotModel } from "shared";
+import type { Command, DialogAnswer, ProtocolErrorCode, ServerFrame, SnapshotModel } from "shared";
 
 import { Dialogs } from "./dialogs";
-import type { FrameSink } from "./dialogs";
+import type { AnswerOutcome, FrameSink } from "./dialogs";
 import { createEngine, toJsonEvent } from "./engine";
-import type { UiHost } from "./engine";
+import { SessionFrames } from "./frames";
 import { readModelsFrom } from "./models";
 import { buildSnapshot } from "./snapshot";
+import { UiBridge } from "./ui-bridge";
 
 /**
  * How long a session with no tab stays alive. A reload, a route change or a
@@ -32,26 +33,30 @@ export type LiveSessionOptions = {
 export class LiveSession {
 	readonly sessionId: string;
 	private readonly onEmpty: () => void;
-	private readonly subscribers = new Set<FrameSink>();
+	private readonly frames: SessionFrames;
 	private readonly dialogs: Dialogs;
-	/** TUI-only methods seen before the first tab attached, flushed as one notice. */
-	private readonly earlyUnsupported = new Set<string>();
+	private readonly bridge: UiBridge;
 	private agent: AgentSession | undefined;
 	private unsubscribe: (() => void) | undefined;
 	/** The models the picker offers, refreshed when the engine's providers change. */
 	private models: SnapshotModel[] = [];
 	private streaming = false;
 	private bashUnsettled = false;
-	private disposed = false;
 	private idleTimer: ReturnType<typeof setTimeout> | undefined;
 
 	private constructor(sessionId: string, onEmpty: () => void) {
 		this.sessionId = sessionId;
 		this.onEmpty = onEmpty;
+		this.frames = new SessionFrames(() => this.onFrameCount());
 		this.dialogs = new Dialogs(
 			sessionId,
-			(frame) => this.emit(frame),
-			() => this.sendMeta(),
+			(frame) => this.frames.emit(frame),
+			() => this.scheduleIdle(),
+		);
+		this.bridge = new UiBridge(
+			this.dialogs,
+			() => this.frames.count > 0,
+			(error, code) => this.fail(error, code),
 		);
 	}
 
@@ -61,7 +66,7 @@ export class LiveSession {
 			sessionId: options.sessionId,
 			cwd: options.cwd,
 			agentHome: options.agentHome,
-			ui: session.ui,
+			ui: session.bridge.host,
 		});
 		session.agent = agent;
 		session.unsubscribe = agent.subscribe((event) => session.receive(event));
@@ -70,7 +75,7 @@ export class LiveSession {
 	}
 
 	get isOpen(): boolean {
-		return this.agent !== undefined && !this.disposed;
+		return this.agent !== undefined;
 	}
 
 	get needsInput(): boolean {
@@ -78,30 +83,19 @@ export class LiveSession {
 	}
 
 	/**
-	 * A late subscriber gets the meta, every unanswered dialog, the keyed display
-	 * state and the snapshot, so a blocking dialog is never invisible.
+	 * A late subscriber gets every unanswered dialog, the keyed display state and
+	 * the snapshot, so a blocking dialog is never invisible.
 	 */
 	subscribe(sink: FrameSink): () => void {
-		if (this.idleTimer !== undefined) {
-			clearTimeout(this.idleTimer);
-			this.idleTimer = undefined;
-		}
-		this.subscribers.add(sink);
-		if (this.earlyUnsupported.size > 0) {
-			this.dialogs.reportUnsupported(this.earlyUnsupported);
-			this.earlyUnsupported.clear();
-		}
+		this.frames.add(sink);
+		this.bridge.flush();
+		for (const frame of this.frames.takeDeferred()) sink(frame);
 		this.dialogs.replay(sink);
-		this.sendMetaTo(sink);
 		sink(this.snapshotFrame());
-		return () => {
-			this.subscribers.delete(sink);
-			if (this.subscribers.size === 0) this.scheduleIdle();
-		};
+		return () => this.frames.remove(sink);
 	}
 
-	/** Answer one dialog. The first answer wins; a repeat is ignored. */
-	answerDialog(answer: DialogAnswer): boolean {
+	answerDialog(answer: DialogAnswer): AnswerOutcome {
 		return this.dialogs.answer(answer);
 	}
 
@@ -128,14 +122,16 @@ export class LiveSession {
 
 	/** Drop the engine. A later attach rebuilds it from the session file. */
 	dispose(): void {
-		if (this.disposed) return;
-		this.disposed = true;
+		const agent = this.agent;
+		if (agent === undefined) return;
+		// Clear the reference first: cancelling dialogs asks the session to
+		// re-time itself, and a session with no engine must not schedule anything.
+		this.agent = undefined;
 		if (this.idleTimer !== undefined) clearTimeout(this.idleTimer);
 		this.idleTimer = undefined;
 		this.dialogs.cancelAll();
 		this.unsubscribe?.();
-		this.agent?.dispose();
-		this.agent = undefined;
+		agent.dispose();
 		this.onEmpty();
 	}
 
@@ -219,31 +215,17 @@ export class LiveSession {
 		return this.agent;
 	}
 
-	/** The bridge the engine's `ExtensionUIContext` calls. */
-	private get ui(): UiHost {
-		return {
-			ask: this.dialogs.ask,
-			display: this.dialogs.display,
-			unsupported: (method) => this.reportUnsupported(method),
-			fail: (error) => this.fail(error),
-		};
-	}
-
-	private reportUnsupported(method: string): void {
-		if (this.subscribers.size === 0) {
-			this.earlyUnsupported.add(method);
-			return;
-		}
-		this.dialogs.unsupported(method);
-	}
-
-	private fail(error: Error): void {
-		this.emit({
+	private fail(error: Error, code: ProtocolErrorCode = "AGENT_FAILED"): void {
+		// A turn can fail with no tab watching, and an extension can fail while the
+		// engine is being built. With no subscriber the frame waits for the next one.
+		const frame: ServerFrame = {
 			t: "error",
-			code: "AGENT_FAILED",
+			code,
 			message: error.message,
 			sessionId: this.sessionId,
-		});
+		};
+		if (this.frames.count === 0) this.frames.defer(frame);
+		else this.frames.emit(frame);
 	}
 
 	private receive(event: AgentSessionEvent): void {
@@ -278,7 +260,7 @@ export class LiveSession {
 	/** Re-read the snapshot for everyone watching, after the engine changed. */
 	private resync(): void {
 		if (!this.isOpen) return;
-		for (const sink of this.subscribers) sink(this.snapshotFrame());
+		this.frames.emit(this.snapshotFrame());
 	}
 
 	/** Keep an unwatched session while it runs, waits for an answer or compacts. */
@@ -289,22 +271,23 @@ export class LiveSession {
 		);
 	}
 
+	/** The tab count changed: cancel the countdown, or start one once it is zero. */
+	private onFrameCount(): void {
+		if (this.frames.count > 0) {
+			if (this.idleTimer !== undefined) clearTimeout(this.idleTimer);
+			this.idleTimer = undefined;
+			return;
+		}
+		this.scheduleIdle();
+	}
+
 	private scheduleIdle(): void {
-		if (this.disposed || this.subscribers.size > 0 || this.busy) return;
+		if (this.agent === undefined || this.frames.count > 0 || this.busy) return;
 		if (this.idleTimer !== undefined) return;
 		this.idleTimer = setTimeout(() => this.dispose(), IDLE_DISPOSE_MS);
 	}
 
-	private sendMeta(): void {
-		for (const sink of this.subscribers) this.sendMetaTo(sink);
-		this.scheduleIdle();
-	}
-
-	private sendMetaTo(sink: FrameSink): void {
-		sink({ t: "meta", sessionId: this.sessionId, needsInput: this.dialogs.needsInput });
-	}
-
 	private emit(frame: ServerFrame): void {
-		for (const sink of this.subscribers) sink(frame);
+		this.frames.emit(frame);
 	}
 }

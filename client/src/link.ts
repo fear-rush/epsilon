@@ -6,10 +6,12 @@
 import { PROTOCOL_VERSION, clientFrameSchema, serverFrameSchema } from "shared";
 import type { ClientFrame, ServerFrame } from "shared";
 
-export type LinkStatus = "connecting" | "open" | "closed";
+export type LinkStatus = "connecting" | "open" | "closed" | "blocked";
 
 type FrameHandler = (frame: ServerFrame) => void;
 type StatusHandler = (status: LinkStatus) => void;
+/** A frame this page could not read, so the session can show it (AGENTS.md rule 7). */
+type ProblemHandler = (message: string) => void;
 
 const SOCKET_PATH = "/api/link";
 const RECONNECT_STEPS_MS = [500, 1_000, 2_000, 4_000, 8_000];
@@ -18,9 +20,12 @@ class Link {
 	private readonly tabId = crypto.randomUUID();
 	private readonly frames = new Map<string, Set<FrameHandler>>();
 	private readonly statusListeners = new Set<StatusHandler>();
+	private readonly problemListeners = new Set<ProblemHandler>();
 	private socket: WebSocket | undefined;
 	private status: LinkStatus = "connecting";
 	private attempt = 0;
+	/** One report per connection: a decoding bug must not become an endless notice. */
+	private reportedProblem = false;
 
 	constructor() {
 		this.connect();
@@ -35,6 +40,12 @@ class Link {
 		this.statusListeners.add(listener);
 		listener(this.status);
 		return () => this.statusListeners.delete(listener);
+	}
+
+	/** A frame this page cannot read, reported once per connection. */
+	onProblem(listener: ProblemHandler): () => void {
+		this.problemListeners.add(listener);
+		return () => this.problemListeners.delete(listener);
 	}
 
 	/** Watch one session. Returns the detach for that session alone. */
@@ -62,6 +73,7 @@ class Link {
 
 	private connect(): void {
 		this.setStatus("connecting");
+		this.reportedProblem = false;
 		const scheme = location.protocol === "https:" ? "wss" : "ws";
 		const socket = new WebSocket(`${scheme}://${location.host}${SOCKET_PATH}`);
 		this.socket = socket;
@@ -96,13 +108,42 @@ class Link {
 		for (const listener of this.statusListeners) listener(status);
 	}
 
+	private report(message: string): void {
+		if (this.reportedProblem) return;
+		this.reportedProblem = true;
+		for (const listener of this.problemListeners) listener(message);
+	}
+
 	private receive(raw: string): void {
-		const frame = serverFrameSchema.safeParse(JSON.parse(raw));
-		if (!frame.success) return;
+		let value: unknown;
+		try {
+			value = JSON.parse(raw);
+		} catch {
+			this.report("The server sent a frame that is not JSON.");
+			return;
+		}
+		const frame = serverFrameSchema.safeParse(value);
+		if (!frame.success) {
+			this.report("The server sent a frame this page cannot read.");
+			return;
+		}
 		this.attempt = 0;
 		if (frame.data.t === "welcome") {
 			this.setStatus("open");
 			for (const sessionId of this.frames.keys()) this.send({ t: "attach", sessionId });
+			return;
+		}
+		if (frame.data.t === "error") {
+			// A protocol mismatch is a whole-page condition: the page shows a reload
+			// notice, and guessing at changed frames is worse than a stale tab.
+			if (frame.data.code === "PROTOCOL_MISMATCH") {
+				this.setStatus("blocked");
+				return;
+			}
+			if (frame.data.sessionId === undefined) {
+				this.report(`${frame.data.code}: ${frame.data.message}`);
+				return;
+			}
 		}
 		if (!("sessionId" in frame.data)) return;
 		const sessionId = frame.data.sessionId;

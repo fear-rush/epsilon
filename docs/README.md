@@ -26,8 +26,11 @@ that file before you change code.
 
 - Change the code and the document in the same commit.
 - Name the file or the command. Do not copy code, types or route lists into a document.
+- Mark a surface that does not exist as **planned**, and name its slice. Never name a
+  module, route or frame as if it were current when it is not.
 - Generate a fact with a tool when a tool can generate it.
 - Keep one status line in each document. Do not repeat scope in a second document.
 - Add a note to [notes/](notes/README.md) after a trap costs you time.
+- Delete a fact when it becomes false. Do not append a correction under it.
 - Write an ADR when a decision changes. Write a new record. Do not edit an accepted record.
 - Split a document that no longer fits in one reading.

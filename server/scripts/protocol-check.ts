@@ -1,9 +1,9 @@
 /** The failure paths of the socket, checked by hand against a running server. */
 import { execSync } from "node:child_process";
-import { PROTOCOL_VERSION, clientFrameSchema, serverFrameSchema } from "shared";
-import type { ClientFrame, ServerFrame } from "shared";
+import { PROTOCOL_VERSION } from "shared";
+import type { ServerFrame } from "shared";
 
-const URL = "ws://127.0.0.1:3000/api/link";
+import { SOCKET_URL as URL, hello, parseFrame, send as sendFrame } from "./socket";
 
 const once = (open: (socket: WebSocket) => void): Promise<ServerFrame[]> =>
 	new Promise((resolve) => {
@@ -11,7 +11,7 @@ const once = (open: (socket: WebSocket) => void): Promise<ServerFrame[]> =>
 		const frames: ServerFrame[] = [];
 		socket.addEventListener("open", () => open(socket));
 		socket.addEventListener("message", (message) => {
-			frames.push(serverFrameSchema.parse(JSON.parse(String(message.data))));
+			frames.push(parseFrame(message.data));
 		});
 		setTimeout(() => {
 			socket.close();
@@ -19,8 +19,8 @@ const once = (open: (socket: WebSocket) => void): Promise<ServerFrame[]> =>
 		}, 1500);
 	});
 
-const send = (socket: WebSocket, frame: ClientFrame) =>
-	socket.send(JSON.stringify(clientFrameSchema.parse(frame)));
+const send = (socket: WebSocket, frame: Parameters<typeof sendFrame>[1]) =>
+	sendFrame(socket, frame);
 
 const report = (name: string, frames: ServerFrame[]) => {
 	const brief = frames.map((frame) => (frame.t === "error" ? `error:${frame.code}` : frame.t));
@@ -36,7 +36,7 @@ const beforeHello = await once((socket) => send(socket, { t: "attach", sessionId
 report("attach before hello", beforeHello);
 
 const unsupported = await once((socket) => {
-	send(socket, { t: "hello", protocol: PROTOCOL_VERSION, tabId: "check" });
+	send(socket, hello("check"));
 	send(socket, { t: "terminal", terminalId: "t1", input: "ls" });
 });
 report("terminal frame", unsupported);
@@ -46,11 +46,9 @@ const embedded = await new Promise<ServerFrame[]>((resolve) => {
 	const sessionId = crypto.randomUUID();
 	const socket = new WebSocket(URL);
 	const frames: ServerFrame[] = [];
-	socket.addEventListener("open", () =>
-		send(socket, { t: "hello", protocol: PROTOCOL_VERSION, tabId: "check" }),
-	);
+	socket.addEventListener("open", () => send(socket, hello("check")));
 	socket.addEventListener("message", (message) => {
-		const frame = serverFrameSchema.parse(JSON.parse(String(message.data)));
+		const frame = parseFrame(message.data);
 		frames.push(frame);
 		if (frame.t === "welcome") {
 			send(socket, { t: "attach", sessionId });

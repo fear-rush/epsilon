@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { problemSchema } from "./problem";
+
 /**
  * One session file on disk, plus the two facts only the server's live children
  * know. `firstMessage` is pi's own preview, not the whole transcript.
@@ -27,8 +29,7 @@ export type SessionList = z.infer<typeof sessionListSchema>;
 export const sessionErrorCodeSchema = z.enum(["SESSION_NOT_FOUND", "SESSION_RUNNING"]);
 export type SessionErrorCode = z.infer<typeof sessionErrorCodeSchema>;
 
-export const sessionErrorSchema = z.object({
+export const sessionErrorSchema = problemSchema.extend({
 	code: sessionErrorCodeSchema,
-	message: z.string(),
 });
 export type SessionError = z.infer<typeof sessionErrorSchema>;

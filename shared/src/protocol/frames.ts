@@ -35,8 +35,35 @@ export const commandSchema = z.discriminatedUnion("type", [
 
 export type Command = z.infer<typeof commandSchema>;
 
-export const agentEventSchema = z.custom<JsonAgentSessionEvent>();
-export const snapshotSchema = z.custom<Snapshot>();
+/**
+ * An event is checked as an envelope only: an object with a discriminant. pi's
+ * payload behind `type` is pi's own type (`shared/src/pi.ts`), and the reducer
+ * reads the parts it draws with its own schemas. A frame that is not an event at
+ * all fails here instead of inside a render.
+ */
+const eventEnvelopeSchema = z.looseObject({ type: z.string().min(1) });
+
+export const agentEventSchema = z.custom<JsonAgentSessionEvent>(
+	(value) => eventEnvelopeSchema.safeParse(value).success,
+);
+
+/** Every role pi writes into a session file. A new one is a protocol change. */
+const messageRoles = [
+	"user",
+	"assistant",
+	"toolResult",
+	"system",
+	"bashExecution",
+	"branchSummary",
+	"compactionSummary",
+	"custom",
+] as const;
+
+const messageEnvelopeSchema = z.looseObject({ role: z.enum(messageRoles) });
+
+const snapshotMessageSchema = z.custom<SnapshotMessage>(
+	(value) => messageEnvelopeSchema.safeParse(value).success,
+);
 
 export const protocolErrorCodeSchema = z.enum([
 	"PROTOCOL_MISMATCH",
@@ -96,19 +123,22 @@ export const snapshotStateSchema = z.object({
 
 export type SnapshotState = z.infer<typeof snapshotStateSchema>;
 
-export type Snapshot = {
-	state: SnapshotState;
-	messages: SnapshotMessage[];
-	models: SnapshotModel[];
-	commands: SnapshotCommand[];
-};
+/**
+ * What a tab receives on attach. `state`, `models` and `commands` are Epsilon's
+ * and are checked field by field; `messages` are pi's, checked for the role the
+ * transcript branches on.
+ */
+export const snapshotSchema = z.object({
+	state: snapshotStateSchema,
+	messages: z.array(snapshotMessageSchema),
+	models: z.array(snapshotModelSchema),
+	commands: z.array(snapshotCommandSchema),
+});
+
+export type Snapshot = z.infer<typeof snapshotSchema>;
 
 export const serverFrameSchema = z.discriminatedUnion("t", [
-	z.object({
-		t: z.literal("welcome"),
-		protocol: z.number().int(),
-		serverVersion: z.string(),
-	}),
+	z.object({ t: z.literal("welcome"), protocol: z.number().int() }),
 	z.object({ t: z.literal("snapshot"), sessionId: z.string(), snapshot: snapshotSchema }),
 	z.object({ t: z.literal("event"), sessionId: z.string(), event: agentEventSchema }),
 	z.object({
@@ -125,7 +155,6 @@ export const serverFrameSchema = z.discriminatedUnion("t", [
 		ok: z.boolean(),
 		error: z.string().optional(),
 	}),
-	z.object({ t: z.literal("meta"), sessionId: z.string(), needsInput: z.boolean() }),
 	z.object({
 		t: z.literal("terminal"),
 		terminalId: z.string(),

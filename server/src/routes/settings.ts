@@ -1,15 +1,13 @@
 import { createRoute } from "@hono/zod-openapi";
 import type { RouteHandler } from "@hono/zod-openapi";
-import { defaultModelSchema, settingsErrorSchema, settingsSnapshotSchema } from "shared";
+import { defaultModelSchema, settingsSnapshotSchema } from "shared";
 
 import { config } from "../config";
-import { registry } from "../runtime";
 import { writeDefaultModel } from "../settings/defaults";
 import { createRuntime } from "../settings/providers";
 import { readSettings } from "../settings/read";
-import { failure } from "./failure";
-
-const errorContent = { "application/json": { schema: settingsErrorSchema } };
+import { errorContent } from "./failure";
+import { settingsWrite } from "./write";
 
 export const settingsRoute = createRoute({
 	method: "get",
@@ -44,15 +42,11 @@ export const settingsHandler: RouteHandler<typeof settingsRoute> = async (c) =>
 
 export const defaultModelHandler: RouteHandler<typeof defaultModelRoute> = async (c) => {
 	const model = c.req.valid("json");
-	try {
+	return settingsWrite(c, async () => {
 		const runtime = await createRuntime(config.agentHome);
 		if (runtime.getModel(model.provider, model.modelId) === undefined) {
-			return failure(c, new Error(`Model not found: ${model.provider}/${model.modelId}`));
+			throw new Error(`Model not found: ${model.provider}/${model.modelId}`);
 		}
 		await writeDefaultModel(config.projectDir, config.agentHome, model);
-		registry.reloadAll();
-		return c.body(null, 204);
-	} catch (error) {
-		return failure(c, error instanceof Error ? error : new Error("The settings change failed"));
-	}
+	});
 };

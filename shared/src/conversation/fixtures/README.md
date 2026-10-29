@@ -20,3 +20,9 @@ Two edits were applied to the raw trace, and `replay` does not depend on either:
   `system` entry was removed from `agent_end.messages`. They carry the full
   system prompt and this machine's skill inventory.
 - Absolute paths were replaced with `<project>` and `<home>`.
+
+## `session-snapshot.json`
+
+One `snapshot` frame from a live attach: eight messages, no model list. It was
+recorded before protocol 3 added `commands`, so an empty list was added by hand
+when the schema started checking the frame; the messages are the recording.

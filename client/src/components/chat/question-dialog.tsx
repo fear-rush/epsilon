@@ -35,8 +35,14 @@ export function QuestionDialog({
 	onAnswer: (answer: DialogAnswer) => void;
 }) {
 	const [text, setText] = useState(question.method === "editor" ? (question.prefill ?? "") : "");
-	const answer = (value: string) => onAnswer({ id: question.id, value });
-	const cancel = () => onAnswer({ id: question.id, cancelled: true });
+	// The answer carries the method it belongs to, so the server can refuse one that
+	// was meant for another kind of question.
+	const answer = (value: string) => {
+		if (question.method === "select") onAnswer({ id: question.id, method: "select", value });
+		else if (question.method === "input") onAnswer({ id: question.id, method: "input", value });
+		else onAnswer({ id: question.id, method: "editor", value });
+	};
+	const cancel = () => onAnswer({ id: question.id, method: "cancel" });
 
 	return (
 		<Dialog open onOpenChange={() => {}}>

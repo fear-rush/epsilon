@@ -12,6 +12,9 @@ type PendingDialog = {
 	timer: ReturnType<typeof setTimeout> | undefined;
 };
 
+/** Whether an answer settled a dialog, or why it did not. */
+export type AnswerOutcome = "answered" | "stale" | "mismatch";
+
 /** The two methods that carry state across attaches, and how to key them. */
 const displayKey = (request: ExtensionDisplay): string | undefined => {
 	if (request.method === "setStatus") return `status:${request.statusKey}`;
@@ -29,7 +32,8 @@ export type FrameSink = (frame: ServerFrame) => void;
 export class Dialogs {
 	private readonly sessionId: string;
 	private readonly emit: (frame: ServerFrame) => void;
-	private readonly onMeta: () => void;
+	/** Called whenever the pending set changes, so the session can re-time its idle. */
+	private readonly onChange: () => void;
 	private readonly pending = new Map<string, PendingDialog>();
 	/**
 	 * Keyed display state an extension set and has not cleared, so a tab that
@@ -39,10 +43,10 @@ export class Dialogs {
 	/** Methods that need pi's TUI, already reported, so a loop cannot spam. */
 	private readonly reported = new Set<string>();
 
-	constructor(sessionId: string, emit: (frame: ServerFrame) => void, onMeta: () => void) {
+	constructor(sessionId: string, emit: (frame: ServerFrame) => void, onChange: () => void) {
 		this.sessionId = sessionId;
 		this.emit = emit;
-		this.onMeta = onMeta;
+		this.onChange = onChange;
 	}
 
 	get needsInput(): boolean {
@@ -51,42 +55,47 @@ export class Dialogs {
 
 	ask = (question: DialogQuestion, timeoutMs?: number): Promise<DialogAnswer> =>
 		new Promise<DialogAnswer>((resolve) => {
-			const timer =
-				timeoutMs === undefined
-					? undefined
-					: setTimeout(() => {
-							this.pending.delete(question.id);
-							resolve({ id: question.id, cancelled: true });
-							this.emit({ t: "dialog-closed", sessionId: this.sessionId, id: question.id });
-							this.onMeta();
-						}, timeoutMs);
+			const cancel = () => {
+				this.pending.delete(question.id);
+				resolve({ id: question.id, method: "cancel" });
+				this.emit({ t: "dialog-closed", sessionId: this.sessionId, id: question.id });
+				this.onChange();
+			};
+			const timer = timeoutMs === undefined ? undefined : setTimeout(cancel, timeoutMs);
 			this.pending.set(question.id, { question, resolve, timer });
 			this.emit({ t: "dialog", sessionId: this.sessionId, request: question });
-			this.onMeta();
+			this.onChange();
 		});
 
-	/** Answer one dialog. The first answer wins; a repeat is ignored. */
-	answer(answer: DialogAnswer): boolean {
+	/**
+	 * Answer one dialog. The first answer wins, and an answer only settles the
+	 * kind of question it belongs to, so a stale tab cannot answer a confirm with
+	 * a select value.
+	 */
+	answer(answer: DialogAnswer): AnswerOutcome {
 		const pending = this.pending.get(answer.id);
-		if (pending === undefined) return false;
+		if (pending === undefined) return "stale";
+		if (answer.method !== "cancel" && answer.method !== pending.question.method) return "mismatch";
 		this.pending.delete(answer.id);
 		if (pending.timer !== undefined) clearTimeout(pending.timer);
 		pending.resolve(answer);
 		this.emit({ t: "dialog-closed", sessionId: this.sessionId, id: answer.id });
-		this.onMeta();
-		return true;
+		this.onChange();
+		return "answered";
 	}
 
 	/** Close every dialog as cancelled. An abort must not leave one hanging. */
 	cancelAll(): void {
 		if (this.pending.size === 0) return;
-		for (const [id, pending] of this.pending) {
+		for (const id of this.pending.keys()) {
+			const pending = this.pending.get(id);
+			if (pending === undefined) continue;
 			if (pending.timer !== undefined) clearTimeout(pending.timer);
-			pending.resolve({ id, cancelled: true });
+			pending.resolve({ id, method: "cancel" });
 			this.emit({ t: "dialog-closed", sessionId: this.sessionId, id });
 		}
 		this.pending.clear();
-		this.onMeta();
+		this.onChange();
 	}
 
 	/** Give a late subscriber the unanswered dialogs and the keyed display state. */

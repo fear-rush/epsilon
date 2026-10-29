@@ -1,4 +1,5 @@
 import { ChevronDownIcon, ShieldIcon } from "lucide-react";
+import { PERMISSION_STATUS_KEY, parsePermissionStatus } from "shared";
 import type { UiStatus } from "shared";
 
 import {
@@ -20,9 +21,8 @@ import type { PermissionMode } from "@/lib/permission";
  * with the extension's `/permission <mode>` command.
  */
 const currentMode = (statuses: UiStatus[]): PermissionMode | undefined => {
-	const text = statuses.find((status) => status.key === "permission")?.text ?? "";
-	const match = text.match(/perm:(strict|ask|yolo)/)?.[1];
-	return PERMISSION_MODES.find((mode) => mode.value === match)?.value;
+	const text = statuses.find((status) => status.key === PERMISSION_STATUS_KEY)?.text ?? "";
+	return parsePermissionStatus(text);
 };
 
 export function PermissionMenu({

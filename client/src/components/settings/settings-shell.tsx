@@ -3,56 +3,25 @@
  * on the right. It replaces the session sidebar while it is open, so Back to app
  * is the way out (docs/ui.md, "Settings page").
  */
-import { Link, useLocation } from "@tanstack/react-router";
-import {
-	ArrowLeftIcon,
-	PackageIcon,
-	PlugIcon,
-	SearchIcon,
-	ServerIcon,
-	SettingsIcon,
-	SparklesIcon,
-} from "lucide-react";
+import { Link, useMatchRoute } from "@tanstack/react-router";
+import { ArrowLeftIcon, SearchIcon } from "lucide-react";
 import { useState } from "react";
-import type { ComponentType, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { Input } from "@/components/ui/input";
 import { SIDEBAR_WIDTH } from "@/components/ui/sidebar";
 import { cn } from "cn";
 
-type Section = {
-	to: string;
-	label: string;
-	icon: ComponentType<{ className?: string }>;
-};
+import { SETTINGS_GROUPS, SETTINGS_SECTIONS } from "./settings-sections";
+import type { SettingsSection } from "./settings-sections";
 
-const GROUPS: { label: string; items: Section[] }[] = [
-	{
-		label: "Deployment",
-		items: [
-			{ to: "/settings/general", label: "General", icon: SettingsIcon },
-			{ to: "/settings/providers", label: "Providers", icon: PlugIcon },
-		],
-	},
-	{
-		label: "Resources",
-		items: [
-			{ to: "/settings/mcp", label: "MCP servers", icon: ServerIcon },
-			{ to: "/settings/skills", label: "Skills", icon: SparklesIcon },
-			{ to: "/settings/packages", label: "Packages", icon: PackageIcon },
-		],
-	},
-];
-
-const itemsFor = (query: string): Section[] => {
+const itemsFor = (query: string): SettingsSection[] => {
 	if (query.trim() === "") return [];
 	const needle = query.trim().toLowerCase();
-	return GROUPS.flatMap((group) => group.items).filter((item) =>
-		item.label.toLowerCase().includes(needle),
-	);
+	return SETTINGS_SECTIONS.filter((item) => item.label.toLowerCase().includes(needle));
 };
 
-function NavLink({ section, active }: { section: Section; active: boolean }) {
+function NavLink({ section, active }: { section: SettingsSection; active: boolean }) {
 	const Icon = section.icon;
 	return (
 		<Link
@@ -69,12 +38,12 @@ function NavLink({ section, active }: { section: Section; active: boolean }) {
 }
 
 export function SettingsShell({ children }: { children: ReactNode }) {
-	const pathname = useLocation({ select: (location) => location.pathname });
+	const matchRoute = useMatchRoute();
 	const [query, setQuery] = useState("");
 	const results = itemsFor(query);
 	const filtering = query.trim() !== "";
-	const active = (section: Section) =>
-		pathname === section.to || pathname.startsWith(`${section.to}/`);
+	const active = (section: SettingsSection) =>
+		matchRoute({ to: section.to, fuzzy: true }) !== false;
 
 	return (
 		<div className="flex h-svh min-h-0 flex-col bg-background">
@@ -119,7 +88,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
 								)}
 							</div>
 						) : (
-							GROUPS.map((group) => (
+							SETTINGS_GROUPS.map((group) => (
 								<div key={group.label} className="grid gap-0.5">
 									<p className="px-2 pb-1 text-xs font-medium text-muted-foreground">
 										{group.label}
@@ -135,7 +104,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
 
 				<div className="flex min-h-0 min-w-0 flex-1 flex-col">
 					<nav className="flex gap-1 overflow-x-auto border-b p-2 md:hidden">
-						{GROUPS.flatMap((group) => group.items).map((section) => (
+						{SETTINGS_SECTIONS.map((section) => (
 							<NavLink key={section.to} section={section} active={active(section)} />
 						))}
 					</nav>

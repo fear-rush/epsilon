@@ -35,11 +35,17 @@ export const dialogQuestionSchema = z.discriminatedUnion("method", [
 
 export type DialogQuestion = z.infer<typeof dialogQuestionSchema>;
 
-/** One answer, correlated by the question's id. The first answer wins. */
-export const dialogAnswerSchema = z.union([
-	z.object({ id: z.string(), value: z.string() }),
-	z.object({ id: z.string(), confirmed: z.boolean() }),
-	z.object({ id: z.string(), cancelled: z.literal(true) }),
+/**
+ * One answer, correlated by the question's id and by its method, so an answer can
+ * only be given to the kind of question it belongs to. Cancelling is its own
+ * answer and means the same for every method.
+ */
+export const dialogAnswerSchema = z.discriminatedUnion("method", [
+	z.object({ id: z.string(), method: z.literal("select"), value: z.string() }),
+	z.object({ id: z.string(), method: z.literal("input"), value: z.string() }),
+	z.object({ id: z.string(), method: z.literal("editor"), value: z.string() }),
+	z.object({ id: z.string(), method: z.literal("confirm"), confirmed: z.boolean() }),
+	z.object({ id: z.string(), method: z.literal("cancel") }),
 ]);
 
 export type DialogAnswer = z.infer<typeof dialogAnswerSchema>;

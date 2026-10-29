@@ -1,7 +1,5 @@
-/**
- * Trimmed from the registry to what epsilon uses: an offcanvas column at 1280px
- * and up, a left Sheet below, ⌘B to toggle. No rail, submenus or tooltips.
- */
+/** Trimmed from the registry: offcanvas at 1280px and up, a left Sheet below, ⌘B.
+ * No rail, submenus or tooltips. */
 import * as React from "react";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";

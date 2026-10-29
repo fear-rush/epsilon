@@ -1,10 +1,11 @@
 /**
  * The bottom-left deployment card. It opens a menu the way a chat app opens its
- * account menu: a header naming the deployment, then the sections of the settings
- * page, so a phone reaches them without the sidebar.
+ * account menu: a header naming the deployment, then every settings section, so
+ * a phone reaches them without the sidebar. The sections come from the one list
+ * the settings shell also reads.
  */
 import { useNavigate } from "@tanstack/react-router";
-import { PackageIcon, PlugIcon, ServerIcon, SettingsIcon, SparklesIcon } from "lucide-react";
+import { Fragment } from "react";
 
 import {
 	DropdownMenu,
@@ -15,6 +16,8 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSidebar } from "@/components/ui/sidebar";
+import { SETTINGS_GROUPS } from "@/components/settings/settings-sections";
+import type { SettingsPath } from "@/components/settings/settings-sections";
 
 const AVATAR = "ε";
 
@@ -22,7 +25,7 @@ export function SidebarAccount() {
 	const navigate = useNavigate();
 	const { isMobile, setOpenMobile } = useSidebar();
 
-	const go = (to: string) => {
+	const go = (to: SettingsPath) => {
 		if (isMobile) setOpenMobile(false);
 		void navigate({ to });
 	};
@@ -58,32 +61,19 @@ export function SidebarAccount() {
 						<p className="truncate text-xs text-muted-foreground">Local deployment</p>
 					</div>
 				</div>
-				<DropdownMenuSeparator />
-				<DropdownMenuGroup>
-					<DropdownMenuItem onClick={() => go("/settings/general")}>
-						<SettingsIcon />
-						Settings
-					</DropdownMenuItem>
-					<DropdownMenuItem onClick={() => go("/settings/providers")}>
-						<PlugIcon />
-						Providers
-					</DropdownMenuItem>
-				</DropdownMenuGroup>
-				<DropdownMenuSeparator />
-				<DropdownMenuGroup>
-					<DropdownMenuItem onClick={() => go("/settings/mcp")}>
-						<ServerIcon />
-						MCP servers
-					</DropdownMenuItem>
-					<DropdownMenuItem onClick={() => go("/settings/skills")}>
-						<SparklesIcon />
-						Skills
-					</DropdownMenuItem>
-					<DropdownMenuItem onClick={() => go("/settings/packages")}>
-						<PackageIcon />
-						Packages
-					</DropdownMenuItem>
-				</DropdownMenuGroup>
+				{SETTINGS_GROUPS.map((group) => (
+					<Fragment key={group.label}>
+						<DropdownMenuSeparator />
+						<DropdownMenuGroup>
+							{group.items.map(({ to, label, icon: Icon }) => (
+								<DropdownMenuItem key={to} onClick={() => go(to)}>
+									<Icon />
+									{label}
+								</DropdownMenuItem>
+							))}
+						</DropdownMenuGroup>
+					</Fragment>
+				))}
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);

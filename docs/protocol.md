@@ -1,13 +1,12 @@
 # Browser protocol
 
-Status: **protocol 4 implemented.** This is the contract between `server/` and
+Status: **protocol 5 implemented.** This is the contract between `server/` and
 `client/`. Both sides implement it; neither invents frames.
 
 On the wire today: `hello`, `welcome`, `attach`, `detach`, `command`,
 `command-result`, `dialog`, `dialog-closed`, `ui`, `ping`/`pong`, `snapshot`,
-`event`, `meta` and `error`. The `terminal*` frames are declared and unimplemented
-(S7). The coalescing, backpressure and heartbeat rules below are targets, not
-code.
+`event` and `error`. The `terminal*` frames are declared and unimplemented (S7).
+The coalescing, backpressure and heartbeat rules below are targets, not code.
 
 The REST API is separate. Use REST for reading the disk (sessions, and later
 files, resources and readiness) and this socket for everything agent-shaped.
@@ -29,14 +28,16 @@ what they mean; it does not restate their fields.
 
 1. Client connects and sends `hello`.
 2. Server replies `welcome` or `error { code: "PROTOCOL_MISMATCH" }`.
-3. On mismatch the server answers with `error { code: "PROTOCOL_MISMATCH" }` and the
-   client shows it as a notice. Reload the tab; guessing at a changed frame is
-   worse than a stale page.
+3. On mismatch the server answers with `error { code: "PROTOCOL_MISMATCH" }`. The
+   session page shows a version-mismatch notice with a Reload button and stops
+   attaching; guessing at a changed frame is worse than a stale page.
 
 Version history: 1 was the S2 transcript; 2 added `models` to the snapshot for
 the model picker; 3 added `commands` to the snapshot for the `/` palette; 4
 replaced pi's command vocabulary with Epsilon's own commands and zod shapes when
-the engine moved in-process ([ADR-0009](adr/0009-socket-speaks-epsilon.md)).
+the engine moved in-process ([ADR-0009](adr/0009-socket-speaks-epsilon.md)); 5
+made a dialog answer name the method it belongs to, dropped the `meta` frame and
+`serverVersion` because nothing read them, and made the snapshot a checked shape.
 
 Version the socket, not the REST paths. A stale tab or an installed PWA can
 outlive a server upgrade; REST requests follow the bundle, because the deployment
@@ -81,14 +82,13 @@ is Epsilon's addition, not a pi slash command.
 
 ```ts
 type ServerFrame =
-	| { t: "welcome"; protocol: number; serverVersion: string }
+	| { t: "welcome"; protocol: number }
 	| { t: "snapshot"; sessionId: string; snapshot: Snapshot }
 	| { t: "event"; sessionId: string; event: JsonAgentSessionEvent }
 	| { t: "dialog"; sessionId: string; request: DialogQuestion }
 	| { t: "dialog-closed"; sessionId: string; id: string }
 	| { t: "ui"; sessionId: string; request: ExtensionDisplay }
 	| { t: "command-result"; sessionId: string; command: CommandName; ok: boolean; error?: string }
-	| { t: "meta"; sessionId: string; needsInput: boolean }
 	| { t: "terminal"; terminalId: string; output: string }
 	| { t: "terminal-exit"; terminalId: string; code: number | null }
 	| { t: "error"; code: ProtocolErrorCode; message: string; sessionId?: string }
@@ -96,12 +96,19 @@ type ServerFrame =
 ```
 
 Every frame that concerns a session carries its `sessionId`. There is no ambient
-"current session" on the socket.
+"current session" on the socket. There is no `meta` frame: the sidebar reads
+`needsInput` from the REST session list, which already polls the live engines.
 
 `event` carries pi's `JsonAgentSessionEvent`, the one shape that stays pi's
 ([ADR-0009](adr/0009-socket-speaks-epsilon.md)). It is what
-`shared/conversation/reduce.ts` consumes, and the engine narrows live events with
+`shared/src/conversation/reduce.ts` consumes, and the engine narrows live events with
 the transform it carries (`docs/notes/2026-10-28-tojson-is-not-exported.md`).
+
+The schema checks what this page dereferences, not pi's whole event: the frame
+must be an object with a string `type`, and a snapshot message must carry a known
+`role`. pi's payload behind that stays pi's type, and the reducer parses the
+content it draws with its own schemas. A frame that fails this check is reported
+once per connection, not dropped in silence.
 
 ## Snapshot
 
@@ -127,7 +134,7 @@ type Snapshot = {
 extension commands, prompt templates and skills. pi's interactive built-ins such
 as `/model` and `/settings` are not in it, because they never reach an engine.
 Resources and their paths join the snapshot with the resources page (S8). Dialogs
-and `needsInput` travel in their own frames.
+travel in their own frames.
 
 The client reducer must be able to **replace** its state from a snapshot at any
 moment. That is what makes reconnect, tab duplication and server restart
@@ -139,8 +146,11 @@ The engine's `ExtensionUIContext` blocks a tool call until a dialog is answered.
 `agent/dialogs.ts` owns the pending set.
 
 - `select`, `confirm`, `input` and `editor` wait for an answer and travel as
-  `dialog`. An answer is `{ id, value }`, `{ id, confirmed }` or
-  `{ id, cancelled: true }`.
+  `dialog`. An answer names the method it belongs to: `{ id, method: "select" |
+  "input" | "editor", value }`, `{ id, method: "confirm", confirmed }`, or
+  `{ id, method: "cancel" }`. An answer whose method does not match the pending
+  question is refused with `UNSUPPORTED_FRAME`, so a stale tab cannot answer a
+  confirm with a select value.
 - a dialog's `timeout`, when the extension passes one, answers it as cancelled.
   The pending entry is dropped and `dialog-closed` is sent.
 - `abort` answers every pending dialog as cancelled before it aborts the run, so
@@ -148,11 +158,11 @@ The engine's `ExtensionUIContext` blocks a tool call until a dialog is answered.
 - a late-attaching client receives the unanswered dialogs immediately after its
   snapshot, so a blocking dialog is never invisible. A reload lands inside the idle
   grace, so it reattaches to the same engine and gets the dialog back.
-- the first answer wins. A second tab answering the same id gets `false` from
-  `answerDialog` and no frame is sent.
-- `dialog-closed` tells every attached tab which request left the pending set, so
-  a second tab removes it without guessing from `meta`.
-- `needsInput` is exactly `pending.size > 0`.
+- the first answer wins. A second tab answering the same id is stale: its answer
+  is ignored, no frame is sent, and the `dialog-closed` already on its way
+  removes the dialog.
+- `dialog-closed` tells every attached tab which request left the pending set.
+- the session list marks `needsInput` while a session has a pending dialog.
 - `setStatus` and `setWidget` are keyed state: a value replaces the previous one
   for the same key, an undefined value clears it, and the server replays what is
   still set to every late-attaching tab. `notify`, `setTitle` and
@@ -195,7 +205,7 @@ Not part of this contract: readiness is REST, at `GET /api/readiness`, because i
 answers before any session exists. It reports whether the home holds a usable model,
 the home path, and the step that fixes a home without one. The page turns that into
 one notice and renders no composer
-([ADR-0006](adr/0006-setup-in-the-deployment-terminal.md)).
+([ADR-0012](adr/0012-configure-in-the-dashboard.md)).
 
 The dashboard does not acquire configuration over the socket: no sign-in frames, no
 credential frames, no settings frames.
@@ -219,7 +229,7 @@ while an engine holds it (`SESSION_RUNNING`).
 | `SESSION_NOT_FOUND`  | No live engine for a dialog answer.                              |
 | `AGENT_START_FAILED` | The engine could not be created; the message carries pi's error. |
 | `AGENT_FAILED`       | A prompt, extension or event failed after the engine started.    |
-| `EXTENSION_ERROR`    | Reserved for the error listener's per-event reports.             |
+| `EXTENSION_ERROR`    | An extension handler threw; `onError` reported it once.          |
 | `HOST_NOT_ALLOWED`   | Reserved: the request's Host or Origin is not this server (S11). |
 | `UNSUPPORTED_FRAME`  | Frame the server does not implement at this version.             |
 
@@ -235,7 +245,7 @@ command.
   front. The Host and Origin check is not authentication; it stops a page that is
   not this app from driving the API.
 - No credential upload, no configuration import, no code upload over any route
-  ([ADR-0006](adr/0006-setup-in-the-deployment-terminal.md)).
+  ([ADR-0012](adr/0012-configure-in-the-dashboard.md)).
 - No attachments over the socket yet. Files go over REST when S6 lands; there is
   no image prompt path.
 - No replay log. Snapshots replace state; history is read from pi's files.

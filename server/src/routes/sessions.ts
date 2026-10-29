@@ -9,7 +9,7 @@ import { registry } from "../runtime";
 import { deleteSession } from "../sessions/delete";
 import { joinSessions } from "../sessions/list";
 
-const errorContent = { "application/json": { schema: sessionErrorSchema } };
+const sessionErrorContent = { "application/json": { schema: sessionErrorSchema } };
 
 export const listSessionsRoute = createRoute({
 	method: "get",
@@ -32,8 +32,8 @@ export const deleteSessionRoute = createRoute({
 	request: { params: z.object({ id: z.string().min(1) }) },
 	responses: {
 		204: { description: "Session file removed" },
-		404: { description: "No such session in this project", content: errorContent },
-		409: { description: "A live agent still holds this session", content: errorContent },
+		404: { description: "No such session in this project", content: sessionErrorContent },
+		409: { description: "A live agent still holds this session", content: sessionErrorContent },
 	},
 });
 

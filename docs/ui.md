@@ -1,9 +1,11 @@
 # UI
 
-Status: **design.** Covers the visual vocabulary, the layout, and the interaction
-rules. Implemented surfaces and their checks are in [plan.md](plan.md). Numbers
-marked "starting value" are decisions to adopt now and tune against a real screen,
-not laws.
+Status: **current for built surfaces, design for planned ones.** This page covers
+the visual vocabulary, the layout and the interaction rules. Implemented surfaces
+and their checks are in [plan.md](plan.md). A row marked **planned** names a design
+with no code behind it yet; its slice is in [plan.md](plan.md). Numbers marked
+"starting value" are decisions to adopt now and tune against a real screen, not
+laws.
 
 ## Principles
 
@@ -21,7 +23,7 @@ not laws.
    notice, never a dead control. The same rule covers a deployment that is not
    ready: no credential, no model and an untrusted project are shown on the page,
    never as an empty transcript
-   ([ADR-0006](adr/0006-setup-in-the-deployment-terminal.md)).
+   ([ADR-0012](adr/0012-configure-in-the-dashboard.md)).
 
 ## Component inventory
 
@@ -59,41 +61,42 @@ with it.
 | Thread                             | `MessageScrollerProvider` → `MessageScroller` → `Viewport` → `Content` → `Item`                                                        | `autoScroll`; `scrollAnchor` on the user turn; `MessageScrollerButton` last                                     |
 | User turn                          | `Message align="end"` + `Bubble variant="muted"`                                                                                       | Bubble only here                                                                                                |
 | Assistant turn                     | `Message align="start"` + `MessageContent`                                                                                             | Markdown body, no bubble                                                                                        |
-| Thinking                           | `Trace` → `TraceLine` with duration in `TraceDescription`                                                                              | `shimmer` on the title while running; collapses on finish                                                       |
+| Thinking                           | muted paragraph above the answer                                                                                                       | No duration and no collapse yet; a collapsible `Trace` is planned                                               |
 | Tool, running                      | `TraceLine status="running"`                                                                                                           | Bare line while there is nothing to open                                                                        |
 | Tool, finished                     | `TraceCollapsible` → trigger wraps the line → `TraceCollapsibleContent` → `CodeBlock size="sm" wrap max-h-64`                          | Never `<pre>`                                                                                                   |
-| Diff                               | `CodeBlock` + `CodeBlockLine variant="added"/"removed"`                                                                                | One column under 720px, two above                                                                               |
+| Diff                               | `CodeBlock` + `CodeBlockLine variant="added"/"removed"`                                                                                | The `+` and `−` marks come from the component, not from copy                                                    |
 | Unknown / MCP tool                 | Same as a tool, generic field rows                                                                                                     | Name, args, output, status. Never blank                                                                         |
 | Notice, compaction, branch summary | `Marker variant="separator"`                                                                                                           | Not a trace row                                                                                                 |
-| Approval or blocked tool           | `AlertDialog` while it blocks the run                                                                                                  | Inline `Item` + `ItemActions` when a prompt does not block                                                      |
+| Approval or blocked tool           | `AlertDialog` while it blocks the run                                                                                                  | Inline `Item` + `ItemActions` when a prompt does not block: **planned**, the component is not installed         |
 | Extension select                   | `Dialog` with one `Button` per option                                                                                                  | Options wrap, so a long one cannot overflow the dialog; a leading glyph from pi is dropped                      |
-| Extension confirm                  | `AlertDialog`                                                                                                                          | Destructive variant when pi marks it                                                                            |
+| Extension confirm                  | `AlertDialog`                                                                                                                          | Two buttons, Yes and No; no destructive variant                                                                 |
 | Extension input / editor           | `Dialog` + `Input`; monospace `Textarea`                                                                                               |                                                                                                                 |
-| Extension status / widget          | `Badge` in the header; widget rows above the composer                                                                                  | Widget is text, not UI                                                                                          |
-| Session list                       | `Sidebar` + `SidebarGroup` per project                                                                                                 | No run indicator; needs-input keeps `Badge variant="warning"`                                                   |
+| Extension status / widget          | The permission status drives the composer menu; widget rows sit above the composer                                                     | Other keyed statuses are held in state but not rendered yet                                                     |
+| Session list                       | `Sidebar` + one `SidebarGroup` for this project                                                                                        | No run indicator; needs-input keeps `Badge variant="warning"`                                                   |
 | Session actions                    | `ContextMenu` and `DropdownMenu` on `…`; on mobile the row is already inside a `Sheet`                                                 |                                                                                                                 |
 | Deployment card                    | Footer button with avatar, name and a `DropdownMenu` above it                                                                          | Bottom-left, on every page. The menu names the deployment and links to each settings section                    |
 | Settings page                      | Full page: own left nav with Back to app and Search, section on the right                                                              | Replaces the session sidebar; not a dialog. One URL per section                                                 |
 | Settings rows                      | Row in a divided card: title, muted description, right-aligned actions                                                                 | Secret values are never shown; a blank key keeps the stored one; destructive actions confirm in `AlertDialog`   |
 | Settings list row                  | `Link` with the name, the id and the count ("74 models") under it                                                                      | A credential-only provider still lists, so deleting one has to log it out                                       |
 | Settings fields                    | `FieldGroup` → `Field` → `FieldLabel` + control + `FieldDescription`                                                                   | `Select` for option sets, never a native `<select>`; `InputGroup` when a button sits inside the field           |
-| Search everything                  | `Command` in `Dialog`, ⌘K                                                                                                              | Sessions, files, slash commands, actions                                                                        |
-| Slash palette, `@` files           | `Command` in `Popover` anchored to the composer                                                                                        | Server-driven from the snapshot's `commands`; as wide as the composer, three columns: name, description, source |
-| Model                              | `DropdownMenu` + `DropdownMenuRadioGroup`, one group per provider                                                                      | 510 models: current provider first, names sorted inside each group                                              |
+| Search everything                  | `Command` in `Dialog`, ⌘K                                                                                                              | **planned**: sessions, files, slash commands, actions                                                           |
+| Slash palette                      | `Command` in `Popover` anchored to the composer                                                                                        | Server-driven from the snapshot's `commands`; as wide as the composer, three columns: name, description, source |
+| Model                              | `DropdownMenu` + `DropdownMenuRadioGroup`, one group per provider                                                                      | Hundreds of models: current provider first, names sorted inside each group                                      |
 | Default model, in settings         | `Command` in a `Popover` on a full-width `Button` trigger, one `CommandGroup` per provider                                             | Searchable by provider, name and id; the popup is as wide as the row, not the button                            |
 | Permission                         | `DropdownMenu` radio group: Strict, Ask, Yolo                                                                                          | The extension's `/permission <mode>` owns it; the UI shows its own labels                                       |
-| Reasoning                          | `DropdownMenu` + `DropdownMenuRadioGroup`                                                                                              | Not built yet                                                                                                   |
-| Context usage                      | `HoverCard` + `Progress`                                                                                                               |                                                                                                                 |
-| Attachments                        | `Attachment` + `AttachmentGroup` in `InputGroup`                                                                                       | `state` wired to real progress                                                                                  |
+| Reasoning                          | `DropdownMenu` + `DropdownMenuRadioGroup`                                                                                              | **planned**                                                                                                     |
+| Context usage                      | `HoverCard` + `Progress`                                                                                                               | **planned (S15)**                                                                                               |
+| Attachments                        | `Attachment` + `AttachmentGroup` in `InputGroup`                                                                                       | **planned (S16)**: `state` wired to real progress                                                               |
 | Composer                           | `InputGroup` + `InputGroupTextarea`; white surface, `border-foreground/25`; `block-end` addon holds model, permission, stop and submit | Arrow-up submit; Enter sends, Shift+Enter adds a line, Esc stops                                                |
-| File tree                          | nested `Collapsible` per folder, `Button` per file                                                                                     | A single read file in a turn stays a `TraceLine`                                                                |
-| Preview                            | `Resizable` + `Tabs` (Preview / Source / Diff) + sandboxed iframe                                                                      |                                                                                                                 |
-| Terminal                           | `Tabs` + xterm, `Button` row for touch keys                                                                                            |                                                                                                                 |
-| Empty state                        | `Empty` + suggestion `Button`s                                                                                                         |                                                                                                                 |
-| Toasts, errors                     | `sonner`, `Alert variant="destructive"`                                                                                                |                                                                                                                 |
-| Keyboard hints                     | `kbd`                                                                                                                                  | In menus and the palette footer                                                                                 |
+| File tree                          | nested `Collapsible` per folder, `Button` per file                                                                                     | **planned (S6)**; a single read file in a turn stays a `TraceLine`                                              |
+| Preview                            | `Resizable` + `Tabs` (Preview / Source / Diff) + sandboxed iframe                                                                      | **planned (S9)**                                                                                                |
+| Terminal                           | `Tabs` + xterm, `Button` row for touch keys                                                                                            | **planned (S7)**                                                                                                |
+| Empty state                        | `Empty`                                                                                                                                | Title and one sentence; suggestion buttons are planned                                                          |
+| Errors                             | `Alert variant="destructive"`, transcript notice                                                                                       | No toast system is installed                                                                                    |
+| Keyboard hints                     | `kbd`                                                                                                                                  | **planned**; no `kbd` component is installed                                                                    |
 | Loading                            | `spinner`                                                                                                                              | For attach and file load, not for streaming                                                                     |
 | Not ready                          | centre, `Alert`                                                                                                                        | Names the missing step and the home, and offers **Open Settings**; the composer is not rendered                 |
+| Render error                       | centre, `Alert variant="destructive"` + **Try again**                                                                                  | The route error component; never the router's default screen                                                    |
 
 ## Layout
 
@@ -111,10 +114,10 @@ the right panel becomes a tab strip over the transcript.
 full-screen `Sheet`; composer pinned to the bottom with `InputGroup`; terminal adds
 a touch key row (Esc, Tab, arrows, Ctrl+C).
 
-**Header.** Session title inline-editable, then actions: files, preview, terminal,
-resources, palette. No status chips: a session that is loading, disconnected or not
-ready says so in the middle of the page, not in the header. Model and permission are
-composer controls.
+**Header.** The session title, and no actions until their surfaces exist: files
+(S6), preview (S9), terminal (S7), resources (S8), palette. No status chips: a
+session that is loading, disconnected, blocked or not ready says so in the middle of
+the page, not in the header. Model and permission are composer controls.
 
 **Sidebar footer.** The deployment card sits at the bottom of the sidebar, the way a
 chat app puts its account menu there. It opens a menu above itself, and Settings
@@ -122,24 +125,22 @@ opens a full page with its own navigation.
 
 ## Visual states
 
-| State                            | Where it shows                    | Treatment                                                                                     |
-| -------------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------- |
-| Idle                             | nowhere                           | No header indicator; the transcript says what happened                                        |
-| Running                          | last `TraceLine status="running"` | pulsing line, `shimmer` title only while it runs                                              |
-| Loading a session                | centre                            | `Spinner` + "Loading the session…"                                                            |
-| Disconnected                     | centre                            | destructive `Alert`, "Reconnecting…"                                                          |
-| Permission                       | composer footer                   | `DropdownMenu` trigger: shield, current label; no glyphs from pi                              |
-| Needs input                      | dialog, session row               | The blocking dialog is the prompt; the row keeps a `Badge variant="warning"`                  |
-| Streaming                        | last assistant turn               | text appends; no spinner, no layout shift                                                     |
-| Compacting                       | header chip                       | "Compacting…" with a stop control                                                             |
-| Retrying                         | header chip                       | attempt count from `auto_retry_*` events                                                      |
-| Error                            | last turn + toast                 | `Alert variant="destructive"`, never a silent stop                                            |
-| Engine failed                    | transcript notice                 | states that the turn was lost, offers reattach                                                |
-| Not ready                        | centre on every page              | one `Alert` naming the missing step and the home, with Open Settings; no composer is rendered |
-| Disconnected                     | top banner                        | reconnect in progress, no modal                                                               |
-| Unsupported UI (`ctx.ui.custom`) | transcript notice                 | names the extension, points at the terminal tab                                               |
-| Empty session                    | centre                            | `Empty` with three suggestions                                                                |
-| No project                       | sidebar                           | `Empty` with a project picker                                                                 |
+| State                            | Where it shows        | Treatment                                                                                     |
+| -------------------------------- | --------------------- | --------------------------------------------------------------------------------------------- |
+| Idle                             | nowhere               | No header indicator; the transcript says what happened                                        |
+| Running                          | last tool `TraceLine` | the line carries the running status; the streaming text keeps its caret                       |
+| Loading a session                | centre                | `Spinner` + "Loading the session…"                                                            |
+| Disconnected                     | centre                | destructive `Alert`, "Reconnecting…"                                                          |
+| Blocked (version mismatch)       | centre                | destructive `Alert` with **Reload**                                                           |
+| Permission                       | composer footer       | `DropdownMenu` trigger: shield, current label; no glyphs from pi                              |
+| Needs input                      | dialog, session row   | The blocking dialog is the prompt; the row keeps a `Badge variant="warning"`                  |
+| Streaming                        | last assistant turn   | text appends; no spinner, no layout shift                                                     |
+| Compacting, retrying             | transcript notice     | one `Marker` row where it happened                                                            |
+| Error                            | transcript            | `Alert variant="destructive"`, never a silent stop                                            |
+| Engine failed                    | transcript notice     | `AGENT_FAILED` as a destructive notice; no reattach control yet                               |
+| Not ready                        | centre on every page  | one `Alert` naming the missing step and the home, with Open Settings; no composer is rendered |
+| Unsupported UI (`ctx.ui.custom`) | transcript notice     | names the extension, points at the terminal tab                                               |
+| Empty session                    | centre                | `Empty` with a title and one sentence                                                         |
 
 ## Density and typography
 
@@ -169,17 +170,17 @@ Notes:
 
 ## Interaction
 
-**Keyboard.** ⌘K palette · ⌘B sidebar · ⌘J right panel · ⌘⇧F files · ⌘Enter send
-(configurable) · Esc stops the run, else closes the top overlay · ↑ recalls the last
-prompt on an empty composer.
+**Keyboard.** Built: ⌘B toggles the sidebar, Enter sends, Shift+Enter adds a line,
+Esc stops the run or closes the top overlay. Planned with their surfaces: ⌘K
+palette (S8), ⌘J right panel (S6), ⌘⇧F files (S6), ↑ prompt recall.
 
 **Escape order.** Top overlay first: dialog → sheet → popover → palette. Only when
 nothing is open does Esc reach the run.
 
-**Menus.** Every row action exists in a `ContextMenu` and a `DropdownMenu`; mobile
-uses a bottom `Sheet`. Destructive items confirm in `AlertDialog`. Popups size to
-their content (`w-auto`, `max-w-(--available-width)`, `min-w-(--anchor-width)`), not
-to the trigger, so a long model name is never clipped.
+**Menus.** A session row's actions exist in a `ContextMenu` and a `DropdownMenu`;
+mobile uses a bottom `Sheet`. Destructive items confirm in `AlertDialog`. Popups size
+to their content (`w-auto`, `max-w-(--available-width)`, `min-w-(--anchor-width)`),
+not to the trigger, so a long model name is never clipped.
 
 **Enabled states must match capability.** No "Reload" button: `/reload` typed in
 the composer runs the reload command. No in-session branch switcher
@@ -278,9 +279,9 @@ When the agent home is unconfigured, every page shows one `Alert` naming the hom
 and the missing step, plus **Open Settings**. It is deliberately small: no wizard, no
 welcome carousel. The settings page behind the link is the whole setup path.
 
-## Open questions from S2
+## Open UI questions
 
-Deciding these needs a real transcript, not a document:
+Not built, and not decided:
 
 - Whether assistant turns need a header line at all, or the name is noise.
 - Whether the right panel should be per-session or per-project.

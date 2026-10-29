@@ -34,7 +34,7 @@ export const providerModelInputSchema = z.object({
 	name: z.string().optional(),
 	/** Per-model override; the provider's API applies when unset. */
 	api: providerApiSchema.optional(),
-	baseUrl: z.string().optional(),
+	baseUrl: z.url().optional(),
 	reasoning: z.boolean().optional(),
 	input: z.array(z.enum(["text", "image"])).optional(),
 	contextWindow: z.number().int().positive().optional(),
@@ -49,15 +49,28 @@ export const modelOverrideSchema = providerModelInputSchema.omit({ id: true });
 
 export type ModelOverride = z.infer<typeof modelOverrideSchema>;
 
+/** The provider key under `providers` in models.json, and the URL segment. */
+export const providerIdSchema = z
+	.string()
+	.min(1)
+	// `new` is the add-provider page, so it cannot also name a provider.
+	.regex(
+		/^(?!new$)[A-Za-z0-9][A-Za-z0-9_-]*$/,
+		'Use letters, digits, dashes and underscores; "new" is reserved',
+	);
+
 export const providerInputSchema = z.object({
 	/** Also the key under `providers` in models.json. */
-	id: z
-		.string()
-		.min(1)
-		.regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, "Use letters, digits, dashes and underscores"),
+	id: providerIdSchema,
 	name: z.string().optional(),
-	baseUrl: z.string().optional(),
-	api: providerApiSchema.optional(),
+	/**
+	 * A provider field is partial: omitting it keeps the stored value and an empty
+	 * string clears it. The form sends what it shows. A set value must be a URL the
+	 * engine can call.
+	 */
+	baseUrl: z.union([z.literal(""), z.url()]).optional(),
+	/** Empty clears the stored family; omitting it keeps the stored one. */
+	api: z.union([z.literal(""), providerApiSchema]).optional(),
 	/**
 	 * Empty means "keep the stored value". A literal key is written to the
 	 * documented `apiKey` field; `$NAME` and `!command` work as pi documents them.
@@ -79,7 +92,7 @@ export const providerViewSchema = z.object({
 	id: z.string(),
 	name: z.string(),
 	baseUrl: z.string().optional(),
-	api: z.string().optional(),
+	api: providerApiSchema.optional(),
 	modelCount: z.number().int().nonnegative(),
 	configured: z.boolean(),
 	/** Where the credential came from: stored, environment, models.json, ... */
@@ -138,7 +151,7 @@ export type BuiltinProvider = z.infer<typeof builtinProviderSchema>;
 export const providerImportInputSchema = z.object({
 	/** Reuses the stored credential when apiKey is empty. */
 	providerId: z.string().optional(),
-	baseUrl: z.string().min(1),
+	baseUrl: z.url(),
 	api: providerApiSchema,
 	apiKey: z.string().optional(),
 });
@@ -162,22 +175,40 @@ export const mcpTransportSchema = z.enum(["stdio", "http"]);
 
 export type McpTransport = z.infer<typeof mcpTransportSchema>;
 
-export const mcpServerInputSchema = z.object({
-	name: z
-		.string()
-		.min(1)
-		.regex(/^[A-Za-z0-9_-]+$/, "Use letters, digits, dashes and underscores"),
-	transport: mcpTransportSchema,
-	/** stdio: one executable, and its arguments as separate entries. */
-	command: z.string().optional(),
-	args: z.array(z.string()).optional(),
-	env: z.record(z.string(), z.string()).optional(),
-	/** http: the streamable HTTP endpoint. */
-	url: z.string().optional(),
-	headers: z.record(z.string(), z.string()).optional(),
+/** The key under `mcpServers`, and the URL segment. */
+export const mcpNameSchema = z
+	.string()
+	.min(1)
+	.regex(/^[A-Za-z0-9_-]+$/, "Use letters, digits, dashes and underscores");
+
+const mcpServerFields = {
+	name: mcpNameSchema,
 	description: z.string().optional(),
 	enabled: z.boolean().optional(),
-});
+};
+
+/**
+ * A transport decides which target a server needs, so the two are one shape:
+ * a stdio server cannot be saved without a command, and an HTTP server cannot be
+ * saved without a URL.
+ */
+export const mcpServerInputSchema = z.discriminatedUnion("transport", [
+	z.object({
+		...mcpServerFields,
+		transport: z.literal("stdio"),
+		/** stdio: one executable, and its arguments as separate entries. */
+		command: z.string().min(1),
+		args: z.array(z.string()).optional(),
+		env: z.record(z.string(), z.string()).optional(),
+	}),
+	z.object({
+		...mcpServerFields,
+		transport: z.literal("http"),
+		/** http: the streamable HTTP endpoint. */
+		url: z.string().min(1),
+		headers: z.record(z.string(), z.string()).optional(),
+	}),
+]);
 
 export type McpServerInput = z.infer<typeof mcpServerInputSchema>;
 
@@ -192,12 +223,14 @@ export const mcpServerViewSchema = z.object({
 
 export type McpServerView = z.infer<typeof mcpServerViewSchema>;
 
+/** The directory name under `<agent home>/skills`, and the URL segment. */
+export const skillNameSchema = z
+	.string()
+	.min(1)
+	.regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, "Use letters, digits, dashes and underscores");
+
 export const skillInputSchema = z.object({
-	/** The directory name under `<agent home>/skills`. */
-	name: z
-		.string()
-		.min(1)
-		.regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, "Use letters, digits, dashes and underscores"),
+	name: skillNameSchema,
 	description: z.string().min(1),
 	body: z.string(),
 });
@@ -238,9 +271,3 @@ export const settingsSnapshotSchema = z.object({
 });
 
 export type SettingsSnapshot = z.infer<typeof settingsSnapshotSchema>;
-
-export const settingsErrorSchema = z.object({
-	message: z.string(),
-});
-
-export type SettingsError = z.infer<typeof settingsErrorSchema>;

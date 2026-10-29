@@ -20,7 +20,7 @@ package, not the installed CLI.
 | Settings writer              | `dist/core/settings-manager.d.ts`                             |
 | Package manager              | `dist/core/package-manager.d.ts`                              |
 | Models config shape          | `dist/core/model-config.d.ts`                                 |
-| MCP config shape             | `dist/extensions/mcp/config.d.ts`, `pi`'s `docs/mcp.md`       |
+| MCP config shape             | `dist/extensions/mcp/config.d.ts`, pi's `docs/mcp.md`         |
 | What the CLI does            | `dist/main.js` (a host over the library, not a second engine) |
 
 Verified against 1.4.0.
@@ -52,14 +52,29 @@ Other facts worth having before embedding:
 - `InputSource` is `"interactive" | "rpc" | "extension"`. A prompt typed by a person
   in the browser is `"interactive"`.
 - A `uiContext` is required for dialogs; without one a `confirm` has nowhere to go.
-  The methods are `select`, `confirm`, `input`, `editor`, `notify`, `setStatus`,
-  `setWidget`, `setTitle`, `set_editor_text`. There is no `custom` method
-  ([ADR-0002](../adr/0002-own-the-ui-contract.md)).
-- `NewSessionOptions.id` creates a session with an exact id, and `SessionManager`
-  lists, opens, forks and imports. This is how a host keeps pi's own session files.
-- `AgentSessionRuntime` owns `newSession`, `switchSession`, `fork` and
-  `importFromJsonl`, and replaces the active session. Subscriptions belong to the
-  old session and must be rebound.
+  `ExtensionUIContext` has 25 methods, in three groups:
+  - **answer** a person: `select`, `confirm`, `input`, `editor`
+  - **show** state: `notify`, `setStatus`, `setTitle`, `setWidget` (text lines or a
+    TUI component), `setEditorText`, `pasteToEditor`, `getEditorText`
+  - **TUI only**: `custom`, `onTerminalInput`, `setWorkingMessage`,
+    `setWorkingVisible`, `setWorkingIndicator`, `setHiddenThinkingLabel`,
+    `setFooter`, `setHeader`, `getAllThemes`, `getTheme`, `setTheme`,
+    `getToolsExpanded`, `setToolsExpanded`, `addAutocompleteProvider`,
+    `setEditorComponent`, `getEditorComponent`
+    `custom` exists and takes a component factory, so a host with no terminal cannot
+    render it. Epsilon answers the first group, maps the text half of the second,
+    and reports the rest once as unsupported
+    ([ADR-0002](../adr/0002-own-the-ui-contract.md)).
+- `NewSessionOptions.id` creates a session with an exact id. `SessionManager` lists,
+  opens, finds, creates and owns `getEntries()`, `getTree()` and `getSessionName()`;
+  `AgentSessionRuntime` owns `newSession`, `switchSession`, `fork` and
+  `importFromJsonl`, and replaces the active session. Subscriptions belong to the old
+  session and must be rebound. Epsilon uses the `SessionManager` half and opens one
+  session per engine.
+- `AgentSession` also has `setSessionName`, `navigateTree`, `exportToHtml`,
+  `getSessionStats`, `getContextUsage`, `compact`, `abortCompaction`,
+  `abortRetry`, `executeBash`, `abortBash`, `getAllTools` and the model and thinking
+  setters. A socket feature uses one of these instead of inventing an RPC command.
 - `toJsonEvent` is the transformation between a live event and the JSON the reducer
   consumes: `message_update` loses its `partial` payload and `toolcall_start` gains
   `id` and `toolName`. It is **not exported**. A host carries the transform itself
@@ -89,8 +104,10 @@ Compaction and retries: `compaction_start`, `compaction_end`, `auto_retry_start`
 Session and queue: `queue_update`, `session_info_changed`,
 `thinking_level_changed`, `bash_execution_update`
 
-Plus `extension_ui_request` when an extension asks the host for input, and
-`session_shutdown` on teardown.
+Extension lifecycle names (`session_start`, `session_shutdown`, `tool_call`,
+`project_trust` and the rest) are `ExtensionEvent`s the extension subscribes to in
+`pi.on(...)`, not members of the `AgentSessionEvent` union the socket carries. A host
+does not receive them as frames.
 
 `bash_execution_update` exists in the union but pi's own UI ignores it. The `bash`
 tool also records a `bashExecution` message in the session, which reaches a reader
@@ -99,16 +116,16 @@ only through the session's messages
 
 ## Writers: what the SDK can and cannot save
 
-| Thing                      | Writer                                                                                   |
-| -------------------------- | ---------------------------------------------------------------------------------------- |
-| Default provider and model | `SettingsManager.setDefaultModelAndProvider`, then `flush()`                             |
-| Other settings             | `SettingsManager` setters                                                                |
-| Packages                   | `DefaultPackageManager.installAndPersist`, `removeAndPersist`, `listConfiguredPackages`  |
-| Project trust              | `ProjectTrustStore.set`                                                                  |
-| Providers (`models.json`)  | **none.** `registerProvider()` is runtime-only; `ModelConfig` is read-only               |
-| MCP servers (`mcp.json`)   | **none exported.** `addMcpServerConfig` lives behind a package path that is not exported |
-| Skills                     | **none.** A skill is a directory with `SKILL.md`                                         |
-| Credentials (`auth.json`)  | `ModelRuntime.login()` and `logout()` for a provider that declares a login method        |
+| Thing                      | Writer                                                                                                                                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Default provider and model | `SettingsManager.setDefaultModelAndProvider`, then `flush()`                                                                                                                                           |
+| Other settings             | `SettingsManager` setters                                                                                                                                                                              |
+| Packages                   | `DefaultPackageManager.installAndPersist`, `removeAndPersist`, `listConfiguredPackages`                                                                                                                |
+| Project trust              | `ProjectTrustStore.set`                                                                                                                                                                                |
+| Providers (`models.json`)  | **none.** `registerProvider()` is runtime-only; `ModelConfig` is read-only                                                                                                                             |
+| MCP servers (`mcp.json`)   | **none reachable.** `addMcpServerConfig`, `removeMcpServerConfig` and `loadMcpConfig` exist, but the package's `exports` map exposes only `.` and `./rpc-entry`, so they cannot be imported through it |
+| Skills                     | **none.** A skill is a directory with `SKILL.md`                                                                                                                                                       |
+| Credentials (`auth.json`)  | `ModelRuntime.login()` and `logout()` for a provider that declares a login method                                                                                                                      |
 
 `ModelRuntime.login(providerId, type, interaction)` persists through the credential
 store for built-in providers. A custom `models.json` endpoint has no login method,
@@ -117,9 +134,12 @@ field instead. That field accepts a literal, `$NAME`, or `!command` output.
 
 `models.json` is parsed with `ModelConfig.load()`, which is read-only. Its provider
 fields are documented in pi's `docs/models-configuration.md`: `name`, `baseUrl`,
-`apiKey`, `api`, `headers`, `models`, `modelOverrides`, `compat`. A model needs only
-`id`; `name`, `input`, `cost`, `contextWindow` and `maxTokens` have defaults
-(`["text"]`, zero cost, 128000, 16384).
+`apiKey`, `api`, `headers`, `models`, `modelOverrides`, `compat` and the per-model
+extras (`thinkingLevelMap`, `inputLimits`, `promptCache`, `samplingParams`). A model
+needs only `id`; `input` defaults to `["text"]`, `contextWindow` to 128000 and
+`maxTokens` to 16384. `cost` is optional, and when present its four fields are
+required. A `modelOverrides` object merges field by field for object fields such as
+`cost`; every other field replaces the model's value.
 
 ## API family paths
 
@@ -145,8 +165,9 @@ The base URL is not interchangeable between families:
 - pi sets Google's `apiVersion` to empty when a `baseUrl` is present, so the base
   must include the version path (`https://generativelanguage.googleapis.com/v1beta`).
 
-`shared/src/provider-endpoints.ts` mirrors this table for the preview in Settings,
-and its test pins the commandcode paths.
+`shared/src/provider-endpoints.ts` mirrors this table. The provider form's API
+picker labels each family with the path it appends, and the model-list fetch reads
+`modelsPath` from the same list. Its test pins the commandcode paths.
 
 The model list is not a pi SDK method. The settings panel makes its own bounded
 `GET` to the endpoints above, with the typed key or the credential resolved by
@@ -167,7 +188,8 @@ models by hand.
 | `skills/`       | pi    | User skills; each directory holds a `SKILL.md`                     |
 | `sessions/`     | pi    | One JSONL per session                                              |
 
-Skills also load from `<cwd>/.pi/skills`, `~/.agents/skills` and installed packages.
+Skills also load from `<cwd>/.pi/skills`, `<cwd>/.agents/skills`, `~/.agents/skills`
+and installed packages.
 Packages are declared in `settings.json` and installed with
 `pi install npm:@scope/pkg`, `pi install git:host/repo` or `pi install ./path`.
 MCP servers come from `mcp.json` and a project's `.pi/mcp.json`, the latter gated by
@@ -194,7 +216,7 @@ shell out to them.
 | Command                                                  | What it does                                                                                              |
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `pi`                                                     | The interactive TUI: `/login`, `/settings`, `/trust`, `/mcp`, `/model`, `/compact`, `/fork`, `/resume`    |
-| `pi auth check --provider <p> [--json]`                  | Reads provider readiness: `ready`, `not_ready`, and the source                                            |
+| `pi auth check --provider <p> [--json]`                  | Reads provider readiness: `ready`, `not_ready` or `invalid`, with a matching exit code                    |
 | `pi auth print-api-key`, `print-bearer-token`            | Reads the stored credential or a refreshed token. Read-only; there is no command that writes a credential |
 | `pi mcp add`, `remove`, `list --json`, `login`, `logout` | Configures MCP servers and signs in to OAuth servers. `login` opens a browser and waits, with `--timeout` |
 | `pi install <source> [-l]`, `remove`, `list`, `update`   | Installs packages and edits the settings that declare them                                                |
