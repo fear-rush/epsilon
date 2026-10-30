@@ -85,7 +85,7 @@
 						"patterns": [
 							{
 								"group": ["@earendil-works/*"],
-								"message": "Import pi only in server/src/platform/pi and server/src/features/conversation; elsewhere use their exports."
+								"message": "Import pi only in server/src/platform/pi.ts and server/src/features/conversation; elsewhere use their exports."
 							}
 						]
 					}
@@ -97,7 +97,7 @@
 			"rules": { "no-restricted-imports": "off" }
 		},
 		{
-			// The platform never reaches up into features. platform/pi may import pi.
+			// The platform never reaches up into features. platform/pi.ts may import pi.
 			"files": ["server/src/platform/**/*.ts"],
 			"rules": {
 				"no-restricted-imports": [
@@ -106,7 +106,7 @@
 						"patterns": [
 							{
 								"group": ["@earendil-works/*"],
-								"message": "Import pi only in server/src/platform/pi and server/src/features/conversation; elsewhere use their exports."
+								"message": "Import pi only in server/src/platform/pi.ts and server/src/features/conversation; elsewhere use their exports."
 							},
 							{
 								"group": ["**/features/**"],
@@ -118,7 +118,7 @@
 			}
 		},
 		{
-			"files": ["server/src/platform/pi/**/*.ts"],
+			"files": ["server/src/platform/pi.ts"],
 			"rules": {
 				"no-restricted-imports": [
 					"error",

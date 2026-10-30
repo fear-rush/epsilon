@@ -23,3 +23,11 @@ export const providerIdSchema = z
 		/^(?!new$)[A-Za-z0-9][A-Za-z0-9_-]*$/,
 		'Use letters, digits, dashes and underscores; "new" is reserved',
 	);
+
+/**
+ * A model's identity in a menu or a picker: the pair the engine switches on.
+ * Provider ids are letters, digits, dashes and underscores, so one slash keeps
+ * the key unambiguous.
+ */
+export const modelKey = (model: { provider: string; id: string }): string =>
+	`${model.provider}/${model.id}`;

@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { listStoredSessions } from "../../platform/pi";
 import type { Deps } from "../../deps";
-import { deleteSession, joinSessions } from "./catalog";
+import { deleteSession, joinSessions } from "./service";
 import { sessionErrorSchema, sessionListSchema } from "./contract";
 
 const sessionErrorContent = { "application/json": { schema: sessionErrorSchema } };

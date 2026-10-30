@@ -4,7 +4,7 @@ import type { Deps } from "../../deps";
 import { configWrite, errorContent } from "../../platform/http";
 import { modelRuntime } from "../../platform/pi";
 import { defaultModelSchema } from "./contract";
-import { writeDefaultModel } from "./defaults";
+import { writeDefaultModel } from "./store";
 
 const defaultModelRoute = createRoute({
 	method: "put",
