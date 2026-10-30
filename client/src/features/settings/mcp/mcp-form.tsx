@@ -95,9 +95,9 @@ function McpServerForm({
 		mutationFn: (target: { scope: McpScope; name: string }) =>
 			deleteMcpServer(target.scope, target.name),
 		onSuccess: () => {
-			refresh();
 			form.allowLeave();
-			void navigate({ to: "/settings/mcp" });
+			// Leave first: a refresh while this page is mounted refetches the deleted entry.
+			void navigate({ to: "/settings/mcp" }).then(refresh);
 		},
 	});
 	const inProject = useMutation({

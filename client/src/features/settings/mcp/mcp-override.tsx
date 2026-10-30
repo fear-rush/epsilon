@@ -41,15 +41,15 @@ export function McpOverrideForm({ detail }: { detail: McpOverrideSubject }) {
 	const inherit = useMutation({
 		mutationFn: () => setMcpServerInProject({ name: detail.name, value: "inherit" as const }),
 		onSuccess: () => {
-			refresh();
-			void navigate({ to: "/settings/mcp", replace: true });
+			// Leave first: a refresh while this page is mounted refetches the removed entry.
+			void navigate({ to: "/settings/mcp", replace: true }).then(refresh);
 		},
 	});
 	const remove = useMutation({
 		mutationFn: () => deleteMcpServer("project", detail.name),
 		onSuccess: () => {
-			refresh();
-			void navigate({ to: "/settings/mcp", replace: true });
+			// Leave first: a refresh while this page is mounted refetches the removed entry.
+			void navigate({ to: "/settings/mcp", replace: true }).then(refresh);
 		},
 	});
 

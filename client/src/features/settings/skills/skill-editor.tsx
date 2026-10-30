@@ -79,9 +79,9 @@ function SkillForm({ detail }: { detail: SkillInput | undefined }) {
 	const remove = useMutation({
 		mutationFn: deleteSkill,
 		onSuccess: () => {
-			refresh();
 			form.allowLeave();
-			void navigate({ to: "/settings/skills" });
+			// Leave first: a refresh while this page is mounted refetches the deleted entry.
+			void navigate({ to: "/settings/skills" }).then(refresh);
 		},
 	});
 

@@ -121,9 +121,9 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 	const remove = useMutation({
 		mutationFn: deleteProvider,
 		onSuccess: () => {
-			refresh();
 			form.allowLeave();
-			void navigate({ to: "/settings/providers" });
+			// Leave first: a refresh while this page is mounted refetches the deleted entry.
+			void navigate({ to: "/settings/providers" }).then(refresh);
 		},
 	});
 
