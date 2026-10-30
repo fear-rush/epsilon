@@ -31,7 +31,7 @@ prose; fix a doc that disagrees in the same commit, and never copy code or file 
 
 ## Invariants
 
-1. Import `@earendil-works/*` only in `server/src/platform/pi/` and
+1. Import `@earendil-works/*` only in `server/src/platform/pi.ts` and
    `server/src/features/conversation/`; `shared/src/pi.ts` for types only.
 2. `shared/` imports no `node:*` and no React. The reducer stays pure.
 3. Do not invent a pi capability. If [pi-sdk.md](docs/pi-sdk.md) does not list it,

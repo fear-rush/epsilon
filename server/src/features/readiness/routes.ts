@@ -2,7 +2,7 @@ import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 
 import type { Deps } from "../../deps";
 import { readinessSchema } from "./contract";
-import { readReadiness } from "./readiness";
+import { readReadiness } from "./service";
 
 const readinessRoute = createRoute({
 	method: "get",

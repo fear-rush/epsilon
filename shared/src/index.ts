@@ -12,6 +12,7 @@ export type {
 	ThinkingLevel,
 } from "./protocol/frames";
 export {
+	PROTOCOL_VERSION,
 	agentEventSchema,
 	clientFrameSchema,
 	commandNameSchema,
@@ -24,9 +25,8 @@ export {
 	snapshotStateSchema,
 	thinkingLevelSchema,
 } from "./protocol/frames";
-export { dialogAnswerSchema, dialogQuestionSchema, extensionDisplaySchema } from "./extui";
-export type { DialogAnswer, DialogQuestion, ExtensionDisplay } from "./extui";
-export { PROTOCOL_VERSION } from "./protocol/version";
+export { dialogAnswerSchema, dialogQuestionSchema, extensionDisplaySchema } from "./protocol/extui";
+export type { DialogAnswer, DialogQuestion, ExtensionDisplay } from "./protocol/extui";
 export {
 	PERMISSION_MODE_VALUES,
 	PERMISSION_STATUS_KEY,
@@ -45,9 +45,8 @@ export {
 } from "./mcp/rules";
 export type { McpExposure, McpOverrideKey, McpRelation, McpScope, McpTransport } from "./mcp/rules";
 export { skillDescriptionSchema, skillNameSchema } from "./skills/rules";
-export { providerApiSchema, providerIdSchema } from "./providers/rules";
+export { modelKey, providerApiSchema, providerIdSchema } from "./providers/rules";
 export type { ProviderApi } from "./providers/rules";
-export { modelKey } from "./providers/model-key";
 export {
 	PROVIDER_APIS,
 	parseProviderApi,

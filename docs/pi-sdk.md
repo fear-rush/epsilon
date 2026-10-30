@@ -284,7 +284,7 @@ Turborepo or the runtime.
   command and again at `agent_settled`.
 - **`toJsonEvent` is not exported.** `package.json` exports only `.` and
   `./rpc-entry`; `dist/modes/json-event.js` is private. The host carries its own
-  copy of the transform in `server/src/platform/pi/`.
+  copy of the transform in `server/src/features/conversation/engine.ts`.
 - **The embedded engine always trusts the project folder.** `SettingsManager.create`
   starts with `projectTrusted = true` and the SDK never runs the CLI's
   `resolveProjectTrusted()`, so `.pi/settings.json` and `.pi/mcp.json` load with an
