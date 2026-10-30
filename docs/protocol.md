@@ -37,7 +37,9 @@ the model picker; 3 added `commands` to the snapshot for the `/` palette; 4
 replaced pi's command vocabulary with Epsilon's own commands and zod shapes when
 the engine moved in-process ([ADR-0009](adr/0009-socket-speaks-epsilon.md)); 5
 made a dialog answer name the method it belongs to, dropped the `meta` frame and
-`serverVersion` because nothing read them, and made the snapshot a checked shape.
+`serverVersion` because nothing read them, and made the snapshot a checked shape;
+6 added the thinking level and its available levels to the snapshot and the
+`set_thinking_level` command.
 
 Version the socket, not the REST paths. A stale tab or an installed PWA can
 outlive a server upgrade; REST requests follow the bundle, because the deployment
@@ -68,6 +70,7 @@ type ClientFrame =
 | `{ type: "abort" }`                             | `session.abort()`, pending dialogs cancelled | events              |
 | `{ type: "bash"; command; excludeFromContext }` | `session.executeBash(...)`                   | snapshot            |
 | `{ type: "set_model"; provider; modelId }`      | `session.setModel(model)`                    | snapshot            |
+| `{ type: "set_thinking_level"; level }`         | `session.setThinkingLevel(level)`            | snapshot, event     |
 | `{ type: "reload" }`                            | `session.reload()`                           | snapshot            |
 
 A command attaches the tab to its session first. It carries no id: the answer is
@@ -113,8 +116,8 @@ once per connection, not dropped in silence.
 ## Snapshot
 
 A snapshot is sent once per `attach`, and again after `bash`, `set_model`,
-`reload` or a session rename. It is built synchronously from the live engine, not
-from a request/reply:
+`set_thinking_level`, `reload` or a session rename. It is built synchronously from
+the live engine, not from a request/reply:
 
 ```ts
 type Snapshot = {
@@ -123,6 +126,10 @@ type Snapshot = {
 		isStreaming: boolean;
 		isCompacting: boolean;
 		sessionName?: string;
+		// pi's current level and what this model supports. A model without
+		// reasoning reports `["off"]`.
+		thinkingLevel: ThinkingLevel;
+		availableThinkingLevels: ThinkingLevel[];
 	};
 	messages: SnapshotMessage[]; // session.messages, system entries filtered out
 	models: { provider; id; name }[];
@@ -135,6 +142,10 @@ extension commands, prompt templates and skills. pi's interactive built-ins such
 as `/model` and `/settings` are not in it, because they never reach an engine.
 Resources and their paths join the snapshot with the resources page (S8). Dialogs
 travel in their own frames.
+
+`ThinkingLevel` is pi's union `off`, `minimal`, `low`, `medium`, `high`, `xhigh`,
+`max`. The snapshot is authoritative; `thinking_level_changed` also arrives as an
+event so a label does not wait for the next snapshot.
 
 The client reducer must be able to **replace** its state from a snapshot at any
 moment. That is what makes reconnect, tab duplication and server restart

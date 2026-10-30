@@ -27,22 +27,22 @@ route · **WS** = our socket command or frame · **own** = our own module ·
 
 ## Running a turn
 
-| Feature                                    | How                                                                                |
-| ------------------------------------------ | ---------------------------------------------------------------------------------- |
-| Send a prompt                              | WS `prompt` → `AgentSession.prompt(text, { source: "interactive" })`               |
-| Steer mid-run                              | WS `steer` → `AgentSession.steer(text, undefined, { source: "interactive" })`      |
-| Abort                                      | WS `abort` → pending dialogs cancelled, then `AgentSession.abort()`                |
-| `!command` / `!!command`                   | WS `bash` → `executeBash()`; the snapshot is re-read after the run                 |
-| Slash palette: skills, prompts, extensions | the snapshot's `commands`; the picked `/name` runs through `prompt()`              |
-| Permission policy (strict, ask, yolo)      | extension command `/permission <mode>`; the mode is read from its keyed status     |
-| Change model                               | WS `set_model` → `AgentSession.setModel()`, resolved against the offered list      |
-| Reload extensions, skills and packages     | WS `reload` → `AgentSession.reload()`, also called after every settings write      |
-| Queue a follow-up, queue behaviour modes   | **planned**: `followUp()`, `setSteeringMode()`, `setFollowUpMode()`                |
-| Reasoning level                            | **planned**: `setThinkingLevel()`, `cycleThinkingLevel()`                          |
-| Compact context, stop a compaction         | **planned**: `compact()`, `abortCompaction()`                                      |
-| Auto-compaction and auto-retry settings    | **planned**: `setAutoCompactionEnabled()`, `setAutoRetryEnabled()`, `abortRetry()` |
-| Context usage, tokens, cost, tool counts   | **planned (S15)**: `getContextUsage()`, `getSessionStats()`                        |
-| Needs-input notification                   | **planned (S10)**: own, on a dialog opening and on `agent_settled`                 |
+| Feature                                    | How                                                                                   |
+| ------------------------------------------ | ------------------------------------------------------------------------------------- |
+| Send a prompt                              | WS `prompt` → `AgentSession.prompt(text, { source: "interactive" })`                  |
+| Steer mid-run                              | WS `steer` → `AgentSession.steer(text, undefined, { source: "interactive" })`         |
+| Abort                                      | WS `abort` → pending dialogs cancelled, then `AgentSession.abort()`                   |
+| `!command` / `!!command`                   | WS `bash` → `executeBash()`; the snapshot is re-read after the run                    |
+| Slash palette: skills, prompts, extensions | the snapshot's `commands`; the picked `/name` runs through `prompt()`                 |
+| Permission policy (strict, ask, yolo)      | extension command `/permission <mode>`; the mode is read from its keyed status        |
+| Change model                               | WS `set_model` → `AgentSession.setModel()`, resolved against the offered list         |
+| Reload extensions, skills and packages     | WS `reload` → `AgentSession.reload()`, also called after every settings write         |
+| Queue a follow-up, queue behaviour modes   | **planned**: `followUp()`, `setSteeringMode()`, `setFollowUpMode()`                   |
+| Reasoning level                            | WS `set_thinking_level` → `AgentSession.setThinkingLevel()`, levels from the snapshot |
+| Compact context, stop a compaction         | **planned**: `compact()`, `abortCompaction()`                                         |
+| Auto-compaction and auto-retry settings    | **planned**: `setAutoCompactionEnabled()`, `setAutoRetryEnabled()`, `abortRetry()`    |
+| Context usage, tokens, cost, tool counts   | **planned (S15)**: `getContextUsage()`, `getSessionStats()`                           |
+| Needs-input notification                   | **planned (S10)**: own, on a dialog opening and on `agent_settled`                    |
 
 ## Transcript rendering
 
@@ -66,26 +66,30 @@ The dashboard configures it through pi's SDK and its documented files
 ([ADR-0012](adr/0012-configure-in-the-dashboard.md)). What stays in the terminal is
 only what pi does not expose to a host.
 
-| Feature                                                                       | How                                                                                                                                            |
-| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Report readiness: is there a usable model in this home, and where is the home | `agent/readiness.ts` behind REST `GET /api/readiness`                                                                                          |
-| A missing provider becomes a notice that opens Settings                       | own, on the not-ready state; never a silently failed turn                                                                                      |
-| Provider list with the id and model count                                     | `settings/providers.ts` + `ModelRuntime`, REST `GET /api/settings`                                                                             |
-| Two-pane editor: configured providers left, one form right                    | Routes `/settings/providers/$providerId` and `/new`                                                                                            |
-| Add a provider pi ships, or a custom one, from a searchable picker            | `builtins` in the snapshot; `components/settings/providers/`                                                                                   |
-| Read one provider's detail, with header names but no secret values            | REST `GET /api/settings/providers/{id}`                                                                                                        |
-| Name each API family with the path it appends, in the picker                  | `PROVIDER_APIS` in `shared/src/provider-endpoints.ts`                                                                                          |
-| Add, edit or remove a model; override a model pi ships                        | **settings** page → `models` / `modelOverrides`, with an explicit replace warning                                                              |
-| Fetch a provider's model list, then add the ones you pick                     | REST `POST /api/settings/providers/models`; Epsilon's own bounded GET                                                                          |
-| Add, edit or remove a provider endpoint, its key, headers and models          | **settings** page → `settings/provider-write.ts` merges `models.json`, keeps unknown keys, and logs a stored key out of `auth.json` on removal |
-| Choose the default provider and model                                         | **settings** → `SettingsManager.setDefaultModelAndProvider`                                                                                    |
-| Add, replace or remove an MCP server                                          | **settings** → `settings/mcp.ts` writes `mcp.json`                                                                                             |
-| Create, edit or remove a user skill                                           | **settings** → `settings/skills.ts` writes `<agent home>/skills/<name>/SKILL.md`                                                               |
-| Install or remove a package                                                   | **settings** → `DefaultPackageManager.installAndPersist` / `removeAndPersist`                                                                  |
-| Apply a change to live sessions                                               | `registry.reloadAll()` → `session.reload()`                                                                                                    |
-| Readiness detail, package versions, trust state on a resources page           | **planned (S8)**                                                                                                                               |
-| OAuth or subscription login, project trust, MCP sign-in, TUI-only settings    | **terminal**: `pi`, then `/login`, `/trust`, `/mcp login`, `/settings`                                                                         |
-| Update a package, clear MCP credentials, configuration import                 | **not built**                                                                                                                                  |
+| Feature                                                                              | How                                                                                                                                            |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Report readiness: is there a usable model in this home, and where is the home        | `agent/readiness.ts` behind REST `GET /api/readiness`                                                                                          |
+| A missing provider becomes a notice that opens Settings                              | own, on the not-ready state; never a silently failed turn                                                                                      |
+| Provider list with the id and model count                                            | `settings/providers.ts` + `ModelRuntime`, REST `GET /api/settings`                                                                             |
+| Two-pane editor: configured providers left, one form right                           | Routes `/settings/providers/$providerId` and `/new`                                                                                            |
+| Add a provider pi ships, or a custom one, from a searchable picker                   | `builtins` in the snapshot; `components/settings/providers/`                                                                                   |
+| Read one provider's detail, with header names but no secret values                   | REST `GET /api/settings/providers/{id}`                                                                                                        |
+| Name each API family with the path it appends, in the picker                         | `PROVIDER_APIS` in `shared/src/provider-endpoints.ts`                                                                                          |
+| Show the request URL a base URL produces, and warn when it repeats the family's path | `providerEndpoint` and `providerBaseUrlProblem` in `shared/src/provider-endpoints.ts`                                                          |
+| Add, edit or remove a model; override a model pi ships                               | **settings** page → `models` / `modelOverrides`, with an explicit replace warning                                                              |
+| Configure reasoning per model and provider                                           | **settings** page → `reasoning`, `thinkingLevelMap` and the reasoning keys of `compat`; written by the model and provider forms                |
+| Fetch a provider's model list, then add the ones you pick                            | REST `POST /api/settings/providers/models`; Epsilon's own bounded GET; `supported_endpoints` sets a per-model Anthropic/Responses shape        |
+| Test a provider at a reasoning level and report its tokens                           | REST `POST /api/settings/providers/test`; the same route, a `level` and the streamed usage                                                     |
+| Test a provider draft or one model before Save writes it                             | REST `POST /api/settings/providers/test`; `registerProvider()` on a throwaway runtime, then `completeSimple()`                                 |
+| Add, edit or remove a provider endpoint, its key, headers and models                 | **settings** page → `settings/provider-write.ts` merges `models.json`, keeps unknown keys, and logs a stored key out of `auth.json` on removal |
+| Choose the default provider and model                                                | **settings** → `SettingsManager.setDefaultModelAndProvider`                                                                                    |
+| Add, replace or remove an MCP server                                                 | **settings** → `settings/mcp.ts` writes `mcp.json`                                                                                             |
+| Create, edit or remove a user skill                                                  | **settings** → `settings/skills.ts` writes `<agent home>/skills/<name>/SKILL.md`                                                               |
+| Install or remove a package                                                          | **settings** → `DefaultPackageManager.installAndPersist` / `removeAndPersist`                                                                  |
+| Apply a change to live sessions                                                      | `registry.reloadAll()` → `session.reload()`                                                                                                    |
+| Readiness detail, package versions, trust state on a resources page                  | **planned (S8)**                                                                                                                               |
+| OAuth or subscription login, project trust, MCP sign-in, TUI-only settings           | **terminal**: `pi`, then `/login`, `/trust`, `/mcp login`, `/settings`                                                                         |
+| Update a package, clear MCP credentials, configuration import                        | **not built**                                                                                                                                  |
 
 ## Extension surface
 

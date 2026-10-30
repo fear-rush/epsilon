@@ -135,7 +135,10 @@ field instead. That field accepts a literal, `$NAME`, or `!command` output.
 `models.json` is parsed with `ModelConfig.load()`, which is read-only. Its provider
 fields are documented in pi's `docs/models-configuration.md`: `name`, `baseUrl`,
 `apiKey`, `api`, `headers`, `models`, `modelOverrides`, `compat` and the per-model
-extras (`thinkingLevelMap`, `inputLimits`, `promptCache`, `samplingParams`). A model
+extras (`thinkingLevelMap`, `inputLimits`, `promptCache`, `samplingParams`). The
+panel writes `thinkingLevelMap` and the reasoning subset of `compat` from the model
+dialog, provider-wide `compat` from the provider's reasoning defaults, and keeps
+every unknown key in both objects. A model
 needs only `id`; `input` defaults to `["text"]`, `contextWindow` to 128000 and
 `maxTokens` to 16384. `cost` is optional, and when present its four fields are
 required. A `modelOverrides` object merges field by field for object fields such as
@@ -166,14 +169,37 @@ The base URL is not interchangeable between families:
   must include the version path (`https://generativelanguage.googleapis.com/v1beta`).
 
 `shared/src/provider-endpoints.ts` mirrors this table. The provider form's API
-picker labels each family with the path it appends, and the model-list fetch reads
-`modelsPath` from the same list. Its test pins the commandcode paths.
+picker labels each family with the path it appends, the base URL field names the
+request URL that results, and the model-list fetch reads `modelsPath` from the same
+list. A list that carries `supported_endpoints` (commandcode does) is read as a
+gateway hint: a `/messages`-only model gets the Anthropic API and a base above its
+`/v1`, and a `/responses`-only model gets the Responses API. That keeps one
+provider's mixed catalog correct. An exact id and API match in pi's catalog also
+supplies `reasoning`, `thinkingLevelMap` and `forceAdaptiveThinking`; the rest of
+the gateway's compat is left alone. A base that repeats the family's path is a warning under the field, not a
+silent rewrite, because pi calls exactly the base it is given. Its test pins the
+commandcode paths.
 
 The model list is not a pi SDK method. The settings panel makes its own bounded
 `GET` to the endpoints above, with the typed key or the credential resolved by
 `ModelRuntime.getAuth()`, no cross-origin redirects, a ten second timeout and a
 response cap. Google's list API is a different shape, so the panel asks for those
 models by hand.
+
+The provider test is a pi SDK call instead. It registers the draft with
+`ModelRuntime.registerProvider()` on a throwaway runtime, which is runtime-only and
+writes no file, then asks `completeSimple()` for a one-word answer. A typed key or
+header overrides the stored one, so the test tries what Save would write, and the
+request goes through pi's own client rather than a second wire implementation.
+
+It runs two probes. The keyless one registers a placeholder key, because pi refuses
+to stream an unconfigured provider, then suppresses the family's auth header with a
+`null` header value so the endpoint sees no key. The keyed one uses the typed or
+stored credential. That is how a local or keyless endpoint and a real key are told
+apart before Save. A `level` on the request is passed to `completeSimple` as
+`reasoning`; the test reads a clone of the provider stream for
+`reasoning_tokens`/thinking deltas and reports that evidence, not a claim that the
+level was sent.
 
 ## Files in the agent home
 

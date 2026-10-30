@@ -56,47 +56,48 @@ with it.
 
 ## Concept to component
 
-| Concept                            | Component                                                                                                                              | Notes                                                                                                           |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Thread                             | `MessageScrollerProvider` → `MessageScroller` → `Viewport` → `Content` → `Item`                                                        | `autoScroll`; `scrollAnchor` on the user turn; `MessageScrollerButton` last                                     |
-| User turn                          | `Message align="end"` + `Bubble variant="muted"`                                                                                       | Bubble only here                                                                                                |
-| Assistant turn                     | `Message align="start"` + `MessageContent`                                                                                             | Markdown body, no bubble                                                                                        |
-| Thinking                           | muted paragraph above the answer                                                                                                       | No duration and no collapse yet; a collapsible `Trace` is planned                                               |
-| Tool, running                      | `TraceLine status="running"`                                                                                                           | Bare line while there is nothing to open                                                                        |
-| Tool, finished                     | `TraceCollapsible` → trigger wraps the line → `TraceCollapsibleContent` → `CodeBlock size="sm" wrap max-h-64`                          | Never `<pre>`                                                                                                   |
-| Diff                               | `CodeBlock` + `CodeBlockLine variant="added"/"removed"`                                                                                | The `+` and `−` marks come from the component, not from copy                                                    |
-| Unknown / MCP tool                 | Same as a tool, generic field rows                                                                                                     | Name, args, output, status. Never blank                                                                         |
-| Notice, compaction, branch summary | `Marker variant="separator"`                                                                                                           | Not a trace row                                                                                                 |
-| Approval or blocked tool           | `AlertDialog` while it blocks the run                                                                                                  | Inline `Item` + `ItemActions` when a prompt does not block: **planned**, the component is not installed         |
-| Extension select                   | `Dialog` with one `Button` per option                                                                                                  | Options wrap, so a long one cannot overflow the dialog; a leading glyph from pi is dropped                      |
-| Extension confirm                  | `AlertDialog`                                                                                                                          | Two buttons, Yes and No; no destructive variant                                                                 |
-| Extension input / editor           | `Dialog` + `Input`; monospace `Textarea`                                                                                               |                                                                                                                 |
-| Extension status / widget          | The permission status drives the composer menu; widget rows sit above the composer                                                     | Other keyed statuses are held in state but not rendered yet                                                     |
-| Session list                       | `Sidebar` + one `SidebarGroup` for this project                                                                                        | No run indicator; needs-input keeps `Badge variant="warning"`                                                   |
-| Session actions                    | `ContextMenu` and `DropdownMenu` on `…`; on mobile the row is already inside a `Sheet`                                                 |                                                                                                                 |
-| Deployment card                    | Footer button with avatar, name and a `DropdownMenu` above it                                                                          | Bottom-left, on every page. The menu names the deployment and links to each settings section                    |
-| Settings page                      | Full page: own left nav with Back to app and Search, section on the right                                                              | Replaces the session sidebar; not a dialog. One URL per section                                                 |
-| Settings rows                      | Row in a divided card: title, muted description, right-aligned actions                                                                 | Secret values are never shown; a blank key keeps the stored one; destructive actions confirm in `AlertDialog`   |
-| Settings list row                  | `Link` with the name, the id and the count ("74 models") under it                                                                      | A credential-only provider still lists, so deleting one has to log it out                                       |
-| Settings fields                    | `FieldGroup` → `Field` → `FieldLabel` + control + `FieldDescription`                                                                   | `Select` for option sets, never a native `<select>`; `InputGroup` when a button sits inside the field           |
-| Search everything                  | `Command` in `Dialog`, ⌘K                                                                                                              | **planned**: sessions, files, slash commands, actions                                                           |
-| Slash palette                      | `Command` in `Popover` anchored to the composer                                                                                        | Server-driven from the snapshot's `commands`; as wide as the composer, three columns: name, description, source |
-| Model                              | `DropdownMenu` + `DropdownMenuRadioGroup`, one group per provider                                                                      | Hundreds of models: current provider first, names sorted inside each group                                      |
-| Default model, in settings         | `Command` in a `Popover` on a full-width `Button` trigger, one `CommandGroup` per provider                                             | Searchable by provider, name and id; the popup is as wide as the row, not the button                            |
-| Permission                         | `DropdownMenu` radio group: Strict, Ask, Yolo                                                                                          | The extension's `/permission <mode>` owns it; the UI shows its own labels                                       |
-| Reasoning                          | `DropdownMenu` + `DropdownMenuRadioGroup`                                                                                              | **planned**                                                                                                     |
-| Context usage                      | `HoverCard` + `Progress`                                                                                                               | **planned (S15)**                                                                                               |
-| Attachments                        | `Attachment` + `AttachmentGroup` in `InputGroup`                                                                                       | **planned (S16)**: `state` wired to real progress                                                               |
-| Composer                           | `InputGroup` + `InputGroupTextarea`; white surface, `border-foreground/25`; `block-end` addon holds model, permission, stop and submit | Arrow-up submit; Enter sends, Shift+Enter adds a line, Esc stops                                                |
-| File tree                          | nested `Collapsible` per folder, `Button` per file                                                                                     | **planned (S6)**; a single read file in a turn stays a `TraceLine`                                              |
-| Preview                            | `Resizable` + `Tabs` (Preview / Source / Diff) + sandboxed iframe                                                                      | **planned (S9)**                                                                                                |
-| Terminal                           | `Tabs` + xterm, `Button` row for touch keys                                                                                            | **planned (S7)**                                                                                                |
-| Empty state                        | `Empty`                                                                                                                                | Title and one sentence; suggestion buttons are planned                                                          |
-| Errors                             | `Alert variant="destructive"`, transcript notice                                                                                       | No toast system is installed                                                                                    |
-| Keyboard hints                     | `kbd`                                                                                                                                  | **planned**; no `kbd` component is installed                                                                    |
-| Loading                            | `spinner`                                                                                                                              | For attach and file load, not for streaming                                                                     |
-| Not ready                          | centre, `Alert`                                                                                                                        | Names the missing step and the home, and offers **Open Settings**; the composer is not rendered                 |
-| Render error                       | centre, `Alert variant="destructive"` + **Try again**                                                                                  | The route error component; never the router's default screen                                                    |
+| Concept                            | Component                                                                                                                                              | Notes                                                                                                           |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Thread                             | `MessageScrollerProvider` → `MessageScroller` → `Viewport` → `Content` → `Item`                                                                        | `autoScroll`; `scrollAnchor` on the user turn; `MessageScrollerButton` last                                     |
+| User turn                          | `Message align="end"` + `Bubble variant="muted"`                                                                                                       | Bubble only here                                                                                                |
+| Assistant turn                     | `Message align="start"` + `MessageContent`                                                                                                             | Markdown body, no bubble                                                                                        |
+| Thinking                           | muted paragraph above the answer                                                                                                                       | No duration and no collapse yet; a collapsible `Trace` is planned                                               |
+| Tool, running                      | `TraceLine status="running"`                                                                                                                           | Bare line while there is nothing to open                                                                        |
+| Tool, finished                     | `TraceCollapsible` → trigger wraps the line → `TraceCollapsibleContent` → `CodeBlock size="sm" wrap max-h-64`                                          | Never `<pre>`                                                                                                   |
+| Diff                               | `CodeBlock` + `CodeBlockLine variant="added"/"removed"`                                                                                                | The `+` and `−` marks come from the component, not from copy                                                    |
+| Unknown / MCP tool                 | Same as a tool, generic field rows                                                                                                                     | Name, args, output, status. Never blank                                                                         |
+| Notice, compaction, branch summary | `Marker variant="separator"`                                                                                                                           | Not a trace row                                                                                                 |
+| Approval or blocked tool           | `AlertDialog` while it blocks the run                                                                                                                  | Inline `Item` + `ItemActions` when a prompt does not block: **planned**, the component is not installed         |
+| Extension select                   | `Dialog` with one `Button` per option                                                                                                                  | Options wrap, so a long one cannot overflow the dialog; a leading glyph from pi is dropped                      |
+| Extension confirm                  | `AlertDialog`                                                                                                                                          | Two buttons, Yes and No; no destructive variant                                                                 |
+| Extension input / editor           | `Dialog` + `Input`; monospace `Textarea`                                                                                                               |                                                                                                                 |
+| Extension status / widget          | The permission status drives the composer menu; widget rows sit above the composer                                                                     | Other keyed statuses are held in state but not rendered yet                                                     |
+| Session list                       | `Sidebar` + one `SidebarGroup` for this project                                                                                                        | No run indicator; needs-input keeps `Badge variant="warning"`                                                   |
+| Session actions                    | `ContextMenu` and `DropdownMenu` on `…`; on mobile the row is already inside a `Sheet`                                                                 |                                                                                                                 |
+| Deployment card                    | Footer button with avatar, name and a `DropdownMenu` above it                                                                                          | Bottom-left, on every page. The menu names the deployment and links to each settings section                    |
+| Settings page                      | Full page: own left nav with Back to app and Search, section on the right                                                                              | Replaces the session sidebar; not a dialog. One URL per section                                                 |
+| Settings rows                      | Row in a divided card: title, muted description, right-aligned actions                                                                                 | Secret values are never shown; a blank key keeps the stored one; destructive actions confirm in `AlertDialog`   |
+| Settings list row                  | `Link` with the name, the id and the count ("74 models") under it                                                                                      | A credential-only provider still lists, so deleting one has to log it out                                       |
+| Settings fields                    | `FieldGroup` → `Field` → `FieldLabel` + control + `FieldDescription`                                                                                   | `Select` for option sets, never a native `<select>`; `InputGroup` when a button sits inside the field           |
+| Search everything                  | `Command` in `Dialog`, ⌘K                                                                                                                              | **planned**: sessions, files, slash commands, actions                                                           |
+| Slash palette                      | `Command` in `Popover` anchored to the composer                                                                                                        | Server-driven from the snapshot's `commands`; as wide as the composer, three columns: name, description, source |
+| Model                              | `DropdownMenu` + `DropdownMenuRadioGroup`, one group per provider                                                                                      | Hundreds of models: current provider first, names sorted inside each group                                      |
+| Default model, in settings         | `Command` in a `Popover` on a full-width `Button` trigger, one `CommandGroup` per provider                                                             | Searchable by provider, name and id; the popup is as wide as the row, not the button                            |
+| Permission                         | `DropdownMenu` radio group: Strict, Ask, Yolo                                                                                                          | The extension's `/permission <mode>` owns it; the UI shows its own labels                                       |
+| Reasoning                          | `DropdownMenu` + `DropdownMenuRadioGroup`                                                                                                              | **planned**                                                                                                     |
+| Context usage                      | `HoverCard` + `Progress`                                                                                                                               | **planned (S15)**                                                                                               |
+| Attachments                        | `Attachment` + `AttachmentGroup` in `InputGroup`                                                                                                       | **planned (S16)**: `state` wired to real progress                                                               |
+| Composer                           | `InputGroup` + `InputGroupTextarea`; white surface, `border-foreground/25`; `block-end` addon holds model, thinking level, permission, stop and submit | Arrow-up submit; Enter sends, Shift+Enter adds a line, Esc stops                                                |
+| File tree                          | nested `Collapsible` per folder, `Button` per file                                                                                                     | **planned (S6)**; a single read file in a turn stays a `TraceLine`                                              |
+| Preview                            | `Resizable` + `Tabs` (Preview / Source / Diff) + sandboxed iframe                                                                                      | **planned (S9)**                                                                                                |
+| Terminal                           | `Tabs` + xterm, `Button` row for touch keys                                                                                                            | **planned (S7)**                                                                                                |
+| Empty state                        | `Empty`                                                                                                                                                | Title and one sentence; suggestion buttons are planned                                                          |
+| Errors                             | `Alert variant="destructive"`, transcript notice                                                                                                       | No toast system is installed                                                                                    |
+| Provider test result               | `Alert` above the settings footer                                                                                                                      | `success` on a pass, `destructive` on a failure; a pass does not quote the keyless probe                        |
+| Keyboard hints                     | `kbd`                                                                                                                                                  | **planned**; no `kbd` component is installed                                                                    |
+| Loading                            | `spinner`                                                                                                                                              | For attach and file load, not for streaming                                                                     |
+| Not ready                          | centre, `Alert`                                                                                                                                        | Names the missing step and the home, and offers **Open Settings**; the composer is not rendered                 |
+| Render error                       | centre, `Alert variant="destructive"` + **Try again**                                                                                                  | The route error component; never the router's default screen                                                    |
 
 ## Layout
 
@@ -117,7 +118,8 @@ a touch key row (Esc, Tab, arrows, Ctrl+C).
 **Header.** The session title, and no actions until their surfaces exist: files
 (S6), preview (S9), terminal (S7), resources (S8), palette. No status chips: a
 session that is loading, disconnected, blocked or not ready says so in the middle of
-the page, not in the header. Model and permission are composer controls.
+the page, not in the header. Model, thinking level and permission are composer
+controls.
 
 **Sidebar footer.** The deployment card sits at the bottom of the sidebar, the way a
 chat app puts its account menu there. It opens a menu above itself, and Settings
@@ -133,6 +135,7 @@ opens a full page with its own navigation.
 | Disconnected                     | centre                | destructive `Alert`, "Reconnecting…"                                                          |
 | Blocked (version mismatch)       | centre                | destructive `Alert` with **Reload**                                                           |
 | Permission                       | composer footer       | `DropdownMenu` trigger: shield, current label; no glyphs from pi                              |
+| Thinking level                   | composer footer       | `DropdownMenu` trigger with the current level; hidden when the model offers only Off          |
 | Needs input                      | dialog, session row   | The blocking dialog is the prompt; the row keeps a `Badge variant="warning"`                  |
 | Streaming                        | last assistant turn   | text appends; no spinner, no layout shift                                                     |
 | Compacting, retrying             | transcript notice     | one `Marker` row where it happened                                                            |
@@ -168,7 +171,37 @@ Notes:
 - Borders only on containers that need them: header, sidebar edge, right panel edge,
   code blocks. Not on every row.
 
+## Buttons and badges
+
+- One accent per surface. `default` (`--primary`, near-black) is the single commit
+  action of a form or dialog: Save, Add selected, Submit. A button that opens
+  another surface is `outline`. A button that leaves one is `ghost`, always,
+  including `AlertDialogCancel`.
+- Destructive has two shapes: a labelled `destructive` button in a footer that
+  confirms in `AlertDialog`, and a trash icon (`destructive`, `icon-sm`, with an
+  `aria-label`) in a list row. Never a red text chip inside a row.
+- A row action is one icon button: pencil to edit or override, trash to remove,
+  undo to clear a draft value. The `aria-label` carries the verb and the target.
+- State is not an action. A state badge carries no border (`secondary`), because a
+  border and a pill shape together read as a control. "Stored", "Override",
+  "Configured" and a package scope are badges, not buttons.
+- Sizes: `icon-sm` for icon actions in rows and toolbars, `icon-xs` only inside an
+  `InputGroup`, `xs` for a labelled row action, `default` in a footer. An overlay's
+  close button is `ghost` `icon-sm` in the corner, with no fill.
+
 ## Interaction
+
+**Overlay motion.** Every popup animates with Base UI's `data-starting-style` and
+`data-ending-style`, never `data-open`/`data-closed`: the ending attribute is the
+one present while the popup is still mounted, so the close transition actually
+runs. Dialogs, popovers, menus, selects and tooltips transition opacity and scale
+for 150ms, ease-out opening and ease-in closing; the sheet keeps its directional
+slide. The toasts and command palette inherit the same attributes from `Dialog` and
+`Popover`.
+
+**Pointer.** Clickable controls carry `cursor-pointer`: the button base, menu and
+command items, the select trigger and the checkbox. shadcn's `cursor-default` on
+menu and command items is replaced for that reason. A disabled control does not.
 
 **Keyboard.** Built: ⌘B toggles the sidebar, Enter sends, Shift+Enter adds a line,
 Esc stops the run or closes the top overlay. Planned with their surfaces: ⌘K
@@ -205,7 +238,7 @@ never reads as a long bar across the form. Checkboxes are the shadcn `Checkbox`
 inside a `Field orientation="horizontal"`, never a bare `<input type="checkbox">`.
 
 **Form validation.** The shared zod schemas stay the contract, and the form adds
-only what it knows: a custom provider needs a base URL and an API family, a URL is
+only what it knows: a custom provider needs a name, a base URL and an API family, a URL is
 absolute, a token count and a cost are numbers. A failing control gets
 `aria-invalid`, its `Field` gets `data-invalid`, and the message sits under the
 control in `FieldError`; the first message per field wins. Save stays clickable so a
@@ -234,8 +267,10 @@ silent no-op.
 ### Provider editor
 
 The page is split. The left column lists only providers that are configured (a
-`models.json` entry or a credential), with the id and the model count ("74 models")
-under the name; the search field filters that list. **Add provider** at the bottom
+`models.json` entry or a credential), with the model count ("74 models") on the
+right. Under the name only a provider pi ships says `pi default`; a custom
+provider shows just its name, because its id is usually the same word. The search
+field filters that list. **Add provider** at the bottom
 opens a picker: a provider pi ships (searchable, configured ones marked) or a custom
 one. This is what keeps forty "no credential" rows off the page.
 
@@ -246,11 +281,24 @@ it confirms in `AlertDialog`.
 
 The right column is one provider:
 
-- **Provider**: id, display name, base URL.
-- **Connection**: the API family and the API key. A stored key is never sent back;
-  the field shows a Stored badge instead.
-- **Headers**: rows, not a `KEY=VALUE` textarea. A stored value is never shown; a
-  blank value keeps it.
+- **Provider**: one field, the display name. The id is derived from it and never
+  shown: `CommandCode` becomes `commandcode`, a taken id gets `-2`, and the id is
+  fixed after the first save. Names must be unique. A name already carried by a
+  configured or pi-shipped provider is refused under the field, because the list
+  would otherwise show two rows with the same label.
+- **Connection**: the API family, the base URL and the API key. A stored key is
+  never sent back. The field's placeholder says a key is saved, and the eye reveals
+  only a key typed in this session; a new key replaces the stored one. Under the base URL one
+  muted line names the request URL pi composes from it. When the base already ends
+  in a path the family appends (`…/provider/v1` for Anthropic Messages, whose client
+  adds `/v1/messages`), that line is replaced by a warning and the shorter base to
+  use, because pi will follow the base it is given. The warning never rewrites it.
+  **Reasoning defaults** is a collapsible that animates its height, and carries the
+  provider-wide compatibility fields; a model inherits them unless it sets its own.
+- **Custom Headers**: rows, not a `KEY=VALUE` textarea. A stored value is never shown; a
+  blank value on a stored row keeps it. A new row needs a name and a value, and
+  the form refuses an incomplete row. Adding a row grows it open and removing one
+  collapses it, both over 200ms rather than appearing or vanishing.
 - **Models**: the group title carries the count ("Models pi ships (29)", "Models
   (74)"). For a provider pi ships, the catalog is read-only and each row offers
   **Override** (`modelOverrides`: name, context, max tokens, cost, input). **Add
@@ -258,20 +306,51 @@ The right column is one provider:
   first, because
   saving then replaces pi's catalog. A custom provider edits its `models` list
   directly. Every model can override `api` and `baseUrl` under "Cost and
-  compatibility".
+  compatibility", and a reasoning model gets a **Reasoning effort** section:
+  pi's seven levels, each offered or not, with the provider value it sends. A
+  blank value keeps pi's default, an unchecked level writes `null`, and a value
+  writes that string. Below the levels the compatibility fields choose how the
+  level travels: thinking format, effort support, token budget field, reasoning
+  content and adaptive thinking for the effective API. A model value overrides the
+  provider's reasoning defaults.
 - **Fetch models from provider** reads `{base}/models` for the OpenAI families and
   `{base}/v1/models` for Anthropic, server-side with the typed key or the stored
   credential. Google has no shared list shape here, so the button is disabled and
-  the form says to add models by hand.
+  the form says to add models by hand. The dialog names the URL it reads, and a
+  failed fetch names it again with the status. When the list carries
+  `supported_endpoints`, a model that only accepts `/messages` is saved with the
+  Anthropic API and the base above its `/v1`; a `/responses`-only model gets that
+  API. A gateway can therefore mix Claude and OpenAI-shaped models in one provider.
+  For an exact id and API that pi also ships, the import copies pi's `reasoning`,
+  `thinkingLevelMap` and the Anthropic `forceAdaptiveThinking` switch, so an
+  imported Claude already knows how its thinking works.
+- **Test** opens a searchable model picker with a level select: No reasoning is
+  the connection test, and any pi level sends that level and reports the
+  reasoning tokens or thinking characters the provider returned. It probes once
+  with no auth header and, when a key is typed or stored, once with that key. The
+  result names the model, the level, the credential, the reply, the evidence and
+  the round trip, and says whether the endpoint also answers without a key. A
+  filled key that fails is an error even when the keyless probe works. A key with
+  spaces or line breaks is refused before a request. Nothing is written, and an
+  edit clears the result. This costs a few output tokens, unlike Fetch models.
+- **Test model** in the add or edit dialog tries that one model before it joins the
+  draft, with the same route, values and level select. The level is disabled until
+  Reasoning model is on. It reports the same way, and an edit clears it.
 
-The right column is a column, not a page: the form scrolls and the footer with
-**Delete** and **Save** stays pinned to the bottom of the column, so it never floats
-halfway up a short form.
+The right column is a column, not a page: the form scrolls and the footer stays
+pinned to the bottom of the column, so it never floats halfway up a short form.
+For a provider that has never been saved the order is **Test**, **Cancel**,
+**Save**. Cancel is destructive and asks for confirmation; confirming discards the
+draft and returns to the provider list. An existing provider keeps **Test**,
+**Delete**, **Save**.
 
 Selection is a route: `/settings/providers/$providerId`, and
 `/settings/providers/new` for a custom draft. On a phone the list and the editor are
-separate screens; a Back to providers link returns to the list. There is no
-enable/disable toggle because pi has no per-provider field for it.
+separate screens; a Back to providers button returns to the list. There is no
+enable/disable toggle because pi has no per-provider field for it. When the server
+is unreachable while a provider is open, the error appears once, centred in the
+editor as a destructive `Alert` with a styled **Back to providers** button; the
+left list only says it is waiting, so the same sentence is not shown twice.
 
 ## Not-ready notice
 
