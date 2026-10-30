@@ -67,15 +67,18 @@ export const readJsonForWrite = async <T>(
 /** Serialize writes to one path, so two panel clicks cannot lose each other. */
 const queues = new Map<string, Promise<void>>();
 
-export const writeJson = <T>(path: string, value: T): Promise<void> => {
+/**
+ * Write one JSON file. The agent home's files can hold a key or a bearer token,
+ * so they default to 0600; a repository file names its own mode.
+ */
+export const writeJson = <T>(path: string, value: T, mode = 0o600): Promise<void> => {
 	const previous = queues.get(path) ?? Promise.resolve();
 	const next = previous
 		.catch(() => undefined)
 		.then(async () => {
 			await mkdir(dirname(path), { recursive: true });
 			await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-			// These files can hold an API key or a bearer token.
-			await chmod(path, 0o600).catch(() => undefined);
+			await chmod(path, mode).catch(() => undefined);
 		});
 	queues.set(path, next);
 	return next;
@@ -84,5 +87,4 @@ export const writeJson = <T>(path: string, value: T): Promise<void> => {
 /** The credential file `ModelRuntime.login()` and `logout()` own. */
 export const authPath = (home: string): string => join(home, "auth.json");
 export const modelsPath = (home: string): string => join(home, "models.json");
-export const mcpPath = (home: string): string => join(home, "mcp.json");
 export const skillsPath = (home: string): string => join(home, "skills");

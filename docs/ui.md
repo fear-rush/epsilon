@@ -259,8 +259,9 @@ fields sit on one line.
   the searchable default model picker, which spans the card so its popup lines up
   with the section instead of hanging off a button on the right.
 - **Providers.** A two-pane editor, described below.
-- **MCP servers.** A two-pane editor, described below. Servers come from
-  `mcp.json`, with transport, target and enabled state.
+- **MCP servers.** A two-pane editor over two files, described below. The left
+  list groups this project's `.pi/mcp.json` above the agent home's `mcp.json`, and
+  each row carries the name, the transport, the target and an on/off checkbox.
 - **Skills.** User skills under the agent home, with name, description and
   instructions. Editing reads the file through a REST route; removing deletes only
   that directory.
@@ -365,19 +366,56 @@ button, which still leads somewhere useful.
 
 ### MCP editor
 
-The same split as providers, with one server on the right. The left list carries
-the name, the transport and the target, and a disabled server says so. **Add MCP**
-opens an empty draft. The name is the key in `mcp.json`, so it is fixed after the
-first save and a name already in the list is refused under the field.
+The same split as providers, with one server on the right. The left list has two
+groups: **This project**, above, names the project folder and reads
+`<project>/.pi/mcp.json`; **Global** reads the agent home's `mcp.json`. The same
+name can appear in both, because pi lets a project entry replace or override a
+global one. Each group heading counts how many of its servers are on. A row shows
+the name, the transport and the target, a badge for **Invalid**, **Override**,
+**Replaced** or **Off**, and a checkbox that writes `enabled` in that server's own
+file. Clicking the row opens its pane. **Add MCP server** is a menu, not a form:
+it asks whether the server belongs to this project or to the agent home, because
+that choice is the file it is written to and cannot change later.
+
+When the deployment's `settings.json` turns MCP off with `-builtin:mcp`, a notice
+above the list says so and that changes are still saved. A file that cannot be
+parsed is named in the list's error alert, and the other file still lists.
 
 The form scrolls and its footer stays pinned: **Cancel** for a new server,
-**Delete** for an existing one, then **Save**. Delete removes the entry and
-confirms in `AlertDialog`; an OAuth token in `mcp-auth.json` is not touched.
+**Delete** for an existing one, then **Save**. The name is the key in the file,
+so it is fixed after the first save and a name already used in that same file is
+refused under the field. Delete removes the entry and confirms in `AlertDialog`;
+an OAuth token in `mcp-auth.json` is not touched. A project entry that only
+overrides a global server opens a read-only pane instead: what it changes, the
+global target, a state button, **Use the global setting**, and **Remove
+override**.
 
-The transport decides the target card: command, arguments and environment, or URL
-and headers. Environment and header rows are key/value rows, not a textarea. A
-stored value never travels to the browser: its row shows the name, a blank value
-keeps it, a typed value replaces it, and removing the row removes the entry.
+The header carries a `Global` or `This project` badge and one sentence naming the
+file. The form then sets the transport, the description, the exposure (four
+choices, with the selected one explained), the request timeout in seconds, and
+the target the transport needs: command, one argument per line, an optional
+working directory and environment rows, or the URL and header rows. Environment
+and header rows are key/value rows, not a textarea. A stored value never travels
+to the browser: its row shows the name, a blank value keeps it, a typed value
+replaces it, and removing the row removes the entry.
+
+`oauth`, `auth` and `toolExposure` are not editable here. When an entry has them,
+a **Kept as written** group names what is set (never the `clientSecret` value) and
+says they survive a save. An entry pi would skip shows a destructive alert with
+pi's reason; the list's checkbox can still fix `enabled`, and the file is where
+any other key is fixed.
+
+A project server is written to a repository file. The form says so before the
+value fields: the file is usually committed, a `${NAME}` value is read from the
+dashboard's environment instead of being stored, and a value that starts with `!`
+runs a shell command on the dashboard host at every connection.
+
+A global server's pane has one extra group, **This project**. It offers **Turn off
+in this project** (or **Turn on** when the server is off everywhere), which writes
+the documented `{ "enabled": false }` override into the project file, or **Use the
+global setting** when an override exists. When the project defines its own server
+of the name, the group says so and links to that row instead of writing an
+override that pi would ignore.
 Switching transport clears the other target when the form is saved, so a server
 never carries two. Selection is a route, and a phone shows the list and the editor
 as separate screens; leaving a dirty draft asks to discard.

@@ -1,18 +1,31 @@
 import { createRoute } from "@hono/zod-openapi";
 import type { RouteHandler } from "@hono/zod-openapi";
-import { mcpNameSchema, mcpServerDetailSchema, mcpServerInputSchema } from "shared";
+import {
+	mcpEnabledInputSchema,
+	mcpInProjectInputSchema,
+	mcpNameSchema,
+	mcpScopeSchema,
+	mcpServerDetailSchema,
+	mcpServerInputSchema,
+} from "shared";
 import { z } from "zod";
 
 import { config } from "../config";
-import { readMcpServer, removeMcpServer, writeMcpServer } from "../settings/mcp";
+import {
+	readMcpServer,
+	removeMcpServer,
+	setMcpServerEnabled,
+	setMcpServerInProject,
+	writeMcpServer,
+} from "../settings/mcp";
 import { errorContent, failure, toError } from "./failure";
 import { settingsWrite } from "./write";
 
-const mcpParams = z.object({ name: mcpNameSchema });
+const mcpParams = z.object({ scope: mcpScopeSchema, name: mcpNameSchema });
 
 export const readMcpRoute = createRoute({
 	method: "get",
-	path: "/api/settings/mcp/{name}",
+	path: "/api/settings/mcp/{scope}/{name}",
 	tags: ["settings"],
 	operationId: "readMcpServer",
 	description:
@@ -24,7 +37,7 @@ export const readMcpRoute = createRoute({
 			content: { "application/json": { schema: mcpServerDetailSchema } },
 		},
 		400: { description: "mcp.json could not be read", content: errorContent },
-		404: { description: "No server with this name in mcp.json", content: errorContent },
+		404: { description: "No server with this name in that file", content: errorContent },
 	},
 });
 
@@ -33,31 +46,65 @@ export const writeMcpRoute = createRoute({
 	path: "/api/settings/mcp",
 	tags: ["settings"],
 	operationId: "writeMcpServer",
-	description: "Add or change an MCP server in mcp.json",
+	description: "Add or change an MCP server in the file its scope names",
 	request: {
 		body: { required: true, content: { "application/json": { schema: mcpServerInputSchema } } },
 	},
 	responses: {
-		204: { description: "mcp.json now carries the server, and live engines reloaded" },
+		204: { description: "The file now carries the server, and live engines reloaded" },
 		400: { description: "The server entry was refused", content: errorContent },
+	},
+});
+
+export const enabledMcpRoute = createRoute({
+	method: "post",
+	path: "/api/settings/mcp/enabled",
+	tags: ["settings"],
+	operationId: "setMcpServerEnabled",
+	description:
+		"Turn one server on or off in its own file. Off writes `enabled: false`; on removes the key",
+	request: {
+		body: { required: true, content: { "application/json": { schema: mcpEnabledInputSchema } } },
+	},
+	responses: {
+		204: { description: "The file now carries the state, and live engines reloaded" },
+		400: { description: "The change was refused", content: errorContent },
+	},
+});
+
+export const inProjectMcpRoute = createRoute({
+	method: "post",
+	path: "/api/settings/mcp/in-project",
+	tags: ["settings"],
+	operationId: "setMcpServerInProject",
+	description:
+		"Set a global server's state in this project: inherit the global setting, or write an override",
+	request: {
+		body: { required: true, content: { "application/json": { schema: mcpInProjectInputSchema } } },
+	},
+	responses: {
+		204: { description: "The project file now carries the override, and live engines reloaded" },
+		400: { description: "The change was refused", content: errorContent },
 	},
 });
 
 export const deleteMcpRoute = createRoute({
 	method: "delete",
-	path: "/api/settings/mcp/{name}",
+	path: "/api/settings/mcp/{scope}/{name}",
 	tags: ["settings"],
 	operationId: "deleteMcpServer",
+	description: "Remove an MCP server, or a project override, from its file",
 	request: { params: mcpParams },
 	responses: {
-		204: { description: "The server is gone from mcp.json" },
-		400: { description: "mcp.json could not be written", content: errorContent },
+		204: { description: "The entry is gone from its file" },
+		400: { description: "The file could not be written", content: errorContent },
 	},
 });
 
 export const readMcpHandler: RouteHandler<typeof readMcpRoute> = async (c) => {
+	const { scope, name } = c.req.valid("param");
 	try {
-		const detail = await readMcpServer(config.agentHome, c.req.valid("param").name);
+		const detail = await readMcpServer(config.agentHome, config.projectDir, scope, name);
 		if (detail === undefined) return failure(c, new Error("No such MCP server"), 404);
 		return c.json(detail, 200);
 	} catch (error) {
@@ -66,7 +113,21 @@ export const readMcpHandler: RouteHandler<typeof readMcpRoute> = async (c) => {
 };
 
 export const writeMcpHandler: RouteHandler<typeof writeMcpRoute> = async (c) =>
-	settingsWrite(c, () => writeMcpServer(config.agentHome, c.req.valid("json")));
+	settingsWrite(c, () => writeMcpServer(config.agentHome, config.projectDir, c.req.valid("json")));
 
-export const deleteMcpHandler: RouteHandler<typeof deleteMcpRoute> = async (c) =>
-	settingsWrite(c, () => removeMcpServer(config.agentHome, c.req.valid("param").name));
+export const enabledMcpHandler: RouteHandler<typeof enabledMcpRoute> = async (c) => {
+	const { scope, name, enabled } = c.req.valid("json");
+	return settingsWrite(c, () =>
+		setMcpServerEnabled(config.agentHome, config.projectDir, scope, name, enabled),
+	);
+};
+
+export const inProjectMcpHandler: RouteHandler<typeof inProjectMcpRoute> = async (c) =>
+	settingsWrite(c, () =>
+		setMcpServerInProject(config.agentHome, config.projectDir, c.req.valid("json")),
+	);
+
+export const deleteMcpHandler: RouteHandler<typeof deleteMcpRoute> = async (c) => {
+	const { scope, name } = c.req.valid("param");
+	return settingsWrite(c, () => removeMcpServer(config.agentHome, config.projectDir, scope, name));
+};

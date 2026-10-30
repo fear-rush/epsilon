@@ -75,9 +75,10 @@ they change with the operator's home.
   agent failures are `AGENT_FAILED`. With no tab attached the session holds the
   last few errors and delivers them on the next attach, so a failure during engine
   construction is not lost.
-- A host cannot answer pi's trust prompt. With no stored decision the project's
-  protected resources are skipped
-  ([note](../notes/2026-10-28-host-cannot-answer-trust.md)).
+- The embedded engine does not resolve project trust: `SettingsManager.create()`
+  starts trusted, so the project's `.pi/settings.json`, `.pi/mcp.json` and
+  `.agents/skills` load, and `trust.json` and `defaultProjectTrust` are inert
+  ([note](../notes/2026-10-30-embedded-engine-always-trusts.md)).
 - The not-ready notice replaces the routed page in `client/src/routes/__root.tsx`,
   and a session route does not mount until the readiness answer arrives, so no
   session attaches and no engine is built while the home is unconfigured or unknown.

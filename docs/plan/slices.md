@@ -1,8 +1,8 @@
 # Slice checks
 
-Status: **S1 to S5, S12, S13 and S17 are verified. S14 is active; S6 to S11, S15 and
-S16 are open.** This page holds the checks. [../plan.md](../plan.md) holds the jobs,
-the slice table and the risks.
+Status: **S1 to S5, S12, S13, S17 and S18 are verified. S14 is active; S6 to S11,
+S15 and S16 are open.** This page holds the checks. [../plan.md](../plan.md) holds
+the jobs, the slice table and the risks.
 
 A slice ends when you can run its checks yourself, by hand, in a browser. A slice
 is not done because it compiles.
@@ -348,4 +348,58 @@ Browser checks, confirmed by the operator:
 - [x] A live session picks up a new provider, MCP server or skill without a restart
 - [x] `rg -i rpc server shared client` finds no engine path that enters pi's RPC mode
       or speaks its envelope; `mode` is `"json"` and a prompt source is `"interactive"`
-      or speaks its envelope; `mode` is `"json"` and a prompt source is `"interactive"`
+
+### S18: Pick the file an MCP server belongs to
+
+Both `mcp.json` files, pi's precedence, and the switch that owns `enabled`. Run
+over HTTP against a scratch home and a scratch project:
+
+- [x] A global stdio server and a project HTTP server write to the two files; the
+      agent-home file is 0600 and a new project file 0644, while an existing
+      project file keeps its mode
+- [x] The snapshot lists this project's entries first, then the global ones, each
+      with its `scope`; a global entry a project entry replaces says
+      `replacedByProject`, and the project entry says `replacesGlobal`
+- [x] A project entry with only `enabled` lists as an override: it reports the
+      global target, the effective `enabled`, `overrideKeys`, and the global row
+      says `overriddenByProject`
+- [x] The row switch writes `enabled: false` and removes the key again for a full
+      entry, and writes the key for an override; a missing server is a sentence,
+      not a stale write
+- [x] The in-project action writes `{ "enabled": false }` into the project file and
+      refuses a missing global server or a project entry of its own; `inherit`
+      removes the override again
+- [x] A project server save keeps unknown keys, keeps a stored env value when the
+      row is blank, drops a key left out of the map, and keeps `oauth`,
+      `toolExposure` and `enabled` untouched
+- [x] Switching transport clears the other target and `type`; an ftp URL and a
+      zero timeout are refused with a sentence
+- [x] An entry pi refuses is listed with its reason, still removable, and still
+      editable as long as it is an object; the switch fixes `enabled` alone
+- [x] A project override with no global base, one with a defining key, a project
+      `url` with `auth`, and a namespace clash are each listed as refused, while
+      pi's own valid siblings still list
+- [x] A broken or over-1 MB file is named in the snapshot error, the other file
+      still lists, and every write to that file returns 400
+- [x] `settings.json` with `-builtin:mcp` answers `mcpDisabled: true`; a project
+      `+builtin:mcp` overrides it
+- [x] The detail route hides env and header values, and its refusal for an unknown
+      scope is 400 while an unknown name is 404
+- [x] An existing project file keeps its own mode after a save, and two switches
+      racing on one file both land
+
+Rendered controls, asserted in a headless browser against the same scratch state:
+
+- [x] The list has **This project** above **Global**, shows the same name in both
+      groups, and marks the override and the off entry
+- [x] A global pane shows the scope badge, the exposure, the timeout, the stored
+      variable name without its value, and **Use the global setting** for an
+      existing override
+- [x] A project pane warns that the file belongs to the repository and shows the
+      stored header name without its value
+- [x] The override pane names what it changes and offers the state button and
+      **Remove override**
+- [x] **Add MCP server** offers both files, and the project draft opens with the
+      repository warning
+- [x] A row's checkbox writes the file and flips its own label; the MCP-off notice
+      appears from `-builtin:mcp`

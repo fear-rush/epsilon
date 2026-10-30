@@ -16,6 +16,9 @@ import {
 } from "shared";
 import type {
 	DefaultModel,
+	McpEnabledInput,
+	McpInProjectInput,
+	McpScope,
 	McpServerDetail,
 	McpServerInput,
 	ProviderDetail,
@@ -52,6 +55,8 @@ type Text = { failure: string; unreadable: string };
 /** The bodies this page sends; each caller has already typed its own input. */
 type RequestBody =
 	| DefaultModel
+	| McpEnabledInput
+	| McpInProjectInput
 	| McpServerInput
 	| ProviderImportInput
 	| ProviderInput
@@ -159,14 +164,31 @@ export const saveMcpServer = async (input: McpServerInput): Promise<void> => {
 	await writeJson("POST", "/api/settings/mcp", input, "The MCP server was not saved");
 };
 
-export const fetchMcpServer = (name: string): Promise<McpServerDetail> =>
-	readJson(`/api/settings/mcp/${encodeURIComponent(name)}`, mcpServerDetailSchema, {
+export const fetchMcpServer = (scope: McpScope, name: string): Promise<McpServerDetail> =>
+	readJson(`/api/settings/mcp/${scope}/${encodeURIComponent(name)}`, mcpServerDetailSchema, {
 		failure: "The MCP server did not load",
 		unreadable: "The server sent an MCP server this page cannot read.",
 	});
 
-export const deleteMcpServer = (name: string): Promise<void> =>
-	send("DELETE", `/api/settings/mcp/${encodeURIComponent(name)}`, "The MCP server was not removed");
+export const deleteMcpServer = (scope: McpScope, name: string): Promise<void> =>
+	send(
+		"DELETE",
+		`/api/settings/mcp/${scope}/${encodeURIComponent(name)}`,
+		"The MCP server was not removed",
+	);
+
+export const setMcpServerEnabled = async (input: McpEnabledInput): Promise<void> => {
+	await writeJson("POST", "/api/settings/mcp/enabled", input, "The MCP server was not switched");
+};
+
+export const setMcpServerInProject = async (input: McpInProjectInput): Promise<void> => {
+	await writeJson(
+		"POST",
+		"/api/settings/mcp/in-project",
+		input,
+		"The project setting was not saved",
+	);
+};
 
 export const fetchSkill = (name: string): Promise<SkillInput> =>
 	readJson(`/api/settings/skills/${encodeURIComponent(name)}`, skillInputSchema, {

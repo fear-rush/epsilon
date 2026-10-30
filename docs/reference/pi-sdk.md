@@ -218,21 +218,41 @@ Skills also load from `<cwd>/.pi/skills`, `<cwd>/.agents/skills`, `~/.agents/ski
 and installed packages.
 Packages are declared in `settings.json` and installed with
 `pi install npm:@scope/pkg`, `pi install git:host/repo` or `pi install ./path`.
-MCP servers come from `mcp.json` and a project's `.pi/mcp.json`, the latter gated by
-project trust.
+MCP servers come from `mcp.json` and a project's `.pi/mcp.json`. The project file
+is read because the embedded engine starts trusted (see below); a project entry
+there replaces a global entry of the same name, and one without `command`, `url`
+or `type` only overrides its `enabled`, `exposure` and `toolExposure`. A project
+entry cannot set `auth`. `pi mcp add` writes user-level servers unless `-l` is
+given.
+
+`updateMcpServerConfig()` writes `enabled: true` by deleting the key and
+`exposure: "codemode"` likewise; an override keeps both written because it
+replaces the global entry's values. `timeout` is in **seconds**. The package's
+`exports` map still exposes only `.` and `./rpc-entry`, so the dashboard parses
+the documented shape itself.
 
 ## Project trust
 
-A host cannot answer pi's built-in trust prompt. With no stored decision,
-`defaultProjectTrust: "ask"` **skips** the project's protected resources instead of
-blocking: `.pi/settings.json`, `.pi/mcp.json`, `.pi/extensions`, `.pi/skills`,
-`.pi/prompts`, `.pi/themes`, `.pi/SYSTEM.md`, `.pi/APPEND_SYSTEM.md` and project
-`.agents/skills`. Decisions live in `<agent home>/trust.json`.
+The CLI resolves trust before it loads project settings: `resolveProjectTrusted()`
+in `dist/core/project-trust.js` reads `trust.json`, then `defaultProjectTrust`
+("ask" by default), then asks. Extensions see the result through
+`ctx.isProjectTrusted()`, which returns `settingsManager.isProjectTrusted()`.
 
-The alternatives are: store a decision through `ProjectTrustStore`, pass
-`--approve` in the terminal, set `defaultProjectTrust: "always"`, or handle the
-`project_trust` event from an extension. See
-[../notes/2026-10-28-host-cannot-answer-trust.md](../notes/2026-10-28-host-cannot-answer-trust.md).
+An embedded engine does not run that resolution. `SettingsManager.create(cwd,
+agentDir)` starts at `projectTrusted = true` (`dist/core/settings-manager.js`), and
+nothing in `createAgentSession()` changes it. Epsilon therefore loads
+`.pi/settings.json`, `.pi/mcp.json` and the other project resources for whoever
+owns the deployment's project folder, whatever `trust.json` says;
+`defaultProjectTrust` is inert there. That follows from one deployment owning one
+project: the folder is chosen at deploy time. The panel states it instead of
+pretending a decision exists.
+
+The SDK does expose `ProjectTrustStore` and `SettingsManager.setProjectTrusted`,
+so a host that wants pi's CLI behavior can implement it. This repository does not;
+trust decisions stay in a terminal inside the deployment
+([ADR-0012](../adr/0012-configure-in-the-dashboard.md)).
+
+See [../notes/2026-10-30-embedded-engine-always-trusts.md](../notes/2026-10-30-embedded-engine-always-trusts.md).
 
 ## The CLI, for what an embedding host does not do
 

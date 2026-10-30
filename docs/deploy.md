@@ -77,9 +77,10 @@ The image also installs the pinned CLI, for what a host cannot do:
 docker compose run --rm -it epsilon pi
 ```
 
-`/login` for an OAuth or subscription account, `/trust` for a project, and
-`/mcp login` for remote servers that need a browser all work there, because it is
-the real TUI on the real agent home. `/settings` remains the place for pi settings
+`/login` for an OAuth or subscription account and `/mcp login` for remote servers
+that need a browser both work there, because it is the real TUI on the real agent
+home. The dashboard itself always trusts the folder it runs in, so `/trust` only
+changes the terminal's own sessions. `/settings` remains the place for pi settings
 the panel does not cover.
 
 A provider key in the environment is the alternative when nothing else can be
@@ -152,16 +153,16 @@ session. That is the reset button, not the update button.
 ## Sharing the host's home
 
 Opt-in, and it costs what [ADR-0005](adr/0005-deployment-owns-agent-home.md) says it
-costs: the dashboard adopts the host's credentials, policy, extensions, trust
-decisions and sessions, and the isolation is gone. Install the home's packages
+costs: the dashboard adopts the host's credentials, policy, extensions and
+sessions, and the isolation is gone. Install the home's packages
 inside the container first, so the platform matches.
 
 ## Troubleshooting
 
-| Symptom                                                | Cause                                                                                                 | Check                                         |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| Session runs but project extensions and MCP are absent | project not trusted, and no engine event asks ([note](notes/2026-10-28-host-cannot-answer-trust.md))  | run `pi` in the container and answer `/trust` |
-| A package's tools fail though `pi list` shows it       | package installed for another platform ([note](notes/2026-10-28-packages-are-bound-to-a-platform.md)) | reinstall inside the container                |
-| The page shows the not-ready notice                    | the volume has no provider with a usable credential                                                   | open Settings and add a provider              |
-| Page shows a version-mismatch notice with Reload       | the tab was loaded from a different build than the server speaks                                      | press Reload; the page names the mismatch     |
-| `EACCES` on a bind mount                               | container user does not match the host file owner                                                     | run with the host uid                         |
+| Symptom                                               | Cause                                                                                                                 | Check                                             |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Session runs but project extensions or MCP are absent | `settings.json` lists a `-builtin:` switch for them, or the deployment's project folder is not the one holding `.pi/` | check the `extensions` list and `EPSILON_PROJECT` |
+| A package's tools fail though `pi list` shows it      | package installed for another platform ([note](notes/2026-10-28-packages-are-bound-to-a-platform.md))                 | reinstall inside the container                    |
+| The page shows the not-ready notice                   | the volume has no provider with a usable credential                                                                   | open Settings and add a provider                  |
+| Page shows a version-mismatch notice with Reload      | the tab was loaded from a different build than the server speaks                                                      | press Reload; the page names the mismatch         |
+| `EACCES` on a bind mount                              | container user does not match the host file owner                                                                     | run with the host uid                             |

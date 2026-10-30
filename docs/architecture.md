@@ -70,40 +70,46 @@ not built; it becomes a second listener when S9 starts.
 
 `server/src/`: the host. Node-compatible, no browser code.
 
-| Module                       | Owns                                                                                                                         |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `index.ts`                   | The Hono app and its generated OpenAPI document, exported for tests. No listener.                                            |
-| `serve.ts`                   | `Bun.serve` with `fetch` + `websocket`, and the shutdown hooks                                                               |
-| `config.ts`                  | Ports, paths, caps, env. The only place that reads `process.env`                                                             |
-| `runtime.ts`                 | The one engine registry, shared by the socket and the REST handlers                                                          |
-| `agent/engine.ts`            | `createAgentSession`, the CLI built-ins and Epsilon's defaults, and the JSON event transform                                 |
-| `agent/ui-context.ts`        | pi's `ExtensionUIContext`, mapped onto dialogs and notices; TUI-only methods say so once                                     |
-| `agent/ui-bridge.ts`         | The `UiHost` the engine gets, holding back the TUI methods used before the first tab attaches                                |
-| `agent/frames.ts`            | The tabs watching one session: add, remove, fan out                                                                          |
-| `agent/defaults/`            | The guard and the ask-question tool Epsilon ships, as inline factories (ADR-0008, ADR-0010)                                  |
-| `agent/models.ts`            | The model list the picker offers and `set_model` resolves against                                                            |
-| `agent/sdk.ts`               | The one re-export of the SDK classes the settings modules call (rule 1)                                                      |
-| `agent/readiness.ts`         | Whether a home holds a usable model, asked of pi's own runtime                                                               |
-| `agent/session.ts`           | One live session: commands, snapshot, engine events, idle lifetime, dispose                                                  |
-| `agent/dialogs.ts`           | Pending dialogs, method-matched answers, keyed display state, unsupported TUI methods                                        |
-| `agent/registry.ts`          | sessionId → engine, creation dedupe, dispose when the last tab leaves                                                        |
-| `agent/sessions.ts`          | pi's session-manager: the only path from REST to session files                                                               |
-| `settings/read.ts`           | One settings snapshot, including a file the panel had to skip                                                                |
-| `settings/models-file.ts`    | The `models.json` shape, the field merge that keeps unknown keys, and the path helpers                                       |
-| `settings/providers.ts`      | Provider views and detail, built-in ids, and the runtime the panel reads them through                                        |
-| `settings/provider-write.ts` | Upsert and remove, the partial-field policy, the reasoning map and compat, and the credential logged out with a stored one   |
-| `settings/import-models.ts`  | Bounded model-list reads, the per-model shape a `supported_endpoints` list implies, and pi's catalog metadata for a match    |
-| `settings/test-probe.ts`     | The throwaway runtime, the keyless and keyed probes, and the streamed reasoning usage                                        |
-| `settings/test-provider.ts`  | Composes one draft's test target and the sentence the provider form shows                                                    |
-| `settings/mcp.ts`            | MCP servers in `mcp.json`: list, read, write, remove, and the transport switch that clears the other target                  |
-| `settings/skills.ts`         | User skills as `<agent home>/skills/<name>/SKILL.md`                                                                         |
-| `settings/defaults.ts`       | The default model, through `SettingsManager`                                                                                 |
-| `settings/packages.ts`       | Packages, through `DefaultPackageManager`                                                                                    |
-| `settings/store.ts`          | Documented paths, JSON read/write, one queue per path, 0600, and the unreadable file the panel must name                     |
-| `sessions/list.ts`           | Joining stored sessions with live engines, newest first                                                                      |
-| `sessions/delete.ts`         | Removing one session file, refused while an engine holds it                                                                  |
-| `ws/chat.ts`                 | Socket upgrade state, hello, attach/detach, commands, dialog answers, one checked send                                       |
-| `routes/*.ts`                | Thin handlers: validate, call one function, return. `write.ts` is the one settings write; `failure.ts` the one refusal shape |
+| Module                       | Owns                                                                                                                                                                                     |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`                   | The Hono app and its generated OpenAPI document, exported for tests. No listener.                                                                                                        |
+| `serve.ts`                   | `Bun.serve` with `fetch` + `websocket`, and the shutdown hooks                                                                                                                           |
+| `config.ts`                  | Ports, paths, caps, env. The only place that reads `process.env`                                                                                                                         |
+| `runtime.ts`                 | The one engine registry, shared by the socket and the REST handlers                                                                                                                      |
+| `agent/engine.ts`            | `createAgentSession`, the CLI built-ins and Epsilon's defaults, and the JSON event transform                                                                                             |
+| `agent/ui-context.ts`        | pi's `ExtensionUIContext`, mapped onto dialogs and notices; TUI-only methods say so once                                                                                                 |
+| `agent/ui-bridge.ts`         | The `UiHost` the engine gets, holding back the TUI methods used before the first tab attaches                                                                                            |
+| `agent/frames.ts`            | The tabs watching one session: add, remove, fan out                                                                                                                                      |
+| `agent/defaults/`            | The guard and the ask-question tool Epsilon ships, as inline factories (ADR-0008, ADR-0010)                                                                                              |
+| `agent/models.ts`            | The model list the picker offers and `set_model` resolves against                                                                                                                        |
+| `agent/sdk.ts`               | The one re-export of the SDK classes the settings modules call (rule 1)                                                                                                                  |
+| `agent/readiness.ts`         | Whether a home holds a usable model, asked of pi's own runtime                                                                                                                           |
+| `agent/session.ts`           | One live session: commands, snapshot, engine events, idle lifetime, dispose                                                                                                              |
+| `agent/dialogs.ts`           | Pending dialogs, method-matched answers, keyed display state, unsupported TUI methods                                                                                                    |
+| `agent/registry.ts`          | sessionId → engine, creation dedupe, dispose when the last tab leaves                                                                                                                    |
+| `agent/sessions.ts`          | pi's session-manager: the only path from REST to session files                                                                                                                           |
+| `settings/read.ts`           | One settings snapshot, including a file the panel had to skip                                                                                                                            |
+| `settings/models-file.ts`    | The `models.json` shape, the field merge that keeps unknown keys, and the path helpers                                                                                                   |
+| `settings/providers.ts`      | Provider views and detail, built-in ids, and the runtime the panel reads them through                                                                                                    |
+| `settings/provider-write.ts` | Upsert and remove, the partial-field policy, the reasoning map and compat, and the credential logged out with a stored one                                                               |
+| `settings/import-models.ts`  | Bounded model-list reads, the per-model shape a `supported_endpoints` list implies, and pi's catalog metadata for a match                                                                |
+| `settings/test-probe.ts`     | The throwaway runtime, the keyless and keyed probes, and the streamed reasoning usage                                                                                                    |
+| `settings/test-provider.ts`  | Composes one draft's test target and the sentence the provider form shows                                                                                                                |
+| `settings/mcp.ts`            | MCP servers in both `mcp.json` files: the one module the routes import, re-exporting the listing, the writes and availability                                                            |
+| `settings/mcp-list.ts`       | The listing and one detail, with pi's precedence, the replace/override markers and the per-file problems                                                                                 |
+| `settings/mcp-entries.ts`    | What pi would load from both documents in its order, including the namespace and project-`auth` refusals                                                                                 |
+| `settings/mcp-entry.ts`      | One `mcpServers` entry: the loose schema, pi's validator rules on top, and the raw helpers a write needs                                                                                 |
+| `settings/mcp-write.ts`      | Save, switch, remove and the project override, each a read-modify-write serialized on its file                                                                                           |
+| `settings/mcp-file.ts`       | The two file paths, the loose entry schema, the per-entry read that says why pi skips one, and the writes that keep unknown keys                                                         |
+| `settings/mcp-builtin.ts`    | Whether `settings.json` turns MCP off with `-builtin:mcp`, resolved through `DefaultPackageManager`                                                                                      |
+| `settings/skills.ts`         | User skills as `<agent home>/skills/<name>/SKILL.md`                                                                                                                                     |
+| `settings/defaults.ts`       | The default model, through `SettingsManager`                                                                                                                                             |
+| `settings/packages.ts`       | Packages, through `DefaultPackageManager`                                                                                                                                                |
+| `settings/store.ts`          | Documented paths, JSON read/write, one queue per path, 0600 for the agent home and the repository's mode (0644 when new) for a project file, and the unreadable file the panel must name |
+| `sessions/list.ts`           | Joining stored sessions with live engines, newest first                                                                                                                                  |
+| `sessions/delete.ts`         | Removing one session file, refused while an engine holds it                                                                                                                              |
+| `ws/chat.ts`                 | Socket upgrade state, hello, attach/detach, commands, dialog answers, one checked send                                                                                                   |
+| `routes/*.ts`                | Thin handlers: validate, call one function, return. `write.ts` is the one settings write; `failure.ts` the one refusal shape                                                             |
 
 Not built yet, and named only so the slices stay findable: the Host check, file and
 diff routes, the preview listener, the terminal pty, the resources page,
@@ -207,39 +213,41 @@ The deployment boundary owns the first two rows. Nothing outside it is read or
 written unless the operator mounts it there
 ([ADR-0005](adr/0005-deployment-owns-agent-home.md)).
 
-| State                                               | Owner                              | Lifetime                                               |
-| --------------------------------------------------- | ---------------------------------- | ------------------------------------------------------ |
-| Transcript, branches, compaction, session name      | pi's JSONL in the agent home       | Forever                                                |
-| Thinking level, per session                         | pi's JSONL and the live engine     | Forever in the transcript; startup comes from settings |
-| Settings, credentials, models, MCP, packages, trust | the agent home (`$HOME/.pi/agent`) | Forever                                                |
-| Live engines                                        | `agent/registry.ts`                | 10s after the last detach, unless busy                 |
-| Unanswered extension dialogs, display state         | `agent/dialogs.ts`                 | Until answered, cancelled or timed out                 |
-| Pins, archive, project order                        | not built                          | —                                                      |
-| View state, scroll position, drafts                 | Browser                            | Tab lifetime                                           |
+| State                                                      | Owner                              | Lifetime                                               |
+| ---------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------ |
+| Transcript, branches, compaction, session name             | pi's JSONL in the agent home       | Forever                                                |
+| Thinking level, per session                                | pi's JSONL and the live engine     | Forever in the transcript; startup comes from settings |
+| Settings, credentials, models, global MCP, packages, trust | the agent home (`$HOME/.pi/agent`) | Forever                                                |
+| Project MCP servers, project overrides                     | `<project>/.pi/mcp.json`           | Forever, in the repository                             |
+| Live engines                                               | `agent/registry.ts`                | 10s after the last detach, unless busy                 |
+| Unanswered extension dialogs, display state                | `agent/dialogs.ts`                 | Until answered, cancelled or timed out                 |
+| Pins, archive, project order                               | not built                          | —                                                      |
+| View state, scroll position, drafts                        | Browser                            | Tab lifetime                                           |
 
 Nothing else is persisted. The agent home is not recorded anywhere: it is
 deterministic, so a file naming it would be a second source of truth.
 
 ## Failure modes
 
-| Failure                                 | Behaviour                                                                                                                  |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Engine creation fails                   | The socket answers `AGENT_START_FAILED`; the page shows it, never a blank session                                          |
-| An extension handler throws             | The engine reports it through `onError`; the page shows `EXTENSION_ERROR`                                                  |
-| An engine bug crashes the host          | Every live session dies with the server. Accepted in ADR-0008; the session files survive                                   |
-| Socket drops                            | Reconnect with backoff, `attach` again, a snapshot replaces state                                                          |
-| A tab closes mid-run                    | The engine keeps running with no tab; a reopen reattaches and sees the turn in progress                                    |
-| Server restarts                         | Same as a socket drop; in-flight turns are lost                                                                            |
-| Protocol version mismatch               | `PROTOCOL_MISMATCH` → the session page shows a reload notice and stops attaching                                           |
-| Agent home unconfigured                 | The not-ready notice names the home and opens Settings; a turn cannot be sent                                              |
-| Credential present but rejected         | The turn fails with pi's own error (a 401, for example), which the transcript shows; readiness cannot tell in advance      |
-| `models.json` or `mcp.json` unparseable | The settings snapshot carries a sentence naming the file; neither list pretends it is empty, and every write refuses       |
-| A dialog answer names another method    | The server answers `UNSUPPORTED_FRAME`; a stale answer for an already-settled dialog is ignored, because two tabs may race |
-| The settings query fails                | The providers route is one centred sentence, with no list, no editor, no retry label and no back button                    |
-| The browser cannot read a frame         | The store shows one notice per connection instead of dropping it in silence                                                |
-| Project not trusted                     | pi skips project resources; the dashboard does not report it yet ([note](notes/2026-10-28-host-cannot-answer-trust.md))    |
-| pi upgrade changes its surface          | Types break at compile time first; re-verify against [reference/pi-sdk.md](reference/pi-sdk.md)                            |
-| Extension uses TUI-only UI              | One warning names the methods that need the terminal tab; never silence                                                    |
+| Failure                                        | Behaviour                                                                                                                                                                                                                    |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Engine creation fails                          | The socket answers `AGENT_START_FAILED`; the page shows it, never a blank session                                                                                                                                            |
+| An extension handler throws                    | The engine reports it through `onError`; the page shows `EXTENSION_ERROR`                                                                                                                                                    |
+| An engine bug crashes the host                 | Every live session dies with the server. Accepted in ADR-0008; the session files survive                                                                                                                                     |
+| Socket drops                                   | Reconnect with backoff, `attach` again, a snapshot replaces state                                                                                                                                                            |
+| A tab closes mid-run                           | The engine keeps running with no tab; a reopen reattaches and sees the turn in progress                                                                                                                                      |
+| Server restarts                                | Same as a socket drop; in-flight turns are lost                                                                                                                                                                              |
+| Protocol version mismatch                      | `PROTOCOL_MISMATCH` → the session page shows a reload notice and stops attaching                                                                                                                                             |
+| Agent home unconfigured                        | The not-ready notice names the home and opens Settings; a turn cannot be sent                                                                                                                                                |
+| Credential present but rejected                | The turn fails with pi's own error (a 401, for example), which the transcript shows; readiness cannot tell in advance                                                                                                        |
+| `models.json` or either `mcp.json` unparseable | The settings snapshot carries a sentence naming the file; the other file still lists, and every write to that file refuses                                                                                                   |
+| A dialog answer names another method           | The server answers `UNSUPPORTED_FRAME`; a stale answer for an already-settled dialog is ignored, because two tabs may race                                                                                                   |
+| The settings query fails                       | The providers route is one centred sentence, with no list, no editor, no retry label and no back button                                                                                                                      |
+| The browser cannot read a frame                | The store shows one notice per connection instead of dropping it in silence                                                                                                                                                  |
+| Project resources are trusted by construction  | `SettingsManager.create()` starts trusted, so `.pi/settings.json`, `.pi/mcp.json` and `.agents/skills` load; `trust.json` and `defaultProjectTrust` do not apply ([note](notes/2026-10-30-embedded-engine-always-trusts.md)) |
+| MCP off by `-builtin:mcp`                      | The panel lists both files and says no session connects them; writes are still saved                                                                                                                                         |
+| pi upgrade changes its surface                 | Types break at compile time first; re-verify against [reference/pi-sdk.md](reference/pi-sdk.md)                                                                                                                              |
+| Extension uses TUI-only UI                     | One warning names the methods that need the terminal tab; never silence                                                                                                                                                      |
 
 ## Size budgets
 

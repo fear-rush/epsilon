@@ -11,6 +11,10 @@ import { readinessHandler, readinessRoute } from "./routes/readiness";
 import {
 	deleteMcpHandler,
 	deleteMcpRoute,
+	enabledMcpHandler,
+	enabledMcpRoute,
+	inProjectMcpHandler,
+	inProjectMcpRoute,
 	readMcpHandler,
 	readMcpRoute,
 	writeMcpHandler,
@@ -83,6 +87,8 @@ app.openapi(writeProviderRoute, writeProviderHandler);
 app.openapi(deleteProviderRoute, deleteProviderHandler);
 app.openapi(readMcpRoute, readMcpHandler);
 app.openapi(writeMcpRoute, writeMcpHandler);
+app.openapi(enabledMcpRoute, enabledMcpHandler);
+app.openapi(inProjectMcpRoute, inProjectMcpHandler);
 app.openapi(deleteMcpRoute, deleteMcpHandler);
 app.openapi(readSkillRoute, readSkillHandler);
 app.openapi(writeSkillRoute, writeSkillHandler);

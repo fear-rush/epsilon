@@ -51,6 +51,18 @@ export function McpTargetFields({
 								/>
 								<FieldDescription>One argument per line</FieldDescription>
 							</Field>
+							<Field>
+								<FieldLabel htmlFor="mcp-cwd">Working directory</FieldLabel>
+								<Input
+									id="mcp-cwd"
+									placeholder="e.g. packages/web"
+									value={draft.cwd}
+									onChange={(event) => update({ cwd: event.target.value })}
+								/>
+								<FieldDescription>
+									Optional. A relative path resolves against the session directory.
+								</FieldDescription>
+							</Field>
 						</FieldGroup>
 					</SettingsBlock>
 				</SettingsGroup>
@@ -83,7 +95,9 @@ export function McpTargetFields({
 								aria-invalid={errors.url !== undefined}
 								onChange={(event) => update({ url: event.target.value })}
 							/>
-							<FieldDescription>The streamable HTTP endpoint</FieldDescription>
+							<FieldDescription>
+								The streamable HTTP endpoint, for example https://example.com/mcp
+							</FieldDescription>
 							<FieldError>{errors.url}</FieldError>
 						</Field>
 					</FieldGroup>

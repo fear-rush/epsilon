@@ -1,6 +1,6 @@
 # Plan
 
-Status: **S1 to S5, S12, S13 and S17 are done and verified in a browser. S14 is
+Status: **S1 to S5, S12, S13, S17 and S18 are done and verified in a browser. S14 is
 active. S6 to S11, S15 and S16 are open.** This file answers: what the product does
 for its user, which slice is being built, and whether it is done. Keep "Active slice"
 honest; that is the only part that must never drift.
@@ -73,6 +73,7 @@ without an engine and a socket.
 | S15 | See what the context is spending, in the browser                | todo   |
 | S16 | Paste an image into the composer                                | todo   |
 | S17 | Configure providers, MCP, skills and packages in Settings       | done   |
+| S18 | Pick global or project for an MCP server, and see both files    | done   |
 
 S11 serves job 5. It gates nothing on this laptop, where the dashboard already runs
 against the host's own `pi`, and it comes before any deployment on a second machine.
@@ -100,8 +101,9 @@ is rebuilt in the browser instead.
 
 **S17 is closed and verified in a browser.** Configuration lives in the dashboard:
 providers and their models in `models.json`, the default model through
-`SettingsManager`, MCP servers in `mcp.json`, user skills as `SKILL.md` files, and
-packages through `DefaultPackageManager`
+`SettingsManager`, MCP servers in the agent home's `mcp.json` and the project's
+`.pi/mcp.json`, user skills as `SKILL.md` files, and packages through
+`DefaultPackageManager`
 ([ADR-0012](adr/0012-configure-in-the-dashboard.md)). The not-ready notice links to
 the settings page instead of naming a terminal command.
 
@@ -118,10 +120,10 @@ API, and an exact id and API inherit pi's reasoning metadata. Deleting a provide
 also logs out a key stored in `auth.json`. Forms validate with zod and report the
 first message per field; a blank optional value is never written.
 
-The MCP page uses the same split: configured servers on the left, one form on the
-right. A server's name is its `mcp.json` key, so it is fixed after the first save.
-Environment and header rows keep a stored value when the row is blank, so a secret
-never travels to the browser.
+The MCP page uses the same split: this project's servers above the agent home's,
+then one form on the right. A server's name is its key in that file, so it is
+fixed after the first save. Environment and header rows keep a stored value when
+the row is blank, so a secret never travels to the browser.
 
 Reasoning is configured per model: the model dialog writes `thinkingLevelMap` and
 the reasoning keys of `compat`, with provider-wide defaults in the provider form.
@@ -138,6 +140,21 @@ API/base and pi catalog metadata, a provider/model test reports its level and us
 and a failed turn renders its `errorMessage`.
 The slice also removes pi's RPC vocabulary from the engine: `mode` is `"json"`, a
 prompt's source is `"interactive"`, and no RPC command table remains.
+
+**S18 is closed over HTTP and in a browser**, after S17. MCP servers are configured
+in the file the user picks. Settings lists this project's `.pi/mcp.json` above the
+agent home's `mcp.json`, marks a global entry a project entry replaces or
+overrides, and keeps the same name visible in both groups. The row's checkbox
+writes `enabled` in that server's own file; a global server gets **Turn off in this
+project**, which writes the documented `{ "enabled": false }` override; the
+override's own pane removes it. The form adds `exposure`, `timeout` and `cwd`,
+shows OAuth, `auth` and `toolExposure` read-only, and warns that a project file is
+a repository file. `-builtin:mcp` turns the panel into a notice. The embedded
+engine trusts the project folder by construction, and the panel says so instead of
+offering a trust dialog
+([note](notes/2026-10-30-embedded-engine-always-trusts.md)). A connection test,
+live status and sign-in stay out ([ADR-0012](adr/0012-configure-in-the-dashboard.md));
+the terminal keeps `/mcp login`.
 
 **S13 is closed and verified in a browser**, with Playwright against a scratch home:
 the permission control read `Strict` after `/permission strict`, a `bash` turn raised
