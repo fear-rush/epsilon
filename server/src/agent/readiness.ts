@@ -19,7 +19,7 @@ export const readReadiness = async (agentHome: string): Promise<Readiness> => {
 	return {
 		ready: false,
 		home: agentHome,
-		detail: `No model in ${agentHome} can run a turn: no provider is configured.`,
-		fix: "Open Settings, add a provider, and choose a default model.",
+		detail: "No provider is configured.",
+		fix: "Add one in Settings and choose a default model.",
 	};
 };
