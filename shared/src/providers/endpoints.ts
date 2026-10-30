@@ -1,6 +1,6 @@
 /**
  * What pi appends to a provider's base URL for each API family, verified against
- * the clients pi uses (docs/reference/pi-sdk.md). The API picker labels each family
+ * the clients pi uses (docs/pi-sdk.md). The API picker labels each family
  * with its path, and the model list knows where a compatible `/models` lives.
  */
 import { providerApiSchema } from "./rules";

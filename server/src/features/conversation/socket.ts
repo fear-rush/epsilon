@@ -1,6 +1,6 @@
 /**
  * The browser socket: version handshake, attach/detach, commands and dialog
- * answers. The contract is docs/protocol.md; frames are parsed with the shared
+ * answers. The contract is shared/src/protocol/frames.ts; frames are parsed with the shared
  * zod schemas, never with a parallel copy.
  *
  * One connection may watch several sessions. Frames carry their own

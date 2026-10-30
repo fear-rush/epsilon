@@ -44,7 +44,7 @@ const assistantRows = (
 	}
 	// pi records a failed provider call as an assistant message with no content and
 	// `stopReason: "error"`. Nothing else carries that message, so without this row
-	// a refused turn ends in silence (docs/ui.md, "Error"). Deriving it from the
+	// a refused turn ends in silence (docs/ARCHITECTURE.md, Failure modes). Deriving it from the
 	// message also makes it survive a reload and a reattach.
 	if (message.stopReason === "error") {
 		rows.push({

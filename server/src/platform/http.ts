@@ -6,8 +6,6 @@ import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "@hono/zod-openapi";
 
-import type { SessionRegistry } from "../features/conversation/registry";
-
 /**
  * The refusal body every REST route sends: one sentence the browser can show.
  * A resource that needs a code extends this, so no route invents a second shape.
@@ -38,7 +36,7 @@ export const failure = <Status extends ContentfulStatusCode>(
  */
 export const configWrite = async (
 	c: Context,
-	engines: SessionRegistry,
+	engines: { reloadAll(): void },
 	write: () => Promise<void> | void,
 ): Promise<Response> => {
 	try {

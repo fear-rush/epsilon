@@ -1,7 +1,7 @@
 /**
  * What a page shows when a render throws. Without it the router's own screen is
  * the only thing between a bug and a blank page, and the product's language is
- * lost (AGENTS.md rule 7).
+ * lost (AGENTS.md, Invariants).
  */
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

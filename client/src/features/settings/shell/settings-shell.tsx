@@ -1,7 +1,7 @@
 /**
  * The settings surface: its own left navigation, a search field, and one section
  * on the right. It replaces the session sidebar while it is open, so Back to app
- * is the way out (docs/ui.md, "Settings page").
+ * is the way out.
  */
 import { Link, useMatchRoute } from "@tanstack/react-router";
 import { ArrowLeftIcon, SearchIcon } from "lucide-react";

@@ -1,7 +1,7 @@
 /**
  * The extension dialogs and display state a browser tab can see. pi's engine
  * blocks a tool call until a dialog is answered, so the pending set lives here
- * and is replayed to every late-attaching tab (docs/protocol.md).
+ * and is replayed to every late-attaching tab.
  */
 import type { DialogAnswer, DialogQuestion, ExtensionDisplay, ServerFrame } from "shared";
 

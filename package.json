@@ -1,18 +1,9 @@
 {
 	"name": "epsilon",
 	"version": "0.5.1",
-	"description": "A monorepo template built with Bun, Hono, Vite, and React",
-	"keywords": [
-		"bun",
-		"hono",
-		"monorepo",
-		"react",
-		"turbo",
-		"vite"
-	],
-	"homepage": "https://github.com/stevedylandev/bhvr",
+	"description": "A web dashboard that embeds the pi coding agent for one deployment",
 	"license": "MIT",
-	"author": "Steve Simkins",
+	"author": "Muhammad Firas",
 	"workspaces": [
 		"./server",
 		"./client",

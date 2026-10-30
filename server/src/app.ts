@@ -1,7 +1,7 @@
 /**
  * The Hono app. The OpenAPI document is generated from the `createRoute`
  * definitions in each feature, never written by hand. Agent control does not
- * travel here; it travels over the socket described in docs/protocol.md.
+ * travel here; it travels over the socket described in shared/src/protocol/frames.ts.
  */
 import { Scalar } from "@scalar/hono-api-reference";
 

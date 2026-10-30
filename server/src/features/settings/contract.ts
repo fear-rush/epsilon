@@ -5,15 +5,11 @@
  */
 import { z } from "@hono/zod-openapi";
 
-import { defaultModelSchema } from "../general/contract";
+import { defaultModelSchema } from "../general";
 import { mcpServerViewSchema } from "../mcp/contract";
-import { packageViewSchema } from "../packages/contract";
-import {
-	builtinProviderSchema,
-	catalogModelSchema,
-	providerViewSchema,
-} from "../providers/contract";
-import { skillViewSchema } from "../skills/contract";
+import { packageViewSchema } from "../packages";
+import { builtinProviderSchema, catalogModelSchema, providerViewSchema } from "../providers";
+import { skillViewSchema } from "../skills";
 
 export const settingsSnapshotSchema = z
 	.object({
