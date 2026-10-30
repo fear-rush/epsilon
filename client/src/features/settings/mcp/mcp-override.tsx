@@ -19,16 +19,19 @@ import { DeleteDialog } from "@/features/settings/kit/delete-dialog";
 import { SettingsBlock, SettingsGroup } from "@/features/settings/kit/settings-section";
 import { useSettingsRefresh } from "@/features/settings/refresh";
 import { deleteMcpServer, setMcpServerEnabled, setMcpServerInProject } from "@/api/endpoints";
-import type { McpServerDetail } from "@/api/types";
+import type { McpOverrideSubject } from "./kinds";
 
 const keyText = (keys: readonly string[]): string =>
 	keys.length === 0 ? "nothing" : keys.join(", ");
 
-export function McpOverrideForm({ detail }: { detail: McpServerDetail }) {
+export function McpOverrideForm({ detail }: { detail: McpOverrideSubject }) {
 	const navigate = useNavigate();
 	const refresh = useSettingsRefresh();
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const keys = detail.overrideKeys ?? [];
+	/** An invalid override has no resolved target or state; pi skips it. */
+	const problem = detail.kind === "invalid" ? detail.problem : undefined;
+	const target = detail.kind === "override" ? detail.target : "";
 
 	const enabled = useMutation({
 		mutationFn: (next: boolean) =>
@@ -79,11 +82,11 @@ export function McpOverrideForm({ detail }: { detail: McpServerDetail }) {
 						</p>
 					</header>
 
-					{detail.invalid !== undefined && (
+					{problem !== undefined && (
 						<Alert variant="destructive">
 							<TriangleAlertIcon />
 							<AlertTitle>pi skips this override</AlertTitle>
-							<AlertDescription>{detail.invalid}</AlertDescription>
+							<AlertDescription>{problem}</AlertDescription>
 						</Alert>
 					)}
 
@@ -92,18 +95,16 @@ export function McpOverrideForm({ detail }: { detail: McpServerDetail }) {
 							<dl className="grid gap-2 text-sm">
 								<div className="flex flex-wrap gap-2">
 									<dt className="text-muted-foreground">State here</dt>
-									<dd>
-										{detail.invalid !== undefined ? "Unknown" : detail.enabled ? "On" : "Off"}
-									</dd>
+									<dd>{problem !== undefined ? "Unknown" : detail.enabled ? "On" : "Off"}</dd>
 								</div>
 								<div className="flex flex-wrap gap-2">
 									<dt className="text-muted-foreground">Changes</dt>
 									<dd>{keyText(keys)}</dd>
 								</div>
-								{detail.target !== "" && (
+								{target !== "" && (
 									<div className="flex flex-wrap gap-2">
 										<dt className="text-muted-foreground">Global target</dt>
-										<dd className="break-all">{detail.target}</dd>
+										<dd className="break-all">{target}</dd>
 									</div>
 								)}
 							</dl>
@@ -112,7 +113,7 @@ export function McpOverrideForm({ detail }: { detail: McpServerDetail }) {
 									type="button"
 									size="sm"
 									variant="outline"
-									disabled={busy || detail.invalid !== undefined}
+									disabled={busy || problem !== undefined}
 									onClick={() => enabled.mutate(!detail.enabled)}
 								>
 									{enabled.isPending && <Spinner data-icon="inline-start" />}
@@ -122,7 +123,7 @@ export function McpOverrideForm({ detail }: { detail: McpServerDetail }) {
 									type="button"
 									size="sm"
 									variant="outline"
-									disabled={busy || detail.invalid !== undefined}
+									disabled={busy || problem !== undefined}
 									onClick={() => inherit.mutate()}
 								>
 									{inherit.isPending && <Spinner data-icon="inline-start" />}

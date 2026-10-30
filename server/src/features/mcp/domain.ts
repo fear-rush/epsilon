@@ -10,7 +10,7 @@
  * top (name, transport, a target that exists).
  */
 import { z } from "zod";
-import type { McpExposure, McpOverrideKey, McpScope, McpTransport } from "shared";
+import type { McpExposure, McpOverrideKey, McpRelation, McpScope, McpTransport } from "shared";
 import { mcpExposureSchema } from "shared";
 
 /** The only keys a project entry may set when it overrides a global server. */
@@ -208,179 +208,195 @@ function applyOverride(base: McpEntry, override: McpEntry): McpEntry {
 }
 
 /*
- * Then the two files together.
+ * Then the two files together, in two phases and without mutation.
  *
- * What pi would load from both files, in its order: every global entry first,
- * then this project's entries. A project entry that defines a server replaces the
- * global entry of its name; one that only sets override keys changes it. Both
- * stay listed, so the global entry a project replaces is visible instead of
- * hidden behind it.
+ * Phase 1 parses every raw entry of both files on its own (`parseFile`). Phase 2
+ * resolves what they mean together, in pi's order: every global entry first, then
+ * this project's. A project entry that defines a server replaces the global entry
+ * of its name; one that only sets override keys changes it. Both stay listed, so
+ * the global entry a project replaces is visible instead of hidden behind it.
  */
 
-interface ValidEntry {
+/** One entry of either file, as the server list and detail show it. */
+export type McpServer =
+	| {
+			kind: "server";
+			name: string;
+			scope: McpScope;
+			/** What pi connects. */
+			config: McpEntry;
+			transport: McpTransport;
+			/** How the other file's entry of this name relates to this one, when one does. */
+			relation?: McpRelation;
+	  }
+	| {
+			/** A project entry that only changes keys of the global server of its name. */
+			kind: "override";
+			name: string;
+			scope: "project";
+			/** The global server's config with the override applied: what pi connects. */
+			config: McpEntry;
+			transport: McpTransport;
+			keys: McpOverrideKey[];
+			/** What the override sets `enabled` to, when it sets it. */
+			enabled?: boolean;
+	  }
+	| {
+			/** pi skips this entry. `overrideKeys` is set when it was meant as an override. */
+			kind: "invalid";
+			name: string;
+			scope: McpScope;
+			problem: string;
+			/** The entry's own `enabled`, so a row still shows Off while pi skips it. */
+			enabled: boolean;
+			overrideKeys?: McpOverrideKey[];
+	  };
+
+type GlobalServer = Extract<McpServer, { kind: "server" }>;
+type InvalidServer = Extract<McpServer, { kind: "invalid" }>;
+
+/** Phase 1: one entry read on its own, plus the raw facts an invalid entry still shows. */
+interface ParsedEntry {
 	name: string;
-	scope: McpScope;
-	/** The entry as its own file holds it, parsed. */
-	entry: McpEntry;
-	/** What pi connects: the entry, or a global entry with a project override applied. */
-	config: McpEntry;
-	transport: McpTransport;
-	overrideKeys?: McpOverrideKey[];
-	overrideEnabled?: boolean;
-	replacesGlobal?: boolean;
-	replacedByProject?: boolean;
-	overriddenByProject?: boolean;
+	read: McpEntryRead;
+	enabled: boolean | undefined;
+	/** The override keys the raw object sets, when it has no command, url or type. */
+	rawOverrideKeys: McpOverrideKey[] | undefined;
 }
 
-interface InvalidEntry {
-	name: string;
-	scope: McpScope;
-	problem: string;
-	/** The entry's own `enabled`, so a row still shows Off while pi skips it. */
-	enabled?: boolean;
-	overrideKeys?: McpOverrideKey[];
-}
-
-export type LoadedEntry = ValidEntry | InvalidEntry;
-
-interface InvalidFacts {
-	enabled?: boolean;
-	overrideKeys?: McpOverrideKey[];
-}
+const parseFile = (servers: Record<string, McpRawEntry>): ParsedEntry[] =>
+	Object.entries(servers).map(([name, value]) => ({
+		name,
+		read: readMcpEntry(name, value),
+		enabled: rawEnabled(value),
+		rawOverrideKeys: isRawOverride(value) ? rawOverrideKeys(value) : undefined,
+	}));
 
 /** Names that differ only in `-` and `_` would share pi's tool namespace. */
 const namespaceOf = (name: string): string => `mcp__${name.replace(/-/g, "_")}`;
 
 const invalid = (
-	name: string,
+	parsed: ParsedEntry,
 	scope: McpScope,
 	problem: string,
-	facts: InvalidFacts = {},
-): InvalidEntry => {
-	const entry: InvalidEntry = { name, scope, problem };
-	if (facts.enabled !== undefined) entry.enabled = facts.enabled;
-	if (facts.overrideKeys !== undefined) entry.overrideKeys = facts.overrideKeys;
-	return entry;
-};
+	overrideKeys?: McpOverrideKey[],
+): InvalidServer => ({
+	kind: "invalid",
+	name: parsed.name,
+	scope,
+	problem,
+	enabled: parsed.enabled ?? true,
+	overrideKeys,
+});
 
-const readGlobalEntry = (
-	name: string,
-	value: McpRawEntry,
-	takenNamespaces: Map<string, string>,
-): LoadedEntry => {
-	const read = readMcpEntry(name, value);
-	const enabled = rawEnabled(value);
-	if (read.kind === "invalid") return invalid(name, "global", read.problem, { enabled });
-	if (read.kind === "override") {
-		return invalid(name, "global", 'needs either "command" or "url".', { enabled });
-	}
-	const namespace = namespaceOf(name);
-	const clash = takenNamespaces.get(namespace);
-	if (clash !== undefined) {
-		return invalid(name, "global", `shares its tool namespace with "${clash}", so pi skips it.`, {
-			enabled,
-		});
-	}
-	takenNamespaces.set(namespace, name);
-	return {
-		name,
-		scope: "global",
-		entry: read.entry,
-		config: read.entry,
-		transport: read.transport,
-	};
-};
+const clashProblem = (other: string): string =>
+	`shares its tool namespace with "${other}", so pi skips it.`;
 
-const readProjectEntry = (
-	name: string,
-	value: McpRawEntry,
-	globals: ReadonlyMap<string, ValidEntry>,
-	takenNamespaces: Map<string, string>,
-): LoadedEntry => {
-	const read = readMcpEntry(name, value);
-	const enabled = rawEnabled(value);
-	if (read.kind === "invalid") {
-		const facts: InvalidFacts = { enabled };
-		if (isRawOverride(value)) facts.overrideKeys = rawOverrideKeys(value);
-		return invalid(name, "project", read.problem, facts);
-	}
-	if (read.kind === "override") {
-		const base = globals.get(name);
-		if (base === undefined) {
-			return invalid(
+const resolveGlobals = (parsed: ParsedEntry[], namespaces: Map<string, string>): McpServer[] =>
+	parsed.map((item): McpServer => {
+		const { name, read } = item;
+		if (read.kind === "invalid") return invalid(item, "global", read.problem);
+		if (read.kind === "override") {
+			return invalid(item, "global", 'needs either "command" or "url".');
+		}
+		const namespace = namespaceOf(name);
+		const clash = namespaces.get(namespace);
+		if (clash !== undefined) return invalid(item, "global", clashProblem(clash));
+		namespaces.set(namespace, name);
+		return {
+			kind: "server",
+			name,
+			scope: "global",
+			config: read.entry,
+			transport: read.transport,
+		};
+	});
+
+const resolveProject = (
+	parsed: ParsedEntry[],
+	globals: ReadonlyMap<string, GlobalServer>,
+	namespaces: Map<string, string>,
+): McpServer[] =>
+	parsed.map((item): McpServer => {
+		const { name, read } = item;
+		if (read.kind === "invalid") {
+			return invalid(item, "project", read.problem, item.rawOverrideKeys);
+		}
+		if (read.kind === "override") {
+			const base = globals.get(name);
+			if (base === undefined) {
+				return invalid(
+					item,
+					"project",
+					"pi needs a global server of this name to override, and the global mcp.json does not define one.",
+					read.keys,
+				);
+			}
+			const extra = extraOverrideKeys(read.entry);
+			if (extra.length > 0) {
+				return invalid(
+					item,
+					"project",
+					`an override can only set ${MCP_OVERRIDE_KEYS.join(", ")}; it also sets ${extra.join(", ")}.`,
+					read.keys,
+				);
+			}
+			const config = applyOverride(base.config, read.entry);
+			const problem = entryProblem(name, config);
+			if (problem !== undefined) return invalid(item, "project", problem, read.keys);
+			return {
+				kind: "override",
 				name,
-				"project",
-				"pi needs a global server of this name to override, and the global mcp.json does not define one.",
-				{ enabled, overrideKeys: read.keys },
-			);
+				scope: "project",
+				config,
+				transport: transportOf(config),
+				keys: read.keys,
+				enabled: read.entry.enabled,
+			};
 		}
-		const extra = extraOverrideKeys(read.entry);
-		if (extra.length > 0) {
-			return invalid(
-				name,
-				"project",
-				`an override can only set ${MCP_OVERRIDE_KEYS.join(", ")}; it also sets ${extra.join(", ")}.`,
-				{ enabled, overrideKeys: read.keys },
-			);
+		if (read.entry.url !== undefined && read.entry.auth !== undefined) {
+			return invalid(item, "project", "auth is only allowed in the global mcp.json.");
 		}
-		const config = applyOverride(base.config, read.entry);
-		const problem = entryProblem(name, config);
-		if (problem !== undefined) {
-			return invalid(name, "project", problem, { enabled, overrideKeys: read.keys });
+		const namespace = namespaceOf(name);
+		const clash = namespaces.get(namespace);
+		if (clash !== undefined && clash !== name) {
+			return invalid(item, "project", clashProblem(clash));
 		}
-		base.overriddenByProject = true;
-		const entry: ValidEntry = {
+		namespaces.set(namespace, name);
+		return {
+			kind: "server",
 			name,
 			scope: "project",
-			entry: read.entry,
-			config,
-			transport: config.url === undefined ? "stdio" : "http",
-			overrideKeys: read.keys,
+			config: read.entry,
+			transport: read.transport,
+			relation: globals.has(name) ? "replaces-global" : undefined,
 		};
-		if (read.entry.enabled !== undefined) entry.overrideEnabled = read.entry.enabled;
-		return entry;
-	}
-	if (read.entry.url !== undefined && read.entry.auth !== undefined) {
-		return invalid(name, "project", "auth is only allowed in the global mcp.json.", { enabled });
-	}
-	const namespace = namespaceOf(name);
-	const clash = takenNamespaces.get(namespace);
-	if (clash !== undefined && clash !== name) {
-		return invalid(name, "project", `shares its tool namespace with "${clash}", so pi skips it.`, {
-			enabled,
-		});
-	}
-	takenNamespaces.set(namespace, name);
-	const entry: ValidEntry = {
-		name,
-		scope: "project",
-		entry: read.entry,
-		config: read.entry,
-		transport: read.transport,
-	};
-	const global = globals.get(name);
-	if (global !== undefined) {
-		global.replacedByProject = true;
-		entry.replacesGlobal = true;
-	}
-	return entry;
-};
+	});
 
 /** Every entry of both files, with what pi would load. */
 export const entriesOf = (
 	globalServers: Record<string, McpRawEntry>,
 	projectServers: Record<string, McpRawEntry>,
-): LoadedEntry[] => {
-	const entries: LoadedEntry[] = [];
-	const globals = new Map<string, ValidEntry>();
+): McpServer[] => {
 	const namespaces = new Map<string, string>();
-	for (const [name, value] of Object.entries(globalServers)) {
-		const entry = readGlobalEntry(name, value, namespaces);
-		entries.push(entry);
-		if ("entry" in entry) globals.set(name, entry);
+	const globalEntries = resolveGlobals(parseFile(globalServers), namespaces);
+	const globals = new Map<string, GlobalServer>();
+	for (const entry of globalEntries) {
+		if (entry.kind === "server") globals.set(entry.name, entry);
 	}
-	for (const [name, value] of Object.entries(projectServers)) {
-		entries.push(readProjectEntry(name, value, globals, namespaces));
+	const projectEntries = resolveProject(parseFile(projectServers), globals, namespaces);
+
+	const relations = new Map<string, McpRelation>();
+	for (const entry of projectEntries) {
+		if (entry.kind === "override") relations.set(entry.name, "overridden-by-project");
+		else if (entry.kind === "server" && entry.relation === "replaces-global") {
+			relations.set(entry.name, "replaced-by-project");
+		}
 	}
-	return entries;
+	const globalsWithRelation = globalEntries.map((entry): McpServer => {
+		if (entry.kind !== "server") return entry;
+		const relation = relations.get(entry.name);
+		return relation === undefined ? entry : { ...entry, relation };
+	});
+	return [...globalsWithRelation, ...projectEntries];
 };

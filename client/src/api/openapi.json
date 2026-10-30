@@ -325,10 +325,34 @@
 				]
 			},
 			"McpServerView": {
+				"oneOf": [
+					{
+						"$ref": "#/components/schemas/McpServerEntry"
+					},
+					{
+						"$ref": "#/components/schemas/McpOverrideEntry"
+					},
+					{
+						"$ref": "#/components/schemas/McpInvalidEntry"
+					}
+				],
+				"discriminator": {
+					"propertyName": "kind",
+					"mapping": {
+						"server": "#/components/schemas/McpServerEntry",
+						"override": "#/components/schemas/McpOverrideEntry",
+						"invalid": "#/components/schemas/McpInvalidEntry"
+					}
+				}
+			},
+			"McpServerEntry": {
 				"type": "object",
 				"properties": {
-					"name": {
-						"type": "string"
+					"kind": {
+						"type": "string",
+						"enum": [
+							"server"
+						]
 					},
 					"scope": {
 						"type": "string",
@@ -337,15 +361,18 @@
 							"project"
 						]
 					},
+					"name": {
+						"type": "string"
+					},
+					"target": {
+						"type": "string"
+					},
 					"transport": {
 						"type": "string",
 						"enum": [
 							"stdio",
 							"http"
 						]
-					},
-					"target": {
-						"type": "string"
 					},
 					"description": {
 						"type": "string"
@@ -365,8 +392,69 @@
 					"timeout": {
 						"type": "number"
 					},
-					"invalid": {
+					"relation": {
+						"type": "string",
+						"enum": [
+							"replaces-global",
+							"replaced-by-project",
+							"overridden-by-project"
+						]
+					}
+				},
+				"required": [
+					"kind",
+					"scope",
+					"name",
+					"target",
+					"transport",
+					"enabled"
+				]
+			},
+			"McpOverrideEntry": {
+				"type": "object",
+				"properties": {
+					"kind": {
+						"type": "string",
+						"enum": [
+							"override"
+						]
+					},
+					"scope": {
+						"type": "string",
+						"enum": [
+							"project"
+						]
+					},
+					"name": {
 						"type": "string"
+					},
+					"target": {
+						"type": "string"
+					},
+					"transport": {
+						"type": "string",
+						"enum": [
+							"stdio",
+							"http"
+						]
+					},
+					"description": {
+						"type": "string"
+					},
+					"enabled": {
+						"type": "boolean"
+					},
+					"exposure": {
+						"type": "string",
+						"enum": [
+							"codemode",
+							"deferred",
+							"direct",
+							"hidden"
+						]
+					},
+					"timeout": {
+						"type": "number"
 					},
 					"overrideKeys": {
 						"type": "array",
@@ -381,21 +469,60 @@
 					},
 					"overrideEnabled": {
 						"type": "boolean"
-					},
-					"replacedByProject": {
-						"type": "boolean"
-					},
-					"overriddenByProject": {
-						"type": "boolean"
-					},
-					"replacesGlobal": {
-						"type": "boolean"
 					}
 				},
 				"required": [
+					"kind",
+					"scope",
+					"name",
+					"target",
+					"transport",
+					"enabled",
+					"overrideKeys"
+				]
+			},
+			"McpInvalidEntry": {
+				"type": "object",
+				"properties": {
+					"kind": {
+						"type": "string",
+						"enum": [
+							"invalid"
+						]
+					},
+					"name": {
+						"type": "string"
+					},
+					"scope": {
+						"type": "string",
+						"enum": [
+							"global",
+							"project"
+						]
+					},
+					"problem": {
+						"type": "string"
+					},
+					"enabled": {
+						"type": "boolean"
+					},
+					"overrideKeys": {
+						"type": "array",
+						"items": {
+							"type": "string",
+							"enum": [
+								"enabled",
+								"exposure",
+								"toolExposure"
+							]
+						}
+					}
+				},
+				"required": [
+					"kind",
 					"name",
 					"scope",
-					"target",
+					"problem",
 					"enabled"
 				]
 			},
@@ -982,9 +1109,30 @@
 				]
 			},
 			"McpServerDetail": {
+				"oneOf": [
+					{
+						"$ref": "#/components/schemas/McpServerEntryDetail"
+					},
+					{
+						"$ref": "#/components/schemas/McpOverrideEntry"
+					},
+					{
+						"$ref": "#/components/schemas/McpInvalidEntry"
+					}
+				],
+				"discriminator": {
+					"propertyName": "kind",
+					"mapping": {
+						"server": "#/components/schemas/McpServerEntryDetail",
+						"override": "#/components/schemas/McpOverrideEntry",
+						"invalid": "#/components/schemas/McpInvalidEntry"
+					}
+				}
+			},
+			"McpServerEntryDetail": {
 				"allOf": [
 					{
-						"$ref": "#/components/schemas/McpServerView"
+						"$ref": "#/components/schemas/McpServerEntry"
 					},
 					{
 						"type": "object",

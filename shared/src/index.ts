@@ -39,10 +39,11 @@ export {
 	mcpExposureSchema,
 	mcpNameSchema,
 	mcpOverrideKeySchema,
+	mcpRelationSchema,
 	mcpScopeSchema,
 	mcpTransportSchema,
 } from "./mcp/rules";
-export type { McpExposure, McpOverrideKey, McpScope, McpTransport } from "./mcp/rules";
+export type { McpExposure, McpOverrideKey, McpRelation, McpScope, McpTransport } from "./mcp/rules";
 export { skillDescriptionSchema, skillNameSchema } from "./skills/rules";
 export { providerApiSchema, providerIdSchema } from "./providers/rules";
 export type { ProviderApi } from "./providers/rules";

@@ -26,21 +26,40 @@ import { useSettingsRefresh } from "@/features/settings/refresh";
 import { setMcpServerEnabled } from "@/api/endpoints";
 import type { McpServerView } from "@/api/types";
 
-const badgeFor = (
-	server: McpServerView,
-): { label: string; variant: "warning" | "outline" | "secondary" } | undefined => {
-	if (server.invalid !== undefined) return { label: "Invalid", variant: "warning" };
-	if (server.overrideKeys !== undefined) return { label: "Override", variant: "outline" };
-	if (server.overriddenByProject === true) return { label: "Changed here", variant: "outline" };
-	if (server.replacedByProject === true) return { label: "Replaced", variant: "outline" };
-	if (!server.enabled) return { label: "Off", variant: "secondary" };
-	return undefined;
+type RowBadge = { label: string; variant: "warning" | "outline" | "secondary" };
+
+const badgeFor = (server: McpServerView): RowBadge | undefined => {
+	switch (server.kind) {
+		case "invalid":
+			return { label: "Invalid", variant: "warning" };
+		case "override":
+			return { label: "Override", variant: "outline" };
+		case "server":
+			switch (server.relation) {
+				case "overridden-by-project":
+					return { label: "Changed here", variant: "outline" };
+				case "replaced-by-project":
+					return { label: "Replaced", variant: "outline" };
+				case "replaces-global":
+				case undefined:
+					return server.enabled ? undefined : { label: "Off", variant: "secondary" };
+				default:
+					return server.relation satisfies never;
+			}
+		default:
+			return server satisfies never;
+	}
 };
 
+/** The command or URL a row shows; an invalid entry has none and no transport. */
+const targetOf = (server: McpServerView): string =>
+	server.kind === "invalid" ? "" : server.target;
+
 const targetLine = (server: McpServerView): string => {
-	const transport = server.transport ?? "unread";
-	if (server.target === "") return transport;
-	return `${transport} · ${server.target}`;
+	const transport = server.kind === "invalid" ? "unread" : server.transport;
+	const target = targetOf(server);
+	if (target === "") return transport;
+	return `${transport} · ${target}`;
 };
 
 function ServerRow({
@@ -141,7 +160,10 @@ export function McpPanel({
 	const projectDir = settings.data?.projectDir;
 	const needle = query.trim().toLowerCase();
 	const visible = servers.filter((server) =>
-		[server.name, server.target, server.description ?? ""].join(" ").toLowerCase().includes(needle),
+		[server.name, targetOf(server), server.kind === "invalid" ? "" : (server.description ?? "")]
+			.join(" ")
+			.toLowerCase()
+			.includes(needle),
 	);
 	const project = visible.filter((server) => server.scope === "project");
 	const global = visible.filter((server) => server.scope === "global");
