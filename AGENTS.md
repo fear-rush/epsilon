@@ -57,10 +57,13 @@ prose; fix a doc that disagrees in the same commit, and never copy code or file 
 1. If both sides run a rule, put it in `shared/src/<feature>/rules.ts`.
 2. Server `features/<name>/`: `contract.ts` (zod), `store.ts`, `service.ts`,
    `routes.ts`, plus `domain.ts` if there is pure logic. Add one `app.route` line in
-   `app.ts`.
+   `server/src/routes.ts`.
 3. `bun run api:generate`.
 4. Client `features/settings/<name>/`, an entry in `sections.ts`, and thin route
    files in `client/src/routes`.
+
+There is no line limit; split files by meaning, as
+[ARCHITECTURE.md, Files and folders](docs/ARCHITECTURE.md#files-and-folders) says.
 
 ## Ask before acting when
 

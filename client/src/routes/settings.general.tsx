@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { SettingsGeneral } from "@/features/settings/general";
-import { settingsPage } from "@/features/settings/kit/settings-gate";
+import { SettingsPage } from "@/features/settings/kit/settings-page";
 
 export const Route = createFileRoute("/settings/general")({
-	component: settingsPage(SettingsGeneral),
+	component: () => <SettingsPage content={SettingsGeneral} />,
 });

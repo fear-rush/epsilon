@@ -1,8 +1,4 @@
-// settingsPage is a factory for route components, not a component, so fast
-// refresh cannot track this file; the gate and the factory belong together.
-/* oxlint-disable react/only-export-components */
 import type { ComponentType } from "react";
-import type { UseQueryResult } from "@tanstack/react-query";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
@@ -10,18 +6,17 @@ import type { SettingsSnapshot } from "@/api/types";
 import { useSettings } from "@/features/settings/queries";
 
 /**
- * Loading, error and empty handling for a settings section. The section is
- * passed as a component, not called as a function, so its hooks get their own
- * fiber when the tab changes.
+ * The one shape a settings section page has: read the snapshot, handle loading,
+ * error and empty, then render one section with it. The section is passed as a
+ * component, not called as a function, so its hooks get their own fiber when the
+ * tab changes.
  */
-
-function SettingsGate({
-	query,
+export function SettingsPage({
 	content: Content,
 }: {
-	query: UseQueryResult<SettingsSnapshot>;
 	content: ComponentType<{ snapshot: SettingsSnapshot }>;
 }) {
+	const query = useSettings();
 	if (query.isPending) {
 		return (
 			<div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
@@ -57,12 +52,3 @@ function SettingsGate({
 		</div>
 	);
 }
-
-/**
- * The one shape a settings section route has: read the snapshot, then render one
- * section with it. Five route files used to repeat this wrapper by hand.
- */
-export const settingsPage = (content: ComponentType<{ snapshot: SettingsSnapshot }>) =>
-	function SettingsSectionPage() {
-		return <SettingsGate query={useSettings()} content={content} />;
-	};
