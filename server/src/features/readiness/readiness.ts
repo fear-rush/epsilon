@@ -4,10 +4,10 @@
  * cannot drift from what a session would see. It reads pi's files and writes none;
  * a login in the deployment's shell changes the next answer.
  */
-import type { Readiness } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { modelRuntime } from "../../platform/pi";
+import type { Readiness } from "./contract";
 
 export const readReadiness = async (home: AgentHome): Promise<Readiness> => {
 	const runtime = await modelRuntime(home);

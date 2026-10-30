@@ -1,9 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { TriangleAlertIcon } from "lucide-react";
-import type { Readiness } from "shared";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
+import type { Readiness } from "@/api/types";
 
 /**
  * The unsupported state, centred on every page: a deployment with no usable model

@@ -8,7 +8,7 @@ import { useMutation } from "@tanstack/react-query";
 import { PlusIcon, TriangleAlertIcon } from "lucide-react";
 import { useState } from "react";
 import { cn } from "cn";
-import type { McpScope, McpServerView } from "shared";
+import type { McpScope } from "shared";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,8 @@ import {
 import { MasterListPanel } from "@/features/settings/kit/master-list-panel";
 import { useSettings } from "@/features/settings/queries";
 import { useSettingsRefresh } from "@/features/settings/refresh";
-import { setMcpServerEnabled } from "@/lib/api";
+import { setMcpServerEnabled } from "@/api/endpoints";
+import type { McpServerView } from "@/api/types";
 
 const badgeFor = (
 	server: McpServerView,

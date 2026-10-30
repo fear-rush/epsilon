@@ -4,7 +4,8 @@
  * belong to one API family, so switching the family drops the keys it cannot
  * use while unknown compat keys survive for the writer.
  */
-import type { ProviderApi, ReasoningCompat, ThinkingLevel } from "shared";
+import type { ProviderApi, ThinkingLevel } from "shared";
+import type { ReasoningCompat } from "@/api/types";
 
 export const THINKING_LEVELS: readonly ThinkingLevel[] = [
 	"off",

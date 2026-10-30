@@ -6,7 +6,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { PlusIcon, SearchIcon } from "lucide-react";
 import { useState } from "react";
-import type { BuiltinProvider } from "shared";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,6 +16,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import type { BuiltinProvider } from "@/api/types";
 
 export function AddProviderDialog({
 	open,

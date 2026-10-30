@@ -8,6 +8,14 @@
 			"env": ["NODE_ENV", "VITE_*"],
 			"inputs": ["$TURBO_DEFAULT$", ".env", ".env.*", "!.env.example"]
 		},
+		"api:export": {
+			"dependsOn": ["^build"],
+			"cache": false
+		},
+		"generate": {
+			"dependsOn": ["server#api:export"],
+			"cache": false
+		},
 		"dev": {
 			"cache": false,
 			"persistent": true,

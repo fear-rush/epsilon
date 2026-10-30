@@ -11,13 +11,14 @@
  * keyless and keyed calls and the stream capture. The second half builds the
  * target from a draft and the saved entry.
  */
-import type { ProviderTestInput, ThinkingLevel } from "shared";
+import type { ThinkingLevel } from "shared";
 import { z } from "zod";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { modelRuntime } from "../../platform/pi";
 import type { ModelRuntime, ProviderModelConfig } from "../../platform/pi";
 import { readProvidersFile } from "./store";
+import type { ProviderTestInput } from "./contract";
 
 const CONNECTION_PROMPT = "Reply with the single word: ok";
 const REASONING_PROMPT =

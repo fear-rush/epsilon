@@ -3,7 +3,6 @@
  * model catalog. Everything here is derived from disk at call time, so a change
  * made in a terminal shows up on the next open.
  */
-import type { SettingsSnapshot } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { modelRuntime } from "../../platform/pi";
@@ -14,6 +13,7 @@ import { listPackages } from "../packages/service";
 import { listBuiltins, listProviders } from "../providers/service";
 import { modelsDocument } from "../providers/store";
 import { listSkills } from "../skills/store";
+import type { SettingsSnapshot } from "./contract";
 
 /**
  * A file the panel had to skip, plus what pi's runtime could not compose. The

@@ -11,9 +11,9 @@
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
-import type { SkillInput, SkillView } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
+import type { SkillInput, SkillView } from "./contract";
 
 /** The directory for a skill, refused if the name would leave the skills root. */
 const skillDirectory = (home: AgentHome, name: string): string => {

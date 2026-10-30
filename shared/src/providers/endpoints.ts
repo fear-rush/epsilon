@@ -3,8 +3,8 @@
  * the clients pi uses (docs/reference/pi-sdk.md). The API picker labels each family
  * with its path, and the model list knows where a compatible `/models` lives.
  */
-import { providerApiSchema } from "./schemas/settings";
-import type { ProviderApi } from "./schemas/settings";
+import { providerApiSchema } from "./rules";
+import type { ProviderApi } from "./rules";
 
 export type ProviderApiInfo = {
 	id: ProviderApi;

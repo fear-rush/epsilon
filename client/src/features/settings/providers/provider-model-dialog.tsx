@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { parseProviderApi } from "shared";
 import { thinkingLevelSchema } from "shared";
-import type { ProviderApi, ProviderModelInput, ThinkingLevel } from "shared";
+import type { ProviderApi, ThinkingLevel } from "shared";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -30,6 +30,7 @@ import type { ReasoningForm } from "./reasoning-form";
 import { keepUntouched } from "@/features/settings/kit/field-errors";
 import { modelFieldErrors, modelFields } from "./provider-validation";
 import type { ModelFieldErrors } from "./provider-validation";
+import type { ProviderModelInput } from "@/api/types";
 
 const optionalNumber = (value: string): number | undefined => {
 	const parsed = Number(value);

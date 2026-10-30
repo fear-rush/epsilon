@@ -6,7 +6,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { providerModelsEndpoint } from "shared";
-import type { ProviderApi, ProviderModelInput } from "shared";
+import type { ProviderApi } from "shared";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,8 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { probeKeys } from "@/api/keys";
-import { importProviderModels } from "@/lib/api";
+import { importProviderModels } from "@/api/endpoints";
+import type { ProviderModelInput } from "@/api/types";
 
 export function ProviderImportDialog({
 	open,

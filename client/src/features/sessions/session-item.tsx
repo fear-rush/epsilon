@@ -4,7 +4,6 @@
  */
 import { Link } from "@tanstack/react-router";
 import { MoreHorizontalIcon } from "lucide-react";
-import type { SessionSummary } from "shared";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { formatWhen, sessionLabel } from "@/lib/format";
+import type { SessionSummary } from "@/api/types";
 
 type SessionItemProps = {
 	session: SessionSummary;

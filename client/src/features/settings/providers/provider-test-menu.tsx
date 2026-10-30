@@ -6,7 +6,7 @@
 import { ChevronDownIcon } from "lucide-react";
 import { useState } from "react";
 import { thinkingLevelSchema } from "shared";
-import type { ProviderModelInput, ThinkingLevel } from "shared";
+import type { ThinkingLevel } from "shared";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Spinner } from "@/components/ui/spinner";
 
 import { TestLevelSelect } from "./test-level-select";
+import type { ProviderModelInput } from "@/api/types";
 
 export function ProviderTestMenu({
 	models,

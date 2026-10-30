@@ -14,13 +14,7 @@
  * and `true` removes it, as pi's own writer does, except on an override, which
  * keeps the value written because it replaces the global entry's.
  */
-import type {
-	McpInProjectInput,
-	McpScope,
-	McpServerDetail,
-	McpServerInput,
-	McpServerView,
-} from "shared";
+import type { McpScope } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { mergeSecrets, setDefined, setOrDelete } from "../../platform/patch";
@@ -36,6 +30,7 @@ import {
 } from "./domain";
 import type { LoadedEntry } from "./domain";
 import { mcpDocument } from "./store";
+import type { McpInProjectInput, McpServerDetail, McpServerInput, McpServerView } from "./contract";
 
 const toView = (entry: LoadedEntry): McpServerView => {
 	const view: McpServerView = {

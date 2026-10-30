@@ -6,7 +6,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
-import type { SessionSummary } from "shared";
 
 import { SessionItem } from "@/features/sessions/session-item";
 import { Button } from "@/components/ui/button";
@@ -23,8 +22,9 @@ import {
 import { SidebarAccount } from "@/features/sessions/sidebar-account";
 import { DeleteDialog } from "@/features/settings/kit/delete-dialog";
 import { sessionKeys } from "@/api/keys";
-import { deleteSession, fetchSessions } from "@/lib/api";
+import { deleteSession, fetchSessions } from "@/api/endpoints";
 import { sessionLabel } from "@/lib/format";
+import type { SessionSummary } from "@/api/types";
 
 /** Live children come and go outside this tab, so the badges poll. */
 const LIVE_REFRESH_MS = 5_000;

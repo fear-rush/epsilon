@@ -137,12 +137,11 @@ const route = async (engines: Engines, socket: ChatSocket, frame: ClientFrame): 
 		case "ping":
 			send(socket, { t: "pong" });
 			return;
-		default:
-			sendError(
-				socket,
-				"UNSUPPORTED_FRAME",
-				`Frame "${frame.t}" is not implemented at protocol ${PROTOCOL_VERSION}`,
-			);
+		default: {
+			// Every client frame is handled above; a new one fails to compile here.
+			const unhandled: never = frame;
+			return unhandled;
+		}
 	}
 };
 

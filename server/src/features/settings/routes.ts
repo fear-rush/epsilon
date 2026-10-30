@@ -1,7 +1,7 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
-import { settingsSnapshotSchema } from "shared";
 
 import type { Deps } from "../../deps";
+import { settingsSnapshotSchema } from "./contract";
 import { readSettings } from "./snapshot";
 
 const settingsRoute = createRoute({

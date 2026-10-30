@@ -2,9 +2,10 @@
  * The reasoning form state and the map/compat it serializes. Kept out of the
  * component file so fast refresh sees a components-only module.
  */
-import type { ProviderApi, ProviderModelInput, ReasoningCompat, ThinkingLevel } from "shared";
+import type { ProviderApi, ThinkingLevel } from "shared";
 
 import { THINKING_LEVELS, compatForApi } from "./reasoning";
+import type { ProviderModelInput, ReasoningCompat } from "@/api/types";
 
 export type LevelRow = { offered: boolean; value: string };
 

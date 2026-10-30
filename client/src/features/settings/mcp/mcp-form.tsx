@@ -8,7 +8,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { TriangleAlertIcon } from "lucide-react";
 import { cn } from "cn";
-import type { McpScope, McpServerDetail, McpServerInput } from "shared";
+import type { McpScope } from "shared";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ import { UnsavedChangesBlock } from "@/features/settings/kit/unsaved-changes-blo
 import { useDraftForm } from "@/features/settings/kit/use-draft-form";
 import { useSettingsRefresh } from "@/features/settings/refresh";
 import { useSettings } from "@/features/settings/queries";
-import { deleteMcpServer, saveMcpServer, setMcpServerInProject } from "@/lib/api";
+import { deleteMcpServer, saveMcpServer, setMcpServerInProject } from "@/api/endpoints";
 
 import { draftOf, inputOf } from "./mcp-draft";
 import { McpFields } from "./mcp-fields";
@@ -30,6 +30,7 @@ import { McpTargetFields } from "./mcp-target";
 import { mcpFieldErrors, mcpFields } from "./mcp-validation";
 import type { McpDraft } from "./mcp-draft";
 import type { McpField } from "./mcp-validation";
+import type { McpServerDetail, McpServerInput } from "@/api/types";
 
 const scopeLabel = (scope: McpScope): string => (scope === "global" ? "Global" : "This project");
 

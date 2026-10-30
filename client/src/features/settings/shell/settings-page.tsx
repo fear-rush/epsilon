@@ -1,9 +1,9 @@
 import type { ComponentType } from "react";
-import type { SettingsSnapshot } from "shared";
 
 import { useSettings } from "@/features/settings/queries";
 
 import { SettingsGate } from "@/features/settings/kit/settings-gate";
+import type { SettingsSnapshot } from "@/api/types";
 
 /**
  * The one shape a settings section route has: read the snapshot, then render one

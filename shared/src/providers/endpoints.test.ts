@@ -1,10 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-	providerBaseUrlProblem,
-	providerEndpoint,
-	providerModelsEndpoint,
-} from "./provider-endpoints";
+import { providerBaseUrlProblem, providerEndpoint, providerModelsEndpoint } from "./endpoints";
 
 describe("provider model-list endpoints", () => {
 	test("matches commandcode's documented paths", () => {

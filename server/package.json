@@ -12,6 +12,7 @@
 	},
 	"scripts": {
 		"build": "tsc",
+		"api:export": "bun run scripts/export-api.ts",
 		"dev": "bun --watch run src/main.ts",
 		"type-check": "tsc --noEmit",
 		"test": "bun test"

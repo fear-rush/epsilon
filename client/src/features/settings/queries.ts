@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { settingsKeys } from "@/api/keys";
-import { fetchSettings } from "@/lib/api";
+import { fetchSettings } from "@/api/endpoints";
 
 /**
  * The settings snapshot. Sections share one query key, so the page loads it

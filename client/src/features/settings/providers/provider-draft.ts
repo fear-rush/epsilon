@@ -14,7 +14,7 @@ import type {
 	ProviderModelInput,
 	ProviderTestInput,
 	ReasoningCompat,
-} from "shared";
+} from "@/api/types";
 
 /**
  * Base UI's Select reads the empty string as "nothing selected", so the row that

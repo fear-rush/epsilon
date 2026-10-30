@@ -2,12 +2,12 @@
  * The two optional groups under an MCP server's form: what the server does in
  * this project, and the keys the form preserves without editing.
  */
-import type { McpServerDetail } from "shared";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { SettingsBlock, SettingsGroup } from "@/features/settings/kit/settings-section";
+import type { McpServerDetail } from "@/api/types";
 
 /** A global server's state in this project: its override, or the absence of one. */
 export function McpProjectGroup({
