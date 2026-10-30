@@ -38,20 +38,24 @@ const pairsOf = (rows: PairRow[]): Record<string, string> | undefined => {
 	return Object.fromEntries(filled.map((row) => [row.key.trim(), row.value]));
 };
 
-export const draftOf = (detail: McpServerDetail | undefined, scope: McpScope): McpDraft => ({
-	name: detail?.name ?? "",
-	scope,
-	transport: detail?.transport ?? "stdio",
-	command: detail?.command ?? "",
-	args: (detail?.args ?? []).join("\n"),
-	env: rowsOf(detail?.envKeys ?? []),
-	cwd: detail?.cwd ?? "",
-	url: detail?.url ?? "",
-	headers: rowsOf(detail?.headerKeys ?? []),
-	description: detail?.description ?? "",
-	exposure: detail?.exposure ?? "codemode",
-	timeout: detail?.timeout !== undefined ? String(detail.timeout) : "",
-});
+/** A new server, or an invalid entry (which has no fields to read), starts from the name alone. */
+export const draftOf = (detail: McpServerDetail | undefined, scope: McpScope): McpDraft => {
+	const server = detail?.kind === "server" ? detail : undefined;
+	return {
+		name: detail?.name ?? "",
+		scope,
+		transport: server?.transport ?? "stdio",
+		command: server?.command ?? "",
+		args: (server?.args ?? []).join("\n"),
+		env: rowsOf(server?.envKeys ?? []),
+		cwd: server?.cwd ?? "",
+		url: server?.url ?? "",
+		headers: rowsOf(server?.headerKeys ?? []),
+		description: server?.description ?? "",
+		exposure: server?.exposure ?? "codemode",
+		timeout: server?.timeout !== undefined ? String(server.timeout) : "",
+	};
+};
 
 /** A blank value on a stored row keeps it; the server applies that. */
 export const inputOf = (draft: McpDraft): McpServerInput => {

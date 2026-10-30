@@ -2,7 +2,7 @@
  * What the MCP panel reads and writes. MCP servers live in two files: the agent
  * home's `mcp.json` and this deployment's `<project>/.pi/mcp.json`. pi reads the
  * project file because the embedded engine starts trusted
- * (docs/reference/pi-sdk.md), and a project entry replaces or overrides a global
+ * (docs/pi-sdk.md), and a project entry replaces or overrides a global
  * one of its name. Settings shows both, as pi resolves them.
  *
  * Reads turn both documents into the list and one server's detail, following
@@ -28,41 +28,81 @@ import {
 	stringMapOf,
 	targetOf,
 } from "./domain";
-import type { LoadedEntry } from "./domain";
+import type { McpServer } from "./domain";
 import { mcpDocument } from "./store";
 import type { McpInProjectInput, McpServerDetail, McpServerInput, McpServerView } from "./contract";
 
-const toView = (entry: LoadedEntry): McpServerView => {
-	const view: McpServerView = {
-		name: entry.name,
-		scope: entry.scope,
-		target: "",
-		enabled: true,
-	};
-	if (entry.overrideKeys !== undefined) view.overrideKeys = entry.overrideKeys;
-	if (!("entry" in entry)) {
-		view.invalid = entry.problem;
-		view.enabled = entry.enabled ?? true;
-		return view;
-	}
+type Connectable = Extract<McpServer, { kind: "server" | "override" }>;
+
+/** What a row shows of an entry pi can connect; an unset key is `undefined` and JSON drops it. */
+const connectableFields = (entry: Connectable) => {
 	const config = entry.config;
-	view.target = targetOf(config);
-	view.enabled = config.enabled !== false;
-	view.transport = entry.transport;
-	if (config.description !== undefined) view.description = config.description;
-	if (config.exposure !== undefined) view.exposure = config.exposure;
-	if (config.timeout !== undefined) view.timeout = config.timeout;
-	if (entry.overrideEnabled !== undefined) view.overrideEnabled = entry.overrideEnabled;
-	if (entry.replacesGlobal === true) view.replacesGlobal = true;
-	if (entry.replacedByProject === true) view.replacedByProject = true;
-	if (entry.overriddenByProject === true) view.overriddenByProject = true;
-	return view;
+	return {
+		name: entry.name,
+		target: targetOf(config),
+		transport: entry.transport,
+		enabled: config.enabled !== false,
+		description: config.description,
+		exposure: config.exposure,
+		timeout: config.timeout,
+	};
+};
+
+type NotServer = Extract<McpServer, { kind: "override" | "invalid" }>;
+
+/** An override or an invalid entry: the same in the list and in the detail. */
+const toRestView = (entry: NotServer): Exclude<McpServerView, { kind: "server" }> =>
+	entry.kind === "override"
+		? {
+				kind: "override",
+				scope: "project",
+				...connectableFields(entry),
+				overrideKeys: entry.keys,
+				overrideEnabled: entry.enabled,
+			}
+		: {
+				kind: "invalid",
+				name: entry.name,
+				scope: entry.scope,
+				problem: entry.problem,
+				enabled: entry.enabled,
+				overrideKeys: entry.overrideKeys,
+			};
+
+const toView = (entry: McpServer): McpServerView =>
+	entry.kind === "server"
+		? {
+				kind: "server",
+				scope: entry.scope,
+				...connectableFields(entry),
+				relation: entry.relation,
+			}
+		: toRestView(entry);
+
+const toDetail = (entry: McpServer): McpServerDetail => {
+	if (entry.kind !== "server") return toRestView(entry);
+	const config = entry.config;
+	return {
+		kind: "server",
+		scope: entry.scope,
+		...connectableFields(entry),
+		relation: entry.relation,
+		command: config.command,
+		args: config.args,
+		cwd: config.cwd,
+		url: config.url,
+		authProvider: config.auth?.provider,
+		envKeys: Object.keys(stringMapOf(config.env)),
+		headerKeys: Object.keys(stringMapOf(config.headers)),
+		oauthKeys: Object.keys(config.oauth ?? {}),
+		toolExposureKeys: Object.keys(config.toolExposure ?? {}),
+	};
 };
 
 async function loadEntries(
 	home: AgentHome,
 	projectDir: string,
-): Promise<{ entries: LoadedEntry[]; problems: string[] }> {
+): Promise<{ entries: McpServer[]; problems: string[] }> {
 	const [globalDocument, projectDocument] = await Promise.all([
 		mcpDocument("global", home, projectDir).read(),
 		mcpDocument("project", home, projectDir).read(),
@@ -106,26 +146,7 @@ export async function readMcpServer(
 ): Promise<McpServerDetail | undefined> {
 	const { entries } = await loadEntries(home, projectDir);
 	const entry = entries.find((candidate) => candidate.scope === scope && candidate.name === name);
-	if (entry === undefined) return undefined;
-	const detail: McpServerDetail = {
-		...toView(entry),
-		envKeys: [],
-		headerKeys: [],
-		oauthKeys: [],
-		toolExposureKeys: [],
-	};
-	if (!("entry" in entry)) return detail;
-	const config = entry.config;
-	if (config.command !== undefined) detail.command = config.command;
-	if (config.args !== undefined) detail.args = config.args;
-	if (config.cwd !== undefined) detail.cwd = config.cwd;
-	if (config.url !== undefined) detail.url = config.url;
-	if (config.auth !== undefined) detail.authProvider = config.auth.provider;
-	detail.envKeys = Object.keys(stringMapOf(config.env));
-	detail.headerKeys = Object.keys(stringMapOf(config.headers));
-	detail.oauthKeys = Object.keys(config.oauth ?? {});
-	detail.toolExposureKeys = Object.keys(config.toolExposure ?? {});
-	return detail;
+	return entry === undefined ? undefined : toDetail(entry);
 }
 
 /**

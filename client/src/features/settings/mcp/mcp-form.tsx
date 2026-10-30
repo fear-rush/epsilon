@@ -1,8 +1,8 @@
 /**
  * One MCP server, read and written into the file its scope names. The form holds
  * a draft so nothing is written until Save; a new server becomes a real route
- * after its first save. A project entry that only overrides a global server is
- * not editable as a server: it is shown by `McpOverrideForm` instead.
+ * after its first save. An override (`kind: "override"`) is not editable as a
+ * server: `McpOverrideForm` shows it instead.
  */
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
@@ -26,6 +26,7 @@ import { draftOf, inputOf } from "./mcp-draft";
 import { McpFields } from "./mcp-fields";
 import { McpKeptGroup, McpProjectGroup } from "./mcp-form-groups";
 import { McpOverrideForm } from "./mcp-override";
+import { isOverrideSubject } from "./kinds";
 import { McpTargetFields } from "./mcp-target";
 import { mcpFieldErrors, mcpFields } from "./mcp-validation";
 import type { McpDraft } from "./mcp-draft";
@@ -46,9 +47,7 @@ export function McpForm({
 	detail: McpServerDetail | undefined;
 	scope: McpScope;
 }) {
-	if (detail?.overrideKeys !== undefined) {
-		return <McpOverrideForm detail={detail} />;
-	}
+	if (isOverrideSubject(detail)) return <McpOverrideForm detail={detail} />;
 	return <McpServerForm detail={detail} scope={scope} />;
 }
 
@@ -67,6 +66,8 @@ function McpServerForm({
 		fields: mcpFields,
 	});
 	const { draft, update, errors, setErrors } = form;
+	const server = detail?.kind === "server" ? detail : undefined;
+	const relation = server?.relation;
 
 	/** Names already used in this file, so a new server cannot replace one by accident. */
 	const taken = new Set(
@@ -113,7 +114,8 @@ function McpServerForm({
 		save.mutate(input);
 	};
 	const overrideLink =
-		detail !== undefined && (detail.overriddenByProject || detail.replacedByProject) ? (
+		detail !== undefined &&
+		(relation === "overridden-by-project" || relation === "replaced-by-project") ? (
 			<Link
 				to="/settings/mcp/$scope/$name"
 				params={{ scope: "project", name: detail.name }}
@@ -144,17 +146,17 @@ function McpServerForm({
 				/>
 			}
 		>
-			{detail?.invalid !== undefined && (
+			{detail?.kind === "invalid" && (
 				<Alert variant="destructive">
 					<TriangleAlertIcon />
 					<AlertTitle>pi skips this entry</AlertTitle>
 					<AlertDescription>
-						{detail.invalid} The switch in the list fixes only <code>enabled</code>; any other key
+						{detail.problem} The switch in the list fixes only <code>enabled</code>; any other key
 						has to be fixed in the file.
 					</AlertDescription>
 				</Alert>
 			)}
-			{detail?.replacedByProject === true && (
+			{relation === "replaced-by-project" && (
 				<Alert>
 					<AlertTitle>Replaced in this project</AlertTitle>
 					<AlertDescription>
@@ -163,7 +165,7 @@ function McpServerForm({
 					</AlertDescription>
 				</Alert>
 			)}
-			{detail?.overriddenByProject === true && (
+			{relation === "overridden-by-project" && (
 				<Alert>
 					<AlertTitle>Changed in this project</AlertTitle>
 					<AlertDescription>
@@ -189,20 +191,20 @@ function McpServerForm({
 				</Alert>
 			)}
 
-			{detail !== undefined && detail.scope === "global" && (
+			{server !== undefined && server.scope === "global" && (
 				<McpProjectGroup
-					detail={detail}
+					detail={server}
 					projectDir={settings.data?.projectDir}
 					pending={inProject.isPending}
 					error={inProject.error}
-					onAction={(value) => inProject.mutate({ name: detail.name, value })}
+					onAction={(value) => inProject.mutate({ name: server.name, value })}
 				/>
 			)}
 
-			{detail !== undefined &&
-				(detail.oauthKeys.length > 0 ||
-					detail.authProvider !== undefined ||
-					detail.toolExposureKeys.length > 0) && <McpKeptGroup detail={detail} />}
+			{server !== undefined &&
+				(server.oauthKeys.length > 0 ||
+					server.authProvider !== undefined ||
+					server.toolExposureKeys.length > 0) && <McpKeptGroup detail={server} />}
 
 			{save.error !== null && (
 				<Alert variant="destructive">

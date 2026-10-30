@@ -363,24 +363,59 @@ export interface components {
             id: string;
             name: string;
         };
-        McpServerView: {
-            name: string;
+        McpServerView: components["schemas"]["McpServerEntry"] | components["schemas"]["McpOverrideEntry"] | components["schemas"]["McpInvalidEntry"];
+        McpServerEntry: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "server";
             /** @enum {string} */
             scope: "global" | "project";
-            /** @enum {string} */
-            transport?: "stdio" | "http";
+            name: string;
             target: string;
+            /** @enum {string} */
+            transport: "stdio" | "http";
             description?: string;
             enabled: boolean;
             /** @enum {string} */
             exposure?: "codemode" | "deferred" | "direct" | "hidden";
             timeout?: number;
-            invalid?: string;
-            overrideKeys?: ("enabled" | "exposure" | "toolExposure")[];
+            /** @enum {string} */
+            relation?: "replaces-global" | "replaced-by-project" | "overridden-by-project";
+        };
+        McpOverrideEntry: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "override";
+            /** @enum {string} */
+            scope: "project";
+            name: string;
+            target: string;
+            /** @enum {string} */
+            transport: "stdio" | "http";
+            description?: string;
+            enabled: boolean;
+            /** @enum {string} */
+            exposure?: "codemode" | "deferred" | "direct" | "hidden";
+            timeout?: number;
+            overrideKeys: ("enabled" | "exposure" | "toolExposure")[];
             overrideEnabled?: boolean;
-            replacedByProject?: boolean;
-            overriddenByProject?: boolean;
-            replacesGlobal?: boolean;
+        };
+        McpInvalidEntry: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "invalid";
+            name: string;
+            /** @enum {string} */
+            scope: "global" | "project";
+            problem: string;
+            enabled: boolean;
+            overrideKeys?: ("enabled" | "exposure" | "toolExposure")[];
         };
         SkillView: {
             name: string;
@@ -518,7 +553,8 @@ export interface components {
                 [key: string]: components["schemas"]["ModelOverride"];
             };
         };
-        McpServerDetail: components["schemas"]["McpServerView"] & {
+        McpServerDetail: components["schemas"]["McpServerEntryDetail"] | components["schemas"]["McpOverrideEntry"] | components["schemas"]["McpInvalidEntry"];
+        McpServerEntryDetail: components["schemas"]["McpServerEntry"] & {
             command?: string;
             args?: string[];
             envKeys: string[];
@@ -528,6 +564,12 @@ export interface components {
             oauthKeys: string[];
             authProvider?: string;
             toolExposureKeys: string[];
+        } & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "server";
         };
         McpServerInput: {
             name: string;

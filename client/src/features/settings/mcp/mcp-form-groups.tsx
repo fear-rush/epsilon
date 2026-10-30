@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { SettingsBlock, SettingsGroup } from "@/features/settings/kit/settings-section";
-import type { McpServerDetail } from "@/api/types";
+import type { McpServerEntryDetail } from "./kinds";
 
 /** A global server's state in this project: its override, or the absence of one. */
 export function McpProjectGroup({
@@ -17,19 +17,20 @@ export function McpProjectGroup({
 	error,
 	onAction,
 }: {
-	detail: McpServerDetail;
+	detail: McpServerEntryDetail;
 	projectDir: string | undefined;
 	pending: boolean;
 	error: Error | null;
 	onAction: (value: "inherit" | "on" | "off") => void;
 }) {
-	const overridden = detail.overriddenByProject === true;
+	const overridden = detail.relation === "overridden-by-project";
+	const replaced = detail.relation === "replaced-by-project";
 	return (
 		<SettingsGroup title="This project" description={projectDir}>
 			<SettingsBlock>
 				<div className="flex flex-wrap items-center justify-between gap-3">
 					<p className="text-sm text-muted-foreground">
-						{detail.replacedByProject === true
+						{replaced
 							? "This project's own server replaces this one."
 							: overridden
 								? "This project changes this server with an override in its .pi/mcp.json."
@@ -37,7 +38,7 @@ export function McpProjectGroup({
 									? "Sessions in this project connect this server."
 									: "This server is off in its own file, so sessions here skip it too."}
 					</p>
-					{detail.replacedByProject !== true && (
+					{!replaced && (
 						<div className="flex items-center gap-2">
 							<Button
 								type="button"
@@ -67,7 +68,7 @@ export function McpProjectGroup({
 }
 
 /** OAuth, `auth` and `toolExposure`: named, never sent with their values, kept on save. */
-export function McpKeptGroup({ detail }: { detail: McpServerDetail }) {
+export function McpKeptGroup({ detail }: { detail: McpServerEntryDetail }) {
 	return (
 		<SettingsGroup title="Kept as written">
 			<SettingsBlock>

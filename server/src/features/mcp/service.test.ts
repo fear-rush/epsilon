@@ -4,12 +4,12 @@
  * replaces a file it cannot parse. These checks read the file back.
  */
 import { describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { agentHome } from "../../platform/agent-home";
-import { setMcpServerEnabled, writeMcpServer } from "./service";
+import { listMcpServers, readMcpServer, setMcpServerEnabled, writeMcpServer } from "./service";
 
 const scratch = async () => {
 	const home = agentHome(await mkdtemp(join(tmpdir(), "epsilon-mcp-")));
@@ -97,5 +97,73 @@ describe("mcp writes", () => {
 			}),
 		).rejects.toThrow("mcp.json cannot be written");
 		expect(await readFile(home.mcpFile, "utf8")).toBe("{ nope");
+	});
+});
+
+describe("mcp reads", () => {
+	const seed = async () => {
+		const { home, projectDir } = await scratch();
+		await writeFile(
+			home.mcpFile,
+			JSON.stringify({
+				mcpServers: {
+					files: { command: "npx", args: ["a"], env: { TOKEN: "secret" }, exposure: "direct" },
+					docs: { url: "https://example.test/mcp", headers: { Authorization: "x" } },
+					broken: { type: "sse", url: "https://example.test", enabled: false },
+				},
+			}),
+		);
+		await mkdir(join(projectDir, ".pi"));
+		await writeFile(
+			join(projectDir, ".pi", "mcp.json"),
+			JSON.stringify({ mcpServers: { files: { enabled: false }, extra: { command: "x" } } }),
+		);
+		return { home, projectDir };
+	};
+
+	test("the list carries each kind and relation, with no value of a secret", async () => {
+		const { home, projectDir } = await seed();
+		const { servers } = await listMcpServers(home, projectDir);
+		const byKey = Object.fromEntries(
+			servers.map((server) => [`${server.scope}/${server.name}`, server]),
+		);
+		expect(byKey["global/files"]).toMatchObject({
+			kind: "server",
+			relation: "overridden-by-project",
+			target: "npx a",
+			enabled: true,
+		});
+		expect(byKey["project/files"]).toMatchObject({
+			kind: "override",
+			overrideKeys: ["enabled"],
+			overrideEnabled: false,
+			enabled: false,
+			target: "npx a",
+		});
+		expect(byKey["global/broken"]).toMatchObject({
+			kind: "invalid",
+			enabled: false,
+		});
+		expect(byKey["global/docs"]).toMatchObject({ kind: "server", transport: "http" });
+		expect(byKey["project/extra"]).toMatchObject({ kind: "server", scope: "project" });
+		expect(JSON.stringify(servers)).not.toContain("secret");
+	});
+
+	test("the detail of a server names its stored keys, an override and an invalid entry are their row", async () => {
+		const { home, projectDir } = await seed();
+		expect(await readMcpServer(home, projectDir, "global", "files")).toMatchObject({
+			kind: "server",
+			command: "npx",
+			envKeys: ["TOKEN"],
+			exposure: "direct",
+		});
+		expect(await readMcpServer(home, projectDir, "global", "docs")).toMatchObject({
+			headerKeys: ["Authorization"],
+		});
+		const override = await readMcpServer(home, projectDir, "project", "files");
+		expect(override?.kind).toBe("override");
+		expect(override).not.toHaveProperty("envKeys");
+		expect((await readMcpServer(home, projectDir, "global", "broken"))?.kind).toBe("invalid");
+		expect(await readMcpServer(home, projectDir, "global", "none")).toBeUndefined();
 	});
 });

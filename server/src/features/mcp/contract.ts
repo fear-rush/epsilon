@@ -7,6 +7,7 @@ import {
 	mcpExposureSchema,
 	mcpNameSchema,
 	mcpOverrideKeySchema,
+	mcpRelationSchema,
 	mcpScopeSchema,
 	mcpTransportSchema,
 } from "shared";
@@ -75,32 +76,57 @@ const mcpInProjectInputSchema = z
 
 export type McpInProjectInput = z.infer<typeof mcpInProjectInputSchema>;
 
-export const mcpServerViewSchema = z
+/** What every row shows for an entry pi can connect, resolved the way pi reads it. */
+const mcpConnectableFields = {
+	name: z.string(),
+	/** The command for stdio, the URL for HTTP. */
+	target: z.string(),
+	transport: mcpTransportSchema,
+	description: z.string().optional(),
+	/** Whether the server connects as pi reads it: its own `enabled`, with a project override applied. */
+	enabled: z.boolean(),
+	exposure: mcpExposureSchema.optional(),
+	timeout: z.number().optional(),
+};
+
+const mcpServerEntrySchema = z
 	.object({
+		kind: z.literal("server"),
+		scope: mcpScopeSchema,
+		...mcpConnectableFields,
+		/** The other file's entry of this name, when there is one. */
+		relation: mcpRelationSchema.optional(),
+	})
+	.openapi("McpServerEntry");
+
+/** A project entry that only changes keys of the global server of its name. */
+const mcpOverrideEntrySchema = z
+	.object({
+		kind: z.literal("override"),
+		scope: z.literal("project"),
+		...mcpConnectableFields,
+		overrideKeys: z.array(mcpOverrideKeySchema),
+		/** What the override sets `enabled` to, when it sets it. */
+		overrideEnabled: z.boolean().optional(),
+	})
+	.openapi("McpOverrideEntry");
+
+/** pi skips this entry. It never connects, but it can be removed. */
+const mcpInvalidEntrySchema = z
+	.object({
+		kind: z.literal("invalid"),
 		name: z.string(),
 		scope: mcpScopeSchema,
-		/** Absent when the entry is malformed, so nothing says how pi would connect it. */
-		transport: mcpTransportSchema.optional(),
-		/** The command for stdio, the URL for HTTP. */
-		target: z.string(),
-		description: z.string().optional(),
-		/** Whether the server connects as pi reads it: its own `enabled`, with a project override applied. */
+		problem: z.string(),
+		/** The entry's own `enabled`, so a row still shows Off while pi skips it. */
 		enabled: z.boolean(),
-		exposure: mcpExposureSchema.optional(),
-		timeout: z.number().optional(),
-		/** Why pi skips this entry. It never connects, but it can be removed. */
-		invalid: z.string().optional(),
-		/** A project entry that only changes these keys of the global server of its name. */
+		/** Set when the entry was meant as an override of a global server. */
 		overrideKeys: z.array(mcpOverrideKeySchema).optional(),
-		/** What that override sets `enabled` to, when it sets it. */
-		overrideEnabled: z.boolean().optional(),
-		/** This global server is replaced by the project's own entry of the same name. */
-		replacedByProject: z.boolean().optional(),
-		/** This global server's `enabled`, `exposure` or `toolExposure` is changed by a project override. */
-		overriddenByProject: z.boolean().optional(),
-		/** This project entry replaces a global server of the same name. */
-		replacesGlobal: z.boolean().optional(),
 	})
+	.openapi("McpInvalidEntry");
+
+export const mcpServerViewSchema = z
+	.discriminatedUnion("kind", [mcpServerEntrySchema, mcpOverrideEntrySchema, mcpInvalidEntrySchema])
 	.openapi("McpServerView");
 
 export type McpServerView = z.infer<typeof mcpServerViewSchema>;
@@ -109,9 +135,10 @@ export type McpServerView = z.infer<typeof mcpServerViewSchema>;
  * One server, editable. The transport still decides which target the write uses;
  * environment and header values have no place here, so only their names travel.
  * The `oauth*`, `authProvider` and `toolExposureKeys` fields are shown read-only:
- * the form keeps them, and the file is where they are edited.
+ * the form keeps them, and the file is where they are edited. An override and an
+ * invalid entry have nothing to edit, so their detail is their row.
  */
-const mcpServerDetailSchema = mcpServerViewSchema
+const mcpServerEntryDetailSchema = mcpServerEntrySchema
 	.extend({
 		command: z.string().optional(),
 		args: z.array(z.string()).optional(),
@@ -124,6 +151,14 @@ const mcpServerDetailSchema = mcpServerViewSchema
 		authProvider: z.string().optional(),
 		toolExposureKeys: z.array(z.string()),
 	})
+	.openapi("McpServerEntryDetail");
+
+const mcpServerDetailSchema = z
+	.discriminatedUnion("kind", [
+		mcpServerEntryDetailSchema,
+		mcpOverrideEntrySchema,
+		mcpInvalidEntrySchema,
+	])
 	.openapi("McpServerDetail");
 
 export type McpServerDetail = z.infer<typeof mcpServerDetailSchema>;

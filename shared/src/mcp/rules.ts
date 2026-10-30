@@ -29,3 +29,17 @@ export const mcpNameSchema = z
 	.string()
 	.min(1)
 	.regex(/^[A-Za-z0-9_-]+$/, "Use letters, digits, dashes and underscores");
+
+/**
+ * How a global server and the project entry of its name relate. The global side
+ * is `replaced-by-project` (the project defines its own server) or
+ * `overridden-by-project` (the project changes some keys); the project side of a
+ * replacement is `replaces-global`.
+ */
+export const mcpRelationSchema = z.enum([
+	"replaces-global",
+	"replaced-by-project",
+	"overridden-by-project",
+]);
+
+export type McpRelation = z.infer<typeof mcpRelationSchema>;
