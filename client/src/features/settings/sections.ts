@@ -1,5 +1,5 @@
 /**
- * The settings sections, written once. The left navigation and the deployment
+ * The settings sections, written once. The left navigation and the app
  * menu both map this list, so a section cannot exist in one and be missing from
  * the other.
  */
@@ -22,7 +22,7 @@ export type SettingsSection = {
 
 export const SETTINGS_GROUPS: { label: string; items: SettingsSection[] }[] = [
 	{
-		label: "Deployment",
+		label: "App",
 		items: [
 			{ to: "/settings/general", label: "General", icon: SettingsIcon },
 			{ to: "/settings/providers", label: "Providers", icon: PlugIcon },

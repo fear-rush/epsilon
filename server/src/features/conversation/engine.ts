@@ -25,9 +25,9 @@ import type {
 
 import { discussExtension } from "./extensions/discuss";
 import { permissionExtension } from "./extensions/permission";
-import { createUiContext } from "./ui-context";
 import type { AgentHome } from "../../platform/agent-home";
-import type { UiHost } from "./ui-bridge";
+import { createUiContext } from "./ui-context";
+import type { UiHost } from "./ui-context";
 
 /**
  * The CLI's own built-in extension set, registered the way the CLI registers it

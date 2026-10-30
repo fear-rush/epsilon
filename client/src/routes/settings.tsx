@@ -4,7 +4,7 @@
  */
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 
-import { SettingsShell } from "@/features/settings/shell/settings-shell";
+import { SettingsShell } from "@/features/settings/settings-shell";
 
 export const Route = createFileRoute("/settings")({
 	component: function SettingsLayout() {

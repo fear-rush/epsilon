@@ -8,8 +8,14 @@
 import { z } from "zod";
 
 import type { SnapshotMessage } from "../conversation/state";
-import { dialogAnswerSchema, dialogQuestionSchema, extensionDisplaySchema } from "../extui";
+import { dialogAnswerSchema, dialogQuestionSchema, extensionDisplaySchema } from "./extui";
 import type { JsonAgentSessionEvent } from "../pi";
+
+/**
+ * Bumped whenever a frame's shape changes. The client sends it in `hello` and
+ * reloads on a mismatch instead of guessing.
+ */
+export const PROTOCOL_VERSION = 6;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([

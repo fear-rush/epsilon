@@ -682,7 +682,7 @@ interface operations {
 		};
 		requestBody?: never;
 		responses: {
-			/** The configuration this deployment runs on */
+			/** The configuration Epsilon runs on */
 			200: {
 				headers: {
 					[name: string]: unknown;
@@ -713,7 +713,7 @@ interface operations {
 				};
 				content?: never;
 			};
-			/** The model is not one this deployment can run */
+			/** The model is not one Epsilon can run */
 			400: {
 				headers: {
 					[name: string]: unknown;

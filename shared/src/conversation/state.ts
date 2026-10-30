@@ -2,7 +2,7 @@
  * What the browser shows. Built only from socket frames, so replaying a fixture
  * twice produces the same state.
  */
-import type { DialogQuestion } from "../extui";
+import type { DialogQuestion } from "../protocol/extui";
 import type { JsonAgentSessionEvent } from "../pi";
 import type { SnapshotCommand, SnapshotModel, ThinkingLevel } from "../protocol/frames";
 

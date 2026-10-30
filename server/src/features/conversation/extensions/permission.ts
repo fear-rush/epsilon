@@ -1,5 +1,5 @@
 /**
- * Epsilon's permission guard, shipped as an inline extension so a deployment gets
+ * Epsilon's permission guard, shipped as an inline extension so Epsilon gets
  * a policy without installing a file (docs/DECISIONS.md,
  * Default extensions). Ported from the operator extension of the same name: the modes, the
  * flag, the command and the session entry are unchanged, so an operator whose own

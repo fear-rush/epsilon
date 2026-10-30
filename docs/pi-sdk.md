@@ -242,21 +242,21 @@ An embedded engine does not run that resolution. `SettingsManager.create(cwd,
 agentDir)` starts at `projectTrusted = true` (`dist/core/settings-manager.js`), and
 nothing in `createAgentSession()` changes it. Epsilon therefore loads
 `.pi/settings.json`, `.pi/mcp.json` and the other project resources for whoever
-owns the deployment's project folder, whatever `trust.json` says;
-`defaultProjectTrust` is inert there. That follows from one deployment owning one
-project: the folder is chosen at deploy time. The panel states it instead of
+owns Epsilon's project folder, whatever `trust.json` says;
+`defaultProjectTrust` is inert there. That follows from one Epsilon owning one
+project: the folder is chosen at startup. The panel states it instead of
 pretending a decision exists.
 
 The SDK does expose `ProjectTrustStore` and `SettingsManager.setProjectTrusted`,
 so a host that wants pi's CLI behavior can implement it. This repository does not;
-trust decisions stay in a terminal inside the deployment
+trust decisions stay in a terminal using the same agent home
 ([DECISIONS.md](DECISIONS.md), Configure in the dashboard).
 
 See Traps: the embedded engine always trusts.
 
 ## The CLI, for what an embedding host does not do
 
-These run as commands in a terminal inside the deployment. The dashboard does not
+These run as commands in a terminal using the same agent home. The dashboard does not
 shell out to them.
 
 | Command                                                  | What it does                                                                                              |
@@ -284,7 +284,7 @@ Turborepo or the runtime.
   command and again at `agent_settled`.
 - **`toJsonEvent` is not exported.** `package.json` exports only `.` and
   `./rpc-entry`; `dist/modes/json-event.js` is private. The host carries its own
-  copy of the transform in `server/src/platform/pi/`.
+  copy of the transform in `server/src/features/conversation/engine.ts`.
 - **The embedded engine always trusts the project folder.** `SettingsManager.create`
   starts with `projectTrusted = true` and the SDK never runs the CLI's
   `resolveProjectTrusted()`, so `.pi/settings.json` and `.pi/mcp.json` load with an
@@ -304,7 +304,7 @@ Turborepo or the runtime.
   accepts `/messages` or `/responses` needs that API on its own entry, and newer
   Claude models need adaptive thinking metadata. Import both per model.
 - **Installed packages are bound to one platform.** Native optional dependencies are
-  resolved at install time. Install inside the deployment that runs them; config
+  resolved at install time. Install on the machine that runs them; config
   files are portable, dependency trees are not.
 - **Turborepo strict env mode drops undeclared variables.** A variable a task needs
   (`EPSILON_AGENT_HOME`, `EPSILON_PROJECT`) must be named in `turbo.json`, or

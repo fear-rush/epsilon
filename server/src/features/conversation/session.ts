@@ -1,7 +1,7 @@
 /**
  * One live engine session and the state the browser cannot rebuild by itself.
  * The transcript is pi's session file; the dialogs and display state live in
- * `dialogs.ts`, and the fan-out to tabs in `frames.ts`. A command is a method
+ * `dialogs.ts`, and the fan-out to tabs in `SessionFrames` below. A command is a method
  * call on the embedded `AgentSession` (docs/DECISIONS.md, Embedded engine); no process speaks to this one.
  */
 import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
@@ -11,10 +11,50 @@ import type { AgentHome } from "../../platform/agent-home";
 import { Dialogs } from "./dialogs";
 import type { AnswerOutcome, FrameSink } from "./dialogs";
 import { createEngine, toJsonEvent } from "./engine";
-import { SessionFrames } from "./frames";
-import { readModelsFrom } from "./models";
-import { buildSnapshot } from "./snapshot";
-import { UiBridge } from "./ui-bridge";
+import { buildSnapshot, readModelsFrom } from "./snapshot";
+import { UiBridge } from "./ui-context";
+
+/** A session with no tab keeps the last few frames worth showing on the next one. */
+const MAX_DEFERRED = 5;
+
+/**
+ * The tabs watching one session. The session asks how many remain to decide its
+ * idle lifetime, so this is the only place that counts them.
+ */
+export class SessionFrames {
+	private readonly sinks = new Set<FrameSink>();
+	private readonly deferred: ServerFrame[] = [];
+
+	/** Called after every change, so the session can cancel or start its idle timer. */
+	constructor(private readonly changed: () => void) {}
+
+	get count(): number {
+		return this.sinks.size;
+	}
+
+	add(sink: FrameSink): void {
+		this.sinks.add(sink);
+		this.changed();
+	}
+
+	remove(sink: FrameSink): void {
+		this.sinks.delete(sink);
+		this.changed();
+	}
+
+	/** A frame nobody could receive yet; kept for the next subscriber. */
+	defer(frame: ServerFrame): void {
+		if (this.deferred.length < MAX_DEFERRED) this.deferred.push(frame);
+	}
+
+	takeDeferred(): ServerFrame[] {
+		return this.deferred.splice(0);
+	}
+
+	emit(frame: ServerFrame): void {
+		for (const sink of this.sinks) sink(frame);
+	}
+}
 
 /**
  * How long a session with no tab stays alive. A reload, a route change or a

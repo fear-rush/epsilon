@@ -1,10 +1,10 @@
 # Epsilon
 
-A self-hosted web workspace for the `pi` coding agent. It runs the agent in its own
-deployment, keeps the agent's home (config, credentials, skills, packages, sessions)
-there, and puts it in a browser: continue sessions, read runs, answer permission
+A local web workspace for the `pi` coding agent. It runs the agent in its own
+process, keeps the agent's home (config, credentials, skills, packages, sessions),
+and puts it in a browser: continue sessions, read runs, answer permission
 prompts, and configure providers, MCP servers, skills and packages in Settings. Built
-for one operator behind a private network or tunnel; there are no accounts.
+for one operator on one machine; there are no accounts.
 
 ## Run it
 
@@ -28,6 +28,5 @@ bun run build && bun run type-check && bun run lint && bun run format:check && b
 
 - [AGENTS.md](AGENTS.md): workspaces, commands, rules, how to add a feature
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): the map
-- [docs/DEPLOY.md](docs/DEPLOY.md): running it in a container
 - [docs/pi-sdk.md](docs/pi-sdk.md): what pi exposes, and its traps
 - [docs/DECISIONS.md](docs/DECISIONS.md): decisions and the options rejected

@@ -35,6 +35,22 @@ one aggregator: it composes the configuration features into a single snapshot an
 owns no data of its own. `main.ts` is the only reader of `process.env`; it chooses
 the agent home and project once and passes them in through `deps`.
 
+## Files and folders
+
+There is no line limit. Split by meaning:
+
+- A file is one concept read top to bottom. Private helpers and subcomponents stay
+  in it. Past about 400–500 lines, ask whether it is still one concept.
+- A file earns its own place when it is a public surface (`index.ts`, `contract.ts`),
+  an I/O boundary (`store.ts`), pure logic tested on its own, something with its own
+  state (a hook, a dialog), or code used by two or more modules. Otherwise it lives
+  in its only consumer.
+- Extract on the third use, not the first. Lift to `settings/kit/`, `lib/` or
+  `platform/` when a second feature needs it, never by reaching into a sibling.
+- What changes together lives together. No folder for one file; a subfolder needs
+  about four siblings with a shared role.
+- Routes only wire: params and one feature component.
+
 ## Two boundaries
 
 - **REST** is described by the server's generated OpenAPI document. The client is

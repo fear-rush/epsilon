@@ -20,8 +20,8 @@
 	"dependencies": {
 		"@earendil-works/pi-coding-agent": "1.4.0",
 		"@hono/zod-openapi": "1.6.3",
-		"@scalar/hono-api-reference": "0.12.11",
-		"hono": "4.13.13",
+		"@scalar/hono-api-reference": "0.12.17",
+		"hono": "4.13.14",
 		"shared": "workspace:*",
 		"zod": "4.6.7"
 	},

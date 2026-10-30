@@ -3,7 +3,7 @@
 	"info": {
 		"title": "epsilon API",
 		"version": "0.0.1",
-		"description": "Local REST surface for sessions and for configuring this deployment."
+		"description": "Local REST surface for sessions and for configuring the agent."
 	},
 	"components": {
 		"schemas": {
@@ -1510,7 +1510,7 @@
 				"description": "Providers, default model, MCP servers, skills and packages from the agent home",
 				"responses": {
 					"200": {
-						"description": "The configuration this deployment runs on",
+						"description": "The configuration Epsilon runs on",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1543,7 +1543,7 @@
 						"description": "pi's settings.json now names this provider and model"
 					},
 					"400": {
-						"description": "The model is not one this deployment can run",
+						"description": "The model is not one Epsilon can run",
 						"content": {
 							"application/json": {
 								"schema": {

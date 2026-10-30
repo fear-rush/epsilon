@@ -1,7 +1,7 @@
 /**
  * Every TanStack Query key, written once. A key lives here so the hook that reads
  * it and the code that invalidates it cannot drift apart. Everything under
- * `settingsKeys.all` is one family: a write to the deployment's configuration
+ * `settingsKeys.all` is one family: a write to the agent's configuration
  * invalidates the whole family by prefix.
  */
 import type { McpScope } from "shared";

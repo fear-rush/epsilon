@@ -1,7 +1,7 @@
 {
 	"name": "epsilon",
 	"version": "0.5.1",
-	"description": "A web dashboard that embeds the pi coding agent for one deployment",
+	"description": "A web dashboard that embeds the pi coding agent for one operator",
 	"license": "MIT",
 	"author": "Muhammad Firas",
 	"workspaces": [
@@ -35,18 +35,18 @@
 	},
 	"dependencies": {},
 	"devDependencies": {
-		"@j178/prek": "0.5.5",
-		"@oxlint/plugins": "1.87.0",
+		"@j178/prek": "0.5.7",
+		"@oxlint/plugins": "1.90.0",
 		"@types/bun": "1.4.4",
-		"knip": "6.43.0",
-		"oxfmt": "0.72.0",
-		"oxlint": "1.87.0",
-		"turbo": "2.11.7",
+		"knip": "6.44.0",
+		"oxfmt": "0.75.0",
+		"oxlint": "1.90.0",
+		"turbo": "2.11.10",
 		"typescript": "7.0.2"
 	},
 	"engines": {
 		"bun": ">=1.4.4",
-		"node": ">=22.22.0"
+		"node": ">=26.13.0"
 	},
 	"packageManager": "bun@1.4.4"
 }

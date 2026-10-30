@@ -1,14 +1,13 @@
 # epsilon
 
 A web dashboard for one user. It embeds the `pi` coding agent SDK in its own process
-and the deployment owns the agent home (config, credentials, extensions, packages,
-sessions). The dashboard and a terminal in the same deployment are one agent, and
+and Epsilon owns the agent home (config, credentials, extensions, packages,
+sessions). The dashboard and a terminal using the same agent home are one agent, and
 Settings configures it there.
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) first, [docs/pi-sdk.md](docs/pi-sdk.md)
-before touching anything pi, [docs/DEPLOY.md](docs/DEPLOY.md) for running it, and
-[docs/DECISIONS.md](docs/DECISIONS.md) for why. Code wins over prose; fix a doc that
-disagrees in the same commit, and never copy code or file lists into a doc.
+before touching anything pi, and [docs/DECISIONS.md](docs/DECISIONS.md) for why. Code wins over
+prose; fix a doc that disagrees in the same commit, and never copy code or file lists into a doc.
 
 ## Workspaces
 
@@ -32,7 +31,7 @@ disagrees in the same commit, and never copy code or file lists into a doc.
 
 ## Invariants
 
-1. Import `@earendil-works/*` only in `server/src/platform/pi/` and
+1. Import `@earendil-works/*` only in `server/src/platform/pi.ts` and
    `server/src/features/conversation/`; `shared/src/pi.ts` for types only.
 2. `shared/` imports no `node:*` and no React. The reducer stays pure.
 3. Do not invent a pi capability. If [pi-sdk.md](docs/pi-sdk.md) does not list it,
@@ -58,10 +57,13 @@ disagrees in the same commit, and never copy code or file lists into a doc.
 1. If both sides run a rule, put it in `shared/src/<feature>/rules.ts`.
 2. Server `features/<name>/`: `contract.ts` (zod), `store.ts`, `service.ts`,
    `routes.ts`, plus `domain.ts` if there is pure logic. Add one `app.route` line in
-   `app.ts`.
+   `server/src/routes.ts`.
 3. `bun run api:generate`.
 4. Client `features/settings/<name>/`, an entry in `sections.ts`, and thin route
    files in `client/src/routes`.
+
+There is no line limit; split files by meaning, as
+[ARCHITECTURE.md, Files and folders](docs/ARCHITECTURE.md#files-and-folders) says.
 
 ## Ask before acting when
 

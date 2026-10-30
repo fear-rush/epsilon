@@ -1,5 +1,5 @@
 /**
- * The one sentence a page shows when the deployment cannot be reached. No icon,
+ * The one sentence a page shows when the server cannot be reached. No icon,
  * no retry button and no duplicate pane: the query reconnects on its own.
  */
 export function OfflineNotice({ message }: { message: string }) {

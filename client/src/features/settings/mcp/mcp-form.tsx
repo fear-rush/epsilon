@@ -1,9 +1,3 @@
-/**
- * One MCP server, read and written into the file its scope names. The form holds
- * a draft so nothing is written until Save; a new server becomes a real route
- * after its first save. An override (`kind: "override"`) is not editable as a
- * server: `McpOverrideForm` shows it instead.
- */
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { TriangleAlertIcon } from "lucide-react";
@@ -13,40 +7,42 @@ import type { McpScope } from "shared";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import { CancelDialog } from "@/features/settings/kit/cancel-dialog";
-import { DeleteDialog } from "@/features/settings/kit/delete-dialog";
+import { CancelDialog } from "@/features/settings/kit/dialogs";
+import { DeleteDialog } from "@/features/settings/kit/dialogs";
 import { FormFooter, FormPage } from "@/features/settings/kit/form-page";
-import { UnsavedChangesBlock } from "@/features/settings/kit/unsaved-changes-block";
+import { UnsavedChangesBlock } from "@/features/settings/kit/dialogs";
 import { useDraftForm } from "@/features/settings/kit/use-draft-form";
-import { useSettingsRefresh } from "@/features/settings/refresh";
+import { useSettingsRefresh } from "@/features/settings/queries";
 import { useSettings } from "@/features/settings/queries";
 import { deleteMcpServer, saveMcpServer, setMcpServerInProject } from "@/api/endpoints";
-
 import { draftOf, inputOf } from "./mcp-draft";
 import { McpFields } from "./mcp-fields";
 import { McpKeptGroup, McpProjectGroup } from "./mcp-form-groups";
 import { McpOverrideForm } from "./mcp-override";
-import { isOverrideSubject } from "./kinds";
+import { isOverrideSubject } from "./mcp-detail";
 import { McpTargetFields } from "./mcp-target";
 import { mcpFieldErrors, mcpFields } from "./mcp-validation";
 import type { McpDraft } from "./mcp-draft";
 import type { McpField } from "./mcp-validation";
 import type { McpServerDetail, McpServerInput } from "@/api/types";
+import { DetailLoader } from "@/features/settings/kit/detail-loader";
+import { useMcpServer } from "@/features/settings/queries";
+
+/**
+ * One MCP server, read and written into the file its scope names. The form holds
+ * a draft so nothing is written until Save; a new server becomes a real route
+ * after its first save. An override (`kind: "override"`) is not editable as a
+ * server: `McpOverrideForm` shows it instead.
+ */
 
 const scopeLabel = (scope: McpScope): string => (scope === "global" ? "Global" : "This project");
 
 const scopeDescription = (scope: McpScope): string =>
 	scope === "global"
-		? "Read from this deployment's agent home, so every session can connect it."
+		? "Read from the agent home, so every session can connect it."
 		: "Read from this project's .pi/mcp.json, so only sessions in this folder connect it.";
 
-export function McpForm({
-	detail,
-	scope,
-}: {
-	detail: McpServerDetail | undefined;
-	scope: McpScope;
-}) {
+function McpForm({ detail, scope }: { detail: McpServerDetail | undefined; scope: McpScope }) {
 	if (isOverrideSubject(detail)) return <McpOverrideForm detail={detail} />;
 	return <McpServerForm detail={detail} scope={scope} />;
 }
@@ -243,5 +239,25 @@ function McpServerForm({
 				}}
 			/>
 		</FormPage>
+	);
+}
+
+/**
+ * One MCP server route: read the entry from the file its scope names, then render
+ * its form. A new server skips the read and starts from an empty draft.
+ */
+
+export function McpEditor({ scope, name }: { scope: McpScope; name?: string }) {
+	const query = useMcpServer(scope, name);
+	return (
+		<DetailLoader
+			query={query}
+			reading={name !== undefined}
+			noun="MCP server"
+			backTo="/settings/mcp"
+			backLabel="MCP servers"
+		>
+			{(detail) => <McpForm key={`${scope}\0${detail?.name}`} detail={detail} scope={scope} />}
+		</DetailLoader>
 	);
 }
