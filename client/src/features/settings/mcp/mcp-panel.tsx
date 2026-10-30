@@ -1,6 +1,6 @@
 import { Link, useNavigate, useMatchRoute } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
-import { PlusIcon, TriangleAlertIcon } from "lucide-react";
+import { ChevronDownIcon, FolderIcon, GlobeIcon, PlusIcon, TriangleAlertIcon } from "lucide-react";
 import { useState } from "react";
 import { cn } from "cn";
 import type { McpScope } from "shared";
@@ -350,9 +350,12 @@ function McpPanel({
 						/>
 					)}
 					<DropdownMenu>
-						<DropdownMenuTrigger className={cn(buttonVariants({ variant: "outline" }), "w-full")}>
+						<DropdownMenuTrigger
+							className={cn(buttonVariants({ variant: "outline" }), "group w-full")}
+						>
 							<PlusIcon />
 							Add MCP server
+							<ChevronDownIcon className="ml-auto transition-transform group-data-[popup-open]:rotate-180" />
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="start" className="w-(--anchor-width)">
 							<DropdownMenuItem
@@ -360,6 +363,7 @@ function McpPanel({
 									void navigate({ to: "/settings/mcp/$scope/new", params: { scope: "global" } })
 								}
 							>
+								<GlobeIcon />
 								Global
 							</DropdownMenuItem>
 							<DropdownMenuItem
@@ -367,6 +371,7 @@ function McpPanel({
 									void navigate({ to: "/settings/mcp/$scope/new", params: { scope: "project" } })
 								}
 							>
+								<FolderIcon />
 								This project
 							</DropdownMenuItem>
 						</DropdownMenuContent>
