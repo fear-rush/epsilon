@@ -175,3 +175,29 @@
 		font-size: inherit;
 	}
 }
+
+/* A header row grows and collapses instead of popping in and out. The starting
+   style plays when React inserts the row; data-closing holds it while it closes. */
+.header-row-anim {
+	display: grid;
+	grid-template-rows: 1fr;
+	transition:
+		grid-template-rows 200ms ease-out,
+		opacity 200ms ease-out;
+}
+
+.header-row-anim > * {
+	min-height: 0;
+}
+
+.header-row-anim[data-closing="true"] {
+	grid-template-rows: 0fr;
+	opacity: 0;
+}
+
+@starting-style {
+	.header-row-anim {
+		grid-template-rows: 0fr;
+		opacity: 0;
+	}
+}

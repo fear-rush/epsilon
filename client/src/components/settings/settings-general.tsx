@@ -81,7 +81,7 @@ export function SettingsGeneral({ snapshot }: { snapshot: SettingsSnapshot }) {
 					description={
 						current === null
 							? "No default is set. pi chooses the first available model."
-							: `${current.provider}/${current.modelId}`
+							: undefined
 					}
 				>
 					<DefaultModelPicker
@@ -129,7 +129,7 @@ function DefaultModelPicker({
 						id="default-model"
 						aria-label="Default model"
 						variant="outline"
-						className="w-full justify-between"
+						className="w-full justify-between font-normal"
 					/>
 				}
 			>

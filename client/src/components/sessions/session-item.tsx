@@ -65,7 +65,7 @@ export function SessionItem({ session, active, onDelete }: SessionItemProps) {
 						render={
 							<Button
 								variant="ghost"
-								size="icon-xs"
+								size="icon-sm"
 								aria-label="Session actions"
 								className="absolute top-2 right-1.5 text-muted-foreground"
 							/>

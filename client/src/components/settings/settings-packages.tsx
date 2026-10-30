@@ -53,7 +53,7 @@ export function SettingsPackages({ snapshot }: { snapshot: SettingsSnapshot }) {
 								.filter((part) => part !== undefined)
 								.join(", ")}
 						>
-							<Badge variant="outline">{entry.scope}</Badge>
+							<Badge variant="secondary">{entry.scope}</Badge>
 							<Button
 								variant="destructive"
 								size="icon-sm"
