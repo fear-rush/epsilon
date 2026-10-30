@@ -1,4 +1,7 @@
-import { useHighlightedCode } from "@/features/conversation/hooks/use-highlighted-code";
+import ReactMarkdown, { type ExtraProps } from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+import { useHighlightedCode } from "@/features/conversation/highlight";
 import {
 	CodeBlock,
 	CodeBlockActions,
@@ -8,14 +11,22 @@ import {
 	CodeBlockLine,
 	CodeBlockTitle,
 } from "@/components/ui/code-block";
-import { type ExtraProps } from "react-markdown";
+
+const components = { pre: MarkdownPre };
+
+/** Assistant prose. Code fences go through MarkdownPre, which highlights them. */
+export function Markdown({ children }: { children: string }) {
+	return (
+		<div className="typeset typeset-chat min-w-0 max-w-full wrap-break-word">
+			<ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+				{children}
+			</ReactMarkdown>
+		</div>
+	);
+}
 
 // Fenced code arrives as <pre><code>, so read it from the hast node.
-export function MarkdownPre({
-	node,
-	children,
-	...props
-}: React.ComponentProps<"pre"> & ExtraProps) {
+function MarkdownPre({ node, children, ...props }: React.ComponentProps<"pre"> & ExtraProps) {
 	const element = node?.children[0];
 
 	if (element?.type !== "element" || element.tagName !== "code") {

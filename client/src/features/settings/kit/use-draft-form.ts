@@ -1,12 +1,11 @@
+import { useRef, useState } from "react";
+
 /**
  * The state every settings editor shares: a draft nothing writes until Save, a
  * dirty flag, one message per field, the dialogs that confirm leaving, and the
  * flag that lets a deliberate exit (after a save, a delete or a discard) pass the
  * unsaved-changes block. A form keeps its own fields, validation and mutations.
  */
-import { useRef, useState } from "react";
-
-import { keepUntouched } from "./field-errors";
 
 export function useDraftForm<Draft extends object, Field extends string>({
 	initial,
@@ -53,3 +52,21 @@ export function useDraftForm<Draft extends object, Field extends string>({
 		setCancelOpen,
 	};
 }
+
+/**
+ * The messages a form keeps after a change: every field the change did not
+ * touch. A form clears a field's message as soon as that field is edited, and
+ * nothing else, so a fix does not hide the other problems.
+ */
+export const keepUntouched = <Field extends string>(
+	current: Partial<Record<Field, string>>,
+	fields: readonly Field[],
+	changed: readonly string[],
+): Partial<Record<Field, string>> => {
+	const next: Partial<Record<Field, string>> = {};
+	for (const field of fields) {
+		const message = current[field];
+		if (message !== undefined && !changed.includes(field)) next[field] = message;
+	}
+	return next;
+};

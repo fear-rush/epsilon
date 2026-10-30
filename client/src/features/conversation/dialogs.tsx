@@ -1,10 +1,16 @@
-/**
- * The three extension requests that ask for a choice or text. `confirm` is an
- * AlertDialog instead (docs/ARCHITECTURE.md, UI rules).
- */
-import { useState } from "react";
 import type { DialogAnswer, DialogQuestion } from "shared";
+import { useState } from "react";
 
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -16,6 +22,43 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+
+/** A blocking `confirm`: the agent cannot continue until this is answered. */
+
+type ConfirmQuestion = Extract<DialogQuestion, { method: "confirm" }>;
+
+export function ConfirmDialog({
+	question,
+	onAnswer,
+}: {
+	question: ConfirmQuestion;
+	onAnswer: (answer: DialogAnswer) => void;
+}) {
+	const answer = (confirmed: boolean) =>
+		onAnswer({ id: question.id, method: "confirm", confirmed });
+
+	return (
+		<AlertDialog open onOpenChange={() => {}}>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>{question.title}</AlertDialogTitle>
+					<AlertDialogDescription className="whitespace-pre-wrap break-words">
+						{question.message}
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel onClick={() => answer(false)}>No</AlertDialogCancel>
+					<AlertDialogAction onClick={() => answer(true)}>Yes</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	);
+}
+
+/**
+ * The three extension requests that ask for a choice or text. `confirm` is an
+ * AlertDialog instead (docs/ARCHITECTURE.md, UI rules).
+ */
 
 type Question = Exclude<DialogQuestion, { method: "confirm" }>;
 

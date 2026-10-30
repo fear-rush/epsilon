@@ -15,11 +15,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { DeleteDialog } from "@/features/settings/kit/delete-dialog";
+import { DeleteDialog } from "@/features/settings/kit/dialogs";
 import { SettingsBlock, SettingsGroup } from "@/features/settings/kit/settings-section";
-import { useSettingsRefresh } from "@/features/settings/refresh";
+import { useSettingsRefresh } from "@/features/settings/queries";
 import { deleteMcpServer, setMcpServerEnabled, setMcpServerInProject } from "@/api/endpoints";
-import type { McpOverrideSubject } from "./kinds";
+import type { McpOverrideSubject } from "./mcp-detail";
 
 const keyText = (keys: readonly string[]): string =>
 	keys.length === 0 ? "nothing" : keys.join(", ");

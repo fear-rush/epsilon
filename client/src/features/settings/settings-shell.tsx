@@ -1,19 +1,19 @@
+import { Link, useMatchRoute } from "@tanstack/react-router";
+import { ArrowLeftIcon, SearchIcon } from "lucide-react";
+import { useState } from "react";
+import type { ReactNode } from "react";
+import { cn } from "cn";
+
+import { Input } from "@/components/ui/input";
+import { SIDEBAR_WIDTH } from "@/components/ui/sidebar";
+import { SETTINGS_GROUPS, SETTINGS_SECTIONS } from "@/features/settings/sections";
+import type { SettingsSection } from "@/features/settings/sections";
+
 /**
  * The settings surface: its own left navigation, a search field, and one section
  * on the right. It replaces the session sidebar while it is open, so Back to app
  * is the way out.
  */
-import { Link, useMatchRoute } from "@tanstack/react-router";
-import { ArrowLeftIcon, SearchIcon } from "lucide-react";
-import { useState } from "react";
-import type { ReactNode } from "react";
-
-import { Input } from "@/components/ui/input";
-import { SIDEBAR_WIDTH } from "@/components/ui/sidebar";
-import { cn } from "cn";
-
-import { SETTINGS_GROUPS, SETTINGS_SECTIONS } from "@/features/settings/sections";
-import type { SettingsSection } from "@/features/settings/sections";
 
 const itemsFor = (query: string): SettingsSection[] => {
 	if (query.trim() === "") return [];

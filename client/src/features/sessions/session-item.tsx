@@ -22,7 +22,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
-import { formatWhen, sessionLabel } from "@/lib/format";
+import { formatWhen, sessionLabel } from "@/features/sessions/format";
 import type { SessionSummary } from "@/api/types";
 
 type SessionItemProps = {

@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { SettingsBlock, SettingsGroup } from "@/features/settings/kit/settings-section";
-import type { McpServerEntryDetail } from "./kinds";
+import type { McpServerEntryDetail } from "./mcp-detail";
 
 /** A global server's state in this project: its override, or the absence of one. */
 export function McpProjectGroup({

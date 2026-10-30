@@ -1,9 +1,6 @@
-/**
- * The transcript: one column, phone-first, no horizontal scrolling. Rows come
- * from `shared/conversation/selectors`, so this file only maps a row kind to a
- * component (docs/ARCHITECTURE.md, UI rules: semantic components, not decorated divs).
- */
 import { Fragment } from "react";
+import type { TranscriptRow } from "shared";
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Marker } from "@/components/ui/marker";
@@ -16,10 +13,14 @@ import {
 	MessageScrollerProvider,
 	MessageScrollerViewport,
 } from "@/components/ui/message-scroller";
-import type { TranscriptRow } from "shared";
-
 import { Markdown } from "./markdown";
 import { ToolTrace } from "./tool-trace";
+
+/**
+ * The transcript: one column, phone-first, no horizontal scrolling. Rows come
+ * from `shared/conversation/selectors`, so this file only maps a row kind to a
+ * component (docs/ARCHITECTURE.md, UI rules: semantic components, not decorated divs).
+ */
 
 export function Transcript({ rows }: { rows: TranscriptRow[] }) {
 	return (

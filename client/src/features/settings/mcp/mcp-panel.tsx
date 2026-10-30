@@ -1,9 +1,4 @@
-/**
- * The left side of the MCP editor: this project's servers, the global servers,
- * and the add route. A server appears under the file it lives in; the same name
- * can appear twice, once per file, and the project entry wins where it does.
- */
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useMatchRoute } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { PlusIcon, TriangleAlertIcon } from "lucide-react";
 import { useState } from "react";
@@ -22,9 +17,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MasterListPanel } from "@/features/settings/kit/master-list-panel";
 import { useSettings } from "@/features/settings/queries";
-import { useSettingsRefresh } from "@/features/settings/refresh";
+import { useSettingsRefresh } from "@/features/settings/queries";
 import { setMcpServerEnabled } from "@/api/endpoints";
 import type { McpServerView } from "@/api/types";
+import { MasterDetailLayout } from "@/features/settings/kit/master-detail-layout";
+import { asScope } from "./mcp-detail";
+
+/**
+ * The left side of the MCP editor: this project's servers, the global servers,
+ * and the add route. A server appears under the file it lives in; the same name
+ * can appear twice, once per file, and the project entry wins where it does.
+ */
 
 type RowBadge = { label: string; variant: "warning" | "outline" | "secondary" };
 
@@ -144,7 +147,7 @@ function ServerGroup({
 	);
 }
 
-export function McpPanel({
+function McpPanel({
 	selected,
 	editing,
 }: {
@@ -259,5 +262,21 @@ export function McpPanel({
 				toggling={toggle.isPending}
 			/>
 		</MasterListPanel>
+	);
+}
+
+/** The route owns which server is selected; the panel only draws it. */
+export function McpLayout() {
+	const matchRoute = useMatchRoute();
+	const matched = matchRoute({ to: "/settings/mcp/$scope/$name" });
+	const selected =
+		matched === false ? undefined : { scope: asScope(matched.scope), name: matched.name };
+	const adding = matchRoute({ to: "/settings/mcp/$scope/new" }) !== false;
+	const editing = selected !== undefined || adding;
+	return (
+		<MasterDetailLayout
+			editing={editing}
+			list={<McpPanel selected={selected} editing={editing} />}
+		/>
 	);
 }
