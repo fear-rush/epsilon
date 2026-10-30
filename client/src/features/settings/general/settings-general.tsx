@@ -1,5 +1,5 @@
 /**
- * General: whether the deployment can run a turn, where its home is, and which
+ * General: whether Epsilon can run a turn, where its home is, and which
  * model a new session starts on.
  */
 import { useMutation } from "@tanstack/react-query";
@@ -54,7 +54,7 @@ export function SettingsGeneral({ snapshot }: { snapshot: SettingsSnapshot }) {
 
 	return (
 		<SettingsPage title="General">
-			<SettingsGroup title="Deployment">
+			<SettingsGroup title="App">
 				<SettingsRow
 					title="Status"
 					description={

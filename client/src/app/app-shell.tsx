@@ -11,7 +11,7 @@ import { useReadiness } from "@/features/readiness/use-readiness";
 import { SessionSidebar } from "@/features/sessions/session-sidebar";
 
 export function AppShell() {
-	// A deployment with no usable model replaces every other page with one
+	// An Epsilon with no usable model replaces every other page with one
 	// notice. The check is REST, so it is read once here instead of once per
 	// route; Settings stays reachable so the notice has somewhere to send you.
 	const readiness = useReadiness();

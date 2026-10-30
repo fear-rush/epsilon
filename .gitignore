@@ -50,5 +50,5 @@ bun.lockb
 # settings live in ~/.pi, and this is not source.
 .pi/settings.local.json
 
-# The dev loop's own agent home and project. A deployment uses a volume instead.
+# The dev loop's own agent home and project.
 .sandbox

@@ -52,7 +52,7 @@ const send = (socket: ChatSocket, frame: ServerFrame): void => {
 			JSON.stringify({
 				t: "error",
 				code: "AGENT_FAILED",
-				message: "The agent produced a frame this deployment cannot send.",
+				message: "The agent produced a frame Epsilon cannot send.",
 			}),
 		);
 		return;

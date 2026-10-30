@@ -1,7 +1,7 @@
 import { z } from "@hono/zod-openapi";
 
 /**
- * Whether this deployment can run a turn at all. The server asks the engine's own
+ * Whether Epsilon can run a turn at all. The server asks the engine's own
  * model runtime, so the answer cannot disagree with what a session would see, and
  * the browser shows one notice instead of a composer that looks broken.
  */

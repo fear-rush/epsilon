@@ -1,6 +1,6 @@
 /**
  * What the MCP panel reads and writes. MCP servers live in two files: the agent
- * home's `mcp.json` and this deployment's `<project>/.pi/mcp.json`. pi reads the
+ * home's `mcp.json` and the `<project>/.pi/mcp.json`. pi reads the
  * project file because the embedded engine starts trusted
  * (docs/pi-sdk.md), and a project entry replaces or overrides a global
  * one of its name. Settings shows both, as pi resolves them.
@@ -150,7 +150,7 @@ export async function readMcpServer(
 }
 
 /**
- * Whether this deployment's settings turn the built-in MCP extension off.
+ * Whether the settings turn the built-in MCP extension off.
  *
  * pi resolves the built-ins named in `settings.extensions` (global and, for a
  * trusted project, project) through `DefaultPackageManager`, which the SDK

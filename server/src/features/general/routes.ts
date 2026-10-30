@@ -16,7 +16,7 @@ const defaultModelRoute = createRoute({
 	},
 	responses: {
 		204: { description: "pi's settings.json now names this provider and model" },
-		400: { description: "The model is not one this deployment can run", content: errorContent },
+		400: { description: "The model is not one Epsilon can run", content: errorContent },
 	},
 });
 

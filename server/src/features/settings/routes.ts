@@ -12,7 +12,7 @@ const settingsRoute = createRoute({
 	description: "Providers, default model, MCP servers, skills and packages from the agent home",
 	responses: {
 		200: {
-			description: "The configuration this deployment runs on",
+			description: "The configuration Epsilon runs on",
 			content: { "application/json": { schema: settingsSnapshotSchema } },
 		},
 	},

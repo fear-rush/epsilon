@@ -53,24 +53,22 @@ internals and produces terminal-shaped dialogs). A per-extension UI adapter.
 
 ## Agent home
 
-The deployment owns one agent home, at pi's default path inside it (`$HOME/.pi/agent`),
+Epsilon owns one agent home, at pi's default path (`$HOME/.pi/agent`),
 resolved once in `server/src/main.ts` and passed to every engine explicitly. An inherited `PI_*`
-variable never decides it. Nothing records the choice. The default deployment is a
-container with the home on a named volume; the host's `~/.pi` is mounted only by an
-explicit opt-in that accepts its credentials, policy and sessions. Sessions are grouped
+variable never decides it. Nothing records the choice. Sessions are grouped
 by project, not by home. Development uses a sandbox home; `dev:host` is the only path to
 the operator's real one.
 
-Why: the operator may have no terminal and no `pi` on the host, and pi's home holds
-credentials, policy, extensions and sessions that should not be adopted silently.
+Why: pi's home holds credentials, policy, extensions and sessions that a dev run
+should not adopt silently.
 
-Not: inheriting the host home (no isolation). A home at `~/.epsilon/agent` (pi and
+Not: a dev loop on the real home. A home at `~/.epsilon/agent` (pi and
 `getAgentDir()` would disagree). A config file naming the home (a second truth for a
-deterministic value). A read-only host mount (pi writes at the first turn).
+deterministic value).
 
 ## Configure in the dashboard
 
-Settings configures the deployment: provider endpoints and their models, the default
+Settings configures the agent: provider endpoints and their models, the default
 model, MCP servers, skills and packages. Writes go through an exported pi writer where
 one exists (`SettingsManager`, `DefaultPackageManager`). Otherwise the dashboard parses
 the documented file with zod, merges it, keeps unknown keys, writes at mode 0600 under
@@ -80,17 +78,17 @@ Every settings write reloads the live engines. A pi-shipped provider keeps its c
 and is edited through `modelOverrides`; importing models is Epsilon's own bounded HTTP
 call, disabled where an API family has no shared list shape.
 
-Stays in the terminal inside the deployment, because pi exposes no host API for it:
+Stays in the terminal, because pi exposes no host API for it:
 OAuth and subscription login, MCP sign-in, project trust, and TUI-only toggles. The
 dashboard names that boundary. It never writes `auth.json` or `trust.json`; a credential
 changes only through `ModelRuntime.login()` and `logout()`.
 
-Why: a phone-only deployment must be usable, and most of the work is editing two
+Why: the dashboard must be usable without a terminal, and most of the work is editing two
 documented files and calling two exported classes.
 
 Not: writing `auth.json` (pi exports neither its store nor its locking). Epsilon-side
 copies of pi config registered at engine start (lost on restart, duplicates resolution).
-Showing a terminal command to a phone. A screen for every pi setting.
+Showing a terminal command in the UI. A screen for every pi setting.
 
 ## Default extensions
 
@@ -102,7 +100,7 @@ the extensions are bound.
 
 The defaults exist in the dashboard's engine only. They are not written into the home
 and are not claimed to exist in a terminal; the dashboard is therefore more guarded than
-a terminal in the same deployment, and the docs say so.
+a terminal using the same agent home, and the docs say so.
 
 Why: writing extension files into pi's home makes Epsilon a writer of pi's configuration
 and lets copies drift from the repository.
@@ -139,7 +137,7 @@ Revisit if a route needs streaming or uploads that the generated client cannot e
 
 ## Documentation
 
-Docs hold decisions, the pi reference, a map and deployment. Code, types and tests state
+Docs hold decisions, the pi reference and a map. Code, types and tests state
 everything else; plans, feature lists, UI inventories and frame lists are not kept in
 prose because they drift. This file states a decision as it holds now and is edited in
 place when a decision changes.
