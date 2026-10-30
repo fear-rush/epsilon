@@ -102,6 +102,8 @@ export const reduceEvent = (
 		case "agent_end":
 		case "agent_settled":
 			return { ...state, busy: false, streaming: null };
+		case "thinking_level_changed":
+			return { ...state, thinkingLevel: event.level };
 		case "message_start":
 			if (event.message.role !== "assistant") return state;
 			return { ...state, streaming: { text: "", thinking: "" } };

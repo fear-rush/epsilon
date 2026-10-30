@@ -33,6 +33,7 @@
 				}
 			},
 			"thinkingLevel": "high",
+			"availableThinkingLevels": ["low", "high", "max"],
 			"isStreaming": false,
 			"isCompacting": false,
 			"steeringMode": "one-at-a-time",

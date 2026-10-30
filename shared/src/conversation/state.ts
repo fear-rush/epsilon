@@ -4,7 +4,7 @@
  */
 import type { DialogQuestion } from "../extui";
 import type { JsonAgentSessionEvent } from "../pi";
-import type { SnapshotCommand, SnapshotModel } from "../protocol/frames";
+import type { SnapshotCommand, SnapshotModel, ThinkingLevel } from "../protocol/frames";
 
 type EventMessage = Extract<JsonAgentSessionEvent, { type: "message_end" }>["message"];
 
@@ -85,6 +85,9 @@ export type ConversationState = {
 	commands: SnapshotCommand[];
 	/** The model the session uses now, or undefined before the first snapshot. */
 	model: SnapshotModel | undefined;
+	/** The level pi is currently using, and the levels this model offers. */
+	thinkingLevel: ThinkingLevel;
+	availableThinkingLevels: ThinkingLevel[];
 	nextNoticeId: number;
 };
 
@@ -100,5 +103,7 @@ export const emptyConversation: ConversationState = {
 	models: [],
 	commands: [],
 	model: undefined,
+	thinkingLevel: "off",
+	availableThinkingLevels: [],
 	nextNoticeId: 0,
 };

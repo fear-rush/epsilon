@@ -25,4 +25,6 @@ Two edits were applied to the raw trace, and `replay` does not depend on either:
 
 One `snapshot` frame from a live attach: eight messages, no model list. It was
 recorded before protocol 3 added `commands`, so an empty list was added by hand
-when the schema started checking the frame; the messages are the recording.
+when the schema started checking the frame. Protocol 6 added
+`availableThinkingLevels`, which was added by hand from the model's
+`thinkingLevelMap`; the messages are the recording.

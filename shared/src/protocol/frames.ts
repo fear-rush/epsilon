@@ -12,13 +12,27 @@ import type { SnapshotMessage } from "../conversation/state";
 import { dialogAnswerSchema, dialogQuestionSchema, extensionDisplaySchema } from "../extui";
 import type { JsonAgentSessionEvent } from "../pi";
 
-/** The six commands a tab may send. */
+/** pi's thinking levels. A model supports a subset of them. */
+export const thinkingLevelSchema = z.enum([
+	"off",
+	"minimal",
+	"low",
+	"medium",
+	"high",
+	"xhigh",
+	"max",
+]);
+
+export type ThinkingLevel = z.infer<typeof thinkingLevelSchema>;
+
+/** The seven commands a tab may send. */
 export const commandNameSchema = z.enum([
 	"prompt",
 	"steer",
 	"abort",
 	"bash",
 	"set_model",
+	"set_thinking_level",
 	"reload",
 ]);
 
@@ -30,6 +44,7 @@ export const commandSchema = z.discriminatedUnion("type", [
 	z.object({ type: z.literal("abort") }),
 	z.object({ type: z.literal("bash"), command: z.string(), excludeFromContext: z.boolean() }),
 	z.object({ type: z.literal("set_model"), provider: z.string(), modelId: z.string() }),
+	z.object({ type: z.literal("set_thinking_level"), level: thinkingLevelSchema }),
 	z.object({ type: z.literal("reload") }),
 ]);
 
@@ -119,6 +134,8 @@ export const snapshotStateSchema = z.object({
 	isStreaming: z.boolean(),
 	isCompacting: z.boolean(),
 	sessionName: z.string().optional(),
+	thinkingLevel: thinkingLevelSchema,
+	availableThinkingLevels: z.array(thinkingLevelSchema),
 });
 
 export type SnapshotState = z.infer<typeof snapshotStateSchema>;

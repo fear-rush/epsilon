@@ -67,6 +67,8 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				models: frame.snapshot.models,
 				commands: frame.snapshot.commands,
 				sessionName: frame.snapshot.state.sessionName,
+				thinkingLevel: frame.snapshot.state.thinkingLevel,
+				availableThinkingLevels: frame.snapshot.state.availableThinkingLevels,
 				model:
 					current === undefined
 						? undefined

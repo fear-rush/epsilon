@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { snapshotModelSchema } from "../protocol/frames";
+import { snapshotModelSchema, thinkingLevelSchema } from "../protocol/frames";
 
 /**
  * The dashboard configuration contract. The server writes pi's documented files
@@ -17,6 +17,44 @@ export const providerApiSchema = z.enum([
 ]);
 
 export type ProviderApi = z.infer<typeof providerApiSchema>;
+
+/** Which pi thinking levels a model offers, and the value each one sends. */
+export const thinkingLevelMapSchema = z.partialRecord(
+	thinkingLevelSchema,
+	z.union([z.string().min(1), z.null()]),
+);
+
+export type ThinkingLevelMap = z.infer<typeof thinkingLevelMapSchema>;
+
+/**
+ * The compatibility fields that decide how a reasoning level travels. Empty
+ * means pi auto-detects; other compat keys are preserved by the writers.
+ */
+export const reasoningCompatSchema = z.looseObject({
+	thinkingFormat: z
+		.enum([
+			"openai",
+			"openrouter",
+			"deepseek",
+			"together",
+			"baseten",
+			"zai",
+			"qwen",
+			"chat-template",
+			"qwen-chat-template",
+			"string-thinking",
+			"ant-ling",
+		])
+		.optional(),
+	supportsReasoningEffort: z.boolean().optional(),
+	thinkingTokenBudgetField: z
+		.enum(["thinking_token_budget", "thinking_budget", "thinking_budget_tokens"])
+		.optional(),
+	requiresReasoningContentOnAssistantMessages: z.boolean().optional(),
+	forceAdaptiveThinking: z.boolean().optional(),
+});
+
+export type ReasoningCompat = z.infer<typeof reasoningCompatSchema>;
 
 export const providerModelCostSchema = z.object({
 	input: z.number(),
@@ -36,6 +74,8 @@ export const providerModelInputSchema = z.object({
 	api: providerApiSchema.optional(),
 	baseUrl: z.url().optional(),
 	reasoning: z.boolean().optional(),
+	thinkingLevelMap: thinkingLevelMapSchema.optional(),
+	compat: reasoningCompatSchema.optional(),
 	input: z.array(z.enum(["text", "image"])).optional(),
 	contextWindow: z.number().int().positive().optional(),
 	maxTokens: z.number().int().positive().optional(),
@@ -81,6 +121,8 @@ export const providerInputSchema = z.object({
 	 * record is removed. Headers never travel back to the browser.
 	 */
 	headers: z.record(z.string(), z.string()).optional(),
+	/** Provider-wide reasoning format; a model's compat overrides it per key. */
+	compat: reasoningCompatSchema.optional(),
 	/** Omit for a built-in provider whose catalog must stay in place. */
 	models: z.array(providerModelInputSchema).optional(),
 	modelOverrides: z.record(z.string(), modelOverrideSchema).optional(),
@@ -111,6 +153,7 @@ const providerStoredSchema = z.object({
 	name: z.string().optional(),
 	baseUrl: z.string().optional(),
 	api: providerApiSchema.optional(),
+	compat: reasoningCompatSchema.optional(),
 });
 
 export const providerDetailSchema = z.object({
@@ -157,6 +200,34 @@ export const providerImportInputSchema = z.object({
 });
 
 export type ProviderImportInput = z.infer<typeof providerImportInputSchema>;
+
+/**
+ * A provider draft under test. Everything is the form's current value, not the
+ * saved entry, so a key, endpoint or model can be tried before Save writes it.
+ * A blank apiKey or header value means "use the stored one".
+ */
+export const providerTestInputSchema = z.object({
+	providerId: z.string().optional(),
+	name: z.string().optional(),
+	baseUrl: z.union([z.literal(""), z.url()]).optional(),
+	api: providerApiSchema.optional(),
+	apiKey: z.string().optional(),
+	headers: z.record(z.string(), z.string()).optional(),
+	/** The provider's reasoning format, as the draft has it. */
+	compat: reasoningCompatSchema.optional(),
+	/** A reasoning level for the test; omitted sends no reasoning fields. */
+	level: thinkingLevelSchema.optional(),
+	/** The model to try. Without one, the provider's first model is used. */
+	model: providerModelInputSchema.optional(),
+});
+
+export type ProviderTestInput = z.infer<typeof providerTestInputSchema>;
+
+export const providerTestResultSchema = z.object({
+	message: z.string(),
+});
+
+export type ProviderTestResult = z.infer<typeof providerTestResultSchema>;
 
 export const providerImportResultSchema = z.object({
 	models: z.array(providerModelInputSchema),

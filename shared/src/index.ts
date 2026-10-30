@@ -9,6 +9,7 @@ export type {
 	SnapshotCommand,
 	SnapshotModel,
 	SnapshotState,
+	ThinkingLevel,
 } from "./protocol/frames";
 export {
 	agentEventSchema,
@@ -21,6 +22,7 @@ export {
 	snapshotModelSchema,
 	snapshotSchema,
 	snapshotStateSchema,
+	thinkingLevelSchema,
 } from "./protocol/frames";
 export { dialogAnswerSchema, dialogQuestionSchema, extensionDisplaySchema } from "./extui";
 export type { DialogAnswer, DialogQuestion, ExtensionDisplay } from "./extui";
@@ -67,7 +69,11 @@ export {
 	providerInputSchema,
 	providerModelCostSchema,
 	providerModelInputSchema,
+	providerTestInputSchema,
+	providerTestResultSchema,
 	providerViewSchema,
+	reasoningCompatSchema,
+	thinkingLevelMapSchema,
 	settingsSnapshotSchema,
 	skillInputSchema,
 	skillNameSchema,
@@ -88,13 +94,24 @@ export type {
 	ProviderInput,
 	ProviderModelCost,
 	ProviderModelInput,
+	ProviderTestInput,
+	ProviderTestResult,
 	ProviderView,
+	ReasoningCompat,
 	SettingsSnapshot,
 	SkillInput,
 	SkillView,
+	ThinkingLevelMap,
 } from "./schemas/settings";
-export { PROVIDER_APIS, parseProviderApi, providerModelsEndpoint } from "./provider-endpoints";
-export type { ProviderApiInfo } from "./provider-endpoints";
+export {
+	PROVIDER_APIS,
+	parseProviderApi,
+	providerApiInfo,
+	providerBaseUrlProblem,
+	providerEndpoint,
+	providerModelsEndpoint,
+} from "./provider-endpoints";
+export type { ProviderApiInfo, ProviderBaseUrlProblem } from "./provider-endpoints";
 export { emptyConversation } from "./conversation/state";
 export { isVisibleMessage } from "./conversation/state";
 export type {
