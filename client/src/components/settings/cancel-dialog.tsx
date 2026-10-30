@@ -1,5 +1,5 @@
 /**
- * A new provider is a route with a draft, so leaving it needs its own exit. The
+ * A new entry is a route with a draft, so leaving it needs its own exit. The
  * confirmation is destructive because confirming throws the whole draft away.
  */
 import {
@@ -13,12 +13,16 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export function ProviderCancelDialog({
+export function CancelDialog({
 	open,
+	title,
+	description,
 	onOpenChange,
 	onDiscard,
 }: {
 	open: boolean;
+	title: string;
+	description: string;
 	onOpenChange: (open: boolean) => void;
 	onDiscard: () => void;
 }) {
@@ -26,11 +30,8 @@ export function ProviderCancelDialog({
 		<AlertDialog open={open} onOpenChange={onOpenChange}>
 			<AlertDialogContent>
 				<AlertDialogHeader>
-					<AlertDialogTitle>Cancel this provider?</AlertDialogTitle>
-					<AlertDialogDescription>
-						Nothing is saved until you press Save. The name, endpoint, key and models you entered
-						will be lost.
-					</AlertDialogDescription>
+					<AlertDialogTitle>{title}</AlertDialogTitle>
+					<AlertDialogDescription>{description}</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel>Keep editing</AlertDialogCancel>

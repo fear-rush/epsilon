@@ -26,3 +26,16 @@ export const uniqueProviderId = (base: string, taken: ReadonlySet<string>): stri
 	while (taken.has(`${base}-${suffix}`)) suffix += 1;
 	return `${base}-${suffix}`;
 };
+
+/** Lowercased display names already in use, excluding the provider being edited. */
+export const providerNamesInUse = (
+	providers: readonly { id: string; name: string }[],
+	builtins: readonly { id: string; name: string }[],
+	excludeId: string | undefined,
+): Set<string> => {
+	const names = new Set<string>();
+	for (const provider of [...providers, ...builtins]) {
+		if (provider.id !== excludeId) names.add(provider.name.trim().toLowerCase());
+	}
+	return names;
+};

@@ -1,7 +1,7 @@
 /**
  * The messages a form keeps after a change: every field the change did not
- * touch. Both provider forms clear a field's message as soon as that field is
- * edited, and nothing else, so a fix does not hide the other problems.
+ * touch. A form clears a field's message as soon as that field is edited, and
+ * nothing else, so a fix does not hide the other problems.
  */
 export const keepUntouched = <Field extends string>(
 	current: Partial<Record<Field, string>>,

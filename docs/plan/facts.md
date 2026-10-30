@@ -136,7 +136,8 @@ they change with the operator's home.
   value.
 - A blank key keeps the stored credential. A blank value on a stored header keeps
   it; a new header needs a name and a value, and the form refuses an incomplete row.
-  Header values never travel to the browser.
+  Header values, and an MCP server's environment and header values, never travel to
+  the browser.
 - A provider id is letters, digits, dashes and underscores, and `new` is reserved
   because it is the add-provider route. The form derives the id from the display
   name, suffixes a taken id with `-2`, and refuses a name another configured or
@@ -146,6 +147,10 @@ they change with the operator's home.
 - `api: ""` clears a provider's API family; a missing `api` keeps the stored one.
 - MCP input is a union on `transport`, so a stdio server needs a command and an
   HTTP server needs a URL. Switching transport clears the other target's fields.
+  A read returns environment and header names but not values. A blank value on a
+  stored row keeps it and an omitted row removes it. The name is the `mcp.json` key,
+  so it is fixed after the first save and a new server refuses a name already in
+  the list; the two-pane editor is selected by route.
 - Writes go through one queue per path, are written with mode `0600`, and keep the
   rest of the file. Two panel clicks cannot lose each other.
 - The API validates every body and param with the shared zod schema. A refusal is

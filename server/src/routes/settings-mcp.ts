@@ -1,14 +1,32 @@
 import { createRoute } from "@hono/zod-openapi";
 import type { RouteHandler } from "@hono/zod-openapi";
-import { mcpNameSchema, mcpServerInputSchema } from "shared";
+import { mcpNameSchema, mcpServerDetailSchema, mcpServerInputSchema } from "shared";
 import { z } from "zod";
 
 import { config } from "../config";
-import { removeMcpServer, writeMcpServer } from "../settings/mcp";
-import { errorContent } from "./failure";
+import { readMcpServer, removeMcpServer, writeMcpServer } from "../settings/mcp";
+import { errorContent, failure, toError } from "./failure";
 import { settingsWrite } from "./write";
 
 const mcpParams = z.object({ name: mcpNameSchema });
+
+export const readMcpRoute = createRoute({
+	method: "get",
+	path: "/api/settings/mcp/{name}",
+	tags: ["settings"],
+	operationId: "readMcpServer",
+	description:
+		"The editable detail of one MCP server, with variable and header names but no values",
+	request: { params: mcpParams },
+	responses: {
+		200: {
+			description: "The server entry, its target and the names of its stored values",
+			content: { "application/json": { schema: mcpServerDetailSchema } },
+		},
+		400: { description: "mcp.json could not be read", content: errorContent },
+		404: { description: "No server with this name in mcp.json", content: errorContent },
+	},
+});
 
 export const writeMcpRoute = createRoute({
 	method: "post",
@@ -36,6 +54,16 @@ export const deleteMcpRoute = createRoute({
 		400: { description: "mcp.json could not be written", content: errorContent },
 	},
 });
+
+export const readMcpHandler: RouteHandler<typeof readMcpRoute> = async (c) => {
+	try {
+		const detail = await readMcpServer(config.agentHome, c.req.valid("param").name);
+		if (detail === undefined) return failure(c, new Error("No such MCP server"), 404);
+		return c.json(detail, 200);
+	} catch (error) {
+		return failure(c, toError(error, "The MCP server did not load"), 400);
+	}
+};
 
 export const writeMcpHandler: RouteHandler<typeof writeMcpRoute> = async (c) =>
 	settingsWrite(c, () => writeMcpServer(config.agentHome, c.req.valid("json")));

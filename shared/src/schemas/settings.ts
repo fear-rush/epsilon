@@ -71,6 +71,20 @@ export const mcpServerViewSchema = z.object({
 
 export type McpServerView = z.infer<typeof mcpServerViewSchema>;
 
+/**
+ * One server, editable. The transport still decides which target the write uses;
+ * environment and header values have no place here, so only their names travel.
+ */
+export const mcpServerDetailSchema = mcpServerViewSchema.extend({
+	command: z.string().optional(),
+	args: z.array(z.string()).optional(),
+	envKeys: z.array(z.string()),
+	url: z.string().optional(),
+	headerKeys: z.array(z.string()),
+});
+
+export type McpServerDetail = z.infer<typeof mcpServerDetailSchema>;
+
 /** The directory name under `<agent home>/skills`, and the URL segment. */
 export const skillNameSchema = z
 	.string()

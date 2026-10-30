@@ -27,7 +27,7 @@ import { ModelReasoningFields } from "./provider-model-reasoning";
 import { reasoningFormOf, reasoningOf } from "./reasoning-form";
 import { TestLevelSelect } from "./test-level-select";
 import type { ReasoningForm } from "./reasoning-form";
-import { keepUntouched } from "./field-errors";
+import { keepUntouched } from "@/components/settings/field-errors";
 import { modelFieldErrors, modelFields } from "./provider-validation";
 import type { ModelFieldErrors } from "./provider-validation";
 

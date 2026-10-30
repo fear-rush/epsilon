@@ -4,6 +4,7 @@
  * secret field means "keep", an empty header value means "keep that header".
  */
 import { parseProviderApi } from "shared";
+import type { PairRow } from "@/components/settings/pair-rows";
 
 import { compatForApi } from "./reasoning";
 import type {
@@ -21,20 +22,13 @@ import type {
  */
 export const providerApiUnset = "provider-api-unset";
 
-export type HeaderRow = {
-	key: string;
-	value: string;
-	/** The value is stored on the server and was not sent to this page. */
-	stored: boolean;
-};
-
 export type ProviderDraft = {
 	id: string;
 	name: string;
 	baseUrl: string;
 	api: string;
 	apiKey: string;
-	headers: HeaderRow[];
+	headers: PairRow[];
 	/** Provider-wide reasoning format; each model's compat overrides it. */
 	compat: ReasoningCompat;
 	models: ProviderModelInput[];

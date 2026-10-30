@@ -118,6 +118,11 @@ API, and an exact id and API inherit pi's reasoning metadata. Deleting a provide
 also logs out a key stored in `auth.json`. Forms validate with zod and report the
 first message per field; a blank optional value is never written.
 
+The MCP page uses the same split: configured servers on the left, one form on the
+right. A server's name is its `mcp.json` key, so it is fixed after the first save.
+Environment and header rows keep a stored value when the row is blank, so a secret
+never travels to the browser.
+
 Reasoning is configured per model: the model dialog writes `thinkingLevelMap` and
 the reasoning keys of `compat`, with provider-wide defaults in the provider form.
 The composer offers the current model's supported levels at runtime. The provider

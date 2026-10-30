@@ -176,9 +176,10 @@
 	}
 }
 
-/* A header row grows and collapses instead of popping in and out. The starting
-   style plays when React inserts the row; data-closing holds it while it closes. */
-.header-row-anim {
+/* A key/value row grows and collapses instead of popping in and out. The
+   starting style plays when React inserts the row; data-closing holds it while
+   it closes. */
+.pair-row-anim {
 	display: grid;
 	grid-template-rows: 1fr;
 	transition:
@@ -186,17 +187,17 @@
 		opacity 200ms ease-out;
 }
 
-.header-row-anim > * {
+.pair-row-anim > * {
 	min-height: 0;
 }
 
-.header-row-anim[data-closing="true"] {
+.pair-row-anim[data-closing="true"] {
 	grid-template-rows: 0fr;
 	opacity: 0;
 }
 
 @starting-style {
-	.header-row-anim {
+	.pair-row-anim {
 		grid-template-rows: 0fr;
 		opacity: 0;
 	}

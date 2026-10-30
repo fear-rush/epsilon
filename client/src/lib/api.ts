@@ -4,6 +4,7 @@
  * and every refusal becomes the one sentence the route sent.
  */
 import {
+	mcpServerDetailSchema,
 	problemSchema,
 	providerDetailSchema,
 	providerImportResultSchema,
@@ -15,6 +16,7 @@ import {
 } from "shared";
 import type {
 	DefaultModel,
+	McpServerDetail,
 	McpServerInput,
 	ProviderDetail,
 	ProviderImportInput,
@@ -156,6 +158,12 @@ export const setDefaultModel = async (model: DefaultModel): Promise<void> => {
 export const saveMcpServer = async (input: McpServerInput): Promise<void> => {
 	await writeJson("POST", "/api/settings/mcp", input, "The MCP server was not saved");
 };
+
+export const fetchMcpServer = (name: string): Promise<McpServerDetail> =>
+	readJson(`/api/settings/mcp/${encodeURIComponent(name)}`, mcpServerDetailSchema, {
+		failure: "The MCP server did not load",
+		unreadable: "The server sent an MCP server this page cannot read.",
+	});
 
 export const deleteMcpServer = (name: string): Promise<void> =>
 	send("DELETE", `/api/settings/mcp/${encodeURIComponent(name)}`, "The MCP server was not removed");

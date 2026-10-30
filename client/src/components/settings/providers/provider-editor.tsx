@@ -17,19 +17,17 @@ import { useProviderDetail } from "@/hooks/use-provider-detail";
 import { useSettings } from "@/hooks/use-settings";
 import { OFFLINE, deleteProvider, saveProvider, testProvider } from "@/lib/api";
 import { useSettingsRefresh } from "@/components/settings/settings-refresh";
-
 import { DeleteDialog } from "@/components/settings/delete-dialog";
-
-import { keepUntouched } from "./field-errors";
+import { keepUntouched } from "@/components/settings/field-errors";
+import { PairRows } from "@/components/settings/pair-rows";
 import { draftOf, inputOf, testInputOf } from "./provider-draft";
-import { providerIdFromName, uniqueProviderId } from "./provider-id";
+import { providerIdFromName, providerNamesInUse, uniqueProviderId } from "./provider-id";
 import { providerFieldErrors, providerFields } from "./provider-validation";
 import type { ProviderFieldErrors } from "./provider-validation";
 import type { ProviderDraft } from "./provider-draft";
 import { ProviderConnection } from "./provider-connection";
-import { ProviderHeaders } from "./provider-headers";
-import { ProviderCancelDialog } from "./provider-cancel-dialog";
-import { ProviderDiscardDialog } from "./provider-discard-dialog";
+import { CancelDialog } from "@/components/settings/cancel-dialog";
+import { DiscardDialog } from "@/components/settings/discard-dialog";
 import { ProviderModels } from "./provider-models";
 import { ProviderTestMenu } from "./provider-test-menu";
 
@@ -94,13 +92,11 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 	if (detail !== undefined) taken.delete(detail.id);
 
 	/** Names already in use, so a second provider cannot carry the same label. */
-	const existingNames = new Set<string>();
-	for (const provider of settings.data?.providers ?? []) {
-		if (provider.id !== detail?.id) existingNames.add(provider.name.trim().toLowerCase());
-	}
-	for (const provider of settings.data?.builtins ?? []) {
-		if (provider.id !== detail?.id) existingNames.add(provider.name.trim().toLowerCase());
-	}
+	const existingNames = providerNamesInUse(
+		settings.data?.providers ?? [],
+		settings.data?.builtins ?? [],
+		detail?.id,
+	);
 
 	const update = (patch: Partial<ProviderDraft>) => {
 		allowLeave.current = false;
@@ -201,7 +197,11 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 						namePlaceholder={detail?.name ?? "Display name"}
 						update={update}
 					/>
-					<ProviderHeaders
+					<PairRows
+						title="Custom Headers"
+						addLabel="Add custom headers"
+						keyLabel="Header name"
+						valueLabel="Header value"
 						rows={draft.headers}
 						error={errors.headers}
 						onChange={(headers) => update({ headers })}
@@ -259,8 +259,10 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 			</footer>
 
 			{detail === undefined && (
-				<ProviderCancelDialog
+				<CancelDialog
 					open={cancelOpen}
+					title="Cancel this provider?"
+					description="Nothing is saved until you press Save. The name, endpoint, key and models you entered will be lost."
 					onOpenChange={setCancelOpen}
 					onDiscard={() => {
 						allowLeave.current = true;
@@ -275,7 +277,9 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 				withResolver
 			>
 				{({ status, proceed, reset }) =>
-					status === "blocked" ? <ProviderDiscardDialog onStay={reset} onDiscard={proceed} /> : null
+					status === "blocked" ? (
+						<DiscardDialog subject="provider" onStay={reset} onDiscard={proceed} />
+					) : null
 				}
 			</Block>
 

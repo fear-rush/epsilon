@@ -4,7 +4,7 @@
  * dashboard parses the documented `mcpServers` shape and keeps every other key
  * (ADR-0012). A running session picks the change up through `reload`.
  */
-import type { McpServerInput, McpServerView } from "shared";
+import type { McpServerDetail, McpServerInput, McpServerView } from "shared";
 import { z } from "zod";
 
 import { mcpPath, readJson, readJsonForWrite, writeJson } from "./store";
@@ -34,6 +34,24 @@ const targetOf = (config: ServerEntry): string => {
 	return [config.command ?? "", ...(config.args ?? [])].join(" ").trim();
 };
 
+const keysOf = (values: Record<string, string> | undefined): string[] => Object.keys(values ?? {});
+
+/**
+ * A blank value in an incoming map keeps the stored one, because the browser
+ * only ever sees the keys. A key the form dropped is absent, so it is removed.
+ */
+const mergeStored = (
+	incoming: Record<string, string> | undefined,
+	stored: Record<string, string> | undefined,
+): Record<string, string> | undefined => {
+	if (incoming === undefined || Object.keys(incoming).length === 0) return undefined;
+	const merged: Record<string, string> = {};
+	for (const [key, value] of Object.entries(incoming)) {
+		merged[key] = value === "" && stored?.[key] !== undefined ? stored[key] : value;
+	}
+	return merged;
+};
+
 export const listMcpServers = async (home: string): Promise<McpServerView[]> => {
 	const file = await readJson(mcpPath(home), mcpFileSchema, EMPTY_FILE);
 	return Object.entries(file.mcpServers ?? {})
@@ -45,6 +63,27 @@ export const listMcpServers = async (home: string): Promise<McpServerView[]> => 
 			enabled: config.enabled !== false,
 		}))
 		.sort((left, right) => left.name.localeCompare(right.name));
+};
+
+export const readMcpServer = async (
+	home: string,
+	name: string,
+): Promise<McpServerDetail | undefined> => {
+	const file = await readJson(mcpPath(home), mcpFileSchema, EMPTY_FILE);
+	const config = file.mcpServers?.[name];
+	if (config === undefined) return undefined;
+	return {
+		name,
+		transport: config.url === undefined ? "stdio" : "http",
+		target: targetOf(config),
+		description: config.description,
+		enabled: config.enabled !== false,
+		command: config.command,
+		args: config.args,
+		envKeys: keysOf(config.env),
+		url: config.url,
+		headerKeys: keysOf(config.headers),
+	};
 };
 
 export const writeMcpServer = async (home: string, input: McpServerInput): Promise<void> => {
@@ -65,18 +104,17 @@ export const writeMcpServer = async (home: string, input: McpServerInput): Promi
 		next.command = input.command;
 		if (input.args !== undefined && input.args.length > 0) next.args = input.args;
 		else delete next.args;
-		if (input.env !== undefined && Object.keys(input.env).length > 0) next.env = input.env;
+		const env = mergeStored(input.env, next.env);
+		if (env !== undefined) next.env = env;
 		else delete next.env;
 	} else {
 		delete next.command;
 		delete next.args;
 		delete next.env;
 		next.url = input.url;
-		if (input.headers !== undefined && Object.keys(input.headers).length > 0) {
-			next.headers = input.headers;
-		} else {
-			delete next.headers;
-		}
+		const headers = mergeStored(input.headers, next.headers);
+		if (headers !== undefined) next.headers = headers;
+		else delete next.headers;
 	}
 
 	await writeJson(mcpPath(home), {

@@ -56,6 +56,7 @@ export {
 	builtinProviderSchema,
 	defaultModelSchema,
 	mcpNameSchema,
+	mcpServerDetailSchema,
 	mcpServerInputSchema,
 	mcpServerViewSchema,
 	mcpTransportSchema,
@@ -82,6 +83,7 @@ export {
 export type {
 	BuiltinProvider,
 	DefaultModel,
+	McpServerDetail,
 	McpServerInput,
 	McpServerView,
 	McpTransport,

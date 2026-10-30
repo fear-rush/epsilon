@@ -51,7 +51,7 @@ export function SidebarAccount() {
 					</span>
 				</span>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent side="top" align="start" sideOffset={8} className="w-64">
+			<DropdownMenuContent side="top" align="center" sideOffset={8} className="w-64">
 				<div className="flex items-center gap-3 px-2 py-2">
 					<span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
 						{AVATAR}

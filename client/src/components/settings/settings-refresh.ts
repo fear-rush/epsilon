@@ -9,6 +9,7 @@ export const useSettingsRefresh = (): (() => void) => {
 	return () => {
 		void queryClient.invalidateQueries({ queryKey: ["settings"] });
 		void queryClient.invalidateQueries({ queryKey: ["provider"] });
+		void queryClient.invalidateQueries({ queryKey: ["mcp"] });
 		void queryClient.invalidateQueries({ queryKey: ["readiness"] });
 	};
 };

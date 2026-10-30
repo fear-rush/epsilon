@@ -1,8 +1,8 @@
 /**
- * The router's leave guard for a provider form with unsaved changes. Stay keeps
- * the draft; Discard proceeds with the blocked navigation. The dialog mounts
- * already open, so it opens on the next frame and waits for its close transition
- * before it lets the route change unmount it.
+ * The router's leave guard for a form with unsaved changes. Stay keeps the
+ * draft; Discard proceeds with the blocked navigation. The dialog mounts already
+ * open, so it opens on the next frame and waits for its close transition before
+ * it lets the route change unmount it.
  */
 import { useEffect, useRef, useState } from "react";
 
@@ -19,10 +19,13 @@ import {
 
 const CLOSE_MS = 180;
 
-export function ProviderDiscardDialog({
+export function DiscardDialog({
+	subject,
 	onStay,
 	onDiscard,
 }: {
+	/** The noun in the sentence: "provider" or "MCP server". */
+	subject: string;
 	onStay: () => void;
 	onDiscard: () => void;
 }) {
@@ -51,7 +54,7 @@ export function ProviderDiscardDialog({
 				<AlertDialogHeader>
 					<AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
 					<AlertDialogDescription>
-						This provider has changes that are not saved. Leaving now loses them.
+						This {subject} has changes that are not saved. Leaving now loses them.
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>

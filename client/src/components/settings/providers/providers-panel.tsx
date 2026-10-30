@@ -46,7 +46,7 @@ export function ProvidersPanel({
 				<span className="text-xs text-muted-foreground">{providers.length}</span>
 			</div>
 			{settings.data?.error !== undefined && (
-				<div className="shrink-0 p-2">
+				<div className="shrink-0 px-3 py-2">
 					<Alert variant="destructive">
 						<TriangleAlertIcon />
 						<AlertDescription className="max-h-32 overflow-auto whitespace-pre-wrap text-xs">
@@ -55,7 +55,7 @@ export function ProvidersPanel({
 					</Alert>
 				</div>
 			)}
-			<div className="shrink-0 p-2">
+			<div className="shrink-0 p-3">
 				<div className="relative">
 					<SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
 					<Input
@@ -67,7 +67,7 @@ export function ProvidersPanel({
 					/>
 				</div>
 			</div>
-			<div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+			<div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
 				{settings.isPending ? (
 					<div className="flex items-center gap-2 px-2 py-3 text-xs text-muted-foreground">
 						<Spinner />
@@ -101,7 +101,7 @@ export function ProvidersPanel({
 					))
 				)}
 			</div>
-			<div className="shrink-0 border-t p-2">
+			<div className="shrink-0 border-t p-3">
 				<Button variant="outline" className="w-full" onClick={() => setAddOpen(true)}>
 					<PlusIcon />
 					Add provider

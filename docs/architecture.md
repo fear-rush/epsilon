@@ -95,7 +95,7 @@ not built; it becomes a second listener when S9 starts.
 | `settings/import-models.ts`  | Bounded model-list reads, the per-model shape a `supported_endpoints` list implies, and pi's catalog metadata for a match    |
 | `settings/test-probe.ts`     | The throwaway runtime, the keyless and keyed probes, and the streamed reasoning usage                                        |
 | `settings/test-provider.ts`  | Composes one draft's test target and the sentence the provider form shows                                                    |
-| `settings/mcp.ts`            | MCP servers in `mcp.json`: list, write, remove, and the transport switch that clears the other target                        |
+| `settings/mcp.ts`            | MCP servers in `mcp.json`: list, read, write, remove, and the transport switch that clears the other target                  |
 | `settings/skills.ts`         | User skills as `<agent home>/skills/<name>/SKILL.md`                                                                         |
 | `settings/defaults.ts`       | The default model, through `SettingsManager`                                                                                 |
 | `settings/packages.ts`       | Packages, through `DefaultPackageManager`                                                                                    |

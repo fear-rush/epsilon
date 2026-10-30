@@ -122,8 +122,9 @@ the page, not in the header. Model, thinking level and permission are composer
 controls.
 
 **Sidebar footer.** The deployment card sits at the bottom of the sidebar, the way a
-chat app puts its account menu there. It opens a menu above itself, and Settings
-opens a full page with its own navigation.
+chat app puts its account menu there. It opens a menu above itself, centred so the
+menu keeps the same margin on both sides, and Settings opens a full page with its
+own navigation.
 
 ## Visual states
 
@@ -234,6 +235,7 @@ reach every section.
 Each section is a page title, then grouped cards. A row carries a title, a muted
 description and right-aligned actions; forms sit in a card below the list. A section
 does not restate what the rows already say. The column is `max-w-5xl`: a narrower one leaves half the page empty.
+Providers and MCP servers are two-pane editors instead, described below.
 
 A form's submit is sized to its label and sits at the right edge of its card, so it
 never reads as a long bar across the form. Checkboxes are the shadcn `Checkbox`
@@ -241,21 +243,24 @@ inside a `Field orientation="horizontal"`, never a bare `<input type="checkbox">
 
 **Form validation.** The shared zod schemas stay the contract, and the form adds
 only what it knows: a custom provider needs a name, a base URL and an API family, a URL is
-absolute, a token count and a cost are numbers. A failing control gets
-`aria-invalid`, its `Field` gets `data-invalid`, and the message sits under the
-control in `FieldError`; the first message per field wins. Save stays clickable so a
-blank required field can say so, and a blank optional field is left out of the
-payload instead of being stored empty.
+absolute, a token count and a cost are numbers. An MCP server needs a free name and
+either a command or an absolute URL, and a stored-map row needs a name and a value.
+A failing control gets `aria-invalid`, its `Field` gets `data-invalid`, and the
+message sits under the control in `FieldError`; the first message per field wins.
+Save stays clickable so a blank required field can say so, and a blank optional
+field is left out of the payload instead of being stored empty.
 
 The settings navigation is the same width as the session sidebar (`SIDEBAR_WIDTH`),
-so the column edge does not jump when moving between the app and Settings.
+so the column edge does not jump when moving between the app and Settings. The
+settings navigation and a two-pane list use the same inset, so the two search
+fields sit on one line.
 
 - **General.** Readiness with a Ready or Not configured badge, the agent home, and
   the searchable default model picker, which spans the card so its popup lines up
   with the section instead of hanging off a button on the right.
 - **Providers.** A two-pane editor, described below.
-- **MCP servers.** Servers from `mcp.json`, with transport, target and enabled
-  state. Adding a name that exists replaces it.
+- **MCP servers.** A two-pane editor, described below. Servers come from
+  `mcp.json`, with transport, target and enabled state.
 - **Skills.** User skills under the agent home, with name, description and
   instructions. Editing reads the file through a REST route; removing deletes only
   that directory.
@@ -357,6 +362,25 @@ the server is not reachable. No retry label, no back button and no half-empty
 list, because the query reconnects on its own. A provider-specific error that is
 not the unreachable state keeps its alert and a styled **Back to providers**
 button, which still leads somewhere useful.
+
+### MCP editor
+
+The same split as providers, with one server on the right. The left list carries
+the name, the transport and the target, and a disabled server says so. **Add MCP**
+opens an empty draft. The name is the key in `mcp.json`, so it is fixed after the
+first save and a name already in the list is refused under the field.
+
+The form scrolls and its footer stays pinned: **Cancel** for a new server,
+**Delete** for an existing one, then **Save**. Delete removes the entry and
+confirms in `AlertDialog`; an OAuth token in `mcp-auth.json` is not touched.
+
+The transport decides the target card: command, arguments and environment, or URL
+and headers. Environment and header rows are key/value rows, not a textarea. A
+stored value never travels to the browser: its row shows the name, a blank value
+keeps it, a typed value replaces it, and removing the row removes the entry.
+Switching transport clears the other target when the form is saved, so a server
+never carries two. Selection is a route, and a phone shows the list and the editor
+as separate screens; leaving a dirty draft asks to discard.
 
 ## Not-ready notice
 
