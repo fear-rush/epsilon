@@ -63,7 +63,7 @@ export function AddProviderDialog({
 						onChange={(event) => setQuery(event.target.value)}
 					/>
 				</div>
-				<div className="max-h-96 overflow-y-auto rounded-2xl border">
+				<div className="max-h-96 overflow-y-auto rounded-xl border">
 					<button
 						type="button"
 						className="flex w-full cursor-pointer items-center gap-3 border-b px-3 py-3 text-left hover:bg-muted/60"

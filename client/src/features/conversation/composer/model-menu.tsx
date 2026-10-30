@@ -54,7 +54,7 @@ export function ModelMenu({ models, model, onSelect }: ModelMenuProps) {
 				render={
 					<InputGroupButton
 						size="sm"
-						className="ml-auto w-auto max-w-40 cursor-pointer gap-1 truncate rounded-full text-xs sm:max-w-64"
+						className="ml-auto w-auto max-w-40 cursor-pointer gap-1 truncate rounded-md text-xs sm:max-w-64"
 					/>
 				}
 			>

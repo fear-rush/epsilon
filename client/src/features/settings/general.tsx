@@ -72,7 +72,7 @@ export function SettingsGeneral({ snapshot }: { snapshot: SettingsSnapshot }) {
 					title="Agent home"
 					description="pi reads settings, credentials, sessions and skills here."
 				>
-					<code className="w-full rounded-lg bg-muted px-2 py-1 font-mono text-xs break-all">
+					<code className="w-full rounded-md bg-muted px-2 py-1 font-mono text-xs break-all">
 						{snapshot.home}
 					</code>
 				</SettingsRow>

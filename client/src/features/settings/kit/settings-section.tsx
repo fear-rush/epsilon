@@ -41,7 +41,7 @@ export function SettingsGroup({
 		<section className="grid gap-2">
 			{title !== undefined && <h2 className="text-sm font-medium">{title}</h2>}
 			{description !== undefined && <p className="text-xs text-muted-foreground">{description}</p>}
-			<div className="divide-y overflow-hidden rounded-2xl border bg-card">{children}</div>
+			<div className="divide-y overflow-hidden rounded-xl border bg-card">{children}</div>
 		</section>
 	);
 }

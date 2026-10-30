@@ -27,7 +27,7 @@ function NavLink({ section, active }: { section: SettingsSection; active: boolea
 		<Link
 			to={section.to}
 			className={cn(
-				"flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-colors",
+				"flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
 				active ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/60",
 			)}
 		>
@@ -61,7 +61,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
 				>
 					<Link
 						to="/"
-						className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground"
+						className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground"
 					>
 						<ArrowLeftIcon className="size-4" />
 						Back to app

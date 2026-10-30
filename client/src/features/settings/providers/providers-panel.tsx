@@ -71,7 +71,7 @@ function ProvidersPanel({
 					to="/settings/providers/$providerId"
 					params={{ providerId: provider.id }}
 					className={cn(
-						"flex items-center gap-2 rounded-xl px-2 py-2 transition-colors",
+						"flex items-center gap-2 rounded-md px-2 py-2 transition-colors",
 						selectedId === provider.id ? "bg-muted" : "hover:bg-muted/60",
 					)}
 				>

@@ -37,7 +37,7 @@ export function SidebarAccount() {
 					<button
 						type="button"
 						aria-label="App menu"
-						className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left hover:bg-sidebar-accent"
+						className="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left hover:bg-sidebar-accent"
 					/>
 				}
 			>

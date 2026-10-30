@@ -95,6 +95,10 @@ session down with the server; session files survive
   `Message`, `Trace`, `CodeBlock`, `Marker`) mean something, so do not fake them
   with divs. One component per concept: one way to render a tool call.
 - Composition is Base UI: `render={<Button />}`, never `asChild`.
+- Radius follows one ladder: `rounded-md` for rows, menu items and chips, `rounded-lg`
+  for controls, menus, popovers and code blocks, `rounded-xl` for dialogs, alerts,
+  panels and bordered lists, `rounded-2xl` for message bubbles only, and `rounded-full`
+  only for pills, avatars and circular icon buttons.
 - Colour carries state only (running, needs input, error, selected).
 - Surfaces rest white. A muted fill is a state (hover, selected, code, icon tile).
 - Destructive actions use `variant="destructive"` and confirm in an `AlertDialog`.

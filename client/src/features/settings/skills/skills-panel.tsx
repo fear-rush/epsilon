@@ -63,7 +63,7 @@ function SkillsPanel({
 					to="/settings/skills/$name"
 					params={{ name: skill.name }}
 					className={cn(
-						"block rounded-xl px-2 py-2 transition-colors",
+						"block rounded-md px-2 py-2 transition-colors",
 						selectedName === skill.name ? "bg-muted" : "hover:bg-muted/60",
 					)}
 				>
