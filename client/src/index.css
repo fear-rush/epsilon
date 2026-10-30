@@ -176,10 +176,10 @@
 	}
 }
 
-/* A key/value row grows and collapses instead of popping in and out. The
-   starting style plays when React inserts the row; data-closing holds it while
-   it closes. */
-.pair-row-anim {
+/* A settings row grows and collapses instead of popping in and out. The starting
+   style plays when React inserts the row; data-closing holds it while it
+   closes. `kit/animating-rows.tsx` owns the timings on the React side. */
+.settings-row-anim {
 	display: grid;
 	grid-template-rows: 1fr;
 	transition:
@@ -187,17 +187,17 @@
 		opacity 200ms ease-out;
 }
 
-.pair-row-anim > * {
+.settings-row-anim > * {
 	min-height: 0;
 }
 
-.pair-row-anim[data-closing="true"] {
+.settings-row-anim[data-closing="true"] {
 	grid-template-rows: 0fr;
 	opacity: 0;
 }
 
 @starting-style {
-	.pair-row-anim {
+	.settings-row-anim {
 		grid-template-rows: 0fr;
 		opacity: 0;
 	}

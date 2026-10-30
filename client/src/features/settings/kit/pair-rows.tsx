@@ -5,11 +5,12 @@
  * incomplete row. Rows grow and collapse instead of popping in and out.
  */
 import { PlusIcon, Trash2Icon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { AnimatedRow } from "@/features/settings/kit/animated-row";
+import { useAnimatedRows } from "@/features/settings/kit/use-animated-rows";
 import { SettingsBlock, SettingsGroup } from "@/features/settings/kit/settings-section";
 
 export type PairRow = {
@@ -40,28 +41,16 @@ export function PairRows({
 	keyPlaceholder?: string;
 	onChange: (rows: PairRow[]) => void;
 }) {
-	const [removing, setRemoving] = useState<number | undefined>();
-	const latest = useRef(rows);
-	useEffect(() => {
-		latest.current = rows;
-	}, [rows]);
+	const { closing, remove } = useAnimatedRows(rows, onChange);
 	const update = (index: number, patch: Partial<PairRow>) =>
 		onChange(rows.map((row, at) => (at === index ? { ...row, ...patch } : row)));
-	/** Let the row collapse, then drop it. The CSS transition is 200ms. */
-	const remove = (index: number) => {
-		setRemoving(index);
-		window.setTimeout(() => {
-			onChange(latest.current.filter((_, at) => at !== index));
-			setRemoving(undefined);
-		}, 220);
-	};
 
 	return (
 		<SettingsGroup title={title} description={description}>
 			<SettingsBlock>
 				<div className="grid gap-2">
 					{rows.map((row, index) => (
-						<div key={index} className="pair-row-anim" data-closing={removing === index}>
+						<AnimatedRow key={index} closing={closing === index}>
 							<div className="flex items-center gap-2">
 								<Input
 									value={row.key}
@@ -81,13 +70,13 @@ export function PairRows({
 									variant="destructive"
 									size="icon-sm"
 									aria-label={`Remove ${row.key || "row"}`}
-									disabled={removing !== undefined}
+									disabled={closing !== undefined}
 									onClick={() => remove(index)}
 								>
 									<Trash2Icon />
 								</Button>
 							</div>
-						</div>
+						</AnimatedRow>
 					))}
 					<div>
 						<Button
