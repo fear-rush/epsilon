@@ -1,9 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type { McpScope } from "shared";
 
-import { McpEditor } from "@/components/settings/mcp/mcp-editor";
-
-const asScope = (value: string): McpScope => (value === "project" ? "project" : "global");
+import { asScope } from "@/features/settings/mcp/scope";
+import { McpEditor } from "@/features/settings/mcp/mcp-editor";
 
 export const Route = createFileRoute("/settings/mcp/$scope/$name")({
 	component: function McpServerPage() {
