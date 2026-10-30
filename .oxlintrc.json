@@ -22,7 +22,7 @@
 		"anti-slop/require-safety-comment-for-type-assertion": "error"
 	},
 	"env": {
-		"es2024": true
+		"es2026": true
 	},
 	"ignorePatterns": [
 		"**/dist/**",

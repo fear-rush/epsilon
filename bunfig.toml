@@ -1,3 +1,0 @@
-[install]
-# Only resolve versions published at least three days ago.
-minimumReleaseAge = 259200

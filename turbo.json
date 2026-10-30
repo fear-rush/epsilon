@@ -43,8 +43,7 @@
 		"package.json",
 		"bun.lock",
 		"tsconfig.json",
-		"tsconfig.base.json",
-		"bunfig.toml"
+		"tsconfig.base.json"
 	],
 	"globalEnv": ["NODE_ENV", "CI"]
 }
