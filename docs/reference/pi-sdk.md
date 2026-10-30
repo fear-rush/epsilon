@@ -188,7 +188,7 @@ models by hand.
 
 The provider test is a pi SDK call instead. It registers the draft with
 `ModelRuntime.registerProvider()` on a throwaway runtime, which is runtime-only and
-writes no file, then asks `completeSimple()` for a one-word answer. A typed key or
+writes no file, then asks `completeSimple()` for a small answer. A typed key or
 header overrides the stored one, so the test tries what Save would write, and the
 request goes through pi's own client rather than a second wire implementation.
 
@@ -197,9 +197,9 @@ to stream an unconfigured provider, then suppresses the family's auth header wit
 `null` header value so the endpoint sees no key. The keyed one uses the typed or
 stored credential. That is how a local or keyless endpoint and a real key are told
 apart before Save. A `level` on the request is passed to `completeSimple` as
-`reasoning`; the test reads a clone of the provider stream for
-`reasoning_tokens`/thinking deltas and reports that evidence, not a claim that the
-level was sent.
+`reasoning`; the test reads the request payload and a clone of the provider stream,
+then reports the field the request carried plus the `reasoning_tokens` or thinking
+characters the provider returned.
 
 ## Files in the agent home
 

@@ -40,6 +40,10 @@ they change with the operator's home.
 - `busy` means a turn is running. It comes from `agent_start`/`agent_end` and the
   snapshot's `isStreaming`. Whether a dialog blocks the engine reaches the sidebar
   through the REST session list's `needsInput`, not the socket.
+- Protocol 6 carries `thinkingLevel` and `availableThinkingLevels` in the snapshot
+  and `set_thinking_level` as a command. `setThinkingLevel()` clamps to the model's
+  supported levels; the snapshot and `thinking_level_changed` report the effective
+  one.
 - An answer names the method of its question. A mismatched answer is refused with
   `UNSUPPORTED_FRAME`, a second answer for a settled dialog is stale and ignored,
   and the first answer wins.
@@ -130,11 +134,15 @@ they change with the operator's home.
   is unset. Unknown keys survive on the entry, on each model and on each override,
   because every file schema is a loose object and the merge starts from the stored
   value.
-- A blank key or header value keeps the stored secret; a header left out of the
-  record is removed. Header values never travel to the browser.
+- A blank key keeps the stored credential. A blank value on a stored header keeps
+  it; a new header needs a name and a value, and the form refuses an incomplete row.
+  Header values never travel to the browser.
 - A provider id is letters, digits, dashes and underscores, and `new` is reserved
-  because it is the add-provider route. A provider or model base URL must be an
-  absolute URL at the HTTP boundary, and an empty provider string clears the field.
+  because it is the add-provider route. The form derives the id from the display
+  name, suffixes a taken id with `-2`, and refuses a name another configured or
+  pi-shipped provider already uses; the id is fixed after the first save. A provider
+  or model base URL must be an absolute URL at the HTTP boundary, and an empty
+  provider string clears the field.
 - `api: ""` clears a provider's API family; a missing `api` keeps the stored one.
 - MCP input is a union on `transport`, so a stdio server needs a command and an
   HTTP server needs a URL. Switching transport clears the other target's fields.
@@ -148,7 +156,16 @@ they change with the operator's home.
   `ModelRuntime.logout()`. A key from the environment or from `models.json` is not
   touched.
 - Model import uses the typed key, or the stored credential resolved by
-  `ModelRuntime.getAuth()` on the server; the key is never sent to the page.
+  `ModelRuntime.getAuth()` on the server; the key is never sent to the page. A
+  `supported_endpoints` list can give a `/messages`-only model the Anthropic API and
+  the base above its `/v1`, and a `/responses`-only model that API. An exact id and
+  API in pi's catalog supplies `reasoning`, `thinkingLevelMap` and
+  `forceAdaptiveThinking`.
+- The provider test registers the draft on a throwaway runtime, probes without auth
+  headers and again with the typed or stored key, and reads a clone of the stream.
+  A `level` is passed as `reasoning`; the result names the sent field and the
+  reasoning tokens or thinking characters. A filled key that fails is an error even
+  when the keyless probe works.
 - Packages go through `DefaultPackageManager.installAndPersist` and
   `removeAndPersist`; the panel never calls the CLI.
 - A skill name is a route segment and a directory name. The shared schema rejects
@@ -167,7 +184,8 @@ they change with the operator's home.
 - Keyed statuses other than `permission` are held in reducer state and not rendered
   yet. Widgets render as text above the composer.
 - Thinking renders as a muted paragraph above the answer, with no duration and no
-  collapse.
+  collapse. The composer's thinking menu offers the current model's supported
+  levels and stays hidden when the model offers only Off.
 - Diffs and written files render as `CodeBlockLine variant="removed"/"added"` inside
   `CodeBlockContent`; the `+` and `−` marks come from the component, not from copy.
 - The model menu is a `DropdownMenu` with one `DropdownMenuRadioGroup` per provider,
@@ -182,28 +200,33 @@ they change with the operator's home.
   the column edge does not jump between the two surfaces. `useIsMobile` treats
   anything under 1280px as mobile.
 - The provider editor's right column is a flex column: the form scrolls above a
-  footer pinned to the bottom, so Delete and Save sit at the panel edge on a short
-  form too.
+  footer pinned to the bottom. A new provider has Test, Cancel, Save; a saved one
+  has Test, Delete, Save. Cancel confirms before discarding the draft.
 - A form submit inside a grid stretches to the grid width; each settings form puts
   it at the right edge instead.
 - Base UI groups menu parts: a `DropdownMenuLabel` or item outside a
   `DropdownMenuGroup`/`RadioGroup` throws "MenuGroupContext is missing" during
   render.
-- The registry ships `cursor-default` on menu, command and select items, and cmdk
-  writes `data-disabled="false"` on every enabled row; the pointer rule keys on
-  `aria-disabled="true"` and the local components drop the cursor class. The
-  checkbox keeps its indicator mounted and transitions scale and opacity, with
+- The registry ships `cursor-default` on menu, command and select items; the base
+  CSS gives clickable roles a pointer and the local components add `cursor-pointer`
+  to buttons, items and the select trigger. cmdk writes `data-disabled="false"` on
+  every enabled row; the pointer rule keys on `aria-disabled="true"`. The checkbox
+  keeps its indicator mounted and transitions scale and opacity, with
   `[&>svg]:size-3.5`.
 - `DialogContent` and `AlertDialogContent` cap their height at `100svh-2rem`,
   scroll, and wrap long tokens, so a long permission command or option stays inside
-  the dialog.
+  the dialog. Overlays use Base UI's `data-starting-style`/`data-ending-style`
+  transitions; a dialog that mounts already open needs an explicit next-frame open
+  and a delayed close before its route action (the discard guard does both).
 - Network failures are phrased: a dropped fetch reads "The server is not
-  reachable. Retrying…". The sidebar keeps its rows while the poll retries; a failed
-  delete reports inside its dialog.
+  reachable." with no retry label. The sidebar keeps its rows while the poll retries
+  in the background; a failed delete reports inside its dialog. When the settings
+  query fails, the providers route is one centred sentence with no list, editor or
+  back button.
 - UI copy has no middots. Lists join with a comma; pi's own model names keep their
   `·` and are rendered as received. Durations read `done (1.2s)`.
 - The composer is an `InputGroup` with a `block-end` addon holding the model,
-  permission, stop and submit controls. Enter sends, Shift+Enter adds a line, Esc
+  thinking level, permission, stop and submit controls. Enter sends, Shift+Enter adds a line, Esc
   stops a run, and a bare `!` or `!!` that has no command stays in the draft.
 - The tab settles a turn twice: `agent_end` then `agent_settled`. Both clear
   `busy`; `abort` produces `message_end`, `turn_end`, `agent_end` and

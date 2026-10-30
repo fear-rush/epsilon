@@ -13,15 +13,17 @@ tenancy, by design: you put it behind a private network or a tunnel and it is yo
 ## What it does
 
 - **Continue.** A session list, a live transcript, and a composer that sends,
-  steers mid-run and aborts, with the model and permission controls beside it.
+  steers mid-run and aborts, with the model, thinking level and permission controls
+  beside it.
 - **Read the run.** Streaming text, thinking, tool calls with their arguments and
   output, bash output, image results and errors, rendered as a conversation instead
   of a terminal scrollback.
 - **Answer.** Permission approvals and extension questions arrive as dialogs and
   hold the run until you answer, from whichever device is in front of you.
-- **Configure.** Providers and their models, the default model, MCP servers, skills
-  and packages are edited in Settings and written to the agent home, so a machine
-  that has never had `pi` configured becomes usable from the browser.
+- **Configure.** Providers, their models and reasoning levels, the default model,
+  MCP servers, skills and packages are edited in Settings and written to the agent
+  home, so a machine that has never had `pi` configured becomes usable from the
+  browser. A provider or model draft can be tested before it is saved.
 - **Notice what is missing.** A home with no usable model replaces every page with
   one notice that says what to do and links to Settings, never a silently failed
   turn.

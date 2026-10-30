@@ -281,10 +281,18 @@ Server and reducer checks, run over HTTP against a scratch home:
       catalog intact; the entry then lists as configured
 - [x] A provider detail exposes header names but no values, full model entries and
       `modelOverrides`
-- [x] A header write with a blank value keeps the stored value and removes headers
-      left out of the record
+- [x] A header write keeps a stored value when the row is blank, removes a header
+      left out of the record, and the form refuses a new row with a missing name or
+      value
+- [x] `thinkingLevelMap` and the reasoning compat round-trip through a provider write,
+      and unknown keys survive on both
 - [x] Fetch returns ids from `/models` for the OpenAI family and `/v1/models` for
       Anthropic; the stored key is used server-side and is withheld from the page
+- [x] A `/messages`-only model imports with the Anthropic API and the base above its
+      `/v1`; a `/responses`-only model gets that API; an exact id and API copy pi's
+      reasoning, map and adaptive switch
+- [x] A provider/model test at a level names the sent field and the returned
+      reasoning tokens, runs keyless and keyed, and refuses a malformed key
 - [x] The API table pins each family's path and the model-list path: commandcode's
       `/provider/v1` is followed by `/chat/completions` and `/responses`, Anthropic
       adds `/v1/models`, and Google has no shared list
@@ -293,26 +301,44 @@ Server and reducer checks, run over HTTP against a scratch home:
 - [x] A provider write refuses a blank required field, an unsafe id and a relative
       base URL, and a model refuses a non-numeric token count and a half-filled cost
 
+Provider identity, reasoning, import and tests (verified by code and real provider requests):
+
+- [x] A custom provider's name derives a unique id (`-2` on a collision), the id is
+      not shown, a duplicate name is refused, and the id is fixed after save
+- [x] The Providers page lists configured providers by name and model count; a
+      custom provider does not repeat its id, and a pi-shipped one says `pi default`
+- [x] The base URL field names the resolved request URL and warns when the base
+      repeats the family's path, without rewriting it
+- [x] A stored header row with a blank value keeps it; a new row needs a name and a
+      value; adding and removing a row animates it open and closed
+- [x] A mixed model list gives each model its own shape, and an exact pi catalog
+      match supplies its reasoning metadata
+- [x] A reasoning model shows the level matrix and compat fields; the composer
+      offers its supported levels and hides the control when only Off exists
+- [x] Test opens a model picker and level select; the model dialog's Test uses the
+      same level select, disabled until Reasoning model is on
+- [x] A new provider's footer is Test, Cancel, Save; Cancel confirms before
+      discarding, and a saved provider's footer is Test, Delete, Save
+- [x] A failed settings query replaces the providers route with one sentence, with
+      no list, editor, retry label or back button
+
 Browser checks, confirmed by the operator:
 
 - [x] The bottom-left deployment card opens a menu, and Settings from it opens the
       full page; the not-ready notice links to the same page
-- [x] The Providers page lists only configured providers, with the id and the model
-      count. Selecting one shows the list on the left and its form on the right;
-      Add provider opens the built-in picker and the custom draft
 - [x] The API picker names each family with the path it appends, and the model count
       sits in the group title ("Models pi ships (29)")
 - [x] A built-in catalog is read-only; Override writes `modelOverrides`; Add model or
       Fetch models from provider asks before replacing the catalog, and Use pi's
       catalog undoes the draft
-- [x] A header row with a blank value keeps the stored header after save; removing
-      the row removes the header
+- [x] A stored header row with a blank value keeps the stored header after save;
+      removing the row removes the header
 - [x] Fetch models from provider returns ids for an OpenAI base and an Anthropic
       base, and is disabled for Google
 - [x] A provider added on the page is visible without a reload, its key stays hidden,
       and the General default-model picker searches and offers its models
 - [x] Leaving the editor with unsaved changes asks to discard; saving a new provider
-      navigates to its route without the prompt; Delete and Save stay pinned to the
+      navigates to its route without the prompt; the footer stays pinned to the
       bottom of the column
 - [x] MCP, skill and package sections add, edit and remove their entries, and error
       text appears in the form; MCP reads "Add MCP"
@@ -321,4 +347,5 @@ Browser checks, confirmed by the operator:
       keeps every section reachable
 - [x] A live session picks up a new provider, MCP server or skill without a restart
 - [x] `rg -i rpc server shared client` finds no engine path that enters pi's RPC mode
+      or speaks its envelope; `mode` is `"json"` and a prompt source is `"interactive"`
       or speaks its envelope; `mode` is `"json"` and a prompt source is `"interactive"`

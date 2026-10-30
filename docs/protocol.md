@@ -1,6 +1,6 @@
 # Browser protocol
 
-Status: **protocol 5 implemented.** This is the contract between `server/` and
+Status: **protocol 6 implemented.** This is the contract between `server/` and
 `client/`. Both sides implement it; neither invents frames.
 
 On the wire today: `hello`, `welcome`, `attach`, `detach`, `command`,
@@ -8,8 +8,8 @@ On the wire today: `hello`, `welcome`, `attach`, `detach`, `command`,
 `event` and `error`. The `terminal*` frames are declared and unimplemented (S7).
 The coalescing, backpressure and heartbeat rules below are targets, not code.
 
-The REST API is separate. Use REST for reading the disk (sessions, and later
-files, resources and readiness) and this socket for everything agent-shaped.
+The REST API is separate. Use REST for reading the disk (sessions and readiness,
+and later files and resources) and this socket for everything agent-shaped.
 
 The zod schemas in `shared/src/protocol/frames.ts` and `shared/src/extui.ts` are
 the source of truth for every shape. This document says which frames exist and

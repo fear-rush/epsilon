@@ -66,30 +66,31 @@ The dashboard configures it through pi's SDK and its documented files
 ([ADR-0012](adr/0012-configure-in-the-dashboard.md)). What stays in the terminal is
 only what pi does not expose to a host.
 
-| Feature                                                                              | How                                                                                                                                            |
-| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Report readiness: is there a usable model in this home, and where is the home        | `agent/readiness.ts` behind REST `GET /api/readiness`                                                                                          |
-| A missing provider becomes a notice that opens Settings                              | own, on the not-ready state; never a silently failed turn                                                                                      |
-| Provider list with the id and model count                                            | `settings/providers.ts` + `ModelRuntime`, REST `GET /api/settings`                                                                             |
-| Two-pane editor: configured providers left, one form right                           | Routes `/settings/providers/$providerId` and `/new`                                                                                            |
-| Add a provider pi ships, or a custom one, from a searchable picker                   | `builtins` in the snapshot; `components/settings/providers/`                                                                                   |
-| Read one provider's detail, with header names but no secret values                   | REST `GET /api/settings/providers/{id}`                                                                                                        |
-| Name each API family with the path it appends, in the picker                         | `PROVIDER_APIS` in `shared/src/provider-endpoints.ts`                                                                                          |
-| Show the request URL a base URL produces, and warn when it repeats the family's path | `providerEndpoint` and `providerBaseUrlProblem` in `shared/src/provider-endpoints.ts`                                                          |
-| Add, edit or remove a model; override a model pi ships                               | **settings** page → `models` / `modelOverrides`, with an explicit replace warning                                                              |
-| Configure reasoning per model and provider                                           | **settings** page → `reasoning`, `thinkingLevelMap` and the reasoning keys of `compat`; written by the model and provider forms                |
-| Fetch a provider's model list, then add the ones you pick                            | REST `POST /api/settings/providers/models`; Epsilon's own bounded GET; `supported_endpoints` sets a per-model Anthropic/Responses shape        |
-| Test a provider at a reasoning level and report its tokens                           | REST `POST /api/settings/providers/test`; the same route, a `level` and the streamed usage                                                     |
-| Test a provider draft or one model before Save writes it                             | REST `POST /api/settings/providers/test`; `registerProvider()` on a throwaway runtime, then `completeSimple()`                                 |
-| Add, edit or remove a provider endpoint, its key, headers and models                 | **settings** page → `settings/provider-write.ts` merges `models.json`, keeps unknown keys, and logs a stored key out of `auth.json` on removal |
-| Choose the default provider and model                                                | **settings** → `SettingsManager.setDefaultModelAndProvider`                                                                                    |
-| Add, replace or remove an MCP server                                                 | **settings** → `settings/mcp.ts` writes `mcp.json`                                                                                             |
-| Create, edit or remove a user skill                                                  | **settings** → `settings/skills.ts` writes `<agent home>/skills/<name>/SKILL.md`                                                               |
-| Install or remove a package                                                          | **settings** → `DefaultPackageManager.installAndPersist` / `removeAndPersist`                                                                  |
-| Apply a change to live sessions                                                      | `registry.reloadAll()` → `session.reload()`                                                                                                    |
-| Readiness detail, package versions, trust state on a resources page                  | **planned (S8)**                                                                                                                               |
-| OAuth or subscription login, project trust, MCP sign-in, TUI-only settings           | **terminal**: `pi`, then `/login`, `/trust`, `/mcp login`, `/settings`                                                                         |
-| Update a package, clear MCP credentials, configuration import                        | **not built**                                                                                                                                  |
+| Feature                                                                              | How                                                                                                                                                       |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Report readiness: is there a usable model in this home, and where is the home        | `agent/readiness.ts` behind REST `GET /api/readiness`                                                                                                     |
+| A missing provider becomes a notice that opens Settings                              | own, on the not-ready state; never a silently failed turn                                                                                                 |
+| Provider list with the name and model count                                          | `settings/providers.ts` + `ModelRuntime`, REST `GET /api/settings`; a pi-shipped row says `pi default`                                                    |
+| Derive a unique provider id from its name, and refuse a duplicate name               | `provider-id.ts` and `provider-validation.ts`; the id stays the `models.json` key                                                                         |
+| Two-pane editor: configured providers left, one form right                           | Routes `/settings/providers/$providerId` and `/new`                                                                                                       |
+| Add a provider pi ships, or a custom one, from a searchable picker                   | `builtins` in the snapshot; `components/settings/providers/`                                                                                              |
+| Read one provider's detail, with header names but no secret values                   | REST `GET /api/settings/providers/{id}`                                                                                                                   |
+| Name each API family with the path it appends, in the picker                         | `PROVIDER_APIS` in `shared/src/provider-endpoints.ts`                                                                                                     |
+| Show the request URL a base URL produces, and warn when it repeats the family's path | `providerEndpoint` and `providerBaseUrlProblem` in `shared/src/provider-endpoints.ts`                                                                     |
+| Add, edit or remove a model; override a model pi ships                               | **settings** page → `models` / `modelOverrides`, with an explicit replace warning                                                                         |
+| Configure reasoning per model and provider                                           | **settings** page → `reasoning`, `thinkingLevelMap` and the reasoning keys of `compat`; written by the model and provider forms                           |
+| Fetch a provider's model list, then add the ones you pick                            | REST `POST /api/settings/providers/models`; bounded GET; `supported_endpoints` sets a per-model shape, and a pi catalog match supplies reasoning metadata |
+| Test a provider draft or one model, keyless or keyed, at a reasoning level           | REST `POST /api/settings/providers/test`; `registerProvider()` on a throwaway runtime, `completeSimple()`, a `level`, and the streamed usage              |
+| Show one minimal sentence when the settings server cannot be reached                 | `routes/settings.providers.tsx` + `offline-notice.tsx`; no list, editor or retry copy                                                                     |
+| Add, edit or remove a provider endpoint, its key, headers and models                 | **settings** page → `settings/provider-write.ts` merges `models.json`, keeps unknown keys, and logs a stored key out of `auth.json` on removal            |
+| Choose the default provider and model                                                | **settings** → `SettingsManager.setDefaultModelAndProvider`                                                                                               |
+| Add, replace or remove an MCP server                                                 | **settings** → `settings/mcp.ts` writes `mcp.json`                                                                                                        |
+| Create, edit or remove a user skill                                                  | **settings** → `settings/skills.ts` writes `<agent home>/skills/<name>/SKILL.md`                                                                          |
+| Install or remove a package                                                          | **settings** → `DefaultPackageManager.installAndPersist` / `removeAndPersist`                                                                             |
+| Apply a change to live sessions                                                      | `registry.reloadAll()` → `session.reload()`                                                                                                               |
+| Readiness detail, package versions, trust state on a resources page                  | **planned (S8)**                                                                                                                                          |
+| OAuth or subscription login, project trust, MCP sign-in, TUI-only settings           | **terminal**: `pi`, then `/login`, `/trust`, `/mcp login`, `/settings`                                                                                    |
+| Update a package, clear MCP credentials, configuration import                        | **not built**                                                                                                                                             |
 
 ## Extension surface
 
@@ -129,7 +130,7 @@ routes are not implemented; the `terminal*` frames are declared in
 | Agent readiness    | REST `GET /api/readiness`                                 |
 | REST docs          | generated OpenAPI at `/openapi.json`, Scalar at `/scalar` |
 | Health             | REST `GET /health`                                        |
-| One socket per tab | `client/src/link.ts`, protocol 5                          |
+| One socket per tab | `client/src/link.ts`, protocol 6                          |
 | Remote access      | a tunnel in front; no auth code in the app                |
 
 Host and Origin checks, one origin serving the built client, and a published port

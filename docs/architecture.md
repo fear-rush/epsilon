@@ -2,7 +2,7 @@
 
 Status: **partly implemented.** S1 to S5, S12, S13 and S17 are verified in a
 browser. S14 is active; S6 to S11, S15 and S16 are open.
-The browser socket is Epsilon's own protocol 5
+The browser socket is Epsilon's own protocol 6
 ([ADR-0009](adr/0009-socket-speaks-epsilon.md)); the engine runs in this process
 ([ADR-0008](adr/0008-embed-pi-engine-with-opinions.md)). The deployment boundary is
 decided ([ADR-0005](adr/0005-deployment-owns-agent-home.md)) and not built. Modules
@@ -91,8 +91,10 @@ not built; it becomes a second listener when S9 starts.
 | `settings/read.ts`           | One settings snapshot, including a file the panel had to skip                                                                |
 | `settings/models-file.ts`    | The `models.json` shape, the field merge that keeps unknown keys, and the path helpers                                       |
 | `settings/providers.ts`      | Provider views and detail, built-in ids, and the runtime the panel reads them through                                        |
-| `settings/provider-write.ts` | Upsert and remove, the partial-field policy, and the credential logged out with a stored one                                 |
-| `settings/import-models.ts`  | Bounded model-list reads for the OpenAI families and Anthropic, and the stored credential they may use                       |
+| `settings/provider-write.ts` | Upsert and remove, the partial-field policy, the reasoning map and compat, and the credential logged out with a stored one   |
+| `settings/import-models.ts`  | Bounded model-list reads, the per-model shape a `supported_endpoints` list implies, and pi's catalog metadata for a match    |
+| `settings/test-probe.ts`     | The throwaway runtime, the keyless and keyed probes, and the streamed reasoning usage                                        |
+| `settings/test-provider.ts`  | Composes one draft's test target and the sentence the provider form shows                                                    |
 | `settings/mcp.ts`            | MCP servers in `mcp.json`: list, write, remove, and the transport switch that clears the other target                        |
 | `settings/skills.ts`         | User skills as `<agent home>/skills/<name>/SKILL.md`                                                                         |
 | `settings/defaults.ts`       | The default model, through `SettingsManager`                                                                                 |
@@ -109,45 +111,48 @@ notifications, and the queue/backpressure channel.
 
 `shared/src/`: browser-safe. No `node:*`, no React.
 
-| Module                      | Owns                                                                     |
-| --------------------------- | ------------------------------------------------------------------------ |
-| `protocol/version.ts`       | `PROTOCOL_VERSION`                                                       |
-| `protocol/frames.ts`        | zod schemas for every socket frame, the command union and the snapshot   |
-| `permission.ts`             | The permission mode values and the keyed-status text both sides read     |
-| `model-key.ts`              | One model key for the composer menu and the settings picker              |
-| `schemas/problem.ts`        | The one refusal body every route documents and every read parses         |
-| `extui.ts`                  | zod schemas for dialog questions, answers and display requests           |
-| `pi.ts`                     | Type-only re-export of pi's `JsonAgentSessionEvent`, the reducer's input |
-| `conversation/state.ts`     | `ConversationState`                                                      |
-| `conversation/reduce.ts`    | `reduce(state, frame)`: pure, replay-tested; the frame vocabulary        |
-| `conversation/events.ts`    | pi's event half of the reducer: streaming, tool runs, notices            |
-| `conversation/content.ts`   | The content-part parse the reducer and the transcript share              |
-| `conversation/selectors.ts` | Derived views: messages, running tools, pending dialog, needs-input      |
-| `conversation/tools.ts`     | zod schemas for tool arguments the renderers read                        |
-| `conversation/fixtures/`    | Recorded event logs, one per hard case                                   |
-| `schemas/sessions.ts`       | zod schemas for the REST session bodies                                  |
-| `schemas/readiness.ts`      | zod schema for the readiness answer                                      |
-| `schemas/settings.ts`       | zod schemas for the settings snapshot and every write                    |
+| Module                      | Owns                                                                        |
+| --------------------------- | --------------------------------------------------------------------------- |
+| `protocol/version.ts`       | `PROTOCOL_VERSION`                                                          |
+| `protocol/frames.ts`        | zod schemas for every socket frame, the command union and the snapshot      |
+| `provider-endpoints.ts`     | API families, inserted paths, request and model-list URLs, base URL warning |
+| `permission.ts`             | The permission mode values and the keyed-status text both sides read        |
+| `model-key.ts`              | One model key for the composer menu and the settings picker                 |
+| `schemas/problem.ts`        | The one refusal body every route documents and every read parses            |
+| `extui.ts`                  | zod schemas for dialog questions, answers and display requests              |
+| `pi.ts`                     | Type-only re-export of pi's `JsonAgentSessionEvent`, the reducer's input    |
+| `conversation/state.ts`     | `ConversationState`                                                         |
+| `conversation/reduce.ts`    | `reduce(state, frame)`: pure, replay-tested; the frame vocabulary           |
+| `conversation/events.ts`    | pi's event half of the reducer: streaming, tool runs, notices               |
+| `conversation/content.ts`   | The content-part parse the reducer and the transcript share                 |
+| `conversation/selectors.ts` | Derived views: messages, running tools, pending dialog, needs-input         |
+| `conversation/tools.ts`     | zod schemas for tool arguments the renderers read                           |
+| `conversation/fixtures/`    | Recorded event logs, one per hard case                                      |
+| `schemas/sessions.ts`       | zod schemas for the REST session bodies                                     |
+| `schemas/readiness.ts`      | zod schema for the readiness answer                                         |
+| `schemas/providers.ts`      | Provider, model, reasoning map, compatibility, import and test schemas      |
+| `schemas/settings.ts`       | zod schemas for the settings snapshot and the remaining writes              |
 
 `client/src/`: React and Vite.
 
-| Module                           | Owns                                                                                |
-| -------------------------------- | ----------------------------------------------------------------------------------- |
-| `link.ts`                        | One socket, backoff, hello/welcome, attach/detach, unreadable-frame report          |
-| `conversation/store.ts`          | `useSyncExternalStore` over the shared conversation state, command senders, dispose |
-| `hooks/use-conversation.ts`      | One store per session per tab, released when the route leaves                       |
-| `components/route-error.tsx`     | What a render error shows: one sentence and a way back                              |
-| `routes/*.tsx`                   | The home page and `/sessions/$sessionId`; the root gates on readiness               |
-| `hooks/use-readiness.ts`         | REST readiness, re-read on an interval so the notice clears itself                  |
-| `hooks/use-settings.ts`          | The settings snapshot query shared by every section                                 |
-| `components/settings/`           | Sections list, shell, one page per section, shared delete dialog and field errors   |
-| `components/settings/providers/` | The two-pane provider editor: panel, connection, headers, models, import            |
-| `components/not-ready.tsx`       | The unsupported state: one `Alert`, no composer                                     |
-| `components/chat/`               | Transcript, markdown, tool trace, confirm and question dialogs                      |
-| `components/composer/`           | Input, palette, model and permission menus, `!cmd` and `/reload`                    |
-| `components/sessions/`           | The sidebar list                                                                    |
-| `components/ui/`                 | shadcn primitives                                                                   |
-| `lib/`                           | Markdown, Shiki, formatting, permission modes                                       |
+| Module                                   | Owns                                                                                      |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `link.ts`                                | One socket, backoff, hello/welcome, attach/detach, unreadable-frame report                |
+| `conversation/store.ts`                  | `useSyncExternalStore` over the shared conversation state, command senders, dispose       |
+| `hooks/use-conversation.ts`              | One store per session per tab, released when the route leaves                             |
+| `components/route-error.tsx`             | What a render error shows: one sentence and a way back                                    |
+| `routes/*.tsx`                           | The home page and `/sessions/$sessionId`; the root gates on readiness                     |
+| `hooks/use-readiness.ts`                 | REST readiness, re-read on an interval so the notice clears itself                        |
+| `hooks/use-settings.ts`                  | The settings snapshot query shared by every section                                       |
+| `components/settings/`                   | Sections list, shell, one page per section, shared delete dialog and field errors         |
+| `components/settings/providers/`         | The two-pane provider editor: panel, connection, headers, models, import, reasoning, test |
+| `components/settings/offline-notice.tsx` | The one sentence a failed settings query leaves on the providers route                    |
+| `components/not-ready.tsx`               | The unsupported state: one `Alert`, no composer                                           |
+| `components/chat/`                       | Transcript, markdown, tool trace, confirm and question dialogs                            |
+| `components/composer/`                   | Input, palette, model, thinking-level and permission menus, `!cmd` and `/reload`          |
+| `components/sessions/`                   | The sidebar list                                                                          |
+| `components/ui/`                         | shadcn primitives                                                                         |
+| `lib/`                                   | Markdown, Shiki, formatting, permission modes                                             |
 
 ## Data flows
 
@@ -158,9 +163,11 @@ frames are deltas.
 
 **Send a command.** `command { type: "prompt" }` → `LiveSession.run` →
 `AgentSession.prompt` → pi emits session events → `toJsonEvent` → `event` frames →
-the reducer. `steer`, `abort`, `bash`, `set_model` and `reload` map to one
-`AgentSession` method each. `bash`, `set_model`, `reload` and a session rename
-refresh the snapshot because they change what the snapshot reports.
+the reducer. `steer`, `abort`, `bash`, `set_model`, `set_thinking_level` and `reload` map to one
+`AgentSession` method each. `bash`, `set_model`, `set_thinking_level`, `reload` and
+a session rename refresh the snapshot because they change what the snapshot
+reports. The thinking level is clamped by pi, and the effective level comes back in
+the snapshot and in `thinking_level_changed`.
 
 **Answer an extension dialog.** The engine's `ExtensionUIContext.ask` blocks a tool
 call → `agent/dialogs.ts` stores it and sends `dialog` → the client renders →
@@ -180,6 +187,14 @@ live engine. The browser parses every answer with the shared zod schemas, so a
 shape it cannot read is an error it shows, never a blank tab. See
 [ADR-0012](adr/0012-configure-in-the-dashboard.md).
 
+**Test a provider.** `POST /api/settings/providers/test` builds a throwaway runtime,
+registers the draft, and calls `completeSimple()` once without auth headers and once
+with the typed or stored credential. A `level` is passed as `reasoning`. The result
+names the field the request carried and the streamed reasoning tokens or thinking
+characters, and no file is written. Model import is the other non-pi call: a
+bounded `GET /models` whose `supported_endpoints` can give a model its own API and
+base URL, and whose exact id and API can inherit pi's reasoning metadata.
+
 **Not ready.** `GET /api/readiness` asks a model runtime built from the same home and
 the same two files the engine reads, so the answer cannot drift from what a session
 would see. It is REST, not a socket frame, and it caches nothing. The root route
@@ -192,14 +207,15 @@ The deployment boundary owns the first two rows. Nothing outside it is read or
 written unless the operator mounts it there
 ([ADR-0005](adr/0005-deployment-owns-agent-home.md)).
 
-| State                                               | Owner                              | Lifetime                               |
-| --------------------------------------------------- | ---------------------------------- | -------------------------------------- |
-| Transcript, branches, compaction, session name      | pi's JSONL in the agent home       | Forever                                |
-| Settings, credentials, models, MCP, packages, trust | the agent home (`$HOME/.pi/agent`) | Forever                                |
-| Live engines                                        | `agent/registry.ts`                | 10s after the last detach, unless busy |
-| Unanswered extension dialogs, display state         | `agent/dialogs.ts`                 | Until answered, cancelled or timed out |
-| Pins, archive, project order                        | not built                          | —                                      |
-| View state, scroll position, drafts                 | Browser                            | Tab lifetime                           |
+| State                                               | Owner                              | Lifetime                                               |
+| --------------------------------------------------- | ---------------------------------- | ------------------------------------------------------ |
+| Transcript, branches, compaction, session name      | pi's JSONL in the agent home       | Forever                                                |
+| Thinking level, per session                         | pi's JSONL and the live engine     | Forever in the transcript; startup comes from settings |
+| Settings, credentials, models, MCP, packages, trust | the agent home (`$HOME/.pi/agent`) | Forever                                                |
+| Live engines                                        | `agent/registry.ts`                | 10s after the last detach, unless busy                 |
+| Unanswered extension dialogs, display state         | `agent/dialogs.ts`                 | Until answered, cancelled or timed out                 |
+| Pins, archive, project order                        | not built                          | —                                                      |
+| View state, scroll position, drafts                 | Browser                            | Tab lifetime                                           |
 
 Nothing else is persisted. The agent home is not recorded anywhere: it is
 deterministic, so a file naming it would be a second source of truth.
@@ -219,6 +235,7 @@ deterministic, so a file naming it would be a second source of truth.
 | Credential present but rejected         | The turn fails with pi's own error (a 401, for example), which the transcript shows; readiness cannot tell in advance      |
 | `models.json` or `mcp.json` unparseable | The settings snapshot carries a sentence naming the file; neither list pretends it is empty, and every write refuses       |
 | A dialog answer names another method    | The server answers `UNSUPPORTED_FRAME`; a stale answer for an already-settled dialog is ignored, because two tabs may race |
+| The settings query fails                | The providers route is one centred sentence, with no list, no editor, no retry label and no back button                    |
 | The browser cannot read a frame         | The store shows one notice per connection instead of dropping it in silence                                                |
 | Project not trusted                     | pi skips project resources; the dashboard does not report it yet ([note](notes/2026-10-28-host-cannot-answer-trust.md))    |
 | pi upgrade changes its surface          | Types break at compile time first; re-verify against [reference/pi-sdk.md](reference/pi-sdk.md)                            |
@@ -235,7 +252,7 @@ deterministic, so a file naming it would be a second source of truth.
 | Client components          | one concept per file; if it needs more than ~10 state values, the state belongs in the reducer |
 
 Every file is under the 300-line cap. The two area totals are still over target:
-`server/src/agent/` is about 1350 lines and `shared/src/conversation/` about 660.
+`server/src/agent/` is about 1380 lines and `shared/src/conversation/` about 710.
 Both are large because the engine wiring and the transcript are one concept each;
 the seams that keep them readable are `session.ts` (commands, lifetime, events),
 `frames.ts` (fan-out), `ui-context.ts` (the pi surface), and on the shared side

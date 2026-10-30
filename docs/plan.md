@@ -106,16 +106,31 @@ packages through `DefaultPackageManager`
 the settings page instead of naming a terminal command.
 
 The provider page is a two-pane editor. The left column lists configured providers
-with their id and model count, and the right column is one form with its footer
-pinned to the bottom of the column. The API picker names the path each family
-appends, the model count sits in the group title, a provider's model list is fetched
-from the provider on request, and deleting a provider also logs out a key that is
-stored in `auth.json`, so the row disappears. Forms validate with zod and report the
+with their model count; a provider pi ships says `pi default`, and a custom provider
+does not repeat its id under its name. The right column is one form with its footer
+pinned to the bottom. A name derives a unique id (`-2` on a collision) and a
+duplicate name is refused; the id is fixed after the first save. The API picker
+names the path each family appends, the base URL field names the request URL and
+warns when the base repeats that path, and the model count sits in the group title.
+A provider's model list is fetched on request; `supported_endpoints` gives a
+`/messages`-only model the Anthropic API and base, a `/responses`-only model that
+API, and an exact id and API inherit pi's reasoning metadata. Deleting a provider
+also logs out a key stored in `auth.json`. Forms validate with zod and report the
 first message per field; a blank optional value is never written.
+
+Reasoning is configured per model: the model dialog writes `thinkingLevelMap` and
+the reasoning keys of `compat`, with provider-wide defaults in the provider form.
+The composer offers the current model's supported levels at runtime. The provider
+and model test buttons can try a draft at a chosen level through pi's own client;
+the result names the sent field and the reasoning tokens or thinking characters the
+provider returned. A connection that cannot be reached turns the whole providers
+route into one sentence, not a list with an empty editor.
 
 Over HTTP against a scratch home, S17 also verifies: a provider write flips
 readiness, a default model lands in `settings.json`, MCP and skill files are written,
-every delete restores the empty shape, and a failed turn renders its `errorMessage`.
+every delete restores the empty shape, an imported model list can carry per-model
+API/base and pi catalog metadata, a provider/model test reports its level and usage,
+and a failed turn renders its `errorMessage`.
 The slice also removes pi's RPC vocabulary from the engine: `mode` is `"json"`, a
 prompt's source is `"interactive"`, and no RPC command table remains.
 
