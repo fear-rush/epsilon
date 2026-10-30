@@ -1,6 +1,5 @@
 /**
- * The socket contract: one zod union per direction, exactly as
- * docs/protocol.md writes it. Both sides parse with these schemas.
+ * The socket contract: one zod union per direction, and both sides parse with these schemas.
  *
  * Epsilon owns the command vocabulary: an embedded engine has no wire envelope,
  * so `command` names what the page wants and the server maps it onto the SDK.
@@ -86,7 +85,6 @@ export const protocolErrorCodeSchema = z.enum([
 	"AGENT_START_FAILED",
 	"AGENT_FAILED",
 	"EXTENSION_ERROR",
-	"HOST_NOT_ALLOWED",
 	"UNSUPPORTED_FRAME",
 ]);
 
@@ -96,14 +94,6 @@ export const clientFrameSchema = z.discriminatedUnion("t", [
 	z.object({ t: z.literal("detach"), sessionId: z.string() }),
 	z.object({ t: z.literal("command"), sessionId: z.string(), command: commandSchema }),
 	z.object({ t: z.literal("dialog"), sessionId: z.string(), answer: dialogAnswerSchema }),
-	z.object({ t: z.literal("terminal"), terminalId: z.string(), input: z.string() }),
-	z.object({
-		t: z.literal("terminal-resize"),
-		terminalId: z.string(),
-		cols: z.number().int(),
-		rows: z.number().int(),
-	}),
-	z.object({ t: z.literal("terminal-close"), terminalId: z.string() }),
 	z.object({ t: z.literal("ping") }),
 ]);
 
@@ -171,16 +161,6 @@ export const serverFrameSchema = z.discriminatedUnion("t", [
 		command: commandNameSchema,
 		ok: z.boolean(),
 		error: z.string().optional(),
-	}),
-	z.object({
-		t: z.literal("terminal"),
-		terminalId: z.string(),
-		output: z.string(),
-	}),
-	z.object({
-		t: z.literal("terminal-exit"),
-		terminalId: z.string(),
-		code: z.number().nullable(),
 	}),
 	z.object({
 		t: z.literal("error"),

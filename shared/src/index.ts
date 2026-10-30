@@ -33,78 +33,21 @@ export {
 	parsePermissionStatus,
 	permissionModeSchema,
 	permissionStatusText,
-} from "./permission";
-export type { PermissionMode } from "./permission";
-export { modelKey } from "./model-key";
-export { problemSchema } from "./schemas/problem";
-export type { Problem } from "./schemas/problem";
+} from "./permission/rules";
+export type { PermissionMode } from "./permission/rules";
 export {
-	sessionErrorCodeSchema,
-	sessionErrorSchema,
-	sessionListSchema,
-	sessionSummarySchema,
-} from "./schemas/sessions";
-export type {
-	SessionError,
-	SessionErrorCode,
-	SessionList,
-	SessionSummary,
-} from "./schemas/sessions";
-export { readinessSchema } from "./schemas/readiness";
-export type { Readiness } from "./schemas/readiness";
-export {
-	builtinProviderSchema,
-	defaultModelSchema,
+	mcpExposureSchema,
 	mcpNameSchema,
-	mcpServerDetailSchema,
-	mcpServerInputSchema,
-	mcpServerViewSchema,
+	mcpOverrideKeySchema,
+	mcpRelationSchema,
+	mcpScopeSchema,
 	mcpTransportSchema,
-	modelOverrideSchema,
-	packageViewSchema,
-	providerApiSchema,
-	providerDetailSchema,
-	providerIdSchema,
-	providerImportInputSchema,
-	providerImportResultSchema,
-	providerInputSchema,
-	providerModelCostSchema,
-	providerModelInputSchema,
-	providerTestInputSchema,
-	providerTestResultSchema,
-	providerViewSchema,
-	reasoningCompatSchema,
-	thinkingLevelMapSchema,
-	settingsSnapshotSchema,
-	skillInputSchema,
-	skillNameSchema,
-	skillViewSchema,
-} from "./schemas/settings";
-export type {
-	BuiltinProvider,
-	DefaultModel,
-	McpServerDetail,
-	McpServerInput,
-	McpServerView,
-	McpTransport,
-	ModelOverride,
-	PackageView,
-	ProviderApi,
-	ProviderDetail,
-	ProviderImportInput,
-	ProviderImportResult,
-	ProviderInput,
-	ProviderModelCost,
-	ProviderModelInput,
-	ProviderTestInput,
-	ProviderTestResult,
-	ProviderView,
-	ReasoningCompat,
-	SettingsSnapshot,
-	SkillInput,
-	SkillView,
-	ThinkingLevelMap,
-} from "./schemas/settings";
+} from "./mcp/rules";
+export type { McpExposure, McpOverrideKey, McpRelation, McpScope, McpTransport } from "./mcp/rules";
+export { skillDescriptionSchema, skillNameSchema } from "./skills/rules";
+export { providerApiSchema, providerIdSchema } from "./providers/rules";
+export type { ProviderApi } from "./providers/rules";
+export { modelKey } from "./providers/model-key";
 export {
 	PROVIDER_APIS,
 	parseProviderApi,
@@ -112,8 +55,8 @@ export {
 	providerBaseUrlProblem,
 	providerEndpoint,
 	providerModelsEndpoint,
-} from "./provider-endpoints";
-export type { ProviderApiInfo, ProviderBaseUrlProblem } from "./provider-endpoints";
+} from "./providers/endpoints";
+export type { ProviderApiInfo, ProviderBaseUrlProblem } from "./providers/endpoints";
 export { emptyConversation } from "./conversation/state";
 export { isVisibleMessage } from "./conversation/state";
 export type {

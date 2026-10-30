@@ -29,6 +29,8 @@
 		"**/build/**",
 		"**/.turbo/**",
 		"**/routeTree.gen.ts",
+		"client/src/api/*.gen.ts",
+		"client/src/api/openapi.json",
 		"**/drizzle/**",
 		".agent/**",
 		".agents/**",
@@ -68,6 +70,176 @@
 			},
 			"globals": {
 				"Bun": "readonly"
+			}
+		},
+		// Import boundaries (AGENTS.md, Invariants; docs/ARCHITECTURE.md). An override
+		// replaces the whole `no-restricted-imports` config of the files it matches,
+		// so each region below lists every pattern that applies to it.
+		{
+			// Only the pi platform wrapper and the conversation feature touch pi.
+			"files": ["**/*.{ts,tsx}"],
+			"rules": {
+				"no-restricted-imports": [
+					"error",
+					{
+						"patterns": [
+							{
+								"group": ["@earendil-works/*"],
+								"message": "Import pi only in server/src/platform/pi and server/src/features/conversation; elsewhere use their exports."
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"files": ["server/src/features/conversation/**/*.ts"],
+			"rules": { "no-restricted-imports": "off" }
+		},
+		{
+			// The platform never reaches up into features. platform/pi may import pi.
+			"files": ["server/src/platform/**/*.ts"],
+			"rules": {
+				"no-restricted-imports": [
+					"error",
+					{
+						"patterns": [
+							{
+								"group": ["@earendil-works/*"],
+								"message": "Import pi only in server/src/platform/pi and server/src/features/conversation; elsewhere use their exports."
+							},
+							{
+								"group": ["**/features/**"],
+								"message": "server/src/platform must not import from features; invert the dependency."
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"files": ["server/src/platform/pi/**/*.ts"],
+			"rules": {
+				"no-restricted-imports": [
+					"error",
+					{
+						"patterns": [
+							{
+								"group": ["**/features/**"],
+								"message": "server/src/platform must not import from features; invert the dependency."
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			// shared/ runs in the browser and on the server: no Node, React or Hono.
+			"files": ["shared/src/**/*.ts"],
+			"rules": {
+				"no-restricted-imports": [
+					"error",
+					{
+						"patterns": [
+							{
+								"group": ["@earendil-works/*"],
+								"message": "shared/ may only import pi types, and only in shared/src/pi.ts."
+							},
+							{
+								"group": ["node:*", "react", "react-dom", "react/*", "hono", "hono/*"],
+								"message": "shared/ is browser-safe: no node:*, React or Hono."
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			// Replay tests read fixtures from disk.
+			"files": ["shared/src/**/*.test.ts"],
+			"rules": {
+				"no-restricted-imports": [
+					"error",
+					{
+						"patterns": [
+							{
+								"group": ["@earendil-works/*"],
+								"message": "shared/ may only import pi types, and only in shared/src/pi.ts."
+							},
+							{
+								"group": ["react", "react-dom", "react/*", "hono", "hono/*"],
+								"message": "shared/ is browser-safe: no React or Hono."
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"files": ["shared/src/pi.ts"],
+			"rules": {
+				"no-restricted-imports": [
+					"error",
+					{
+						"patterns": [
+							{
+								"group": ["node:*", "react", "react-dom", "react/*", "hono", "hono/*"],
+								"message": "shared/ is browser-safe: no node:*, React or Hono."
+							},
+							{
+								"group": ["@earendil-works/*"],
+								"allowTypeImports": true,
+								"message": "shared/src/pi.ts imports pi as types only."
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			// The browser never imports the server or pi.
+			"files": ["client/src/**/*.{ts,tsx}"],
+			"rules": {
+				"no-restricted-imports": [
+					"error",
+					{
+						"patterns": [
+							{
+								"group": ["@earendil-works/*"],
+								"message": "The browser never imports pi; use shared/ types."
+							},
+							{
+								"group": ["server", "server/*", "**/server/src/**", "@epsilon/server*"],
+								"message": "The browser never imports server code; use the generated API client and shared/."
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			// A feature is reached through its index.ts only. Settings aggregates the
+			// configuration features and so follows the same rule.
+			"files": ["server/src/features/**/*.ts"],
+			"rules": {
+				"anti-slop/no-feature-internals": ["error", { "root": "server/src/features" }]
+			}
+		},
+		{
+			// Client features do not import each other, except two settings files that
+			// are shared on purpose: the kit every settings section composes, and
+			// sections.ts, the one list the deployment menu in the sessions sidebar
+			// and the settings navigation both map.
+			"files": ["client/src/features/**/*.{ts,tsx}"],
+			"rules": {
+				"anti-slop/no-feature-internals": [
+					"error",
+					{
+						"root": "client/src/features",
+						"aliasRoot": "client/src",
+						"open": ["settings/kit", "settings/sections"]
+					}
+				]
 			}
 		},
 		{

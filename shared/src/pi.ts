@@ -1,6 +1,6 @@
 /**
  * Type-only re-exports from the pinned pi package. Nothing else in `shared/`
- * may import `@earendil-works/*` (AGENTS.md, rule 1), and no runtime value from
+ * may import `@earendil-works/*` (AGENTS.md, Invariants), and no runtime value from
  * pi may cross into the browser.
  *
  * pi's JSON session event is the one shape that does cross: it is what

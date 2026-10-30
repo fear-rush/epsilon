@@ -1,0 +1,2169 @@
+{
+	"openapi": "3.1.0",
+	"info": {
+		"title": "epsilon API",
+		"version": "0.0.1",
+		"description": "Local REST surface for sessions and for configuring this deployment."
+	},
+	"components": {
+		"schemas": {
+			"Readiness": {
+				"oneOf": [
+					{
+						"type": "object",
+						"properties": {
+							"ready": {
+								"type": "boolean",
+								"enum": [
+									true
+								]
+							}
+						},
+						"required": [
+							"ready"
+						]
+					},
+					{
+						"type": "object",
+						"properties": {
+							"ready": {
+								"type": "boolean",
+								"enum": [
+									false
+								]
+							},
+							"detail": {
+								"type": "string"
+							},
+							"fix": {
+								"type": "string"
+							},
+							"home": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"ready",
+							"detail",
+							"fix",
+							"home"
+						]
+					}
+				]
+			},
+			"SessionList": {
+				"type": "object",
+				"properties": {
+					"project": {
+						"type": "string"
+					},
+					"sessions": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/SessionSummary"
+						}
+					}
+				},
+				"required": [
+					"project",
+					"sessions"
+				]
+			},
+			"SessionSummary": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"cwd": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"created": {
+						"type": "string"
+					},
+					"modified": {
+						"type": "string"
+					},
+					"messageCount": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"firstMessage": {
+						"type": "string"
+					},
+					"running": {
+						"type": "boolean"
+					},
+					"needsInput": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"id",
+					"cwd",
+					"created",
+					"modified",
+					"messageCount",
+					"firstMessage",
+					"running",
+					"needsInput"
+				]
+			},
+			"SessionError": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/Problem"
+					},
+					{
+						"type": "object",
+						"properties": {
+							"code": {
+								"type": "string",
+								"enum": [
+									"SESSION_NOT_FOUND",
+									"SESSION_RUNNING"
+								]
+							}
+						},
+						"required": [
+							"code"
+						]
+					}
+				]
+			},
+			"Problem": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"message"
+				]
+			},
+			"SettingsSnapshot": {
+				"type": "object",
+				"properties": {
+					"home": {
+						"type": "string"
+					},
+					"defaultModel": {
+						"$ref": "#/components/schemas/DefaultModel"
+					},
+					"providers": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ProviderView"
+						}
+					},
+					"builtins": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/BuiltinProvider"
+						}
+					},
+					"models": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/SnapshotModel"
+						}
+					},
+					"mcp": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/McpServerView"
+						}
+					},
+					"mcpDisabled": {
+						"type": "boolean"
+					},
+					"projectDir": {
+						"type": "string"
+					},
+					"skills": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/SkillView"
+						}
+					},
+					"packages": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/PackageView"
+						}
+					},
+					"ready": {
+						"type": "boolean"
+					},
+					"error": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"home",
+					"defaultModel",
+					"providers",
+					"builtins",
+					"models",
+					"mcp",
+					"mcpDisabled",
+					"projectDir",
+					"skills",
+					"packages",
+					"ready"
+				]
+			},
+			"DefaultModel": {
+				"type": [
+					"object",
+					"null"
+				],
+				"properties": {
+					"provider": {
+						"type": "string"
+					},
+					"modelId": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"provider",
+					"modelId"
+				]
+			},
+			"ProviderView": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"baseUrl": {
+						"type": "string"
+					},
+					"api": {
+						"type": "string",
+						"enum": [
+							"openai-completions",
+							"openai-responses",
+							"anthropic-messages",
+							"google-generative-ai"
+						]
+					},
+					"modelCount": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"configured": {
+						"type": "boolean"
+					},
+					"source": {
+						"type": "string"
+					},
+					"hasKey": {
+						"type": "boolean"
+					},
+					"custom": {
+						"type": "boolean"
+					},
+					"builtin": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"modelCount",
+					"configured",
+					"hasKey",
+					"custom",
+					"builtin"
+				]
+			},
+			"BuiltinProvider": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"configured": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"configured"
+				]
+			},
+			"SnapshotModel": {
+				"type": "object",
+				"properties": {
+					"provider": {
+						"type": "string"
+					},
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"provider",
+					"id",
+					"name"
+				]
+			},
+			"McpServerView": {
+				"oneOf": [
+					{
+						"$ref": "#/components/schemas/McpServerEntry"
+					},
+					{
+						"$ref": "#/components/schemas/McpOverrideEntry"
+					},
+					{
+						"$ref": "#/components/schemas/McpInvalidEntry"
+					}
+				],
+				"discriminator": {
+					"propertyName": "kind",
+					"mapping": {
+						"server": "#/components/schemas/McpServerEntry",
+						"override": "#/components/schemas/McpOverrideEntry",
+						"invalid": "#/components/schemas/McpInvalidEntry"
+					}
+				}
+			},
+			"McpServerEntry": {
+				"type": "object",
+				"properties": {
+					"kind": {
+						"type": "string",
+						"enum": [
+							"server"
+						]
+					},
+					"scope": {
+						"type": "string",
+						"enum": [
+							"global",
+							"project"
+						]
+					},
+					"name": {
+						"type": "string"
+					},
+					"target": {
+						"type": "string"
+					},
+					"transport": {
+						"type": "string",
+						"enum": [
+							"stdio",
+							"http"
+						]
+					},
+					"description": {
+						"type": "string"
+					},
+					"enabled": {
+						"type": "boolean"
+					},
+					"exposure": {
+						"type": "string",
+						"enum": [
+							"codemode",
+							"deferred",
+							"direct",
+							"hidden"
+						]
+					},
+					"timeout": {
+						"type": "number"
+					},
+					"relation": {
+						"type": "string",
+						"enum": [
+							"replaces-global",
+							"replaced-by-project",
+							"overridden-by-project"
+						]
+					}
+				},
+				"required": [
+					"kind",
+					"scope",
+					"name",
+					"target",
+					"transport",
+					"enabled"
+				]
+			},
+			"McpOverrideEntry": {
+				"type": "object",
+				"properties": {
+					"kind": {
+						"type": "string",
+						"enum": [
+							"override"
+						]
+					},
+					"scope": {
+						"type": "string",
+						"enum": [
+							"project"
+						]
+					},
+					"name": {
+						"type": "string"
+					},
+					"target": {
+						"type": "string"
+					},
+					"transport": {
+						"type": "string",
+						"enum": [
+							"stdio",
+							"http"
+						]
+					},
+					"description": {
+						"type": "string"
+					},
+					"enabled": {
+						"type": "boolean"
+					},
+					"exposure": {
+						"type": "string",
+						"enum": [
+							"codemode",
+							"deferred",
+							"direct",
+							"hidden"
+						]
+					},
+					"timeout": {
+						"type": "number"
+					},
+					"overrideKeys": {
+						"type": "array",
+						"items": {
+							"type": "string",
+							"enum": [
+								"enabled",
+								"exposure",
+								"toolExposure"
+							]
+						}
+					},
+					"overrideEnabled": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"kind",
+					"scope",
+					"name",
+					"target",
+					"transport",
+					"enabled",
+					"overrideKeys"
+				]
+			},
+			"McpInvalidEntry": {
+				"type": "object",
+				"properties": {
+					"kind": {
+						"type": "string",
+						"enum": [
+							"invalid"
+						]
+					},
+					"name": {
+						"type": "string"
+					},
+					"scope": {
+						"type": "string",
+						"enum": [
+							"global",
+							"project"
+						]
+					},
+					"problem": {
+						"type": "string"
+					},
+					"enabled": {
+						"type": "boolean"
+					},
+					"overrideKeys": {
+						"type": "array",
+						"items": {
+							"type": "string",
+							"enum": [
+								"enabled",
+								"exposure",
+								"toolExposure"
+							]
+						}
+					}
+				},
+				"required": [
+					"kind",
+					"name",
+					"scope",
+					"problem",
+					"enabled"
+				]
+			},
+			"SkillView": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"path": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"name",
+					"description",
+					"path"
+				]
+			},
+			"PackageView": {
+				"type": "object",
+				"properties": {
+					"source": {
+						"type": "string"
+					},
+					"scope": {
+						"type": "string",
+						"enum": [
+							"user",
+							"project"
+						]
+					},
+					"installedPath": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"source",
+					"scope"
+				]
+			},
+			"ProviderDetail": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"baseUrl": {
+						"type": "string"
+					},
+					"api": {
+						"type": "string",
+						"enum": [
+							"openai-completions",
+							"openai-responses",
+							"anthropic-messages",
+							"google-generative-ai"
+						]
+					},
+					"stored": {
+						"$ref": "#/components/schemas/ProviderStored"
+					},
+					"builtin": {
+						"type": "boolean"
+					},
+					"custom": {
+						"type": "boolean"
+					},
+					"configured": {
+						"type": "boolean"
+					},
+					"source": {
+						"type": "string"
+					},
+					"hasKey": {
+						"type": "boolean"
+					},
+					"headerKeys": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"models": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ProviderModelInput"
+						}
+					},
+					"modelOverrides": {
+						"type": "object",
+						"additionalProperties": {
+							"$ref": "#/components/schemas/ModelOverride"
+						}
+					},
+					"catalog": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/SnapshotModel"
+						}
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"stored",
+					"builtin",
+					"custom",
+					"configured",
+					"hasKey",
+					"headerKeys",
+					"models",
+					"modelOverrides",
+					"catalog"
+				]
+			},
+			"ProviderStored": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"baseUrl": {
+						"type": "string"
+					},
+					"api": {
+						"type": "string",
+						"enum": [
+							"openai-completions",
+							"openai-responses",
+							"anthropic-messages",
+							"google-generative-ai"
+						]
+					},
+					"compat": {
+						"$ref": "#/components/schemas/ReasoningCompat"
+					}
+				}
+			},
+			"ReasoningCompat": {
+				"type": "object",
+				"properties": {
+					"thinkingFormat": {
+						"type": "string",
+						"enum": [
+							"openai",
+							"openrouter",
+							"deepseek",
+							"together",
+							"baseten",
+							"zai",
+							"qwen",
+							"chat-template",
+							"qwen-chat-template",
+							"string-thinking",
+							"ant-ling"
+						]
+					},
+					"supportsReasoningEffort": {
+						"type": "boolean"
+					},
+					"thinkingTokenBudgetField": {
+						"type": "string",
+						"enum": [
+							"thinking_token_budget",
+							"thinking_budget",
+							"thinking_budget_tokens"
+						]
+					},
+					"requiresReasoningContentOnAssistantMessages": {
+						"type": "boolean"
+					},
+					"forceAdaptiveThinking": {
+						"type": "boolean"
+					}
+				},
+				"additionalProperties": {}
+			},
+			"ProviderModelInput": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"minLength": 1
+					},
+					"name": {
+						"type": "string"
+					},
+					"api": {
+						"type": "string",
+						"enum": [
+							"openai-completions",
+							"openai-responses",
+							"anthropic-messages",
+							"google-generative-ai"
+						]
+					},
+					"baseUrl": {
+						"type": "string",
+						"format": "uri"
+					},
+					"reasoning": {
+						"type": "boolean"
+					},
+					"thinkingLevelMap": {
+						"$ref": "#/components/schemas/ThinkingLevelMap"
+					},
+					"compat": {
+						"$ref": "#/components/schemas/ReasoningCompat"
+					},
+					"input": {
+						"type": "array",
+						"items": {
+							"type": "string",
+							"enum": [
+								"text",
+								"image"
+							]
+						}
+					},
+					"contextWindow": {
+						"type": "integer",
+						"exclusiveMinimum": 0
+					},
+					"maxTokens": {
+						"type": "integer",
+						"exclusiveMinimum": 0
+					},
+					"cost": {
+						"$ref": "#/components/schemas/ProviderModelCost"
+					}
+				},
+				"required": [
+					"id"
+				]
+			},
+			"ThinkingLevelMap": {
+				"type": "object",
+				"properties": {
+					"off": {
+						"anyOf": [
+							{
+								"type": "string",
+								"minLength": 1
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"minimal": {
+						"anyOf": [
+							{
+								"type": "string",
+								"minLength": 1
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"low": {
+						"anyOf": [
+							{
+								"type": "string",
+								"minLength": 1
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"medium": {
+						"anyOf": [
+							{
+								"type": "string",
+								"minLength": 1
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"high": {
+						"anyOf": [
+							{
+								"type": "string",
+								"minLength": 1
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"xhigh": {
+						"anyOf": [
+							{
+								"type": "string",
+								"minLength": 1
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"max": {
+						"anyOf": [
+							{
+								"type": "string",
+								"minLength": 1
+							},
+							{
+								"type": "null"
+							}
+						]
+					}
+				}
+			},
+			"ProviderModelCost": {
+				"type": "object",
+				"properties": {
+					"input": {
+						"type": "number"
+					},
+					"output": {
+						"type": "number"
+					},
+					"cacheRead": {
+						"type": "number"
+					},
+					"cacheWrite": {
+						"type": "number"
+					}
+				},
+				"required": [
+					"input",
+					"output",
+					"cacheRead",
+					"cacheWrite"
+				]
+			},
+			"ModelOverride": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"api": {
+						"type": "string",
+						"enum": [
+							"openai-completions",
+							"openai-responses",
+							"anthropic-messages",
+							"google-generative-ai"
+						]
+					},
+					"baseUrl": {
+						"type": "string",
+						"format": "uri"
+					},
+					"reasoning": {
+						"type": "boolean"
+					},
+					"thinkingLevelMap": {
+						"$ref": "#/components/schemas/ThinkingLevelMap"
+					},
+					"compat": {
+						"$ref": "#/components/schemas/ReasoningCompat"
+					},
+					"input": {
+						"type": "array",
+						"items": {
+							"type": "string",
+							"enum": [
+								"text",
+								"image"
+							]
+						}
+					},
+					"contextWindow": {
+						"type": "integer",
+						"exclusiveMinimum": 0
+					},
+					"maxTokens": {
+						"type": "integer",
+						"exclusiveMinimum": 0
+					},
+					"cost": {
+						"$ref": "#/components/schemas/ProviderModelCost"
+					}
+				}
+			},
+			"ProviderImportResult": {
+				"type": "object",
+				"properties": {
+					"models": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ProviderModelInput"
+						}
+					}
+				},
+				"required": [
+					"models"
+				]
+			},
+			"ProviderImportInput": {
+				"type": "object",
+				"properties": {
+					"providerId": {
+						"type": "string"
+					},
+					"baseUrl": {
+						"type": "string",
+						"format": "uri"
+					},
+					"api": {
+						"type": "string",
+						"enum": [
+							"openai-completions",
+							"openai-responses",
+							"anthropic-messages",
+							"google-generative-ai"
+						]
+					},
+					"apiKey": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"baseUrl",
+					"api"
+				]
+			},
+			"ProviderTestResult": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"message"
+				]
+			},
+			"ProviderTestInput": {
+				"type": "object",
+				"properties": {
+					"providerId": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"baseUrl": {
+						"anyOf": [
+							{
+								"type": "string",
+								"enum": [
+									""
+								]
+							},
+							{
+								"type": "string",
+								"format": "uri"
+							}
+						]
+					},
+					"api": {
+						"type": "string",
+						"enum": [
+							"openai-completions",
+							"openai-responses",
+							"anthropic-messages",
+							"google-generative-ai"
+						]
+					},
+					"apiKey": {
+						"type": "string"
+					},
+					"headers": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						}
+					},
+					"compat": {
+						"$ref": "#/components/schemas/ReasoningCompat"
+					},
+					"level": {
+						"type": "string",
+						"enum": [
+							"off",
+							"minimal",
+							"low",
+							"medium",
+							"high",
+							"xhigh",
+							"max"
+						]
+					},
+					"model": {
+						"$ref": "#/components/schemas/ProviderModelInput"
+					}
+				}
+			},
+			"ProviderInput": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"minLength": 1,
+						"pattern": "^(?!new$)[A-Za-z0-9][A-Za-z0-9_-]*$"
+					},
+					"name": {
+						"type": "string"
+					},
+					"baseUrl": {
+						"anyOf": [
+							{
+								"type": "string",
+								"enum": [
+									""
+								]
+							},
+							{
+								"type": "string",
+								"format": "uri"
+							}
+						]
+					},
+					"api": {
+						"anyOf": [
+							{
+								"type": "string",
+								"enum": [
+									""
+								]
+							},
+							{
+								"type": "string",
+								"enum": [
+									"openai-completions",
+									"openai-responses",
+									"anthropic-messages",
+									"google-generative-ai"
+								]
+							}
+						]
+					},
+					"apiKey": {
+						"type": "string"
+					},
+					"headers": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						}
+					},
+					"compat": {
+						"$ref": "#/components/schemas/ReasoningCompat"
+					},
+					"models": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ProviderModelInput"
+						}
+					},
+					"modelOverrides": {
+						"type": "object",
+						"additionalProperties": {
+							"$ref": "#/components/schemas/ModelOverride"
+						}
+					}
+				},
+				"required": [
+					"id"
+				]
+			},
+			"McpServerDetail": {
+				"oneOf": [
+					{
+						"$ref": "#/components/schemas/McpServerEntryDetail"
+					},
+					{
+						"$ref": "#/components/schemas/McpOverrideEntry"
+					},
+					{
+						"$ref": "#/components/schemas/McpInvalidEntry"
+					}
+				],
+				"discriminator": {
+					"propertyName": "kind",
+					"mapping": {
+						"server": "#/components/schemas/McpServerEntryDetail",
+						"override": "#/components/schemas/McpOverrideEntry",
+						"invalid": "#/components/schemas/McpInvalidEntry"
+					}
+				}
+			},
+			"McpServerEntryDetail": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/McpServerEntry"
+					},
+					{
+						"type": "object",
+						"properties": {
+							"command": {
+								"type": "string"
+							},
+							"args": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							},
+							"envKeys": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							},
+							"cwd": {
+								"type": "string"
+							},
+							"url": {
+								"type": "string"
+							},
+							"headerKeys": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							},
+							"oauthKeys": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							},
+							"authProvider": {
+								"type": "string"
+							},
+							"toolExposureKeys": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							}
+						},
+						"required": [
+							"envKeys",
+							"headerKeys",
+							"oauthKeys",
+							"toolExposureKeys"
+						]
+					}
+				]
+			},
+			"McpServerInput": {
+				"oneOf": [
+					{
+						"type": "object",
+						"properties": {
+							"name": {
+								"type": "string",
+								"minLength": 1,
+								"pattern": "^[A-Za-z0-9_-]+$"
+							},
+							"scope": {
+								"type": "string",
+								"enum": [
+									"global",
+									"project"
+								]
+							},
+							"description": {
+								"type": "string"
+							},
+							"exposure": {
+								"type": "string",
+								"enum": [
+									"codemode",
+									"deferred",
+									"direct",
+									"hidden"
+								]
+							},
+							"timeout": {
+								"type": "number",
+								"exclusiveMinimum": 0
+							},
+							"transport": {
+								"type": "string",
+								"enum": [
+									"stdio"
+								]
+							},
+							"command": {
+								"type": "string",
+								"minLength": 1
+							},
+							"args": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							},
+							"env": {
+								"type": "object",
+								"additionalProperties": {
+									"type": "string"
+								}
+							},
+							"cwd": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"name",
+							"scope",
+							"transport",
+							"command"
+						]
+					},
+					{
+						"type": "object",
+						"properties": {
+							"name": {
+								"type": "string",
+								"minLength": 1,
+								"pattern": "^[A-Za-z0-9_-]+$"
+							},
+							"scope": {
+								"type": "string",
+								"enum": [
+									"global",
+									"project"
+								]
+							},
+							"description": {
+								"type": "string"
+							},
+							"exposure": {
+								"type": "string",
+								"enum": [
+									"codemode",
+									"deferred",
+									"direct",
+									"hidden"
+								]
+							},
+							"timeout": {
+								"type": "number",
+								"exclusiveMinimum": 0
+							},
+							"transport": {
+								"type": "string",
+								"enum": [
+									"http"
+								]
+							},
+							"url": {
+								"type": "string",
+								"minLength": 1
+							},
+							"headers": {
+								"type": "object",
+								"additionalProperties": {
+									"type": "string"
+								}
+							}
+						},
+						"required": [
+							"name",
+							"scope",
+							"transport",
+							"url"
+						]
+					}
+				]
+			},
+			"McpEnabledInput": {
+				"type": "object",
+				"properties": {
+					"scope": {
+						"type": "string",
+						"enum": [
+							"global",
+							"project"
+						]
+					},
+					"name": {
+						"type": "string",
+						"minLength": 1,
+						"pattern": "^[A-Za-z0-9_-]+$"
+					},
+					"enabled": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"scope",
+					"name",
+					"enabled"
+				]
+			},
+			"McpInProjectInput": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"minLength": 1,
+						"pattern": "^[A-Za-z0-9_-]+$"
+					},
+					"value": {
+						"type": "string",
+						"enum": [
+							"inherit",
+							"on",
+							"off"
+						]
+					}
+				},
+				"required": [
+					"name",
+					"value"
+				]
+			},
+			"SkillInput": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"minLength": 1,
+						"pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+					},
+					"description": {
+						"type": "string",
+						"minLength": 1
+					},
+					"body": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"name",
+					"description",
+					"body"
+				]
+			}
+		},
+		"parameters": {}
+	},
+	"paths": {
+		"/health": {
+			"get": {
+				"tags": [
+					"meta"
+				],
+				"operationId": "health",
+				"responses": {
+					"200": {
+						"description": "Server is running",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "string",
+											"enum": [
+												"ok"
+											]
+										}
+									},
+									"required": [
+										"status"
+									]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/readiness": {
+			"get": {
+				"tags": [
+					"meta"
+				],
+				"operationId": "readiness",
+				"description": "Whether the agent home holds a usable model, so a turn can run",
+				"responses": {
+					"200": {
+						"description": "What the engine reports for the home it was given",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Readiness"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/sessions": {
+			"get": {
+				"tags": [
+					"sessions"
+				],
+				"operationId": "listSessions",
+				"responses": {
+					"200": {
+						"description": "Sessions pi recorded for the configured project, newest first",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionList"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/sessions/{id}": {
+			"delete": {
+				"tags": [
+					"sessions"
+				],
+				"operationId": "deleteSession",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						},
+						"required": true,
+						"name": "id",
+						"in": "path"
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Session file removed"
+					},
+					"404": {
+						"description": "No such session in this project",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "A live agent still holds this session",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "readSettings",
+				"description": "Providers, default model, MCP servers, skills and packages from the agent home",
+				"responses": {
+					"200": {
+						"description": "The configuration this deployment runs on",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SettingsSnapshot"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/default-model": {
+			"put": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "setDefaultModel",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/DefaultModel"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "pi's settings.json now names this provider and model"
+					},
+					"400": {
+						"description": "The model is not one this deployment can run",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/providers/{id}": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "readProvider",
+				"description": "The editable detail of one provider, with header names but no secrets",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"pattern": "^(?!new$)[A-Za-z0-9][A-Za-z0-9_-]*$"
+						},
+						"required": true,
+						"name": "id",
+						"in": "path"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Provider fields, declared models, overrides and the live catalog",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProviderDetail"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The provider could not be read",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No provider or models.json entry with this id",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "deleteProvider",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"pattern": "^(?!new$)[A-Za-z0-9][A-Za-z0-9_-]*$"
+						},
+						"required": true,
+						"name": "id",
+						"in": "path"
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "The provider entry and its stored credential are gone from the agent home"
+					},
+					"400": {
+						"description": "models.json could not be written",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/providers/models": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "importProviderModels",
+				"description": "Read a provider's model list; OpenAI-style and Anthropic endpoints only",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ProviderImportInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Model ids returned by the provider",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProviderImportResult"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The endpoint refused or returned no model list",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/providers/test": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "testProvider",
+				"description": "Try a provider draft's model without writing models.json",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ProviderTestInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "The draft reached its model",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProviderTestResult"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The provider refused or could not be reached",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/providers": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "writeProvider",
+				"description": "Add or change a provider entry in models.json",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ProviderInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "models.json now carries the provider, and live engines reloaded"
+					},
+					"400": {
+						"description": "The provider entry was refused",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/mcp/{scope}/{name}": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "readMcpServer",
+				"description": "The editable detail of one MCP server, with variable and header names but no values",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"enum": [
+								"global",
+								"project"
+							]
+						},
+						"required": true,
+						"name": "scope",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"pattern": "^[A-Za-z0-9_-]+$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The server entry, its target and the names of its stored values",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/McpServerDetail"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "mcp.json could not be read",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No server with this name in that file",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "deleteMcpServer",
+				"description": "Remove an MCP server, or a project override, from its file",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"enum": [
+								"global",
+								"project"
+							]
+						},
+						"required": true,
+						"name": "scope",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"pattern": "^[A-Za-z0-9_-]+$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "The entry is gone from its file"
+					},
+					"400": {
+						"description": "The file could not be written",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/mcp": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "writeMcpServer",
+				"description": "Add or change an MCP server in the file its scope names",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/McpServerInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The file now carries the server, and live engines reloaded"
+					},
+					"400": {
+						"description": "The server entry was refused",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/mcp/enabled": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "setMcpServerEnabled",
+				"description": "Turn one server on or off in its own file. Off writes `enabled: false`; on removes the key",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/McpEnabledInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The file now carries the state, and live engines reloaded"
+					},
+					"400": {
+						"description": "The change was refused",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/mcp/in-project": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "setMcpServerInProject",
+				"description": "Set a global server's state in this project: inherit the global setting, or write an override",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/McpInProjectInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The project file now carries the override, and live engines reloaded"
+					},
+					"400": {
+						"description": "The change was refused",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/skills/{name}": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "readSkill",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The skill file, for the edit form",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SkillInput"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The name is not a skill directory",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No such skill under the agent home",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "deleteSkill",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "The skill directory is gone"
+					},
+					"400": {
+						"description": "The skill could not be removed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/skills": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "writeSkill",
+				"description": "Create or replace a user skill under the agent home",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SkillInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The skill's SKILL.md is written, and live engines reloaded"
+					},
+					"400": {
+						"description": "The skill was refused",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/packages": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "installPackage",
+				"description": "Install a package and declare it in pi's settings",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"source": {
+										"type": "string",
+										"minLength": 1
+									}
+								},
+								"required": [
+									"source"
+								]
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The package is installed and configured"
+					},
+					"400": {
+						"description": "The install failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "removePackage",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						},
+						"required": true,
+						"name": "source",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "The package is no longer declared"
+					},
+					"400": {
+						"description": "No declared package matched",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"webhooks": {}
+}

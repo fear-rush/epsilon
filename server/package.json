@@ -2,17 +2,18 @@
 	"name": "server",
 	"version": "0.0.1",
 	"type": "module",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
+	"main": "dist/main.js",
+	"types": "dist/main.d.ts",
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
-			"default": "./dist/index.js"
+			"types": "./dist/main.d.ts",
+			"default": "./dist/main.js"
 		}
 	},
 	"scripts": {
 		"build": "tsc",
-		"dev": "bun --watch run src/serve.ts",
+		"api:export": "bun run scripts/export-api.ts",
+		"dev": "bun --watch run src/main.ts",
 		"type-check": "tsc --noEmit",
 		"test": "bun test"
 	},

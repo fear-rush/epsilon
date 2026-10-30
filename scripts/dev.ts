@@ -2,7 +2,7 @@
  * The dev loop's own agent home, so `bun run dev` never writes into the operator's
  * real `~/.pi`. Nothing here changes a deployment: a container sets
  * `EPSILON_AGENT_HOME` to the volume, and an unset variable still means pi's default
- * path inside that deployment (ADR-0005).
+ * path inside that deployment (docs/DECISIONS.md, Agent home).
  *
  * pi creates the home's layout itself on first use (`sessions/`, `auth.json`,
  * `models-store.json`), so this script creates no pi file it could get wrong. The one
@@ -58,7 +58,7 @@ if (useHost) {
 	environment.EPSILON_AGENT_HOME = agentHome;
 	environment.EPSILON_PROJECT = projectDir;
 	// An inherited value must not decide which config a deployment runs on
-	// (AGENTS.md rule 9). The sandbox clears what it cannot pass explicitly.
+	// (AGENTS.md, Invariants). The sandbox clears what it cannot pass explicitly.
 	delete environment.PI_PACKAGE_DIR;
 	delete environment.PI_CODING_AGENT_SESSION_DIR;
 	console.log(`dev: sandbox home ${agentHome}`);

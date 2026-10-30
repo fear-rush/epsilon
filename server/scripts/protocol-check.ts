@@ -35,12 +35,6 @@ report("wrong version", wrongVersion);
 const beforeHello = await once((socket) => send(socket, { t: "attach", sessionId: "x" }));
 report("attach before hello", beforeHello);
 
-const unsupported = await once((socket) => {
-	send(socket, hello("check"));
-	send(socket, { t: "terminal", terminalId: "t1", input: "ls" });
-});
-report("terminal frame", unsupported);
-
 /** One real turn in this process, then prove no `pi` child was spawned for it. */
 const embedded = await new Promise<ServerFrame[]>((resolve) => {
 	const sessionId = crypto.randomUUID();

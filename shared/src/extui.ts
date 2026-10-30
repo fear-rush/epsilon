@@ -1,7 +1,7 @@
 /**
  * The extension UI vocabulary the browser renders. An embedded engine answers
  * pi's `ExtensionUIContext` calls directly, so these are Epsilon's own shapes,
- * not pi's own wire types (docs/adr/0009-socket-speaks-epsilon.md).
+ * not pi's own wire types (docs/DECISIONS.md, Socket vocabulary).
  */
 import { z } from "zod";
 

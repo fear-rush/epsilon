@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 
 /**
  * The sidebar column appears at 1280px; below that it is a Sheet, which is what
- * docs/ui.md asks of the tablet range (768-1279). The registry name stays.
+ * docs/ARCHITECTURE.md (UI rules) asks of the tablet range (768-1279). The registry name stays.
  */
 const MOBILE_BREAKPOINT = 1280;
 const QUERY = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`;

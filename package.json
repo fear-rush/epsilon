@@ -1,18 +1,9 @@
 {
 	"name": "epsilon",
 	"version": "0.5.1",
-	"description": "A monorepo template built with Bun, Hono, Vite, and React",
-	"keywords": [
-		"bun",
-		"hono",
-		"monorepo",
-		"react",
-		"turbo",
-		"vite"
-	],
-	"homepage": "https://github.com/stevedylandev/bhvr",
+	"description": "A web dashboard that embeds the pi coding agent for one deployment",
 	"license": "MIT",
-	"author": "Steve Simkins",
+	"author": "Muhammad Firas",
 	"workspaces": [
 		"./server",
 		"./client",
@@ -31,10 +22,11 @@
 		"dead-code": "knip",
 		"type-check": "tsc --noEmit && turbo type-check",
 		"test": "turbo test",
-		"postinstall": "bun run routes:generate && turbo build --filter=shared --filter=server",
+		"postinstall": "bun run routes:generate && turbo build --filter=shared --filter=server && bun run api:generate",
 		"lint:fix": "oxlint --fix .",
 		"format": "oxfmt --write .",
 		"format:check": "oxfmt --check .",
+		"api:generate": "turbo run api:export --filter=server",
 		"routes:generate": "bun run --cwd client routes:generate",
 		"sandbox:clean": "rm -rf .sandbox",
 		"hooks:install": "prek install",

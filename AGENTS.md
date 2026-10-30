@@ -1,162 +1,73 @@
 # epsilon
 
-A web dashboard for one user. It embeds the `pi` coding agent in its own process
-([ADR-0008](docs/adr/0008-embed-pi-engine-with-opinions.md),
-[ADR-0009](docs/adr/0009-socket-speaks-epsilon.md)). The deployment it runs in owns
-that agent's home: config, credentials, extensions, packages, sessions and trust
-([ADR-0005](docs/adr/0005-deployment-owns-agent-home.md)). The dashboard and a
-terminal inside the same deployment are therefore one agent, and the dashboard
-configures it there: providers, default model, MCP servers, skills and packages, in
-Settings ([ADR-0012](docs/adr/0012-configure-in-the-dashboard.md)).
+A web dashboard for one user. It embeds the `pi` coding agent SDK in its own process
+and the deployment owns the agent home (config, credentials, extensions, packages,
+sessions). The dashboard and a terminal in the same deployment are one agent, and
+Settings configures it there.
 
-Status: S1 to S5, S12, S13 and S17 are done. S14 is active; S6 to S11, S15 and S16
-are open. Progress lives in [docs/plan.md](docs/plan.md); the per-slice checks are in
-[docs/plan/slices.md](docs/plan/slices.md).
-
-Start with [docs/README.md](docs/README.md). Read these documents in this order:
-
-| Document                                        | Use                                                  |
-| ----------------------------------------------- | ---------------------------------------------------- |
-| [plan.md](docs/plan.md)                         | What to build next. Keep "Active slice" honest.      |
-| [architecture.md](docs/architecture.md)         | Modules, data flows, state ownership, failure modes  |
-| [protocol.md](docs/protocol.md)                 | The browser socket contract                          |
-| [ui.md](docs/ui.md)                             | Component choice, layout, visual states, interaction |
-| [features.md](docs/features.md)                 | Every feature, its scope and how to build it         |
-| [deploy.md](docs/deploy.md)                     | How it runs where `pi` was never installed           |
-| [reference/pi-sdk.md](docs/reference/pi-sdk.md) | What pi exposes: its SDK, files and CLI              |
-| [adr/](docs/adr/README.md)                      | Why the engine, the home and the UI contract are so  |
-| [notes/](docs/notes/README.md)                  | How to record a trap that cost time                  |
+Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) first, [docs/pi-sdk.md](docs/pi-sdk.md)
+before touching anything pi, [docs/DEPLOY.md](docs/DEPLOY.md) for running it, and
+[docs/DECISIONS.md](docs/DECISIONS.md) for why. Code wins over prose; fix a doc that
+disagrees in the same commit, and never copy code or file lists into a doc.
 
 ## Workspaces
 
-- `server/`: Hono API, the embedded agent engine, disk reads. Node-compatible.
-- `client/`: React, Vite, Tailwind, shadcn.
-- `shared/`: browser-safe types, zod schemas, the conversation reducer.
-- `tools/`: local Oxlint plugins.
-- `scripts/`: repo-level tooling, such as the dev launcher.
+- `server/`: Hono API, embedded agent engine, disk reads. `features/<name>/` plus `platform/`.
+- `client/`: React, Vite, Tailwind, shadcn. `features/` mirrors the server names.
+- `shared/`: socket protocol, conversation reducer, rules both sides run.
+- `tools/`: local Oxlint plugins. `scripts/`: the dev launcher.
 
-## Commands
+## Commands (from the repository root)
 
-Run these commands from the repository root:
+| Command                                          | Result                                          |
+| ------------------------------------------------ | ----------------------------------------------- |
+| `bun run dev`                                    | Client and server on a sandboxed home           |
+| `bun run dev:host`                               | The same, against the real `~/.pi`              |
+| `bun run sandbox:clean`                          | Remove the dev sandbox                          |
+| `bun run build` / `test` / `lint` / `type-check` | Build, test, Oxlint, TypeScript                 |
+| `bun run dead-code` / `format`                   | Knip / Oxfmt                                    |
+| `bun run routes:generate`                        | Regenerate the client route tree                |
+| `bun run api:generate`                           | Regenerate the client from the server's OpenAPI |
+| `bun run hooks:install`                          | Install the commit hooks, once per clone        |
 
-| Command                   | Result                                                 |
-| ------------------------- | ------------------------------------------------------ |
-| `bun run dev`             | Start the client and the server, on a sandboxed home   |
-| `bun run dev:host`        | The same, against the operator's real `~/.pi`          |
-| `bun run sandbox:clean`   | Remove the dev sandbox                                 |
-| `bun run build`           | Build every workspace                                  |
-| `bun run test`            | Run the tests                                          |
-| `bun run lint`            | Run Oxlint on every workspace                          |
-| `bun run dead-code`       | Find unused files, exports and dependencies (Knip)     |
-| `bun run format`          | Format the files with Oxfmt                            |
-| `bun run type-check`      | Check TypeScript                                       |
-| `bun run routes:generate` | Generate the route tree                                |
-| `bun run hooks:install`   | Install the Git hooks. Run this command once per clone |
+## Invariants
 
-## Rules
+1. Import `@earendil-works/*` only in `server/src/platform/pi/` and
+   `server/src/features/conversation/`; `shared/src/pi.ts` for types only.
+2. `shared/` imports no `node:*` and no React. The reducer stays pure.
+3. Do not invent a pi capability. If [pi-sdk.md](docs/pi-sdk.md) does not list it,
+   pi does not expose it.
+4. Never hand-write `auth.json` or `trust.json`; credentials change only through
+   `ModelRuntime.login()`/`logout()`. A key typed in Settings goes to the `apiKey`
+   field of `models.json` and never goes back to the browser. Other files: use an
+   exported writer, else merge the documented shape, keep unknown keys, refuse to
+   write what you cannot parse. OAuth login, MCP sign-in and trust stay in the terminal.
+5. The agent home is chosen once, in `server/src/main.ts`, and passed down. An
+   inherited `PI_*` variable never decides it. `bun run dev` uses `.sandbox/agent`;
+   a check that starts a server sets `EPSILON_AGENT_HOME` to a scratch directory.
+   Only `dev:host` touches the real `~/.pi`.
+6. Never edit generated files: `client/src/routeTree.gen.ts`, `client/src/api/*.gen.ts`.
+7. One schema language (zod), one styling system (Tailwind with shadcn). Add shadcn
+   components with `bunx --bun shadcn@latest add <name>`, never `npx`. Forms are
+   `FieldGroup` -> `Field` -> `FieldLabel` + control + `FieldDescription`.
+8. No state that lives only in server memory or only in the browser. An unsupported
+   or unknown state shows a visible notice; silence is never acceptable.
 
-1. Import `@earendil-works/*` only in `server/src/agent/` for runtime code and
-   `shared/src/pi.ts` for types. Everywhere else, use the exports of those modules.
-2. `shared/` imports no `node:*` module and no React. `client/src/conversation/`
-   imports no React. The reducer stays pure and testable by replay.
-3. Do not invent a capability. If [pi-sdk.md](docs/reference/pi-sdk.md) does not
-   list it, pi does not expose it. That file records pi's SDK exports, its
-   documented files and its CLI, because a feature may be present in one and
-   missing from another: a custom provider has no login method while a built-in
-   one does, and packages have an exported installer while MCP configuration does
-   not. Examples that exist nowhere: no in-session branch switch, no writer for
-   `auth.json` outside `ModelRuntime.login()`.
-4. Use one schema language (`zod`) and one styling system (Tailwind with shadcn
-   variants).
-5. Keep every file under 300 lines. Keep every route handler under 60 lines. A
-   route handler rejects bad input, calls one function and returns.
-6. Do not keep state that lives only in server memory or only in the browser.
-7. Show a visible notice when the UI is unsupported or unknown. Silence is not an
-   acceptable result. A deployment that is not configured is an unsupported state.
-8. The dashboard configures this deployment through pi's SDK and its documented
-   files ([ADR-0012](docs/adr/0012-configure-in-the-dashboard.md)). Write through an
-   exported writer when one exists (`SettingsManager`, `DefaultPackageManager`).
-   Otherwise merge the documented shape, keep unknown keys, and refuse to write a
-   file you cannot parse. Never hand-write `auth.json` or `trust.json`: a credential
-   changes only through `ModelRuntime.login()`/`logout()`. A key typed in Settings
-   goes to the documented `apiKey` field of `models.json` and is never sent back to
-   the browser. Deleting a provider calls `logout()` for a key that is stored in
-   `auth.json`, because the provider list shows an entry or a credential and the row
-   would otherwise return. OAuth login, MCP sign-in and trust stay in the terminal.
-9. The agent home is chosen once, in `config.ts`, and passed to every engine
-   explicitly. Never let an inherited `PI_*` variable decide which config a
-   deployment runs on. Development and hand checks keep their own state: `bun run
-   dev` writes to `.sandbox/agent`, and a check that starts its own server or engine
-   sets `EPSILON_AGENT_HOME` to a scratch directory. `bun run dev:host` is the only
-   command that reads and writes the operator's `~/.pi`, and it exists to see the
-   sessions a terminal created, not as a verification path.
+## Add a feature
 
-## Truth and drift
+1. If both sides run a rule, put it in `shared/src/<feature>/rules.ts`.
+2. Server `features/<name>/`: `contract.ts` (zod), `store.ts`, `service.ts`,
+   `routes.ts`, plus `domain.ts` if there is pure logic. Add one `app.route` line in
+   `app.ts`.
+3. `bun run api:generate`.
+4. Client `features/settings/<name>/`, an entry in `sections.ts`, and thin route
+   files in `client/src/routes`.
 
-Documents record intent. Code records reality. When they disagree, code wins.
-Correct the document in the same commit.
+## Ask before acting when
 
-- Check a fact by reading the file, running the command or searching pi's `dist`
-  folder. Do not answer from memory. Do not answer from these documents alone.
-- [reference/pi-sdk.md](docs/reference/pi-sdk.md) becomes stale when pi changes.
-  Run the greps in its header before you trust it.
-- Do not copy code into a document. Do not list files, types or routes. Name the
-  file or the command.
-- Generate a fact when a tool can generate it, such as OpenAPI or types. Do not
-  keep a second copy by hand.
-- An accepted ADR is history. Write a new record to supersede it. Do not edit the
-  old record.
-- Delete code. Do not comment it out. Delete the scaffolding when you finish a
-  slice.
-- Split a file that is too large to read in one pass. Split it before you add to it.
-
-## Stop and ask
-
-Ask before you act when one of these is true:
-
-- Two documents disagree.
-- A document and the code disagree.
-- The request names a capability that [reference/pi-sdk.md](docs/reference/pi-sdk.md)
-  does not list, in the SDK, its files or the CLI.
-- The change breaks a rule above: import boundary, size cap, one schema language
-  or one styling system.
+- The request needs a capability [pi-sdk.md](docs/pi-sdk.md) does not list.
+- The engine would stop being an in-process SDK call (no child process, no RPC).
 - A check fails for a reason you do not understand.
-- A result looks unusual.
-- Two readings of the requirement produce different code.
-- The engine would stop being an embedded SDK call: no child process, no RPC mode,
-  no RPC envelope.
-
-State what is inconsistent, what you checked and the options. Do not guess. Do not
-rewrite a document to match a bug. Do not continue without an answer.
-
-## Interface rules
-
-1. Compose the shadcn components that are installed. Forms are `FieldGroup` →
-   `Field` → `FieldLabel` + control + `FieldDescription`; option sets are `Select`,
-   booleans are `Checkbox`, a long list is `Command` in a `Popover`. Never hand-roll
-   a form control, a native `<select>` or a bare `<input type="checkbox">`.
-2. Registry defaults are source. When the product needs different behaviour,
-   change the file in `client/src/components/ui` and say why in `docs/ui.md`.
-   `cursor-default` on menu and command items is removed, and the checkbox carries
-   its own colour transition, for that reason.
-3. Surfaces rest white. A muted fill is a state (hover, selected, code, icon tile),
-   never a resting surface for a control.
-4. Destructive actions use `variant="destructive"`; a form submit is as wide as its
-   label and sits at the right edge of its card. A control that needs the whole row
-   stacks below the title.
-5. Validate a form with `zod` from `shared` plus the rules only the form knows, and
-   put the first message per field under that field with `FieldError`. Never send a
-   blank optional value.
-
-## Integrations
-
-- Read REST state with TanStack Query. Never put socket state in Query.
-- Put file routes in `client/src/routes`. Never edit `routeTree.gen.ts`.
-- Build API routes with `createRoute`. Generate the OpenAPI document. Never write
-  it by hand.
-- Add shadcn components with `bunx --bun shadcn@latest add <name>`. Never use `npx`.
-
-<!-- BEGIN:turborepo-agent-rules -->
 
 # This is NOT the Turborepo you know
 
