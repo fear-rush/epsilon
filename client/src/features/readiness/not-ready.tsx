@@ -8,7 +8,7 @@ import type { Readiness } from "@/api/types";
 /**
  * The unsupported state, centred on every page: a deployment with no usable model
  * names the missing step and the home, and links to the settings page that fixes it.
- * Silence here is what made a fresh home look broken (AGENTS.md rule 7, docs/ui.md).
+ * Silence here is what made a fresh home look broken (AGENTS.md, Invariants).
  *
  * The action sits outside `AlertDescription`, which underlines every link it holds:
  * a button-shaped link must not inherit that.

@@ -1,6 +1,5 @@
 /**
- * The socket contract: one zod union per direction, exactly as
- * docs/protocol.md writes it. Both sides parse with these schemas.
+ * The socket contract: one zod union per direction, and both sides parse with these schemas.
  *
  * Epsilon owns the command vocabulary: an embedded engine has no wire envelope,
  * so `command` names what the page wants and the server maps it onto the SDK.

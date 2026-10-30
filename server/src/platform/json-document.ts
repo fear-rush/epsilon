@@ -1,7 +1,7 @@
 /**
  * The one way this server reads and writes pi's documented JSON files
  * (`models.json`, `mcp.json`). pi ships no writer for them
- * (docs/reference/pi-sdk.md), so the dashboard parses them with zod and merges
+ * (docs/pi-sdk.md), so the dashboard parses them with zod and merges
  * its change into what is there; the schemas are loose, so unknown keys survive.
  *
  * A read is tolerant: a file that is missing is empty, and one that cannot be

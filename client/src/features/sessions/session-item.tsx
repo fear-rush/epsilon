@@ -1,6 +1,6 @@
 /**
  * One session row: the title, when it last changed, the live badges, and the
- * actions every row has (docs/ui.md, Concept to component).
+ * actions every row has.
  */
 import { Link } from "@tanstack/react-router";
 import { MoreHorizontalIcon } from "lucide-react";

@@ -9,7 +9,7 @@
  *
  * The parameters are a zod schema, converted to JSON Schema because pi's tool
  * registry takes JSON Schema. zod stays the only schema language in the repo
- * (AGENTS.md rule 4); the conversion is generated, never hand-written.
+ * (AGENTS.md, Invariants); the conversion is generated, never hand-written.
  */
 import type { ExtensionAPI, ExtensionToolContext } from "@earendil-works/pi-coding-agent";
 import { z } from "zod";

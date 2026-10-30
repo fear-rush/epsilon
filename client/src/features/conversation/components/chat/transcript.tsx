@@ -1,7 +1,7 @@
 /**
  * The transcript: one column, phone-first, no horizontal scrolling. Rows come
  * from `shared/conversation/selectors`, so this file only maps a row kind to a
- * component (docs/ui.md, Principle 1: semantic components, not decorated divs).
+ * component (docs/ARCHITECTURE.md, UI rules: semantic components, not decorated divs).
  */
 import { Fragment } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";

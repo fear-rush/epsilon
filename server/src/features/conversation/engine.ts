@@ -122,7 +122,7 @@ const toJsonDelta = (
  * pi's JSON event shape, which is what `shared/conversation/reduce.ts` reads.
  * pi ships this transform as a private module (`dist/modes/json-event.js`), not
  * as an export, so the host carries the same 20 lines. Re-verify on upgrade:
- * docs/notes/2026-10-28-tojson-is-not-exported.md.
+ * docs/pi-sdk.md, Traps.
  */
 export const toJsonEvent = (event: AgentSessionEvent): JsonAgentSessionEvent => {
 	if (event.type !== "message_update") return event;

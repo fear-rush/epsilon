@@ -1,6 +1,6 @@
 /**
  * What the browser shows. Built only from socket frames, so replaying a fixture
- * twice produces the same state (docs/plan.md, S2).
+ * twice produces the same state.
  */
 import type { DialogQuestion } from "../extui";
 import type { JsonAgentSessionEvent } from "../pi";

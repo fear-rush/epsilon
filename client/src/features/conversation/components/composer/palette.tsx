@@ -25,7 +25,7 @@ type PaletteProps = {
 
 /**
  * The `/` palette: pi's own `get_commands` list, a `Command` in a `Popover`
- * anchored to the composer (docs/ui.md). The composer owns the arrow keys and
+ * anchored to the composer. The composer owns the arrow keys and
  * Enter, so the popup never takes focus and cmdk is told not to filter a second
  * time: the list is already filtered by what follows `/`.
  */

@@ -1,7 +1,7 @@
 /**
  * The settings page furniture: a page header, a grouped card and one row inside
  * it. Rows carry a title, a muted description and actions on the right, which is
- * the shape the panel's sections share (docs/ui.md, "Settings page").
+ * the shape the panel's sections share.
  */
 import type { ReactNode } from "react";
 import { cn } from "cn";

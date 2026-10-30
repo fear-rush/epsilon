@@ -1,6 +1,6 @@
 /**
  * The three extension requests that ask for a choice or text. `confirm` is an
- * AlertDialog instead (docs/ui.md, Concept to component).
+ * AlertDialog instead (docs/ARCHITECTURE.md, UI rules).
  */
 import { useState } from "react";
 import type { DialogAnswer, DialogQuestion } from "shared";
@@ -22,7 +22,7 @@ type Question = Exclude<DialogQuestion, { method: "confirm" }>;
 /**
  * pi's permission extension prefixes each option with a colour dot. The choice is
  * already said in words, so the glyph is dropped instead of carrying pi's palette
- * into the dialog (docs/ui.md: no glyphs from pi).
+ * into the dialog (docs/ARCHITECTURE.md, UI rules: colour carries state only).
  */
 const DECORATIVE_PREFIX = /^[\p{Extended_Pictographic}\uFE0F\u200D\s]+/u;
 const plainOption = (option: string): string => option.replace(DECORATIVE_PREFIX, "");

@@ -1,5 +1,5 @@
 /**
- * The tab's socket: one per tab, per docs/protocol.md. Stores come and go with
+ * The tab's socket: one per tab, per shared/src/protocol/frames.ts. Stores come and go with
  * routes; the socket does not. Frames are routed to the stores watching their
  * sessionId, so a late store joins a socket that is already open.
  */
@@ -10,7 +10,7 @@ export type LinkStatus = "connecting" | "open" | "closed" | "blocked";
 
 type FrameHandler = (frame: ServerFrame) => void;
 type StatusHandler = (status: LinkStatus) => void;
-/** A frame this page could not read, so the session can show it (AGENTS.md rule 7). */
+/** A frame this page could not read, so the session can show it (AGENTS.md, Invariants). */
 type ProblemHandler = (message: string) => void;
 
 const SOCKET_PATH = "/api/link";

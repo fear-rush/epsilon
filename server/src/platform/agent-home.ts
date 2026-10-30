@@ -1,7 +1,7 @@
 /**
  * The agent home as a value: the directory pi owns and every file inside it that
  * this server reads or writes. Chosen once in `main.ts` and passed down, so no
- * module composes a pi path from a bare string (AGENTS.md rule 9).
+ * module composes a pi path from a bare string (AGENTS.md, Invariants).
  */
 import { join } from "node:path";
 

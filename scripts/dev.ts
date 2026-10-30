@@ -58,7 +58,7 @@ if (useHost) {
 	environment.EPSILON_AGENT_HOME = agentHome;
 	environment.EPSILON_PROJECT = projectDir;
 	// An inherited value must not decide which config a deployment runs on
-	// (AGENTS.md rule 9). The sandbox clears what it cannot pass explicitly.
+	// (AGENTS.md, Invariants). The sandbox clears what it cannot pass explicitly.
 	delete environment.PI_PACKAGE_DIR;
 	delete environment.PI_CODING_AGENT_SESSION_DIR;
 	console.log(`dev: sandbox home ${agentHome}`);

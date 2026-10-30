@@ -1,7 +1,7 @@
 /**
  * Packages are declared in pi's settings and installed by its own manager. Both
  * the install and the settings write are exported, so the panel calls them
- * instead of copying `pi install` (docs/reference/pi-sdk.md).
+ * instead of copying `pi install` (docs/pi-sdk.md).
  */
 
 import type { AgentHome } from "../../platform/agent-home";

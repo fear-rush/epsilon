@@ -6,13 +6,12 @@
 
 import type { AgentHome } from "../../platform/agent-home";
 import { modelRuntime } from "../../platform/pi";
-import { readModelsFrom } from "../conversation/models";
-import { readDefaultModel } from "../general/defaults";
+import { readModelsFrom } from "../conversation";
+import { readDefaultModel } from "../general";
 import { isMcpTurnedOff, listMcpServers } from "../mcp/service";
-import { listPackages } from "../packages/service";
-import { listBuiltins, listProviders } from "../providers/service";
-import { modelsDocument } from "../providers/store";
-import { listSkills } from "../skills/store";
+import { listPackages } from "../packages";
+import { listBuiltins, listProviders, modelsDocument } from "../providers";
+import { listSkills } from "../skills";
 import type { SettingsSnapshot } from "./contract";
 
 /**

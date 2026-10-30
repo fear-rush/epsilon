@@ -1,6 +1,6 @@
 /**
  * Replay a recorded fixture through the reducer twice and compare the result.
- * This is the only test that catches ordering bugs (docs/plan.md, Risks), and it
+ * This is the only test that catches ordering bugs, and it
  * uses a real trace, not a hand-written event sequence.
  *
  *   bun run scripts/replay.ts                 # every fixture
