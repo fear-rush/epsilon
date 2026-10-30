@@ -1,6 +1,6 @@
 /**
- * The bottom-left deployment card. It opens a menu the way a chat app opens its
- * account menu: a header naming the deployment, then every settings section, so
+ * The bottom-left app card. It opens a menu the way a chat app opens its
+ * account menu: a header naming the app, then every settings section, so
  * a phone reaches them without the sidebar. The sections come from the one list
  * the settings shell also reads.
  */
@@ -36,7 +36,7 @@ export function SidebarAccount() {
 				render={
 					<button
 						type="button"
-						aria-label="Deployment menu"
+						aria-label="App menu"
 						className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left hover:bg-sidebar-accent"
 					/>
 				}
@@ -46,9 +46,7 @@ export function SidebarAccount() {
 				</span>
 				<span className="grid min-w-0 flex-1 text-left leading-tight">
 					<span className="truncate text-sm font-medium">epsilon</span>
-					<span className="truncate text-xs font-normal text-muted-foreground">
-						This deployment
-					</span>
+					<span className="truncate text-xs font-normal text-muted-foreground">Epsilon</span>
 				</span>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side="top" align="center" sideOffset={8} className="w-64">
@@ -58,7 +56,7 @@ export function SidebarAccount() {
 					</span>
 					<div className="min-w-0">
 						<p className="truncate text-sm font-medium">epsilon</p>
-						<p className="truncate text-xs text-muted-foreground">Local deployment</p>
+						<p className="truncate text-xs text-muted-foreground">Local</p>
 					</div>
 				</div>
 				{SETTINGS_GROUPS.map((group) => (

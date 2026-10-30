@@ -24,7 +24,7 @@ export const settingsSnapshotSchema = z
 		mcp: z.array(mcpServerViewSchema),
 		/** `settings.json` lists `-builtin:mcp`, so no session connects a configured server. */
 		mcpDisabled: z.boolean(),
-		/** The folder this deployment runs in, and therefore the project `mcp.json` it reads. */
+		/** The folder Epsilon runs in, and therefore the project `mcp.json` it reads. */
 		projectDir: z.string(),
 		skills: z.array(skillViewSchema),
 		packages: z.array(packageViewSchema),

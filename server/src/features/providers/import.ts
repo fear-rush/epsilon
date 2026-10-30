@@ -157,7 +157,7 @@ const importModels = async (options: {
 /**
  * Read a provider's model list for the settings panel. A key typed in the form
  * wins; otherwise the provider's stored credential (auth.json) is used, which is
- * what makes an import work right after a login in the deployment's terminal.
+ * what makes an import work right after a login in a terminal using the same home.
  */
 export const importModelsForHome = async (
 	home: AgentHome,

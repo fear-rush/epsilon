@@ -12,7 +12,7 @@ import { mountRoutes } from "./routes";
 const info = {
 	title: "epsilon API",
 	version: "0.0.1",
-	description: "Local REST surface for sessions and for configuring this deployment.",
+	description: "Local REST surface for sessions and for configuring the agent.",
 };
 
 export type OpenApiDocument = ReturnType<ReturnType<typeof mountRoutes>["getOpenAPI31Document"]>;

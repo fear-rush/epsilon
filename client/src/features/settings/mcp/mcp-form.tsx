@@ -37,7 +37,7 @@ const scopeLabel = (scope: McpScope): string => (scope === "global" ? "Global" :
 
 const scopeDescription = (scope: McpScope): string =>
 	scope === "global"
-		? "Read from this deployment's agent home, so every session can connect it."
+		? "Read from the agent home, so every session can connect it."
 		: "Read from this project's .pi/mcp.json, so only sessions in this folder connect it.";
 
 export function McpForm({

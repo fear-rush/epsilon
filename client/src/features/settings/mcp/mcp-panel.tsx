@@ -187,9 +187,8 @@ export function McpPanel({
 							<Alert>
 								<TriangleAlertIcon />
 								<AlertDescription className="text-xs">
-									MCP is turned off in this deployment&apos;s settings.json with{" "}
-									<code>-builtin:mcp</code>, so no session connects these servers. Changes here are
-									still saved.
+									MCP is turned off in settings.json with <code>-builtin:mcp</code>, so no session
+									connects these servers. Changes here are still saved.
 								</AlertDescription>
 							</Alert>
 						</div>

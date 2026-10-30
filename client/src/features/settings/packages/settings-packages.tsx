@@ -1,6 +1,6 @@
 /**
  * Packages are installed by pi's own manager and declared in its settings, so a
- * terminal `pi` in this deployment sees the same list.
+ * terminal `pi` on this machine sees the same list.
  */
 import { useMutation } from "@tanstack/react-query";
 import { PlusIcon, Trash2Icon } from "lucide-react";

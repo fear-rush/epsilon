@@ -1,8 +1,8 @@
 /**
- * Can this deployment run a turn? Asked of a model runtime built from the same home
+ * Can Epsilon run a turn? Asked of a model runtime built from the same home
  * and the same two files the engine uses (`agent-session-services.js`), so the answer
  * cannot drift from what a session would see. It reads pi's files and writes none;
- * a login in the deployment's shell changes the next answer.
+ * a login in a terminal changes the next answer.
  */
 
 import type { AgentHome } from "../../platform/agent-home";
