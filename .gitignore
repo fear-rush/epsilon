@@ -34,9 +34,7 @@ Thumbs.db
 
 # Editors
 .idea
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
+.vscode
 *.suo
 *.ntvs*
 *.njsproj
@@ -49,6 +47,9 @@ bun.lockb
 # pi project state, created by running pi in this repository. The user's real
 # settings live in ~/.pi, and this is not source.
 .pi/settings.local.json
+
+# Agent tooling: skills live in the user's own setup, not in this repository.
+.agents
 
 # The dev loop's own agent home and project.
 .sandbox
