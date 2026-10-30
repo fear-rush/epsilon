@@ -40,6 +40,8 @@ export const buildSnapshot = (agent: AgentSession, models: SnapshotModel[]): Sna
 			isStreaming: agent.isStreaming,
 			isCompacting: agent.isCompacting,
 			sessionName: agent.sessionName,
+			thinkingLevel: agent.thinkingLevel,
+			availableThinkingLevels: agent.getAvailableThinkingLevels(),
 		},
 		messages: agent.messages.filter(isVisibleMessage),
 		// The list the session carries, so the picker and `set_model` agree

@@ -3,7 +3,7 @@
  * so this store holds only what frames reduced to: a remount reuses it instead of
  * rebuilding the transcript from a snapshot, and leaving the route releases it.
  */
-import type { Command, DialogAnswer } from "shared";
+import type { Command, DialogAnswer, ThinkingLevel } from "shared";
 import { emptyConversation, reduce } from "shared";
 import type { ConversationState } from "shared";
 
@@ -90,6 +90,11 @@ export class ConversationStore {
 	/** pi answers with a fresh snapshot, so the menu shows the model it chose. */
 	setModel(provider: string, modelId: string): void {
 		this.sendCommand({ type: "set_model", provider, modelId });
+	}
+
+	/** Session-only, like pi's /thinking. pi records the change in the transcript. */
+	setThinkingLevel(level: ThinkingLevel): void {
+		this.sendCommand({ type: "set_thinking_level", level });
 	}
 
 	/**

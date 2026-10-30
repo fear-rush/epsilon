@@ -173,6 +173,11 @@ export class LiveSession {
 				this.resync();
 				return;
 			}
+			case "set_thinking_level": {
+				agent.setThinkingLevel(command.level);
+				this.resync();
+				return;
+			}
 		}
 	}
 

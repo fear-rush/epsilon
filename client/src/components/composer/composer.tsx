@@ -6,7 +6,7 @@
 import { ArrowUpIcon, SquareIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
-import type { SnapshotCommand, SnapshotModel, UiStatus } from "shared";
+import type { SnapshotCommand, SnapshotModel, ThinkingLevel, UiStatus } from "shared";
 
 import type { ConversationStore } from "@/conversation/store";
 import {
@@ -19,6 +19,7 @@ import {
 import { ModelMenu } from "./model-menu";
 import { Palette } from "./palette";
 import { PermissionMenu } from "./permission-menu";
+import { ThinkingMenu } from "./thinking-menu";
 
 /**
  * What follows `/` while the draft is still a bare command. A space ends it: from
@@ -36,11 +37,22 @@ type ComposerProps = {
 	busy: boolean;
 	models: SnapshotModel[];
 	model: SnapshotModel | undefined;
+	thinkingLevel: ThinkingLevel;
+	availableThinkingLevels: ThinkingLevel[];
 	statuses: UiStatus[];
 	commands: SnapshotCommand[];
 };
 
-export function Composer({ store, busy, models, model, statuses, commands }: ComposerProps) {
+export function Composer({
+	store,
+	busy,
+	models,
+	model,
+	thinkingLevel,
+	availableThinkingLevels,
+	statuses,
+	commands,
+}: ComposerProps) {
 	const [draft, setDraft] = useState("");
 	/** The highlighted command, and the draft it was dismissed at. */
 	const [selected, setSelected] = useState<string>();
@@ -156,6 +168,11 @@ export function Composer({ store, busy, models, model, statuses, commands }: Com
 								models={models}
 								model={model}
 								onSelect={(next) => store.setModel(next.provider, next.id)}
+							/>
+							<ThinkingMenu
+								level={thinkingLevel}
+								levels={availableThinkingLevels}
+								onSelect={(level) => store.setThinkingLevel(level)}
 							/>
 							<PermissionMenu statuses={statuses} onSelect={(mode) => store.setPermission(mode)} />
 							{busy && (

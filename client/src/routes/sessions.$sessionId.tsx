@@ -30,7 +30,7 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 		const { store, snapshot } = useConversation(sessionId);
 		const rows = transcript(snapshot.state);
 		const { busy, dialogs, statuses, widgets, title, sessionName, commands } = snapshot.state;
-		const { models, model } = snapshot.state;
+		const { models, model, thinkingLevel, availableThinkingLevels } = snapshot.state;
 		const confirmations = dialogs.filter(isConfirm);
 		const questions = dialogs.filter((dialog) => !isConfirm(dialog));
 		const aboveComposer = widgets.filter((widget) => widget.placement === "aboveEditor");
@@ -128,6 +128,8 @@ export const Route = createFileRoute("/sessions/$sessionId")({
 					busy={busy}
 					models={models}
 					model={model}
+					thinkingLevel={thinkingLevel}
+					availableThinkingLevels={availableThinkingLevels}
 					statuses={statuses}
 					commands={commands}
 				/>
