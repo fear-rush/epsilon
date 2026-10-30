@@ -1,8 +1,3 @@
-/**
- * The thinking-level picker. pi decides which levels a model supports, so the
- * menu renders only what the session reports and stays hidden for a model that
- * offers nothing above "off".
- */
 import { ChevronDownIcon } from "lucide-react";
 import { thinkingLevelSchema } from "shared";
 import type { ThinkingLevel } from "shared";
@@ -16,6 +11,12 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { InputGroupButton } from "@/components/ui/input-group";
+
+/**
+ * The thinking-level picker. pi decides which levels a model supports, so the
+ * menu renders only what the session reports and stays hidden for a model that
+ * offers nothing above "off".
+ */
 
 const labels: Record<ThinkingLevel, string> = {
 	off: "Off",

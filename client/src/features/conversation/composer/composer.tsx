@@ -1,8 +1,3 @@
-/**
- * The composer: the draft, the `/` palette, `!cmd`, and the footer controls. It
- * owns the arrow keys and Enter, because focus never leaves the textarea, so the
- * palette and the run controls are driven from one key handler instead of three.
- */
 import { ArrowUpIcon, SquareIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
@@ -15,11 +10,16 @@ import {
 	InputGroupButton,
 	InputGroupTextarea,
 } from "@/components/ui/input-group";
-
 import { ModelMenu } from "./model-menu";
 import { Palette } from "./palette";
 import { PermissionMenu } from "./permission-menu";
 import { ThinkingMenu } from "./thinking-menu";
+
+/**
+ * The composer: the draft, the `/` palette, `!cmd`, and the footer controls. It
+ * owns the arrow keys and Enter, because focus never leaves the textarea, so the
+ * palette and the run controls are driven from one key handler instead of three.
+ */
 
 /**
  * What follows `/` while the draft is still a bare command. A space ends it: from

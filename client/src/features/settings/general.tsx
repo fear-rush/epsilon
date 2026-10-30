@@ -1,7 +1,3 @@
-/**
- * General: whether Epsilon can run a turn, where its home is, and which
- * model a new session starts on.
- */
 import { useMutation } from "@tanstack/react-query";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { useState } from "react";
@@ -21,10 +17,14 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { setDefaultModel } from "@/api/endpoints";
-
-import { useSettingsRefresh } from "@/features/settings/refresh";
+import { useSettingsRefresh } from "@/features/settings/queries";
 import { SettingsGroup, SettingsPage, SettingsRow } from "@/features/settings/kit/settings-section";
 import type { SettingsSnapshot } from "@/api/types";
+
+/**
+ * General: whether Epsilon can run a turn, where its home is, and which
+ * model a new session starts on.
+ */
 
 const labelOf = (model: SnapshotModel) => `${model.provider}: ${model.name}`;
 

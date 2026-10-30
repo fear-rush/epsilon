@@ -1,6 +1,6 @@
 import { ChevronDownIcon, ShieldIcon } from "lucide-react";
-import { PERMISSION_STATUS_KEY, parsePermissionStatus } from "shared";
-import type { UiStatus } from "shared";
+import { PERMISSION_STATUS_KEY, parsePermissionStatus, PERMISSION_MODE_VALUES } from "shared";
+import type { UiStatus, PermissionMode } from "shared";
 
 import {
 	DropdownMenu,
@@ -12,8 +12,6 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { InputGroupButton } from "@/components/ui/input-group";
-import { PERMISSION_MODES } from "@/features/conversation/permission";
-import type { PermissionMode } from "@/features/conversation/permission";
 
 /**
  * The extension reports the mode through a keyed status, with its own glyph and
@@ -69,3 +67,18 @@ export function PermissionMenu({
 		</DropdownMenu>
 	);
 }
+
+export type { PermissionMode };
+
+/**
+ * The words the browser shows for each mode. The values come from `shared`, so a
+ * mode cannot exist on one side only. Yolo asks for nothing, and its description
+ * says so.
+ */
+const WORDS: Record<PermissionMode, { label: string; description: string }> = {
+	strict: { label: "Strict", description: "Ask before every command and edit" },
+	ask: { label: "Ask", description: "Ask before commands, writes allowed" },
+	yolo: { label: "Yolo", description: "Run everything without asking" },
+};
+
+const PERMISSION_MODES = PERMISSION_MODE_VALUES.map((value) => ({ value, ...WORDS[value] }));

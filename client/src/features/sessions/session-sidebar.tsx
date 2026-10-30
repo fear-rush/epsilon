@@ -20,10 +20,10 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { SidebarAccount } from "@/features/sessions/sidebar-account";
-import { DeleteDialog } from "@/features/settings/kit/delete-dialog";
+import { DeleteDialog } from "@/features/settings/kit/dialogs";
 import { sessionKeys } from "@/api/keys";
 import { deleteSession, fetchSessions } from "@/api/endpoints";
-import { sessionLabel } from "@/lib/format";
+import { sessionLabel } from "@/features/sessions/format";
 import type { SessionSummary } from "@/api/types";
 
 /** Live children come and go outside this tab, so the badges poll. */

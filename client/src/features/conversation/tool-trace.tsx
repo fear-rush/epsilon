@@ -1,8 +1,3 @@
-/**
- * One tool call, whatever the tool is. The name decides which arguments to read
- * and which body to draw; a name with no renderer falls back to its arguments and
- * output, so a tool is never blank (docs/ARCHITECTURE.md, UI rules: one way to render a tool call).
- */
 import type { ReactNode } from "react";
 import {
 	SquareTerminalIcon,
@@ -32,6 +27,12 @@ import {
 	TraceLine,
 	TraceTitle,
 } from "@/components/ui/trace";
+
+/**
+ * One tool call, whatever the tool is. The name decides which arguments to read
+ * and which body to draw; a name with no renderer falls back to its arguments and
+ * output, so a tool is never blank (docs/ARCHITECTURE.md, UI rules: one way to render a tool call).
+ */
 
 const ICONS = new Map<string, ReactNode>([
 	["bash", <TerminalIcon key="bash" />],

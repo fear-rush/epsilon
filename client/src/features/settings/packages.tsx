@@ -1,7 +1,3 @@
-/**
- * Packages are installed by pi's own manager and declared in its settings, so a
- * terminal `pi` on this machine sees the same list.
- */
 import { useMutation } from "@tanstack/react-query";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
@@ -12,17 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { installPackage, removePackage } from "@/api/endpoints";
-
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import { DeleteDialog } from "@/features/settings/kit/delete-dialog";
+import { DeleteDialog } from "@/features/settings/kit/dialogs";
 import {
 	SettingsBlock,
 	SettingsGroup,
 	SettingsPage,
 	SettingsRow,
 } from "@/features/settings/kit/settings-section";
-import { useSettingsRefresh } from "@/features/settings/refresh";
+import { useSettingsRefresh } from "@/features/settings/queries";
 import type { PackageView, SettingsSnapshot } from "@/api/types";
+
+/**
+ * Packages are installed by pi's own manager and declared in its settings, so a
+ * terminal `pi` on this machine sees the same list.
+ */
 
 export function SettingsPackages({ snapshot }: { snapshot: SettingsSnapshot }) {
 	const [source, setSource] = useState("");

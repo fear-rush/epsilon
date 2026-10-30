@@ -13,17 +13,17 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CancelDialog } from "@/features/settings/kit/cancel-dialog";
-import { DeleteDialog } from "@/features/settings/kit/delete-dialog";
+import { CancelDialog } from "@/features/settings/kit/dialogs";
+import { DeleteDialog } from "@/features/settings/kit/dialogs";
 import { DetailLoader } from "@/features/settings/kit/detail-loader";
 import { FormFooter, FormPage } from "@/features/settings/kit/form-page";
-import { UnsavedChangesBlock } from "@/features/settings/kit/unsaved-changes-block";
+import { UnsavedChangesBlock } from "@/features/settings/kit/dialogs";
 import { useDraftForm } from "@/features/settings/kit/use-draft-form";
 import { useSettings } from "@/features/settings/queries";
-import { useSettingsRefresh } from "@/features/settings/refresh";
+import { useSettingsRefresh } from "@/features/settings/queries";
 import { deleteSkill, saveSkill } from "@/api/endpoints";
 
-import { useSkill } from "./queries";
+import { useSkill } from "@/features/settings/queries";
 import type { SkillInput } from "@/api/types";
 
 type SkillField = keyof SkillInput;
