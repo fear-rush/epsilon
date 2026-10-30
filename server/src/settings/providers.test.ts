@@ -50,6 +50,40 @@ describe("provider writes", () => {
 		expect(entry.modelOverrides["gpt-5"].maxTokens).toBe(10);
 	});
 
+	test("writes thinking level maps and reasoning compat", async () => {
+		const root = await home();
+		await writeProvider(root, {
+			id: "gateway",
+			baseUrl: "https://example.test/v1",
+			api: "openai-completions",
+			compat: { thinkingFormat: "deepseek", supportsReasoningEffort: true },
+			models: [
+				{
+					id: "m",
+					thinkingLevelMap: { off: null, low: "low", high: "high", max: "max" },
+					compat: { requiresReasoningContentOnAssistantMessages: true },
+				},
+			],
+			modelOverrides: {
+				"gpt-5": { thinkingLevelMap: { high: "high", max: "max" } },
+			},
+		});
+
+		const entry = (await stored(root)).providers.gateway;
+		expect(entry.compat).toEqual({ thinkingFormat: "deepseek", supportsReasoningEffort: true });
+		expect(entry.models[0].thinkingLevelMap).toEqual({
+			off: null,
+			low: "low",
+			high: "high",
+			max: "max",
+		});
+		expect(entry.models[0].compat).toEqual({ requiresReasoningContentOnAssistantMessages: true });
+		expect(entry.modelOverrides["gpt-5"].thinkingLevelMap).toEqual({
+			high: "high",
+			max: "max",
+		});
+	});
+
 	test("an omitted field is kept and an empty one clears it", async () => {
 		const root = await home();
 		await writeFile(

@@ -9,6 +9,8 @@ import { providerModelsEndpoint } from "shared";
 import type { ProviderApi, ProviderImportInput, ProviderModelInput } from "shared";
 import { z } from "zod";
 
+import type { ModelRuntime } from "../agent/sdk";
+
 import { createRuntime } from "./providers";
 
 const TIMEOUT_MS = 10_000;
@@ -17,6 +19,8 @@ const MAX_BYTES = 2_000_000;
 const modelEntrySchema = z.looseObject({
 	id: z.string().min(1),
 	name: z.string().optional(),
+	/** Some gateways say which paths a model accepts; commandcode does. */
+	supported_endpoints: z.array(z.string()).optional(),
 });
 
 const modelListSchema = z.union([
@@ -43,11 +47,67 @@ const authHeaders = (
 	return Object.fromEntries(entries);
 };
 
+type LibraryModel = ReturnType<ModelRuntime["getModels"]>[number];
+
+/** An Anthropic client appends `/v1/messages`, so a base ending in `/v1` doubles it. */
+const withoutVersion = (baseUrl: string): string => {
+	const url = new URL(baseUrl);
+	url.pathname = url.pathname.replace(/\/+$/u, "").replace(/\/v1$/u, "") || "/";
+	return url.toString().replace(/\/$/u, "");
+};
+
+/**
+ * One entry from the list. A gateway that serves a model only through Anthropic
+ * Messages gets a per-model API and the base above its `/v1`, because the
+ * provider-level OpenAI shape would reject it.
+ */
+const modelOf = (
+	entry: z.infer<typeof modelEntrySchema>,
+	options: { api: ProviderApi; baseUrl: string; library: readonly LibraryModel[] },
+): ProviderModelInput => {
+	const model: ProviderModelInput =
+		entry.name === undefined ? { id: entry.id } : { id: entry.id, name: entry.name };
+	const endpoints = entry.supported_endpoints ?? [];
+	const messages = endpoints.includes("/messages");
+	const chat = endpoints.includes("/chat/completions");
+	const responses = endpoints.includes("/responses");
+	if (messages && !chat && !responses && options.api !== "anthropic-messages") {
+		model.api = "anthropic-messages";
+		model.baseUrl = withoutVersion(options.baseUrl);
+	} else if (responses && !chat && !messages && options.api !== "openai-responses") {
+		model.api = "openai-responses";
+	}
+
+	// pi's catalog knows more about a model than a gateway list does. Copy the
+	// reasoning capability and level map for an exact id with the same API, and
+	// the Anthropic-specific adaptive switch. Other compat stays with the gateway.
+	const effectiveApi = model.api ?? options.api;
+	const match = options.library.find(
+		(candidate) => candidate.id === entry.id && candidate.api === effectiveApi,
+	);
+	if (match !== undefined) {
+		if (match.reasoning) model.reasoning = true;
+		if (match.thinkingLevelMap !== undefined) model.thinkingLevelMap = match.thinkingLevelMap;
+		if (effectiveApi === "anthropic-messages") {
+			// SAFETY: only an Anthropic model carries forceAdaptiveThinking.
+			const compat = match.compat as { forceAdaptiveThinking?: boolean } | undefined;
+			if (compat?.forceAdaptiveThinking !== undefined) {
+				model.compat = {
+					...(model.compat ?? {}),
+					forceAdaptiveThinking: compat.forceAdaptiveThinking,
+				};
+			}
+		}
+	}
+	return model;
+};
+
 const importModels = async (options: {
 	api: ProviderApi;
 	baseUrl: string;
 	apiKey?: string;
 	headers?: Record<string, string>;
+	library: readonly LibraryModel[];
 }): Promise<ProviderModelInput[]> => {
 	const url = providerModelsEndpoint(options.api, options.baseUrl);
 	if (url === undefined) {
@@ -69,7 +129,7 @@ const importModels = async (options: {
 		redirect: "error",
 	});
 	if (!response.ok) {
-		throw new Error(`The model list answered ${response.status} ${response.statusText}`);
+		throw new Error(`The model list answered ${response.status} ${response.statusText} at ${url}`);
 	}
 	const declared = Number(response.headers.get("content-length") ?? "0");
 	if (declared > MAX_BYTES) throw new Error("The model list is too large to read");
@@ -85,7 +145,7 @@ const importModels = async (options: {
 		for (const entry of entries) {
 			if (seen.has(entry.id)) continue;
 			seen.add(entry.id);
-			models.push(entry.name === undefined ? { id: entry.id } : { id: entry.id, name: entry.name });
+			models.push(modelOf(entry, options));
 		}
 		return models;
 	} catch {
@@ -102,10 +162,11 @@ export const importModelsForHome = async (
 	home: string,
 	input: ProviderImportInput,
 ): Promise<ProviderModelInput[]> => {
+	const runtime = await createRuntime(home);
 	const typedKey = input.apiKey?.trim();
 	const stored =
 		typedKey === undefined && input.providerId !== undefined
-			? await (await createRuntime(home)).getAuth(input.providerId)
+			? await runtime.getAuth(input.providerId)
 			: undefined;
 	const headers: Record<string, string> = {};
 	for (const [key, value] of Object.entries(stored?.auth.headers ?? {})) {
@@ -116,5 +177,6 @@ export const importModelsForHome = async (
 		baseUrl: input.baseUrl,
 		apiKey: typedKey ?? stored?.auth.apiKey,
 		headers,
+		library: runtime.getModels(),
 	});
 };

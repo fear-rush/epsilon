@@ -35,6 +35,10 @@ export const writeProvider = async (home: string, input: ProviderInput): Promise
 		else next.api = input.api;
 	}
 	if (input.apiKey !== undefined && input.apiKey !== "") next.apiKey = input.apiKey;
+	if (input.compat !== undefined) {
+		if (Object.keys(input.compat).length === 0) delete next.compat;
+		else next.compat = input.compat;
+	}
 	if (input.headers !== undefined) {
 		// A blank value for an existing key keeps the stored secret; the browser
 		// only ever sees the key name. Keys left out are removed.

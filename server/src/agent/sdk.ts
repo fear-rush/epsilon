@@ -8,3 +8,4 @@ export {
 	ModelRuntime,
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
+export type { ProviderModelConfig } from "@earendil-works/pi-coding-agent";

@@ -46,7 +46,7 @@ export function AddProviderDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-lg">
+			<DialogContent className="sm:max-w-2xl">
 				<DialogHeader>
 					<DialogTitle>Add a provider</DialogTitle>
 					<DialogDescription>
@@ -63,10 +63,10 @@ export function AddProviderDialog({
 						onChange={(event) => setQuery(event.target.value)}
 					/>
 				</div>
-				<div className="max-h-80 overflow-y-auto rounded-2xl border">
+				<div className="max-h-96 overflow-y-auto rounded-2xl border">
 					<button
 						type="button"
-						className="flex w-full items-center gap-3 border-b px-3 py-3 text-left hover:bg-muted/60"
+						className="flex w-full cursor-pointer items-center gap-3 border-b px-3 py-3 text-left hover:bg-muted/60"
 						onClick={() => go("new")}
 					>
 						<span className="grid size-8 place-items-center rounded-lg bg-muted">
@@ -86,7 +86,7 @@ export function AddProviderDialog({
 							<button
 								key={provider.id}
 								type="button"
-								className="flex w-full items-center justify-between gap-3 border-b px-3 py-3 text-left last:border-b-0 hover:bg-muted/60"
+								className="flex w-full cursor-pointer items-center justify-between gap-3 border-b px-3 py-3 text-left last:border-b-0 hover:bg-muted/60"
 								onClick={() => go(provider.id)}
 							>
 								<span className="min-w-0">

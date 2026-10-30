@@ -4,7 +4,16 @@
  * secret field means "keep", an empty header value means "keep that header".
  */
 import { parseProviderApi } from "shared";
-import type { ModelOverride, ProviderDetail, ProviderInput, ProviderModelInput } from "shared";
+
+import { compatForApi } from "./reasoning";
+import type {
+	ModelOverride,
+	ProviderDetail,
+	ProviderInput,
+	ProviderModelInput,
+	ProviderTestInput,
+	ReasoningCompat,
+} from "shared";
 
 /**
  * Base UI's Select reads the empty string as "nothing selected", so the row that
@@ -26,6 +35,8 @@ export type ProviderDraft = {
 	api: string;
 	apiKey: string;
 	headers: HeaderRow[];
+	/** Provider-wide reasoning format; each model's compat overrides it. */
+	compat: ReasoningCompat;
 	models: ProviderModelInput[];
 	modelOverrides: Record<string, ModelOverride>;
 	/** False keeps pi's catalog for a provider pi ships. */
@@ -43,6 +54,7 @@ export const draftOf = (detail: ProviderDetail | undefined): ProviderDraft => {
 		api: stored ? (detail.stored.api ?? "") : "",
 		apiKey: "",
 		headers: (detail?.headerKeys ?? []).map((key) => ({ key, value: "", stored: true })),
+		compat: detail?.stored.compat ?? {},
 		models: detail?.models ?? [],
 		modelOverrides: detail?.modelOverrides ?? {},
 		customCatalog: detail === undefined ? true : !detail.builtin || detail.models.length > 0,
@@ -55,12 +67,14 @@ export const draftOf = (detail: ProviderDetail | undefined): ProviderDraft => {
  * the stored value instead of keeping it.
  */
 export const inputOf = (draft: ProviderDraft, builtin: boolean): ProviderInput => {
+	const api = parseProviderApi(draft.api);
 	return {
 		id: draft.id.trim(),
 		name: draft.name.trim(),
 		baseUrl: draft.baseUrl.trim(),
-		api: parseProviderApi(draft.api) ?? "",
+		api: api ?? "",
 		apiKey: draft.apiKey.trim() || undefined,
+		compat: compatForApi(draft.compat, api),
 		headers: Object.fromEntries(
 			draft.headers
 				// A blank value keeps a stored header; it never creates one.
@@ -71,3 +85,22 @@ export const inputOf = (draft: ProviderDraft, builtin: boolean): ProviderInput =
 		modelOverrides: draft.modelOverrides,
 	};
 };
+
+/** The draft in the shape the test route reads, with one model to try. */
+export const testInputOf = (
+	draft: ProviderDraft,
+	model: ProviderModelInput | undefined,
+	level?: ProviderTestInput["level"],
+): ProviderTestInput => ({
+	providerId: draft.id.trim() || undefined,
+	name: draft.name.trim() || undefined,
+	baseUrl: draft.baseUrl.trim(),
+	api: parseProviderApi(draft.api),
+	apiKey: draft.apiKey.trim() || undefined,
+	headers: Object.fromEntries(
+		draft.headers.filter((row) => row.key.trim() !== "").map((row) => [row.key.trim(), row.value]),
+	),
+	compat: compatForApi(draft.compat, parseProviderApi(draft.api)),
+	level,
+	model,
+});

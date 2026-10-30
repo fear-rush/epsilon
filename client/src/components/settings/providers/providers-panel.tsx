@@ -4,7 +4,7 @@
  * entry or when it has a credential, never just because pi ships it.
  */
 import { Link } from "@tanstack/react-router";
-import { PlusIcon, SearchIcon } from "lucide-react";
+import { PlusIcon, SearchIcon, TriangleAlertIcon } from "lucide-react";
 import { useState } from "react";
 import { cn } from "cn";
 
@@ -48,6 +48,7 @@ export function ProvidersPanel({
 			{settings.data?.error !== undefined && (
 				<div className="shrink-0 p-2">
 					<Alert variant="destructive">
+						<TriangleAlertIcon />
 						<AlertDescription className="max-h-32 overflow-auto whitespace-pre-wrap text-xs">
 							{settings.data.error}
 						</AlertDescription>
@@ -73,9 +74,16 @@ export function ProvidersPanel({
 						Reading providers…
 					</div>
 				) : settings.error !== null ? (
-					<Alert variant="destructive">
-						<AlertDescription>{settings.error.message}</AlertDescription>
-					</Alert>
+					editing ? (
+						<p className="px-2 py-3 text-xs text-muted-foreground">
+							Waiting for the server to come back…
+						</p>
+					) : (
+						<Alert variant="destructive">
+							<TriangleAlertIcon />
+							<AlertDescription>{settings.error.message}</AlertDescription>
+						</Alert>
+					)
 				) : visible.length === 0 ? (
 					<p className="px-2 py-3 text-xs text-muted-foreground">
 						{providers.length === 0 ? "No provider configured yet." : "Nothing matches."}
@@ -93,9 +101,9 @@ export function ProvidersPanel({
 						>
 							<span className="min-w-0 flex-1">
 								<span className="block truncate text-sm font-medium">{provider.name}</span>
-								<span className="block truncate text-xs text-muted-foreground">
-									{provider.custom ? provider.id : "pi default"}
-								</span>
+								{!provider.custom && (
+									<span className="block truncate text-xs text-muted-foreground">pi default</span>
+								)}
 							</span>
 							<span className="shrink-0 text-xs text-muted-foreground">
 								{provider.modelCount} {provider.modelCount === 1 ? "model" : "models"}

@@ -15,7 +15,7 @@ import type { ProviderDraft } from "./provider-draft";
 
 const trim = (value: string): string => value.trim();
 
-const urlMessage = "Enter an absolute URL, e.g. https://api.example.com/v1";
+const urlMessage = "Enter an absolute URL.";
 const amountPattern = /^\d+(\.\d+)?$/u;
 const countPattern = /^\d+$/u;
 
@@ -25,13 +25,38 @@ const providerId = z
 	.pipe(z.string().min(1, "A provider needs an id."))
 	.pipe(providerInputSchema.shape.id);
 
-export type ProviderField = "id" | "baseUrl" | "api";
+export type ProviderField = "name" | "id" | "baseUrl" | "api" | "headers";
 
-export const providerFields: readonly ProviderField[] = ["id", "baseUrl", "api"];
+export const providerFields: readonly ProviderField[] = ["name", "id", "baseUrl", "api", "headers"];
 
 export type ProviderFieldErrors = Partial<Record<ProviderField, string>>;
 
-export function providerFieldErrors(draft: ProviderDraft, builtin: boolean): ProviderFieldErrors {
+export type ProviderValidation = {
+	/** Ids already in the settings snapshot, so a new name cannot reuse one. */
+	takenIds?: ReadonlySet<string>;
+	/** Lowercased names already in the settings snapshot. */
+	takenNames?: ReadonlySet<string>;
+	/** A new custom provider needs a name, because the id is derived from it. */
+	nameRequired?: boolean;
+};
+
+export function providerFieldErrors(
+	draft: ProviderDraft,
+	builtin: boolean,
+	{ takenIds = new Set(), takenNames = new Set(), nameRequired = false }: ProviderValidation = {},
+): ProviderFieldErrors {
+	const name = z
+		.string()
+		.transform(trim)
+		.refine((value) => !nameRequired || value !== "", "A provider needs a name.")
+		.refine(
+			(value) => value === "" || !takenNames.has(value.toLowerCase()),
+			"Provider names must be unique.",
+		);
+	const id = providerId.refine(
+		(value) => !takenIds.has(value),
+		"This provider id is already used.",
+	);
 	const baseUrl = z
 		.string()
 		.transform(trim)
@@ -41,8 +66,13 @@ export function providerFieldErrors(draft: ProviderDraft, builtin: boolean): Pro
 		.union([z.literal(""), providerApiSchema])
 		.refine((value) => builtin || value !== "", "Choose the API family this provider speaks.");
 
-	const result = z.object({ id: providerId, baseUrl, api }).safeParse(draft);
-	return fieldErrors(result, providerFields);
+	const result = z.object({ name, id, baseUrl, api }).safeParse(draft);
+	const errors = fieldErrors(result, providerFields);
+	const incomplete = draft.headers.some(
+		(row) => row.key.trim() === "" || (!row.stored && row.value.trim() === ""),
+	);
+	if (incomplete) errors.headers = "Fill the header name and value, or remove the row.";
+	return errors;
 }
 
 export type ModelField =

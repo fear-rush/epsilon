@@ -33,6 +33,8 @@ import {
 	importModelsRoute,
 	readProviderHandler,
 	readProviderRoute,
+	testProviderHandler,
+	testProviderRoute,
 	writeProviderHandler,
 	writeProviderRoute,
 } from "./routes/settings-providers";
@@ -74,6 +76,7 @@ app.openapi(settingsRoute, settingsHandler);
 app.openapi(defaultModelRoute, defaultModelHandler);
 app.openapi(readProviderRoute, readProviderHandler);
 app.openapi(importModelsRoute, importModelsHandler);
+app.openapi(testProviderRoute, testProviderHandler);
 app.openapi(writeProviderRoute, writeProviderHandler);
 app.openapi(deleteProviderRoute, deleteProviderHandler);
 app.openapi(writeMcpRoute, writeMcpHandler);

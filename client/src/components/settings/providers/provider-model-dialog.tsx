@@ -5,8 +5,10 @@
  */
 import { useState } from "react";
 import { parseProviderApi } from "shared";
-import type { ProviderModelInput } from "shared";
+import { thinkingLevelSchema } from "shared";
+import type { ProviderApi, ProviderModelInput, ThinkingLevel } from "shared";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
 	Dialog,
 	DialogContent,
@@ -19,7 +21,12 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { ProviderApiSelect } from "./provider-api-select";
+import { Spinner } from "@/components/ui/spinner";
+import { ModelCostFields } from "./provider-model-cost";
+import { ModelReasoningFields } from "./provider-model-reasoning";
+import { reasoningFormOf, reasoningOf } from "./reasoning-form";
+import { TestLevelSelect } from "./test-level-select";
+import type { ReasoningForm } from "./reasoning-form";
 import { keepUntouched } from "./field-errors";
 import { modelFieldErrors, modelFields } from "./provider-validation";
 import type { ModelFieldErrors } from "./provider-validation";
@@ -34,7 +41,7 @@ const optionalCost = (value: string): number | undefined => {
 	return value.trim() !== "" && Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 };
 
-type ModelForm = {
+type ModelForm = ReasoningForm & {
 	id: string;
 	name: string;
 	api: string;
@@ -62,6 +69,7 @@ const formOf = (model: ProviderModelInput | undefined): ModelForm => ({
 	costOutput: model?.cost?.output.toString() ?? "",
 	costCacheRead: model?.cost?.cacheRead.toString() ?? "",
 	costCacheWrite: model?.cost?.cacheWrite.toString() ?? "",
+	...reasoningFormOf(model),
 });
 
 export function ProviderModelDialog({
@@ -70,21 +78,29 @@ export function ProviderModelDialog({
 	title,
 	description,
 	model,
+	providerApi,
 	lockId,
 	onSave,
+	onTest,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	title: string;
 	description: string;
 	model: ProviderModelInput | undefined;
+	providerApi: ProviderApi | undefined;
 	lockId: boolean;
 	onSave: (model: ProviderModelInput) => void;
+	onTest: (model: ProviderModelInput, level?: ThinkingLevel) => Promise<string>;
 }) {
 	const [form, setForm] = useState<ModelForm>(() => formOf(model));
 	const [errors, setErrors] = useState<ModelFieldErrors>({});
+	const [testing, setTesting] = useState(false);
+	const [testLevel, setTestLevel] = useState("none");
+	const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | undefined>();
 	const update = (patch: Partial<ModelForm>) => {
 		setForm((current) => ({ ...current, ...patch }));
+		setTestResult(undefined);
 		setErrors((current) => keepUntouched(current, modelFields, Object.keys(patch)));
 	};
 	const api = parseProviderApi(form.api);
@@ -105,36 +121,60 @@ export function ProviderModelDialog({
 				}
 			: undefined;
 
+	/** The form as the saved model, shared by Save and Test so they cannot drift. */
+	const valueOf = (): ProviderModelInput => ({
+		id: form.id.trim(),
+		name: form.name.trim() || undefined,
+		api,
+		baseUrl: form.baseUrl.trim() || undefined,
+		reasoning: form.reasoning,
+		input: form.images ? ["text", "image"] : undefined,
+		contextWindow: optionalNumber(form.contextWindow),
+		maxTokens: optionalNumber(form.maxTokens),
+		cost,
+		...reasoningOf(form, api ?? providerApi),
+	});
+
+	const runTest = async () => {
+		const found = modelFieldErrors(form);
+		setErrors(found);
+		if (Object.keys(found).length > 0) return;
+		setTesting(true);
+		setTestResult(undefined);
+		try {
+			const parsed = thinkingLevelSchema.safeParse(testLevel);
+			const level = form.reasoning && parsed.success ? parsed.data : undefined;
+			setTestResult({ ok: true, message: await onTest(valueOf(), level) });
+		} catch (error) {
+			setTestResult({
+				ok: false,
+				message: error instanceof Error ? error.message : String(error),
+			});
+		} finally {
+			setTesting(false);
+		}
+	};
+
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-lg">
+			<DialogContent className="sm:max-w-2xl">
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>
 					<DialogDescription>{description}</DialogDescription>
 				</DialogHeader>
 				<form
 					noValidate
-					className="grid gap-3"
+					className="grid gap-4"
 					onSubmit={(event) => {
 						event.preventDefault();
 						const found = modelFieldErrors(form);
 						setErrors(found);
 						if (Object.keys(found).length > 0) return;
-						onSave({
-							id: form.id.trim(),
-							name: form.name.trim() || undefined,
-							api,
-							baseUrl: form.baseUrl.trim() || undefined,
-							reasoning: form.reasoning,
-							input: form.images ? ["text", "image"] : undefined,
-							contextWindow: optionalNumber(form.contextWindow),
-							maxTokens: optionalNumber(form.maxTokens),
-							cost,
-						});
+						onSave(valueOf());
 						onOpenChange(false);
 					}}
 				>
-					<FieldGroup className="grid gap-3 sm:grid-cols-2">
+					<FieldGroup className="grid gap-4 sm:grid-cols-2">
 						<Field data-invalid={errors.id !== undefined}>
 							<FieldLabel htmlFor="model-id">Model id</FieldLabel>
 							<Input
@@ -145,7 +185,6 @@ export function ProviderModelDialog({
 								aria-invalid={errors.id !== undefined}
 								onChange={(event) => update({ id: event.target.value })}
 							/>
-							<FieldDescription>The id sent to the API</FieldDescription>
 							<FieldError>{errors.id}</FieldError>
 						</Field>
 						<Field>
@@ -180,7 +219,7 @@ export function ProviderModelDialog({
 							<FieldError>{errors.maxTokens}</FieldError>
 						</Field>
 					</FieldGroup>
-					<FieldGroup className="flex flex-wrap gap-4">
+					<FieldGroup className="flex flex-wrap gap-x-6 gap-y-3">
 						<Field orientation="horizontal" className="w-auto">
 							<Checkbox
 								id="model-reasoning"
@@ -198,80 +237,34 @@ export function ProviderModelDialog({
 							<FieldLabel htmlFor="model-images">Accepts images</FieldLabel>
 						</Field>
 					</FieldGroup>
-					<details className="rounded-xl border p-3">
-						<summary className="cursor-pointer text-sm text-muted-foreground">
-							Cost and compatibility
-						</summary>
-						<FieldGroup className="mt-3 gap-3">
-							<FieldGroup className="grid gap-3 sm:grid-cols-4">
-								<Field data-invalid={errors.costInput !== undefined}>
-									<FieldLabel htmlFor="model-cost-input">Input /M</FieldLabel>
-									<Input
-										id="model-cost-input"
-										inputMode="decimal"
-										value={form.costInput}
-										aria-invalid={errors.costInput !== undefined}
-										onChange={(event) => update({ costInput: event.target.value })}
-									/>
-									<FieldError>{errors.costInput}</FieldError>
-								</Field>
-								<Field data-invalid={errors.costOutput !== undefined}>
-									<FieldLabel htmlFor="model-cost-output">Output /M</FieldLabel>
-									<Input
-										id="model-cost-output"
-										inputMode="decimal"
-										value={form.costOutput}
-										aria-invalid={errors.costOutput !== undefined}
-										onChange={(event) => update({ costOutput: event.target.value })}
-									/>
-									<FieldError>{errors.costOutput}</FieldError>
-								</Field>
-								<Field data-invalid={errors.costCacheRead !== undefined}>
-									<FieldLabel htmlFor="model-cost-cache-read">Cache read /M</FieldLabel>
-									<Input
-										id="model-cost-cache-read"
-										inputMode="decimal"
-										value={form.costCacheRead}
-										aria-invalid={errors.costCacheRead !== undefined}
-										onChange={(event) => update({ costCacheRead: event.target.value })}
-									/>
-									<FieldError>{errors.costCacheRead}</FieldError>
-								</Field>
-								<Field data-invalid={errors.costCacheWrite !== undefined}>
-									<FieldLabel htmlFor="model-cost-cache-write">Cache write /M</FieldLabel>
-									<Input
-										id="model-cost-cache-write"
-										inputMode="decimal"
-										value={form.costCacheWrite}
-										aria-invalid={errors.costCacheWrite !== undefined}
-										onChange={(event) => update({ costCacheWrite: event.target.value })}
-									/>
-									<FieldError>{errors.costCacheWrite}</FieldError>
-								</Field>
-							</FieldGroup>
-							<Field>
-								<FieldLabel htmlFor="model-api">Model API</FieldLabel>
-								<ProviderApiSelect
-									id="model-api"
-									value={form.api}
-									onChange={(api) => update({ api })}
-								/>
-								<FieldDescription>Overrides the provider's API for this model</FieldDescription>
-							</Field>
-							<Field data-invalid={errors.baseUrl !== undefined}>
-								<FieldLabel htmlFor="model-base-url">Model base URL</FieldLabel>
-								<Input
-									id="model-base-url"
-									value={form.baseUrl}
-									aria-invalid={errors.baseUrl !== undefined}
-									onChange={(event) => update({ baseUrl: event.target.value })}
-								/>
-								<FieldDescription>Overrides the provider's base URL</FieldDescription>
-								<FieldError>{errors.baseUrl}</FieldError>
-							</Field>
-						</FieldGroup>
-					</details>
+					{form.reasoning && (
+						<ModelReasoningFields form={form} api={api ?? providerApi} update={update} />
+					)}
+					<ModelCostFields form={form} errors={errors} update={update} />
+
+					{testResult !== undefined && (
+						<Alert variant={testResult.ok ? "default" : "destructive"}>
+							<AlertDescription className="break-words">{testResult.message}</AlertDescription>
+						</Alert>
+					)}
 					<DialogFooter>
+						<div className="flex items-center gap-2 sm:mr-auto">
+							<TestLevelSelect
+								value={testLevel}
+								onChange={setTestLevel}
+								disabled={!form.reasoning}
+								className="w-36"
+							/>
+							<Button
+								type="button"
+								variant="outline"
+								disabled={testing}
+								onClick={() => void runTest()}
+							>
+								{testing && <Spinner data-icon="inline-start" />}
+								Test model
+							</Button>
+						</div>
 						<Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
 							Cancel
 						</Button>

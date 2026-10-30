@@ -6,6 +6,8 @@ import {
 	providerImportInputSchema,
 	providerImportResultSchema,
 	providerInputSchema,
+	providerTestInputSchema,
+	providerTestResultSchema,
 } from "shared";
 import { z } from "zod";
 
@@ -13,6 +15,7 @@ import { config } from "../config";
 import { importModelsForHome } from "../settings/import-models";
 import { removeProvider, writeProvider } from "../settings/provider-write";
 import { createRuntime, readProviderDetail } from "../settings/providers";
+import { testProviderForHome } from "../settings/test-provider";
 import { errorContent, failure, toError } from "./failure";
 import { settingsWrite } from "./write";
 
@@ -71,6 +74,27 @@ export const importModelsRoute = createRoute({
 	},
 });
 
+export const testProviderRoute = createRoute({
+	method: "post",
+	path: "/api/settings/providers/test",
+	tags: ["settings"],
+	operationId: "testProvider",
+	description: "Try a provider draft's model without writing models.json",
+	request: {
+		body: {
+			required: true,
+			content: { "application/json": { schema: providerTestInputSchema } },
+		},
+	},
+	responses: {
+		200: {
+			description: "The draft reached its model",
+			content: { "application/json": { schema: providerTestResultSchema } },
+		},
+		400: { description: "The provider refused or could not be reached", content: errorContent },
+	},
+});
+
 export const deleteProviderRoute = createRoute({
 	method: "delete",
 	path: "/api/settings/providers/{id}",
@@ -102,6 +126,14 @@ export const importModelsHandler: RouteHandler<typeof importModelsRoute> = async
 		return c.json({ models }, 200);
 	} catch (error) {
 		return failure(c, toError(error, "The models did not load"), 400);
+	}
+};
+
+export const testProviderHandler: RouteHandler<typeof testProviderRoute> = async (c) => {
+	try {
+		return c.json(await testProviderForHome(config.agentHome, c.req.valid("json")), 200);
+	} catch (error) {
+		return failure(c, toError(error, "The provider did not answer"), 400);
 	}
 };
 

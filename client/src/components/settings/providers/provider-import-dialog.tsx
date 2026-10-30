@@ -5,6 +5,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { providerModelsEndpoint } from "shared";
 import type { ProviderApi, ProviderModelInput } from "shared";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -52,6 +53,7 @@ export function ProviderImportDialog({
 		retry: false,
 	});
 	const [picked, setPicked] = useState<ReadonlySet<string> | null>(null);
+	const endpoint = providerModelsEndpoint(api, baseUrl);
 	const ids = models.data?.map((model) => model.id) ?? [];
 	const selected = picked ?? new Set(ids);
 	/** Reopening starts from every model again, whichever way the last one closed. */
@@ -66,7 +68,7 @@ export function ProviderImportDialog({
 				<DialogHeader>
 					<DialogTitle>Fetch models from provider</DialogTitle>
 					<DialogDescription>
-						Models returned by {baseUrl || "the provider"}. Nothing is written until you save.
+						Models read from {endpoint ?? baseUrl}. Nothing is written until you save.
 					</DialogDescription>
 				</DialogHeader>
 				{models.isPending ? (

@@ -7,6 +7,7 @@ import {
 	problemSchema,
 	providerDetailSchema,
 	providerImportResultSchema,
+	providerTestResultSchema,
 	readinessSchema,
 	settingsSnapshotSchema,
 	sessionListSchema,
@@ -19,6 +20,7 @@ import type {
 	ProviderImportInput,
 	ProviderInput,
 	ProviderModelInput,
+	ProviderTestInput,
 	Readiness,
 	SessionList,
 	SettingsSnapshot,
@@ -51,6 +53,7 @@ type RequestBody =
 	| McpServerInput
 	| ProviderImportInput
 	| ProviderInput
+	| ProviderTestInput
 	| SkillInput
 	| { source: string };
 
@@ -126,6 +129,18 @@ export async function importProviderModels(
 export const saveProvider = async (input: ProviderInput): Promise<void> => {
 	await writeJson("POST", "/api/settings/providers", input, "The provider was not saved");
 };
+
+export async function testProvider(input: ProviderTestInput): Promise<string> {
+	const response = await writeJson(
+		"POST",
+		"/api/settings/providers/test",
+		input,
+		"The provider did not answer",
+	);
+	const parsed = providerTestResultSchema.safeParse(await response.json());
+	if (!parsed.success) throw new Error("The server sent a test result this page cannot read.");
+	return parsed.data.message;
+}
 
 export const deleteProvider = (id: string): Promise<void> =>
 	send(

@@ -7,7 +7,7 @@
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { PROVIDER_APIS, parseProviderApi } from "shared";
-import type { ModelOverride, ProviderDetail, ProviderModelInput } from "shared";
+import type { ModelOverride, ProviderDetail, ProviderModelInput, ThinkingLevel } from "shared";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -20,11 +20,13 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { testProvider } from "@/lib/api";
 import { SettingsBlock, SettingsGroup } from "@/components/settings/settings-section";
 
+import { testInputOf } from "./provider-draft";
 import type { ProviderDraft } from "./provider-draft";
+import { CatalogModelRows, CustomModelRows } from "./provider-model-rows";
 import { ProviderImportDialog } from "./provider-import-dialog";
 import { ProviderModelDialog } from "./provider-model-dialog";
 
@@ -35,6 +37,8 @@ const overrideOf = (model: ProviderModelInput): ModelOverride => ({
 	api: model.api,
 	baseUrl: model.baseUrl,
 	reasoning: model.reasoning,
+	thinkingLevelMap: model.thinkingLevelMap,
+	compat: model.compat,
 	input: model.input,
 	contextWindow: model.contextWindow,
 	maxTokens: model.maxTokens,
@@ -62,6 +66,8 @@ export function ProviderModels({
 	const custom = !builtin || draft.customCatalog;
 	const catalog = detail?.catalog ?? [];
 	const count = custom ? draft.models.length : catalog.length;
+	const testDraftModel = (model: ProviderModelInput, level?: ThinkingLevel): Promise<string> =>
+		testProvider(testInputOf(draft, model, level));
 
 	const startAdd = () => {
 		if (!custom) setReplacing("add");
@@ -129,78 +135,31 @@ export function ProviderModels({
 							draft.models.length === 0 ? (
 								<p className="p-3 text-sm text-muted-foreground">No models yet.</p>
 							) : (
-								draft.models.map((model, index) => (
-									<div key={`${model.id}-${index}`} className="flex items-center gap-2 px-3 py-2">
-										<span className="min-w-0 flex-1">
-											<span className="block truncate text-sm font-medium">
-												{model.name ?? model.id}
-											</span>
-											<span className="block truncate text-xs text-muted-foreground">
-												{model.id}
-											</span>
-										</span>
-										<Button
-											type="button"
-											variant="ghost"
-											size="xs"
-											onClick={() => setEditing({ model, index })}
-										>
-											Edit
-										</Button>
-										<Button
-											type="button"
-											variant="destructive"
-											size="xs"
-											onClick={() =>
-												update({ models: draft.models.filter((_, at) => at !== index) })
-											}
-										>
-											Remove
-										</Button>
-									</div>
-								))
+								<CustomModelRows
+									models={draft.models}
+									onEdit={(index, model) => setEditing({ model, index })}
+									onRemove={(index) =>
+										update({ models: draft.models.filter((_, at) => at !== index) })
+									}
+								/>
 							)
 						) : catalog.length === 0 ? (
 							<p className="p-3 text-sm text-muted-foreground">
 								pi exposes no model for this provider.
 							</p>
 						) : (
-							catalog.map((model) => {
-								const override = draft.modelOverrides[model.id];
-								return (
-									<div key={model.id} className="flex items-center gap-2 px-3 py-2">
-										<span className="min-w-0 flex-1">
-											<span className="block truncate text-sm font-medium">{model.name}</span>
-											<span className="block truncate text-xs text-muted-foreground">
-												{model.id}
-											</span>
-										</span>
-										{override !== undefined && <Badge variant="outline">Override</Badge>}
-										<Button
-											type="button"
-											variant="ghost"
-											size="xs"
-											onClick={() => setOverriding({ id: model.id, name: model.name, ...override })}
-										>
-											{override === undefined ? "Override" : "Edit override"}
-										</Button>
-										{override !== undefined && (
-											<Button
-												type="button"
-												variant="destructive"
-												size="xs"
-												onClick={() => {
-													const next = { ...draft.modelOverrides };
-													delete next[model.id];
-													update({ modelOverrides: next });
-												}}
-											>
-												Clear
-											</Button>
-										)}
-									</div>
-								);
-							})
+							<CatalogModelRows
+								catalog={catalog}
+								overrides={draft.modelOverrides}
+								onEdit={(model, override) =>
+									setOverriding({ id: model.id, name: model.name, ...override })
+								}
+								onClear={(model) => {
+									const next = { ...draft.modelOverrides };
+									delete next[model.id];
+									update({ modelOverrides: next });
+								}}
+							/>
 						)}
 					</div>
 				</div>
@@ -214,7 +173,9 @@ export function ProviderModels({
 					title={editing.index === undefined ? "Add a model" : "Edit model"}
 					description="Only the id is required. The rest uses pi's defaults when empty."
 					model={editing.model}
+					providerApi={api}
 					lockId={editing.index !== undefined}
+					onTest={testDraftModel}
 					onSave={(model) => {
 						if (editing.index !== undefined) {
 							const next = [...draft.models];
@@ -239,7 +200,9 @@ export function ProviderModels({
 					title={`Override ${overriding.name ?? overriding.id}`}
 					description="Changes apply to this model without replacing the catalog pi ships."
 					model={overriding}
+					providerApi={api}
 					lockId
+					onTest={testDraftModel}
 					onSave={(model) =>
 						update({
 							modelOverrides: { ...draft.modelOverrides, [model.id]: overrideOf(model) },

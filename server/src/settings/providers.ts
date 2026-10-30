@@ -128,6 +128,7 @@ export const readProviderDetail = async (
 			name: entry?.name,
 			baseUrl: entry?.baseUrl,
 			api: apiOf(entry),
+			compat: entry?.compat,
 		},
 		builtin: shipped.has(providerId),
 		custom: entry !== undefined,

@@ -4,8 +4,8 @@
  * object, and a write never drops a block this version does not model (ADR-0012).
  */
 import { z } from "zod";
-import type { ModelOverride } from "shared";
-import { parseProviderApi } from "shared";
+import type { ModelOverride, ReasoningCompat, ThinkingLevelMap } from "shared";
+import { parseProviderApi, reasoningCompatSchema, thinkingLevelMapSchema } from "shared";
 
 import { modelsPath, readJson } from "./store";
 
@@ -15,6 +15,8 @@ const storedModelSchema = z.looseObject({
 	api: z.string().optional(),
 	baseUrl: z.string().optional(),
 	reasoning: z.boolean().optional(),
+	thinkingLevelMap: thinkingLevelMapSchema.optional(),
+	compat: reasoningCompatSchema.optional(),
 	input: z.array(z.string()).optional(),
 	contextWindow: z.number().optional(),
 	maxTokens: z.number().optional(),
@@ -34,6 +36,7 @@ const providerEntrySchema = z.looseObject({
 	api: z.string().optional(),
 	apiKey: z.string().optional(),
 	headers: z.record(z.string(), z.string()).optional(),
+	compat: reasoningCompatSchema.optional(),
 	models: z.array(storedModelSchema).optional(),
 	modelOverrides: z.record(z.string(), storedModelSchema.omit({ id: true })).optional(),
 });
@@ -52,6 +55,8 @@ export type StoredFields = {
 	api?: string;
 	baseUrl?: string;
 	reasoning?: boolean;
+	thinkingLevelMap?: ThinkingLevelMap;
+	compat?: ReasoningCompat;
 	input?: string[];
 	contextWindow?: number;
 	maxTokens?: number;
@@ -75,6 +80,8 @@ export const fieldsOf = (model: StoredFields): ModelOverride => ({
 	api: parseProviderApi(model.api ?? ""),
 	baseUrl: model.baseUrl,
 	reasoning: model.reasoning,
+	thinkingLevelMap: model.thinkingLevelMap,
+	compat: model.compat,
 	input: model.input?.filter(
 		(kind): kind is "text" | "image" => kind === "text" || kind === "image",
 	),
@@ -103,6 +110,11 @@ export const mergeModelFields = (stored: StoredFields, input: ModelOverride): St
 	else next.baseUrl = input.baseUrl;
 	if (input.reasoning === undefined) delete next.reasoning;
 	else next.reasoning = input.reasoning;
+	if (input.thinkingLevelMap === undefined || Object.keys(input.thinkingLevelMap).length === 0) {
+		delete next.thinkingLevelMap;
+	} else next.thinkingLevelMap = input.thinkingLevelMap;
+	if (input.compat === undefined || Object.keys(input.compat).length === 0) delete next.compat;
+	else next.compat = input.compat;
 	if (input.input === undefined) delete next.input;
 	else next.input = input.input;
 	if (input.contextWindow === undefined) delete next.contextWindow;
