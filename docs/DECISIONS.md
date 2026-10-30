@@ -81,11 +81,20 @@ Every settings write reloads the live engines. A pi-shipped provider keeps its c
 and is edited through `modelOverrides`; importing models is Epsilon's own bounded HTTP
 call, disabled where an API family has no shared list shape.
 
+Signing in with an account is the dashboard's too, because `ModelRuntime.login()` is a
+host API: the panel starts the flow, relays the questions and links pi reports, and
+cancels it. It never writes `auth.json` itself; a credential changes only through
+`login()` and `logout()`. `auth.json` holds one credential per provider and pi uses it
+ahead of a key in `models.json` and ahead of the environment, so the panel names the
+credential in use and offers sign-out, instead of letting a typed key look active
+while an account shadows it. A provider pi ships needs no endpoint from the panel
+for that: pi supplies the endpoint, the API family and the catalog, and the credential
+supplies the auth, so those fields are an override there rather than part of adding
+it. A provider the operator defines has none of them and needs all of them.
+
 Stays in the terminal, because pi exposes no host API for it:
-OAuth and subscription login, MCP sign-in, project trust, and TUI-only toggles. The
-dashboard names that boundary without printing a command for it. It never writes
-`auth.json` or `trust.json`; a credential changes only through `ModelRuntime.login()`
-and `logout()`.
+MCP sign-in, project trust, and TUI-only toggles. The dashboard names that boundary
+without printing a command for it. It never writes `trust.json`.
 
 An MCP server also reports what the next session can reach and what a live engine
 registered, because a configured server that no tool can call is a state the operator
@@ -97,7 +106,8 @@ documented files and calling two exported classes.
 
 Not: writing `auth.json` (pi exports neither its store nor its locking). Epsilon-side
 copies of pi config registered at engine start (lost on restart, duplicates resolution).
-Showing a terminal command in the UI. A screen for every pi setting.
+Showing a terminal command in the UI. A screen for every pi setting. A second key store:
+the panel's field writes `models.json`, and only pi's own flows write `auth.json`.
 
 ## Default extensions
 

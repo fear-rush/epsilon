@@ -2,7 +2,7 @@
  * REST reads and writes as plain functions over the generated client. The client
  * throws the route's own sentence on a refusal, so a caller only sees data.
  */
-import { api } from "./client";
+import { api, RefusalError } from "./client";
 import type {
 	DefaultModel,
 	McpAutoEnableInput,
@@ -13,6 +13,9 @@ import type {
 	ProviderDetail,
 	ProviderImportInput,
 	ProviderInput,
+	ProviderLoginAnswer,
+	ProviderLoginSnapshot,
+	ProviderLoginType,
 	ProviderModelInput,
 	ProviderTestInput,
 	Readiness,
@@ -26,6 +29,22 @@ import type { McpScope } from "shared";
 const body = <Data>(data: Data | undefined): Data => {
 	if (data === undefined) throw new Error("The server sent an empty answer.");
 	return data;
+};
+
+/**
+ * A sign-in the server no longer holds is an answer, not a failure: it is how a flow
+ * that another process finished, or this page lost, reports that it is over.
+ */
+/** What any of the sign-in routes answers with when it has a body. */
+type LoginReply = { data?: ProviderLoginSnapshot };
+
+const loginOrGone = async (request: Promise<LoginReply>): Promise<ProviderLoginSnapshot | null> => {
+	try {
+		return body((await request).data);
+	} catch (error) {
+		if (error instanceof RefusalError && error.status === 404) return null;
+		throw error;
+	}
 };
 
 export const fetchSessions = async (): Promise<SessionList> =>
@@ -58,6 +77,41 @@ export const testProvider = async (input: ProviderTestInput): Promise<string> =>
 
 export const deleteProvider = async (id: string): Promise<void> => {
 	await api.DELETE("/api/settings/providers/{id}", { params: { path: { id } } });
+};
+
+/** Begin pi's sign-in. The answer is the flow's first state; the page polls the rest. */
+export const startProviderLogin = async (
+	id: string,
+	type: ProviderLoginType,
+): Promise<ProviderLoginSnapshot> =>
+	body(
+		(
+			await api.POST("/api/settings/providers/{id}/login", {
+				params: { path: { id } },
+				body: { type },
+			})
+		).data,
+	);
+
+export const fetchProviderLogin = async (id: string): Promise<ProviderLoginSnapshot | null> =>
+	loginOrGone(api.GET("/api/settings/providers/{id}/login", { params: { path: { id } } }));
+
+export const answerProviderLogin = async (
+	id: string,
+	answer: ProviderLoginAnswer,
+): Promise<ProviderLoginSnapshot | null> =>
+	loginOrGone(
+		api.POST("/api/settings/providers/{id}/login/answer", {
+			params: { path: { id } },
+			body: answer,
+		}),
+	);
+
+export const cancelProviderLogin = async (id: string): Promise<ProviderLoginSnapshot | null> =>
+	loginOrGone(api.POST("/api/settings/providers/{id}/login/cancel", { params: { path: { id } } }));
+
+export const logoutProvider = async (id: string): Promise<void> => {
+	await api.POST("/api/settings/providers/{id}/logout", { params: { path: { id } } });
 };
 
 export const setDefaultModel = async (model: DefaultModel): Promise<void> => {

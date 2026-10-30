@@ -40,7 +40,8 @@ prose; fix a doc that disagrees in the same commit, and never copy code or file 
    `ModelRuntime.login()`/`logout()`. A key typed in Settings goes to the `apiKey`
    field of `models.json` and never goes back to the browser. Other files: use an
    exported writer, else merge the documented shape, keep unknown keys, refuse to
-   write what you cannot parse. OAuth login, MCP sign-in and trust stay in the terminal.
+   write what you cannot parse. Account sign-in runs through `ModelRuntime.login()` from
+   the panel; MCP sign-in and trust stay in the terminal.
 5. The agent home is chosen once, in `server/src/main.ts`, and passed down. An
    inherited `PI_*` variable never decides it. `bun run dev` uses `.sandbox/agent`;
    a check that starts a server sets `EPSILON_AGENT_HOME` to a scratch directory.

@@ -48,6 +48,20 @@ const modelInputOf = (model: StoredModel): ProviderModelInput => ({
 	...fieldsOf(model),
 });
 
+/** A provider as the runtime returns it, without importing pi's own type here. */
+type RuntimeProvider = NonNullable<ReturnType<ModelRuntime["getProvider"]>>;
+
+/** The account pi declares for a provider, in the shape the panel draws. */
+const oauthOf = (provider: RuntimeProvider): ProviderDetail["auth"]["oauth"] => {
+	const oauth = provider.auth.oauth;
+	if (oauth === undefined) return undefined;
+	return {
+		name: oauth.name,
+		label: oauth.loginLabel,
+		subscription: oauth.isSubscription === true,
+	};
+};
+
 export const listProviders = async (
 	home: AgentHome,
 	runtime: ModelRuntime,
@@ -99,6 +113,9 @@ export const listBuiltins = async (
 	runtime: ModelRuntime,
 ): Promise<BuiltinProvider[]> => {
 	const file = await readProvidersFile(home);
+	const credentials = new Map(
+		(await runtime.listCredentials()).map((credential) => [credential.providerId, credential.type]),
+	);
 	return runtime
 		.getProviders()
 		.map((provider) => ({
@@ -106,6 +123,10 @@ export const listBuiltins = async (
 			name: provider.name,
 			configured:
 				file[provider.id] !== undefined || runtime.getProviderAuthStatus(provider.id).configured,
+			auth: {
+				credential: credentials.get(provider.id),
+				oauth: oauthOf(provider),
+			},
 		}))
 		.sort((left, right) => left.name.localeCompare(right.name));
 };
@@ -122,9 +143,15 @@ export const readProviderDetail = async (
 	const models = runtime.getModels(providerId);
 	const overrides = entry?.modelOverrides ?? {};
 	const shipped = await readBuiltinIds(home);
+	// auth.json holds at most one credential per provider, and pi uses it ahead of a
+	// key in models.json. The page names it instead of leaving the operator to guess.
+	const credential = (await runtime.listCredentials()).find(
+		(stored) => stored.providerId === providerId,
+	)?.type;
 
 	return {
 		id: providerId,
+		// A provider without an entry can still be signed in, so the shipped name applies.
 		name: entry?.name ?? provider?.name ?? providerId,
 		baseUrl: baseUrlOf(entry, provider),
 		api: apiOf(entry),
@@ -140,6 +167,10 @@ export const readProviderDetail = async (
 		source: status.source,
 		hasKey: entry?.apiKey !== undefined,
 		headerKeys: Object.keys(entry?.headers ?? {}),
+		auth: {
+			credential,
+			oauth: provider === undefined ? undefined : oauthOf(provider),
+		},
 		models: (entry?.models ?? []).map(modelInputOf),
 		modelOverrides: Object.fromEntries(
 			Object.entries(overrides).map(([id, override]) => [id, fieldsOf(override)]),
@@ -199,6 +230,19 @@ export const writeProvider = (home: AgentHome, input: ProviderInput): Promise<vo
 		else providers[input.id] = next;
 		return { ...file, providers };
 	});
+
+/**
+ * Remove the credential auth.json holds for this provider, and nothing else. The
+ * models.json entry stays, so a key in it becomes the one pi uses again.
+ */
+export const logoutProvider = async (home: AgentHome, providerId: string): Promise<void> => {
+	const runtime = await modelRuntime(home);
+	const stored = (await runtime.listCredentials()).some(
+		(credential) => credential.providerId === providerId,
+	);
+	if (!stored) throw new Error("This provider has no stored credential to remove");
+	await runtime.logout(providerId);
+};
 
 /**
  * Drop the models.json entry and, when the credential is a stored one, the entry

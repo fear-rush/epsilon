@@ -22,6 +22,21 @@ export class StaleContractError extends Error {
 	}
 }
 
+/**
+ * A refusal that carries the sentence the route documented, and the status it answered
+ * with. A caller that has its own answer for one status, such as "this resource is
+ * gone", reads it here instead of matching on the sentence.
+ */
+export class RefusalError extends Error {
+	readonly status: number;
+
+	constructor(message: string, status: number) {
+		super(message);
+		this.name = "RefusalError";
+		this.status = status;
+	}
+}
+
 /** What failed, per route, for a refusal that carries no sentence of its own. */
 const FAILURES = new Map([
 	["GET /api/sessions", "The session list did not load"],
@@ -58,7 +73,10 @@ const contractGuard: Middleware = {
 		if (stamped !== null && stamped !== CONTRACT_ID) throw new StaleContractError();
 		if (response.ok) return undefined;
 		const failure = FAILURES.get(`${request.method} ${schemaPath}`) ?? "The request failed";
-		throw new Error((await refusalMessage(response)) ?? `${failure} (${response.status}).`);
+		throw new RefusalError(
+			(await refusalMessage(response)) ?? `${failure} (${response.status}).`,
+			response.status,
+		);
 	},
 };
 

@@ -138,10 +138,36 @@ only through the session's messages
 | Skills                     | **none.** A skill is a directory with `SKILL.md`                                                                                                                                                       |
 | Credentials (`auth.json`)  | `ModelRuntime.login()` and `logout()` for a provider that declares a login method                                                                                                                      |
 
-`ModelRuntime.login(providerId, type, interaction)` persists through the credential
-store for built-in providers. A custom `models.json` endpoint has no login method,
-which is why the dashboard writes its key to `models.json`'s documented `apiKey`
-field instead. That field accepts a literal, `$NAME`, or `!command` output.
+`ModelRuntime.login(providerId, type, interaction)` drives a whole sign-in and
+persists through the credential store; `logout()` removes it. `type` is `"api_key"` or
+`"oauth"`, and what a provider offers is on its `auth` field. The interaction is
+`prompt()` plus `notify()`: a prompt is `text`, `secret`, `select` (answer with an
+option id) or `manual_code`, and a notify is `info`, `auth_url`, `device_code` or
+`progress`. `AuthPrompt.signal` lets pi withdraw a question it no longer needs, a
+`manual_code` raced against its own callback server, and the host must reject that
+prompt. An OAuth flow starts its own callback server on a fixed loopback port, so two
+sign-ins for one provider cannot run at the same time. `LoginOptions.getDeviceId` is
+read by the providers that name an agent (ChatGPT's); pi's CLI passes
+`SettingsManager.getOrCreateDeviceId()`.
+
+A custom `models.json` endpoint gets pi's fabricated API-key login, which asks for one
+bare key and nothing else, so the dashboard writes that key to `models.json`'s
+documented `apiKey` field instead: the field accepts a literal, `$NAME`, or `!command`
+output, which the fabricated prompt cannot express.
+
+`auth.json` holds at most one credential per provider, and pi resolves it first: a
+stored credential wins over a `models.json` `apiKey` and over the ambient environment.
+`getProviderAuthStatus()` names which one it is (`stored`, `runtime`, `environment`,
+`models_json_key`, `models_json_command`, `fallback`), and `listCredentials()` is the
+non-secret enumeration of `{ providerId, type }`.
+
+Because the flow asks and reports through callbacks, a host without a terminal serves
+it with a record per provider: what pi reported, the question it waits on, and an
+abort signal, polled by the page. pi also narrates the loopback callback server it
+opens, which names a port the operator cannot act on, so those lines are dropped and
+the rest of what it reports is shown. Epsilon keeps that record in
+`server/src/features/providers/login.ts` and writes no `auth.json` of its own; pi
+exports neither the store nor its cross-process lock.
 
 `models.json` is parsed with `ModelConfig.load()`, which is read-only. Its provider
 fields are documented in pi's `docs/models-configuration.md`: `name`, `baseUrl`,
@@ -304,7 +330,8 @@ See Traps: the embedded engine always trusts.
 ## The CLI, for what an embedding host does not do
 
 These run as commands in a terminal using the same agent home. The dashboard does not
-shell out to them.
+shell out to them, and does not need to for anything below: the pieces it shares with
+the TUI (`/login`, `/logout`) it drives as SDK calls, as the Writers section says.
 
 | Command                                                  | What it does                                                                                              |
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |

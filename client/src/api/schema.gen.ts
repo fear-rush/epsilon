@@ -150,6 +150,75 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/settings/providers/{id}/login": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** What this provider's sign-in reports and what it waits for, as often as the page polls it */
+		get: operations["readProviderLogin"];
+		put?: never;
+		/** Start pi's sign-in for a provider and answer with the flow's first state */
+		post: operations["startProviderLogin"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/providers/{id}/login/answer": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Answer the question a sign-in waits on. An answer to a question that moved on is ignored */
+		post: operations["answerProviderLogin"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/providers/{id}/login/cancel": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Cancel a sign-in; pi keeps no credential from a cancelled flow */
+		post: operations["cancelProviderLogin"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/providers/{id}/logout": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Remove the credential auth.json holds, leaving the models.json entry in place */
+		post: operations["logoutProvider"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/settings/providers": {
 		parameters: {
 			query?: never;
@@ -372,6 +441,16 @@ export interface components {
 			id: string;
 			name: string;
 			configured: boolean;
+			auth: components["schemas"]["ProviderAuth"];
+		};
+		ProviderAuth: {
+			credential?: "api_key" | "oauth";
+			oauth?: components["schemas"]["ProviderOauth"];
+		};
+		ProviderOauth: {
+			name: string;
+			label?: string;
+			subscription: boolean;
 		};
 		SnapshotModel: {
 			provider: string;
@@ -459,6 +538,7 @@ export interface components {
 			source?: string;
 			hasKey: boolean;
 			headerKeys: string[];
+			auth: components["schemas"]["ProviderAuth"];
 			models: components["schemas"]["ProviderModelInput"][];
 			modelOverrides: {
 				[key: string]: components["schemas"]["ModelOverride"];
@@ -544,6 +624,50 @@ export interface components {
 			compat?: components["schemas"]["ReasoningCompat"];
 			level?: "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 			model?: components["schemas"]["ProviderModelInput"];
+		};
+		ProviderLoginSnapshot: {
+			providerId: string;
+			type: components["schemas"]["ProviderLoginType"];
+			status: "running" | "succeeded" | "failed" | "cancelled";
+			notices: components["schemas"]["ProviderLoginNotice"][];
+			authUrl?: {
+				url: string;
+				instructions?: string;
+			};
+			deviceCode?: {
+				userCode: string;
+				verificationUri: string;
+				intervalSeconds?: number;
+				expiresInSeconds?: number;
+			};
+			question?: components["schemas"]["ProviderLoginQuestion"];
+			error?: string;
+		};
+		ProviderLoginType: "api_key" | "oauth";
+		ProviderLoginNotice: {
+			message: string;
+			links?: ({
+				url: string;
+				label?: string;
+			})[];
+		};
+		ProviderLoginQuestion: {
+			id: string;
+			kind: "text" | "secret" | "select" | "manual_code";
+			message: string;
+			placeholder?: string;
+			options?: ({
+				id: string;
+				label: string;
+				description?: string;
+			})[];
+		};
+		ProviderLoginInput: {
+			type: components["schemas"]["ProviderLoginType"];
+		};
+		ProviderLoginAnswer: {
+			promptId: string;
+			value: string;
 		};
 		ProviderInput: {
 			id: string;
@@ -950,6 +1074,172 @@ interface operations {
 				};
 			};
 			/** The provider refused or could not be reached */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** What this provider's sign-in reports and what it waits for, as often as the page polls it */
+	readProviderLogin: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The sign-in's current state */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ProviderLoginSnapshot"];
+				};
+			};
+			/** Nothing was signed in for this provider */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Start pi's sign-in for a provider and answer with the flow's first state */
+	startProviderLogin: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ProviderLoginInput"];
+			};
+		};
+		responses: {
+			/** The sign-in pi started; poll it for what it reports and what it asks */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ProviderLoginSnapshot"];
+				};
+			};
+			/** pi does not know this provider, or it offers no such sign-in */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Answer the question a sign-in waits on. An answer to a question that moved on is ignored */
+	answerProviderLogin: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ProviderLoginAnswer"];
+			};
+		};
+		responses: {
+			/** The sign-in after the answer */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ProviderLoginSnapshot"];
+				};
+			};
+			/** Nothing was signed in for this provider */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Cancel a sign-in; pi keeps no credential from a cancelled flow */
+	cancelProviderLogin: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The sign-in, cancelled */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ProviderLoginSnapshot"];
+				};
+			};
+			/** Nothing was signed in for this provider */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Remove the credential auth.json holds, leaving the models.json entry in place */
+	logoutProvider: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** auth.json no longer holds a credential for this provider; live engines reloaded */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** There was nothing stored to remove */
 			400: {
 				headers: {
 					[name: string]: unknown;

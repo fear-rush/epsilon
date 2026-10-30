@@ -202,3 +202,25 @@
 		opacity: 0;
 	}
 }
+
+/* A step pi adds mid-flow, such as the question it asks after an answer. It
+   arrives a hair oversized and transparent, so it settles into place instead of
+   popping into a block that was still catching up. */
+.sign-in-step {
+	transition:
+		opacity 200ms ease-out,
+		scale 200ms ease-out;
+}
+
+@starting-style {
+	.sign-in-step {
+		opacity: 0;
+		scale: 1.02;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.sign-in-step {
+		transition: none;
+	}
+}

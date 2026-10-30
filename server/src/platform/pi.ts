@@ -16,6 +16,19 @@ import type { AgentHome } from "./agent-home";
 export type { ModelRuntime, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
 
 /*
+ * The sign-in vocabulary, read from `ModelRuntime.login()`'s own signature. pi
+ * keeps these types in `pi-ai`, which this workspace does not depend on, and
+ * re-exports none of them, so they are derived here instead of restated.
+ */
+type AuthInteraction = Parameters<ModelRuntime["login"]>[2];
+
+/** One question pi asks during a sign-in. */
+export type AuthPrompt = Parameters<AuthInteraction["prompt"]>[0];
+
+/** One progress or instruction message pi reports during a sign-in. */
+export type AuthEvent = Parameters<AuthInteraction["notify"]>[0];
+
+/*
  * The model runtime, built from the agent home and nothing else. Every non-
  * conversation read of providers, credentials and the model catalog goes through
  * here, so the answer matches what the engine's own runtime would see

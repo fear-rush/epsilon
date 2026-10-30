@@ -144,6 +144,30 @@ export const providerViewSchema = z
 
 export type ProviderView = z.infer<typeof providerViewSchema>;
 
+/**
+ * How pi can sign in to one provider: the account it offers and the credential it
+ * already stores. Both a stored credential and a models.json key may exist, and pi
+ * uses the stored one first, so the panel names the one in use.
+ */
+const providerOauthSchema = z
+	.object({
+		name: z.string(),
+		/** pi's own button label, e.g. "Sign in with ChatGPT". */
+		label: z.string().optional(),
+		/** True when the account is a paid plan, not an API key. */
+		subscription: z.boolean(),
+	})
+	.openapi("ProviderOauth");
+
+const providerAuthSchema = z
+	.object({
+		/** The kind of credential auth.json holds for this provider. */
+		credential: z.enum(["api_key", "oauth"]).optional(),
+		/** The account sign-in pi declares, when it declares one. */
+		oauth: providerOauthSchema.optional(),
+	})
+	.openapi("ProviderAuth");
+
 const providerStoredSchema = z
 	.object({
 		name: z.string().optional(),
@@ -171,6 +195,7 @@ const providerDetailSchema = z
 		hasKey: z.boolean(),
 		/** Header names only. Values stay on the server. */
 		headerKeys: z.array(z.string()),
+		auth: providerAuthSchema,
 		/** Models declared in models.json, which replace a built-in catalog. */
 		models: z.array(providerModelInputSchema),
 		modelOverrides: z.record(z.string(), modelOverrideSchema),
@@ -187,6 +212,8 @@ export const builtinProviderSchema = z
 		name: z.string(),
 		/** Already has a models.json entry or a stored credential. */
 		configured: z.boolean(),
+		/** What pi can be signed in with, so the add picker offers what exists. */
+		auth: providerAuthSchema,
 	})
 	.openapi("BuiltinProvider");
 
@@ -239,6 +266,79 @@ const providerImportResultSchema = z
 		models: z.array(providerModelInputSchema),
 	})
 	.openapi("ProviderImportResult");
+
+/** What pi can collect for a provider: an account, or a key it asks for itself. */
+const providerLoginTypeSchema = z.enum(["api_key", "oauth"]).openapi("ProviderLoginType");
+
+export type ProviderLoginType = z.infer<typeof providerLoginTypeSchema>;
+
+/** One question pi asked during a sign-in and cannot go on without. */
+const providerLoginQuestionSchema = z
+	.object({
+		id: z.string(),
+		/** Where the answer goes: a field, a hidden field, or one of `options`. */
+		kind: z.enum(["text", "secret", "select", "manual_code"]),
+		message: z.string(),
+		placeholder: z.string().optional(),
+		/** The choices of a `select`; answering sends one of their ids. */
+		options: z
+			.array(z.object({ id: z.string(), label: z.string(), description: z.string().optional() }))
+			.optional(),
+	})
+	.openapi("ProviderLoginQuestion");
+
+export type ProviderLoginQuestion = z.infer<typeof providerLoginQuestionSchema>;
+
+/** One thing pi reported while it worked. */
+const providerLoginNoticeSchema = z
+	.object({
+		message: z.string(),
+		links: z.array(z.object({ url: z.url(), label: z.string().optional() })).optional(),
+	})
+	.openapi("ProviderLoginNotice");
+
+/**
+ * A sign-in as the browser can see it. The credential never travels: only what pi
+ * reports and what it is waiting for.
+ */
+const providerLoginSnapshotSchema = z
+	.object({
+		providerId: z.string(),
+		type: providerLoginTypeSchema,
+		status: z.enum(["running", "succeeded", "failed", "cancelled"]),
+		notices: z.array(providerLoginNoticeSchema),
+		/** Where the operator finishes an account sign-in. */
+		authUrl: z.object({ url: z.url(), instructions: z.string().optional() }).optional(),
+		/** A code to type on another device instead of following a link. */
+		deviceCode: z
+			.object({
+				userCode: z.string(),
+				verificationUri: z.url(),
+				intervalSeconds: z.number().optional(),
+				expiresInSeconds: z.number().optional(),
+			})
+			.optional(),
+		/** The question pi waits on, when it waits on one. */
+		question: providerLoginQuestionSchema.optional(),
+		/** One sentence when the sign-in did not succeed. */
+		error: z.string().optional(),
+	})
+	.openapi("ProviderLoginSnapshot");
+
+export type ProviderLoginSnapshot = z.infer<typeof providerLoginSnapshotSchema>;
+
+const providerLoginInputSchema = z
+	.object({ type: providerLoginTypeSchema })
+	.openapi("ProviderLoginInput");
+
+const providerLoginAnswerSchema = z
+	.object({
+		/** The question this answers, so a late answer cannot answer the next one. */
+		promptId: z.string(),
+		/** The typed value, or the id of the `select` option that was picked. */
+		value: z.string(),
+	})
+	.openapi("ProviderLoginAnswer");
 
 const providerParams = z.object({ id: providerIdSchema });
 
@@ -327,5 +427,102 @@ export const deleteProviderRoute = createRoute({
 			description: "The provider entry and its stored credential are gone from the agent home",
 		},
 		400: { description: "models.json could not be written", content: errorContent },
+	},
+});
+
+export const startProviderLoginRoute = createRoute({
+	method: "post",
+	path: "/api/settings/providers/{id}/login",
+	tags: ["settings"],
+	operationId: "startProviderLogin",
+	description: "Start pi's sign-in for a provider and answer with the flow's first state",
+	request: {
+		params: providerParams,
+		body: {
+			required: true,
+			content: { "application/json": { schema: providerLoginInputSchema } },
+		},
+	},
+	responses: {
+		200: {
+			description: "The sign-in pi started; poll it for what it reports and what it asks",
+			content: { "application/json": { schema: providerLoginSnapshotSchema } },
+		},
+		400: {
+			description: "pi does not know this provider, or it offers no such sign-in",
+			content: errorContent,
+		},
+	},
+});
+
+export const readProviderLoginRoute = createRoute({
+	method: "get",
+	path: "/api/settings/providers/{id}/login",
+	tags: ["settings"],
+	operationId: "readProviderLogin",
+	description:
+		"What this provider's sign-in reports and what it waits for, as often as the page polls it",
+	request: { params: providerParams },
+	responses: {
+		200: {
+			description: "The sign-in's current state",
+			content: { "application/json": { schema: providerLoginSnapshotSchema } },
+		},
+		404: { description: "Nothing was signed in for this provider", content: errorContent },
+	},
+});
+
+export const answerProviderLoginRoute = createRoute({
+	method: "post",
+	path: "/api/settings/providers/{id}/login/answer",
+	tags: ["settings"],
+	operationId: "answerProviderLogin",
+	description:
+		"Answer the question a sign-in waits on. An answer to a question that moved on is ignored",
+	request: {
+		params: providerParams,
+		body: {
+			required: true,
+			content: { "application/json": { schema: providerLoginAnswerSchema } },
+		},
+	},
+	responses: {
+		200: {
+			description: "The sign-in after the answer",
+			content: { "application/json": { schema: providerLoginSnapshotSchema } },
+		},
+		404: { description: "Nothing was signed in for this provider", content: errorContent },
+	},
+});
+
+export const cancelProviderLoginRoute = createRoute({
+	method: "post",
+	path: "/api/settings/providers/{id}/login/cancel",
+	tags: ["settings"],
+	operationId: "cancelProviderLogin",
+	description: "Cancel a sign-in; pi keeps no credential from a cancelled flow",
+	request: { params: providerParams },
+	responses: {
+		200: {
+			description: "The sign-in, cancelled",
+			content: { "application/json": { schema: providerLoginSnapshotSchema } },
+		},
+		404: { description: "Nothing was signed in for this provider", content: errorContent },
+	},
+});
+
+export const logoutProviderRoute = createRoute({
+	method: "post",
+	path: "/api/settings/providers/{id}/logout",
+	tags: ["settings"],
+	operationId: "logoutProvider",
+	description: "Remove the credential auth.json holds, leaving the models.json entry in place",
+	request: { params: providerParams },
+	responses: {
+		204: {
+			description:
+				"auth.json no longer holds a credential for this provider; live engines reloaded",
+		},
+		400: { description: "There was nothing stored to remove", content: errorContent },
 	},
 });

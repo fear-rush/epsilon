@@ -305,12 +305,49 @@
 					},
 					"configured": {
 						"type": "boolean"
+					},
+					"auth": {
+						"$ref": "#/components/schemas/ProviderAuth"
 					}
 				},
 				"required": [
 					"id",
 					"name",
-					"configured"
+					"configured",
+					"auth"
+				]
+			},
+			"ProviderAuth": {
+				"type": "object",
+				"properties": {
+					"credential": {
+						"type": "string",
+						"enum": [
+							"api_key",
+							"oauth"
+						]
+					},
+					"oauth": {
+						"$ref": "#/components/schemas/ProviderOauth"
+					}
+				}
+			},
+			"ProviderOauth": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"label": {
+						"type": "string"
+					},
+					"subscription": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"name",
+					"subscription"
 				]
 			},
 			"SnapshotModel": {
@@ -728,6 +765,9 @@
 							"type": "string"
 						}
 					},
+					"auth": {
+						"$ref": "#/components/schemas/ProviderAuth"
+					},
 					"models": {
 						"type": "array",
 						"items": {
@@ -756,6 +796,7 @@
 					"configured",
 					"hasKey",
 					"headerKeys",
+					"auth",
 					"models",
 					"modelOverrides",
 					"catalog"
@@ -1150,6 +1191,192 @@
 						"$ref": "#/components/schemas/ProviderModelInput"
 					}
 				}
+			},
+			"ProviderLoginSnapshot": {
+				"type": "object",
+				"properties": {
+					"providerId": {
+						"type": "string"
+					},
+					"type": {
+						"$ref": "#/components/schemas/ProviderLoginType"
+					},
+					"status": {
+						"type": "string",
+						"enum": [
+							"running",
+							"succeeded",
+							"failed",
+							"cancelled"
+						]
+					},
+					"notices": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ProviderLoginNotice"
+						}
+					},
+					"authUrl": {
+						"type": "object",
+						"properties": {
+							"url": {
+								"type": "string",
+								"format": "uri"
+							},
+							"instructions": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"url"
+						]
+					},
+					"deviceCode": {
+						"type": "object",
+						"properties": {
+							"userCode": {
+								"type": "string"
+							},
+							"verificationUri": {
+								"type": "string",
+								"format": "uri"
+							},
+							"intervalSeconds": {
+								"type": "number"
+							},
+							"expiresInSeconds": {
+								"type": "number"
+							}
+						},
+						"required": [
+							"userCode",
+							"verificationUri"
+						]
+					},
+					"question": {
+						"$ref": "#/components/schemas/ProviderLoginQuestion"
+					},
+					"error": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"providerId",
+					"type",
+					"status",
+					"notices"
+				]
+			},
+			"ProviderLoginType": {
+				"type": "string",
+				"enum": [
+					"api_key",
+					"oauth"
+				]
+			},
+			"ProviderLoginNotice": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"links": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"url": {
+									"type": "string",
+									"format": "uri"
+								},
+								"label": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"url"
+							]
+						}
+					}
+				},
+				"required": [
+					"message"
+				]
+			},
+			"ProviderLoginQuestion": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"kind": {
+						"type": "string",
+						"enum": [
+							"text",
+							"secret",
+							"select",
+							"manual_code"
+						]
+					},
+					"message": {
+						"type": "string"
+					},
+					"placeholder": {
+						"type": "string"
+					},
+					"options": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"id": {
+									"type": "string"
+								},
+								"label": {
+									"type": "string"
+								},
+								"description": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"id",
+								"label"
+							]
+						}
+					}
+				},
+				"required": [
+					"id",
+					"kind",
+					"message"
+				]
+			},
+			"ProviderLoginInput": {
+				"type": "object",
+				"properties": {
+					"type": {
+						"$ref": "#/components/schemas/ProviderLoginType"
+					}
+				},
+				"required": [
+					"type"
+				]
+			},
+			"ProviderLoginAnswer": {
+				"type": "object",
+				"properties": {
+					"promptId": {
+						"type": "string"
+					},
+					"value": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"promptId",
+					"value"
+				]
 			},
 			"ProviderInput": {
 				"type": "object",
@@ -2043,6 +2270,232 @@
 					},
 					"400": {
 						"description": "The provider refused or could not be reached",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/providers/{id}/login": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "startProviderLogin",
+				"description": "Start pi's sign-in for a provider and answer with the flow's first state",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"pattern": "^(?!new$)[A-Za-z0-9][A-Za-z0-9_-]*$"
+						},
+						"required": true,
+						"name": "id",
+						"in": "path"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ProviderLoginInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "The sign-in pi started; poll it for what it reports and what it asks",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProviderLoginSnapshot"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "pi does not know this provider, or it offers no such sign-in",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			},
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "readProviderLogin",
+				"description": "What this provider's sign-in reports and what it waits for, as often as the page polls it",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"pattern": "^(?!new$)[A-Za-z0-9][A-Za-z0-9_-]*$"
+						},
+						"required": true,
+						"name": "id",
+						"in": "path"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The sign-in's current state",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProviderLoginSnapshot"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Nothing was signed in for this provider",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/providers/{id}/login/answer": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "answerProviderLogin",
+				"description": "Answer the question a sign-in waits on. An answer to a question that moved on is ignored",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"pattern": "^(?!new$)[A-Za-z0-9][A-Za-z0-9_-]*$"
+						},
+						"required": true,
+						"name": "id",
+						"in": "path"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ProviderLoginAnswer"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "The sign-in after the answer",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProviderLoginSnapshot"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Nothing was signed in for this provider",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/providers/{id}/login/cancel": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "cancelProviderLogin",
+				"description": "Cancel a sign-in; pi keeps no credential from a cancelled flow",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"pattern": "^(?!new$)[A-Za-z0-9][A-Za-z0-9_-]*$"
+						},
+						"required": true,
+						"name": "id",
+						"in": "path"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The sign-in, cancelled",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProviderLoginSnapshot"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Nothing was signed in for this provider",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/providers/{id}/logout": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "logoutProvider",
+				"description": "Remove the credential auth.json holds, leaving the models.json entry in place",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"pattern": "^(?!new$)[A-Za-z0-9][A-Za-z0-9_-]*$"
+						},
+						"required": true,
+						"name": "id",
+						"in": "path"
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "auth.json no longer holds a credential for this provider; live engines reloaded"
+					},
+					"400": {
+						"description": "There was nothing stored to remove",
 						"content": {
 							"application/json": {
 								"schema": {

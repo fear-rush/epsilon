@@ -28,3 +28,11 @@ export const probeKeys = {
 	providerModels: (providerId: string | undefined, baseUrl: string, api: string, apiKey: string) =>
 		["provider-import", providerId, baseUrl, api, apiKey] as const,
 };
+
+/**
+ * A sign-in pi is running. It lives in the server process for as long as the flow
+ * does, not in configuration, so it sits outside `settingsKeys` too.
+ */
+export const providerLoginKeys = {
+	one: (providerId: string | undefined) => ["provider-login", providerId] as const,
+};

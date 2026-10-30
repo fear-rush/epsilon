@@ -30,6 +30,11 @@ import { Badge } from "@/components/ui/badge";
  * fields through `modelOverrides`; a custom provider, or a built-in the operator
  * deliberately replaced, edits its `models` list. Adding a model to a built-in is
  * the one action that replaces pi's catalog, so it asks first (docs/DECISIONS.md, Configure in the dashboard).
+ *
+ * `catalogEditable` is off where the page is about an account rather than a catalog:
+ * pi ships the list and keeps it current, so replacing it belongs with the endpoint
+ * override, not next to a sign-in. Overriding one model stays available, because that
+ * is what `modelOverrides` is for.
  */
 
 type EditTarget = { model: ProviderModelInput | undefined; index: number | undefined };
@@ -51,11 +56,14 @@ export function ProviderModels({
 	draft,
 	detail,
 	builtin,
+	catalogEditable = true,
 	update,
 }: {
 	draft: ProviderDraft;
 	detail: ProviderDetail | undefined;
 	builtin: boolean;
+	/** Whether the catalog itself may be replaced. Off for an account provider. */
+	catalogEditable?: boolean;
 	update: (patch: Partial<ProviderDraft>) => void;
 }) {
 	const [editing, setEditing] = useState<EditTarget | undefined>(undefined);
@@ -89,29 +97,40 @@ export function ProviderModels({
 	};
 
 	return (
-		<SettingsGroup title={custom ? `Models (${count})` : `Models pi ships (${count})`}>
+		<SettingsGroup
+			title={`Models (${count})`}
+			description={
+				// Only a signed-in account needs the explanation: pi owns the list, the account
+				// decides what of it is usable.
+				!catalogEditable && detail?.auth.credential === "oauth"
+					? "pi ships these models; the account you signed in with decides which of them you can use."
+					: undefined
+			}
+		>
 			<SettingsBlock>
 				<div className="grid gap-3">
-					<div className="flex flex-wrap items-center gap-2">
-						<Button type="button" variant="outline" size="sm" onClick={startAdd}>
-							<PlusIcon />
-							Add model
-						</Button>
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							onClick={startImport}
-							disabled={!importable}
-						>
-							Fetch models from provider
-						</Button>
-						{!importable && (
-							<span className="text-xs text-muted-foreground">
-								This API family has no shared model list; add models by hand.
-							</span>
-						)}
-					</div>
+					{catalogEditable && (
+						<div className="flex flex-wrap items-center gap-2">
+							<Button type="button" variant="outline" size="sm" onClick={startAdd}>
+								<PlusIcon />
+								Add model
+							</Button>
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onClick={startImport}
+								disabled={!importable}
+							>
+								Fetch models from provider
+							</Button>
+							{!importable && (
+								<span className="text-xs text-muted-foreground">
+									This API family has no shared model list; add models by hand.
+								</span>
+							)}
+						</div>
+					)}
 
 					{builtin && custom && (
 						<Alert>

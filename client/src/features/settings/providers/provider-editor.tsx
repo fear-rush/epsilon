@@ -4,10 +4,12 @@
  */
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
+import { ChevronDownIcon } from "lucide-react";
 import { useState } from "react";
 import type { ThinkingLevel } from "shared";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useProviderDetail } from "@/features/settings/queries";
 import { useSettings } from "@/features/settings/queries";
 import { deleteProvider, saveProvider, testProvider } from "@/api/endpoints";
@@ -26,6 +28,7 @@ import type { ProviderDraft } from "./provider-draft";
 import { ProviderConnection } from "./provider-connection";
 import { CancelDialog } from "@/features/settings/kit/dialogs";
 import { ProviderModels } from "./provider-models";
+import { ProviderSignIn } from "./provider-sign-in";
 import { ProviderTestMenu } from "./provider-test-menu";
 import type { ProviderDetail, ProviderModelInput } from "@/api/types";
 
@@ -48,6 +51,9 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 	const navigate = useNavigate();
 	const refresh = useSettingsRefresh();
 	const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | undefined>();
+	// The override panel is closed until it is needed, including when a field inside it
+	// fails validation, so an error is never hidden behind a closed row.
+	const [overrideOpen, setOverrideOpen] = useState(false);
 	const form = useDraftForm<ProviderDraft, ProviderField>({
 		initial: () => draftOf(detail),
 		fields: providerFields,
@@ -98,7 +104,10 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 	const runTest = (model: ProviderModelInput, level?: ThinkingLevel) => {
 		const found = validate();
 		setErrors(found);
-		if (Object.keys(found).length > 0) return;
+		if (Object.keys(found).length > 0) {
+			setOverrideOpen(true);
+			return;
+		}
 		test.mutate(testInputOf(draft, model, level));
 	};
 
@@ -130,9 +139,45 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 	const submit = () => {
 		const found = validate();
 		setErrors(found);
-		if (Object.keys(found).length > 0) return;
+		if (Object.keys(found).length > 0) {
+			setOverrideOpen(true);
+			return;
+		}
 		save.mutate(inputOf(draft, builtin));
 	};
+
+	/**
+	 * A provider pi ships and an account can sign in to needs none of the endpoint
+	 * fields: pi supplies the endpoint, the API family and the catalog, and the
+	 * credential supplies the auth. They stay as an override, closed by default, so the
+	 * page leads with the one thing that has to be chosen.
+	 */
+	const collapsible =
+		builtin && detail !== undefined && !detail.custom && detail.auth.oauth !== undefined;
+
+	const connection = (
+		<>
+			<ProviderConnection
+				draft={draft}
+				errors={form.errors}
+				builtin={builtin}
+				onNameChange={updateName}
+				hasKey={detail?.hasKey ?? false}
+				configured={detail?.configured ?? false}
+				namePlaceholder={detail?.name ?? "Display name"}
+				update={update}
+			/>
+			<PairRows
+				title="Custom Headers"
+				addLabel="Add custom headers"
+				keyLabel="Header name"
+				valueLabel="Header value"
+				rows={draft.headers}
+				error={form.errors.headers}
+				onChange={(headers) => update({ headers })}
+			/>
+		</>
+	);
 
 	return (
 		<FormPage
@@ -167,26 +212,37 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 				</>
 			}
 		>
-			<ProviderConnection
+			{detail !== undefined && <ProviderSignIn detail={detail} />}
+			{/* An account provider already has pi's endpoint and catalog, so those fields are
+			    an override rather than part of adding it. */}
+			{collapsible ? (
+				<Collapsible open={overrideOpen} onOpenChange={setOverrideOpen}>
+					<CollapsibleTrigger className="group/override flex w-full cursor-pointer items-start justify-between gap-3 rounded-xl border bg-card px-4 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
+						<span className="grid gap-0.5">
+							<span className="text-sm font-medium">Endpoint, key and headers</span>
+							<span className="text-xs text-muted-foreground">
+								pi ships these for {detail?.name}. Change them only to use a gateway, your own key,
+								or extra headers.
+							</span>
+						</span>
+						<ChevronDownIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-aria-expanded/override:rotate-180" />
+					</CollapsibleTrigger>
+					<CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 data-starting-style:h-0 data-ending-style:h-0">
+						<div className="grid gap-6 pt-4">{connection}</div>
+					</CollapsibleContent>
+				</Collapsible>
+			) : (
+				connection
+			)}
+			<ProviderModels
 				draft={draft}
-				errors={form.errors}
+				detail={detail}
 				builtin={builtin}
-				onNameChange={updateName}
-				hasKey={detail?.hasKey ?? false}
-				configured={detail?.configured ?? false}
-				namePlaceholder={detail?.name ?? "Display name"}
+				// An account page is about the account: pi owns the catalog there, and
+				// replacing it belongs with the endpoint override.
+				catalogEditable={!collapsible}
 				update={update}
 			/>
-			<PairRows
-				title="Custom Headers"
-				addLabel="Add custom headers"
-				keyLabel="Header name"
-				valueLabel="Header value"
-				rows={draft.headers}
-				error={form.errors.headers}
-				onChange={(headers) => update({ headers })}
-			/>
-			<ProviderModels draft={draft} detail={detail} builtin={builtin} update={update} />
 
 			{save.error !== null && (
 				<Alert variant="destructive">
