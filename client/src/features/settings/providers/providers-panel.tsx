@@ -1,12 +1,19 @@
 import { Link, useMatchRoute } from "@tanstack/react-router";
-import { PlusIcon } from "lucide-react";
+import { ChevronDownIcon, LogInIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { cn } from "cn";
 
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { MasterListPanel } from "@/features/settings/kit/master-list-panel";
 import { useSettings } from "@/features/settings/queries";
 import { AddProviderDialog } from "./add-provider-dialog";
+import type { AddMode } from "./add-provider-dialog";
 import { MasterDetailLayout } from "@/features/settings/kit/master-detail-layout";
 
 /**
@@ -24,6 +31,7 @@ function ProvidersPanel({
 }) {
 	const settings = useSettings();
 	const [query, setQuery] = useState("");
+	const [addMode, setAddMode] = useState<AddMode>("key");
 	const [addOpen, setAddOpen] = useState(false);
 
 	const providers = settings.data?.providers ?? [];
@@ -53,12 +61,38 @@ function ProvidersPanel({
 			}
 			footer={
 				<>
-					<Button variant="outline" className="w-full" onClick={() => setAddOpen(true)}>
-						<PlusIcon />
-						Add provider
-					</Button>
+					<DropdownMenu>
+						<DropdownMenuTrigger
+							className={cn(buttonVariants({ variant: "outline" }), "group w-full")}
+						>
+							<PlusIcon />
+							Add provider
+							<ChevronDownIcon className="ml-auto transition-transform group-data-[popup-open]:rotate-180" />
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="start" className="w-(--anchor-width)">
+							<DropdownMenuItem
+								onClick={() => {
+									setAddMode("key");
+									setAddOpen(true);
+								}}
+							>
+								<PlusIcon />
+								With an API key
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								onClick={() => {
+									setAddMode("account");
+									setAddOpen(true);
+								}}
+							>
+								<LogInIcon />
+								Sign in with an account
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
 					<AddProviderDialog
 						open={addOpen}
+						mode={addMode}
 						onOpenChange={setAddOpen}
 						builtins={settings.data?.builtins ?? []}
 					/>
