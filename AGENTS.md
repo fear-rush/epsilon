@@ -1,9 +1,9 @@
 # epsilon
 
-A web dashboard for one user. It embeds the `pi` coding agent SDK in its own process
-and Epsilon owns the agent home (config, credentials, extensions, packages,
-sessions). The dashboard and a terminal using the same agent home are one agent, and
-Settings configures it there.
+A web dashboard for the coding agent on your machine. It embeds the `pi` coding
+agent SDK in its own process and Epsilon owns the agent home (config, credentials,
+extensions, packages, sessions). The dashboard and a terminal using the same agent
+home are one agent, and Settings configures it there.
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) first, [docs/pi-sdk.md](docs/pi-sdk.md)
 before touching anything pi, and [docs/DECISIONS.md](docs/DECISIONS.md) for why. Code wins over

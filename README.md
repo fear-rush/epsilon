@@ -1,10 +1,6 @@
 # Epsilon
 
-A local web workspace for the `pi` coding agent. It runs the agent in its own
-process, keeps the agent's home (config, credentials, skills, packages, sessions),
-and puts it in a browser: continue sessions, read runs, answer permission
-prompts, and configure providers, MCP servers, skills and packages in Settings. Built
-for one operator on one machine; there are no accounts.
+A web dashboard for the `pi` coding agent on your machine.
 
 ## Run it
 

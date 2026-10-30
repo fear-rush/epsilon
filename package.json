@@ -1,7 +1,7 @@
 {
 	"name": "epsilon",
 	"version": "0.5.1",
-	"description": "A web dashboard that embeds the pi coding agent for one operator",
+	"description": "A web dashboard for the pi coding agent on your machine",
 	"license": "MIT",
 	"author": "Muhammad Firas",
 	"workspaces": [
