@@ -1,0 +1,93 @@
+# Architecture
+
+A one-page map. Code is the reality; this page says where things go and why. For the
+decisions behind it read [adr/](adr/README.md); for what pi exposes read
+[pi-sdk.md](pi-sdk.md).
+
+## Bounded contexts
+
+- **Conversation.** A live session: the embedded pi engine, its extension dialogs,
+  the browser socket, and the reducer that turns pi events into a transcript.
+- **Session catalog.** Listing, renaming and deleting sessions by reading pi's
+  session files. It never builds an engine; deleting a session an engine holds is
+  refused.
+- **Agent configuration.** Providers, models, MCP servers, skills, packages and
+  general settings, written to pi's documented files and exporters, plus readiness
+  (does the home hold a usable model).
+
+Server features, client features and settings sections carry the same names, so a
+concept is found by name in every workspace.
+
+## Inside a server feature
+
+`routes -> service -> domain <- store -> platform`
+
+- `contract.ts`: zod request and response schemas. They feed the OpenAPI document.
+- `routes.ts`: parse input, call one service function, return. No logic.
+- `service.ts`: use cases; composes the store and the domain.
+- `domain.ts`: pure rules and shaping, no I/O.
+- `store.ts`: reads and writes pi's files and exporters. Uses `platform/` for
+  parsing, merging and atomic writes; unknown keys are kept and an unparseable file
+  is refused, never overwritten.
+
+Features import another feature only through its public surface. `settings/` is the
+one aggregator: it composes the configuration features into a single snapshot and
+owns no data of its own. `main.ts` is the only reader of `process.env`; it chooses
+the agent home and project once and passes them in through `deps`.
+
+## Two boundaries
+
+- **REST** is described by the server's generated OpenAPI document. The client is
+  generated from it. Every response carries `x-epsilon-contract`; on a mismatch the
+  client shows one reload notice instead of parsing responses at runtime.
+- **Socket** (`/api/link`) is a shared zod protocol in `shared/`. The client sends
+  `hello` with `PROTOCOL_VERSION`; the server replies `welcome` or
+  `error PROTOCOL_MISMATCH`, and the page shows a reload notice and stops attaching.
+  The socket carries Epsilon's commands and events, never pi's RPC types
+  ([ADR-0009](adr/0009-socket-speaks-epsilon.md)). Bump the version when a frame
+  changes. On reconnect the client re-attaches and receives a snapshot per session;
+  there is no replay log.
+
+`shared/` holds only the socket protocol, the conversation reducer and rules both
+sides run. REST shapes live in server `contract.ts`.
+
+## Where state lives
+
+- pi's files in the agent home: transcripts, settings, credentials, models, MCP,
+  packages. Project MCP and overrides live in `<project>/.pi`.
+- Live engines in the server's registry. An engine is disposed ten seconds after its
+  last detach unless it is running, compacting or waiting on a dialog, so a closed
+  tab does not stop a run and a reload sees a pending dialog again.
+- The browser holds view state only: scroll, drafts, open panels.
+
+Nothing is stored only in the browser or only in server memory. The agent home is
+not recorded anywhere; it is derived, so a file naming it would be a second truth.
+
+## Failure modes
+
+Every failure is visible; silence is never acceptable. An unconfigured home replaces
+the page with one notice that opens Settings. A frame or file the code cannot read
+produces a notice naming it. Engine start failures, extension errors and refused
+commands arrive as error frames or `command-result { ok: false }`. An unsupported
+capability gets a notice, never a dead control. An engine bug takes every live
+session down with the server; session files survive
+([ADR-0008](adr/0008-embed-pi-engine-with-opinions.md)).
+
+## UI rules that are not obvious from the code
+
+- Compose the installed shadcn components; chat primitives (`MessageScroller`,
+  `Message`, `Trace`, `CodeBlock`, `Marker`) mean something, so do not fake them
+  with divs. One component per concept: one way to render a tool call.
+- Composition is Base UI: `render={<Button />}`, never `asChild`.
+- Colour carries state only (running, needs input, error, selected).
+- Surfaces rest white. A muted fill is a state (hover, selected, code, icon tile).
+- Destructive actions use `variant="destructive"` and confirm in an `AlertDialog`.
+  A form submit is as wide as its label and sits at the right edge of its card; a
+  control that needs the whole row stacks below the title.
+- Validate a form with zod plus the rules only the form knows; show the first
+  message per field under it with `FieldError`; never send a blank optional value.
+- Secret values are never shown; a blank key field keeps the stored key.
+- Registry defaults are source. Local changes in `client/src/components/ui`:
+  `cursor-default` is removed from menu, select and command items so pointer rules
+  apply; the checkbox keeps its indicator mounted and transitions scale and opacity;
+  `sidebar.tsx` is trimmed to the offcanvas column, Sheet below 1280px and Cmd-B.

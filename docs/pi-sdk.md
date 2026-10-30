@@ -2,9 +2,9 @@
 
 Reference for what pi exposes to an embedding host and what it does not. Everything
 here was read from pi's shipped types and code, not from documentation prose.
-Epsilon embeds pi's engine through this SDK ([ADR-0008](../adr/0008-embed-pi-engine-with-opinions.md))
+Epsilon embeds pi's engine through this SDK ([ADR-0008](adr/0008-embed-pi-engine-with-opinions.md))
 and configures it through the same exports plus pi's documented files
-([ADR-0012](../adr/0012-configure-in-the-dashboard.md)).
+([ADR-0012](adr/0012-configure-in-the-dashboard.md)).
 
 **Re-verify after every pi upgrade.** The sources of truth. Paths are relative to the
 pinned package, `server/node_modules/@earendil-works/pi-coding-agent`, which is the
@@ -64,7 +64,7 @@ Other facts worth having before embedding:
     `custom` exists and takes a component factory, so a host with no terminal cannot
     render it. Epsilon answers the first group, maps the text half of the second,
     and reports the rest once as unsupported
-    ([ADR-0002](../adr/0002-own-the-ui-contract.md)).
+    ([ADR-0002](adr/0002-own-the-ui-contract.md)).
 - `NewSessionOptions.id` creates a session with an exact id. `SessionManager` lists,
   opens, finds, creates and owns `getEntries()`, `getTree()` and `getSessionName()`;
   `AgentSessionRuntime` owns `newSession`, `switchSession`, `fork` and
@@ -78,7 +78,7 @@ Other facts worth having before embedding:
 - `toJsonEvent` is the transformation between a live event and the JSON the reducer
   consumes: `message_update` loses its `partial` payload and `toolcall_start` gains
   `id` and `toolName`. It is **not exported**. A host carries the transform itself
-  ([note](../notes/2026-10-28-tojson-is-not-exported.md)).
+  (see Traps).
 - `session.dispose()` aborts work, invalidates extension contexts and removes
   listeners. A host that forgets it leaks a running agent.
 - `session.reload()` re-reads resources without replacing the session. Epsilon
@@ -112,7 +112,7 @@ does not receive them as frames.
 `bash_execution_update` exists in the union but pi's own UI ignores it. The `bash`
 tool also records a `bashExecution` message in the session, which reaches a reader
 only through the session's messages
-([note](../notes/2026-10-28-bash-result-is-not-an-event.md)).
+(see Traps).
 
 ## Writers: what the SDK can and cannot save
 
@@ -250,9 +250,9 @@ pretending a decision exists.
 The SDK does expose `ProjectTrustStore` and `SettingsManager.setProjectTrusted`,
 so a host that wants pi's CLI behavior can implement it. This repository does not;
 trust decisions stay in a terminal inside the deployment
-([ADR-0012](../adr/0012-configure-in-the-dashboard.md)).
+([ADR-0012](adr/0012-configure-in-the-dashboard.md)).
 
-See [../notes/2026-10-30-embedded-engine-always-trusts.md](../notes/2026-10-30-embedded-engine-always-trusts.md).
+See Traps: the embedded engine always trusts.
 
 ## The CLI, for what an embedding host does not do
 
@@ -271,4 +271,55 @@ shell out to them.
 
 The dashboard writes the same files these commands write, but it does not call them:
 a server that spawns the CLI would duplicate argument parsing and lose structured
-errors ([ADR-0012](../adr/0012-configure-in-the-dashboard.md)).
+errors ([ADR-0012](adr/0012-configure-in-the-dashboard.md)).
+
+## Traps
+
+Behaviour that cost time and that no type or test shows. Each is a fact about pi,
+Turborepo or the runtime.
+
+- **A bash result is a message, not an event.** `executeBash` appends a
+  `bashExecution` message without emitting `message_start`/`message_end`, and holds
+  it until the run settles when streaming. Re-read the snapshot after a `bash`
+  command and again at `agent_settled`.
+- **`toJsonEvent` is not exported.** `package.json` exports only `.` and
+  `./rpc-entry`; `dist/modes/json-event.js` is private. The host carries its own
+  copy of the transform in `server/src/platform/pi/`.
+- **The embedded engine always trusts the project folder.** `SettingsManager.create`
+  starts with `projectTrusted = true` and the SDK never runs the CLI's
+  `resolveProjectTrusted()`, so `.pi/settings.json` and `.pi/mcp.json` load with an
+  empty `trust.json`. A real trust decision needs `ProjectTrustStore` wired in.
+- **A permission `confirm` blocks the turn.** `ctx.ui.confirm` waits for the host's
+  `ExtensionUIContext` with no timeout and no error. A host that never answers
+  leaves the tool call hanging after `tool_execution_start`.
+- **A fresh session id writes no file.** The JSONL (and its project directory) is
+  created on the first appended entry. A `model_change` before the first message
+  lives only in memory and is lost on reload.
+- **`getAvailableSnapshot()` is a cached view.** It listed 420 models where
+  `getAllAvailable()` returned 514 on the same runtime. Read `getAllAvailable()` on
+  open and after `reload`, with a timeout and the snapshot as fallback.
+- **`dispose()` does not end the process.** MCP transports, extension timers and the
+  cache warmer keep handles open. A one-shot check script needs `process.exit(0)`.
+- **A model list's `supported_endpoints` is a gateway hint.** A model that only
+  accepts `/messages` or `/responses` needs that API on its own entry, and newer
+  Claude models need adaptive thinking metadata. Import both per model.
+- **Installed packages are bound to one platform.** Native optional dependencies are
+  resolved at install time. Install inside the deployment that runs them; config
+  files are portable, dependency trees are not.
+- **Turborepo strict env mode drops undeclared variables.** A variable a task needs
+  (`EPSILON_AGENT_HOME`, `EPSILON_PROJECT`) must be named in `turbo.json`, or
+  `bun run dev` runs without it while the shell looks correct.
+- **`turbo dev` runs tasks in their workspace directory.** `process.cwd()` is
+  `server/`, which pi would take as the project. Derive the project from the module
+  path or `EPSILON_PROJECT`.
+- **A partial commit can fail on a stale build.** `dist` is gitignored and survives
+  the pre-commit stash, so a type-check can read a `shared/dist` from another
+  commit. Run `bun run build --force` before committing partially staged work.
+- **`z.custom<T>()` with no checker accepts anything.** A schema that wraps a pi
+  type validates nothing inside it; check the fields the page reads.
+- **Registry classes beat base-layer CSS.** shadcn's `cursor-default` is a utility
+  and wins over any base rule, so it is removed from the component files. When a
+  registry class string is rewritten, diff it against `shadcn view` instead of
+  retyping it (a dropped `[&>svg]:size-3.5` blew the checkbox tick up to 24px).
+- **A Base UI dialog mounted already open has no motion.** Mount closed and open on
+  the next animation frame; close, wait for the transition, then unmount.

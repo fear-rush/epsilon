@@ -1,11 +1,10 @@
 # Deploy
 
-Status: **design.** The container, the compose file and the server changes this
-document assumes are not written yet. Slices are in [plan.md](plan.md); the reasons
-are in [adr/](adr/README.md).
+Status: **design.** No Dockerfile or compose file exists yet; this page records
+what they must do. The reasons are in [adr/](adr/README.md).
 
 One deployment, one user, one agent home, one project. That scope is what the
-socket and the access rules are built for ([protocol.md](protocol.md), Non-goals).
+socket and the access rules are built for.
 
 ## Shape
 
@@ -48,19 +47,19 @@ different one in the container would not match what the server drives.
 
 ## Run it
 
-| Setting    | Value                                | Note                                                                               |
-| ---------- | ------------------------------------ | ---------------------------------------------------------------------------------- |
-| volume     | `pi-agent-home:/root/.pi/agent`      | credentials, settings, packages, sessions                                          |
-| volume     | `epsilon-state:/root/.epsilon`       | `ui-state.json` only                                                               |
-| bind mount | `$PROJECT:/workspace`                | the code the agent works on                                                        |
-| env        | `EPSILON_PROJECT=/workspace`         | which project the session list is scoped to                                        |
-| env        | `EPSILON_AGENT_HOME=/root/.pi/agent` | the home the server passes to every engine; the volume above                       |
-| env        | `HOST=0.0.0.0`                       | **planned (S11)**: the server binds `127.0.0.1` today; a published port needs this |
-| ports      | `127.0.0.1:3000:3000`                | loopback publish, then a tunnel                                                    |
+| Setting    | Value                                | Note                                                                         |
+| ---------- | ------------------------------------ | ---------------------------------------------------------------------------- |
+| volume     | `pi-agent-home:/root/.pi/agent`      | credentials, settings, packages, sessions                                    |
+| volume     | `epsilon-state:/root/.epsilon`       | `ui-state.json` only                                                         |
+| bind mount | `$PROJECT:/workspace`                | the code the agent works on                                                  |
+| env        | `EPSILON_PROJECT=/workspace`         | which project the session list is scoped to                                  |
+| env        | `EPSILON_AGENT_HOME=/root/.pi/agent` | the home the server passes to every engine; the volume above                 |
+| env        | `HOST=0.0.0.0`                       | **planned**: the server binds `127.0.0.1` today; a published port needs this |
+| ports      | `127.0.0.1:3000:3000`                | loopback publish, then a tunnel                                              |
 
 Publishing the port on `0.0.0.0` puts the whole API on the network. There is no
 application authentication, by design: access control is loopback plus the tunnel
-in front ([features.md](features.md), Access and operations). Bind the publish to
+in front. Bind the publish to
 `127.0.0.1`.
 
 ## First run
@@ -92,7 +91,7 @@ A home with no usable model shows one notice on every page, naming the home and
 opening Settings.
 
 Packages must be installed inside the deployment, because native dependencies are
-bound to the platform ([notes](notes/2026-10-28-packages-are-bound-to-a-platform.md)).
+bound to the platform ([pi-sdk.md](pi-sdk.md), Traps).
 
 ## Development
 
@@ -145,7 +144,7 @@ what a wrong command can reach.
    turns die with the container, which [ADR-0008](adr/0008-embed-pi-engine-with-opinions.md)
    accepts as the cost of running the engine in-process.
 3. After a pi upgrade, re-run the greps in
-   [reference/pi-sdk.md](reference/pi-sdk.md) before trusting the surface again.
+   [pi-sdk.md](pi-sdk.md) before trusting the surface again.
 
 `docker compose down -v` deletes the volume, and with it the credentials and every
 session. That is the reset button, not the update button.
@@ -162,7 +161,7 @@ inside the container first, so the platform matches.
 | Symptom                                               | Cause                                                                                                                 | Check                                             |
 | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | Session runs but project extensions or MCP are absent | `settings.json` lists a `-builtin:` switch for them, or the deployment's project folder is not the one holding `.pi/` | check the `extensions` list and `EPSILON_PROJECT` |
-| A package's tools fail though `pi list` shows it      | package installed for another platform ([note](notes/2026-10-28-packages-are-bound-to-a-platform.md))                 | reinstall inside the container                    |
+| A package's tools fail though `pi list` shows it      | package installed for another platform (pi-sdk.md, Traps)                                                             | reinstall inside the container                    |
 | The page shows the not-ready notice                   | the volume has no provider with a usable credential                                                                   | open Settings and add a provider                  |
 | Page shows a version-mismatch notice with Reload      | the tab was loaded from a different build than the server speaks                                                      | press Reload; the page names the mismatch         |
 | `EACCES` on a bind mount                              | container user does not match the host file owner                                                                     | run with the host uid                             |

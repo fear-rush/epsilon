@@ -2,20 +2,21 @@
 
 One file per decision a future contributor (human or agent) could reasonably reverse.
 
-| Record                                            | Status             | Decision                                                                         |
-| ------------------------------------------------- | ------------------ | -------------------------------------------------------------------------------- |
-| [0001](0001-engine-rpc-child.md)                  | Superseded by 0008 | Drive the `pi` CLI over `--mode rpc`. No embedded session, no durable, no chord. |
-| [0002](0002-own-the-ui-contract.md)               | Accepted           | Epsilon owns its UI contract. Render what pi's RPC expresses, never pi's TUI.    |
-| [0003](0003-preview-second-origin.md)             | Accepted           | Serve agent-written preview content from a second origin.                        |
-| [0004](0004-own-the-rpc-driver.md)                | Superseded by 0008 | Write our own RPC driver instead of using pi's `RpcClient`.                      |
-| [0005](0005-deployment-owns-agent-home.md)        | Accepted           | The deployment owns the agent home, at pi's default path, isolated by default.   |
-| [0006](0006-setup-in-the-deployment-terminal.md)  | Superseded by 0012 | Setup, login, trust and installs happen in a terminal inside the deployment.     |
-| [0007](0007-embed-pi-engine.md)                   | Rejected           | Embed pi's engine in a worker of our own. Rejected: RPC is the cheaper contract. |
-| [0008](0008-embed-pi-engine-with-opinions.md)     | Accepted           | Embed pi's engine in the server and ship Epsilon's own default extensions.       |
-| [0009](0009-socket-speaks-epsilon.md)             | Accepted           | The socket carries Epsilon's commands and zod shapes, not pi's RPC types.        |
-| [0010](0010-defaults-are-engine-only.md)          | Accepted           | The defaults are engine-only; S7 restores parity with `-e`, never by seeding.    |
-| [0011](0011-third-party-tools-as-dependencies.md) | Accepted           | Tool packages ship as dependencies; terminal-only surfaces are rebuilt natively. |
-| [0012](0012-configure-in-the-dashboard.md)        | Accepted           | The dashboard configures providers, models, MCP, skills and packages.            |
+| Record                                                      | Status             | Decision                                                                         |
+| ----------------------------------------------------------- | ------------------ | -------------------------------------------------------------------------------- |
+| [0001](superseded/0001-engine-rpc-child.md)                 | Superseded by 0008 | Drive the `pi` CLI over `--mode rpc`. No embedded session, no durable, no chord. |
+| [0002](0002-own-the-ui-contract.md)                         | Accepted           | Epsilon owns its UI contract. Render what pi's RPC expresses, never pi's TUI.    |
+| [0003](0003-preview-second-origin.md)                       | Accepted           | Serve agent-written preview content from a second origin.                        |
+| [0004](superseded/0004-own-the-rpc-driver.md)               | Superseded by 0008 | Write our own RPC driver instead of using pi's `RpcClient`.                      |
+| [0005](0005-deployment-owns-agent-home.md)                  | Accepted           | The deployment owns the agent home, at pi's default path, isolated by default.   |
+| [0006](superseded/0006-setup-in-the-deployment-terminal.md) | Superseded by 0012 | Setup, login, trust and installs happen in a terminal inside the deployment.     |
+| [0007](0007-embed-pi-engine.md)                             | Rejected           | Embed pi's engine in a worker of our own. Rejected: RPC is the cheaper contract. |
+| [0008](0008-embed-pi-engine-with-opinions.md)               | Accepted           | Embed pi's engine in the server and ship Epsilon's own default extensions.       |
+| [0009](0009-socket-speaks-epsilon.md)                       | Accepted           | The socket carries Epsilon's commands and zod shapes, not pi's RPC types.        |
+| [0010](0010-defaults-are-engine-only.md)                    | Accepted           | The defaults are engine-only; S7 restores parity with `-e`, never by seeding.    |
+| [0011](0011-third-party-tools-as-dependencies.md)           | Accepted           | Tool packages ship as dependencies; terminal-only surfaces are rebuilt natively. |
+| [0012](0012-configure-in-the-dashboard.md)                  | Accepted           | The dashboard configures providers, models, MCP, skills and packages.            |
+| [0013](0013-feature-modules-and-openapi-client.md)          | Accepted           | Feature modules, an OpenAPI-generated client, a contract hash; no size cap.      |
 
 Superseding is how history changes here:
 
@@ -31,17 +32,19 @@ Superseding is how history changes here:
   browser contract became Epsilon's own commands and zod shapes.
 - 0010 narrows 0008's claim that the defaults behave the same in a terminal: they
   are engine-only until S7 passes them to the CLI with `-e`.
+- 0013 drops the file-size caps and moves REST validation to a generated client.
 - 0011 accepts third-party package dependencies for their tools and keeps 0008's
   defaults rule. Installation moved to Settings with 0012.
 
 ## Reading one
 
 An ADR records the decision and the tree at its date. It is not current-state
-documentation: a path in an old record may name a module that has since moved or
-been removed, and an early record may name a `pi` RPC command where the SDK now has
-a method. Use [../architecture.md](../architecture.md) for what exists now, and
-[../reference/pi-sdk.md](../reference/pi-sdk.md) for the SDK equivalent of an RPC
-command. Epsilon does not speak RPC.
+documentation: a path in an old record may name a module that has moved, and a link
+to a deleted document (plan, architecture, protocol, features, notes) is history.
+Superseded records live in [superseded/](superseded/); their links to siblings were
+written before the move. Use [../ARCHITECTURE.md](../ARCHITECTURE.md) for what exists
+now and [../pi-sdk.md](../pi-sdk.md) for the SDK equivalent of an RPC command.
+Epsilon does not speak RPC.
 
 ## Writing one
 
