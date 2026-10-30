@@ -73,17 +73,6 @@ export function ProvidersPanel({
 						<Spinner />
 						Reading providers…
 					</div>
-				) : settings.error !== null ? (
-					editing ? (
-						<p className="px-2 py-3 text-xs text-muted-foreground">
-							Waiting for the server to come back…
-						</p>
-					) : (
-						<Alert variant="destructive">
-							<TriangleAlertIcon />
-							<AlertDescription>{settings.error.message}</AlertDescription>
-						</Alert>
-					)
 				) : visible.length === 0 ? (
 					<p className="px-2 py-3 text-xs text-muted-foreground">
 						{providers.length === 0 ? "No provider configured yet." : "Nothing matches."}

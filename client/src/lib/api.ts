@@ -28,7 +28,7 @@ import type {
 } from "shared";
 import type { z } from "zod";
 
-const OFFLINE = "The server is not reachable. Retrying…";
+export const OFFLINE = "The server is not reachable.";
 
 /** A dropped connection is a phrase, not the browser's "Failed to fetch". */
 const request = async (path: string, init?: RequestInit): Promise<Response> => {

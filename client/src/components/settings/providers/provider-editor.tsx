@@ -12,9 +12,10 @@ import type { ProviderDetail, ProviderModelInput, ThinkingLevel } from "shared";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { OfflineNotice } from "@/components/settings/offline-notice";
 import { useProviderDetail } from "@/hooks/use-provider-detail";
 import { useSettings } from "@/hooks/use-settings";
-import { deleteProvider, saveProvider, testProvider } from "@/lib/api";
+import { OFFLINE, deleteProvider, saveProvider, testProvider } from "@/lib/api";
 import { useSettingsRefresh } from "@/components/settings/settings-refresh";
 
 import { DeleteDialog } from "@/components/settings/delete-dialog";
@@ -44,6 +45,7 @@ export function ProviderEditor({ providerId }: { providerId?: string }) {
 			);
 		}
 		if (detail.error !== null) {
+			if (detail.error.message === OFFLINE) return <OfflineNotice message={OFFLINE} />;
 			return (
 				<div className="flex h-full items-center justify-center p-6">
 					<div className="grid w-full max-w-md gap-4">
