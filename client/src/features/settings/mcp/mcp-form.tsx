@@ -17,7 +17,7 @@ import { useSettings } from "@/features/settings/queries";
 import { deleteMcpServer, saveMcpServer, setMcpServerInProject } from "@/api/endpoints";
 import { draftOf, inputOf } from "./mcp-draft";
 import { McpFields } from "./mcp-fields";
-import { McpKeptGroup, McpProjectGroup } from "./mcp-form-groups";
+import { McpDiagnosticsGroup, McpProjectGroup } from "./mcp-form-groups";
 import { McpOverrideForm } from "./mcp-override";
 import { isOverrideSubject } from "./mcp-detail";
 import { McpTargetFields } from "./mcp-target";
@@ -36,11 +36,6 @@ import { useMcpServer } from "@/features/settings/queries";
  */
 
 const scopeLabel = (scope: McpScope): string => (scope === "global" ? "Global" : "This project");
-
-const scopeDescription = (scope: McpScope): string =>
-	scope === "global"
-		? "Read from the agent home, so every session can connect it."
-		: "Read from this project's .pi/mcp.json, so only sessions in this folder connect it.";
 
 function McpForm({ detail, scope }: { detail: McpServerDetail | undefined; scope: McpScope }) {
 	if (isOverrideSubject(detail)) return <McpOverrideForm detail={detail} />;
@@ -64,6 +59,9 @@ function McpServerForm({
 	const { draft, update, errors, setErrors } = form;
 	const server = detail?.kind === "server" ? detail : undefined;
 	const relation = server?.relation;
+	const providers = settings.data?.providers ?? [];
+	const providerIds = providers.map((provider) => provider.id);
+	const live = settings.data?.mcpLive;
 
 	/** Names already used in this file, so a new server cannot replace one by accident. */
 	const taken = new Set(
@@ -103,7 +101,7 @@ function McpServerForm({
 	});
 
 	const submit = () => {
-		const found = mcpFieldErrors(draft, taken);
+		const found = mcpFieldErrors(draft, taken, new Set(providerIds));
 		setErrors(found);
 		if (Object.keys(found).length > 0) return;
 		const input: McpServerInput = inputOf(draft);
@@ -127,7 +125,6 @@ function McpServerForm({
 			backLabel="MCP servers"
 			title={detail?.name ?? "New MCP server"}
 			badge={<Badge variant="secondary">{scopeLabel(scope)}</Badge>}
-			description={scopeDescription(scope)}
 			footer={
 				<FormFooter
 					dirty={form.dirty}
@@ -147,8 +144,9 @@ function McpServerForm({
 					<TriangleAlertIcon />
 					<AlertTitle>pi skips this entry</AlertTitle>
 					<AlertDescription>
-						{detail.problem} The switch in the list fixes only <code>enabled</code>; any other key
-						has to be fixed in the file.
+						{detail.problem} The form is filled in from what pi could still read, and a save
+						rewrites every key it edits and checks the result with pi&apos;s own rules, so fixing
+						the target, exposure or timeout here repairs the entry.
 					</AlertDescription>
 				</Alert>
 			)}
@@ -172,7 +170,7 @@ function McpServerForm({
 			)}
 
 			<McpFields draft={draft} errors={errors} editing={detail !== undefined} update={update} />
-			<McpTargetFields draft={draft} errors={errors} update={update} />
+			<McpTargetFields draft={draft} errors={errors} providerIds={providerIds} update={update} />
 
 			{scope === "project" && (
 				<Alert>
@@ -197,10 +195,7 @@ function McpServerForm({
 				/>
 			)}
 
-			{server !== undefined &&
-				(server.oauthKeys.length > 0 ||
-					server.authProvider !== undefined ||
-					server.toolExposureKeys.length > 0) && <McpKeptGroup detail={server} />}
+			{server !== undefined && <McpDiagnosticsGroup detail={server} live={live} />}
 
 			{save.error !== null && (
 				<Alert variant="destructive">

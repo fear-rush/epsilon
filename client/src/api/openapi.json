@@ -178,6 +178,12 @@
 							"$ref": "#/components/schemas/McpServerView"
 						}
 					},
+					"mcpReach": {
+						"$ref": "#/components/schemas/McpReach"
+					},
+					"mcpLive": {
+						"$ref": "#/components/schemas/McpLive"
+					},
 					"mcpDisabled": {
 						"type": "boolean"
 					},
@@ -210,6 +216,8 @@
 					"builtins",
 					"models",
 					"mcp",
+					"mcpReach",
+					"mcpLive",
 					"mcpDisabled",
 					"projectDir",
 					"skills",
@@ -389,6 +397,9 @@
 							"hidden"
 						]
 					},
+					"needsIndirect": {
+						"type": "boolean"
+					},
 					"timeout": {
 						"type": "number"
 					},
@@ -407,7 +418,8 @@
 					"name",
 					"target",
 					"transport",
-					"enabled"
+					"enabled",
+					"needsIndirect"
 				]
 			},
 			"McpOverrideEntry": {
@@ -453,6 +465,9 @@
 							"hidden"
 						]
 					},
+					"needsIndirect": {
+						"type": "boolean"
+					},
 					"timeout": {
 						"type": "number"
 					},
@@ -478,6 +493,7 @@
 					"target",
 					"transport",
 					"enabled",
+					"needsIndirect",
 					"overrideKeys"
 				]
 			},
@@ -524,6 +540,106 @@
 					"scope",
 					"problem",
 					"enabled"
+				]
+			},
+			"McpReach": {
+				"type": "object",
+				"properties": {
+					"autoEnableCodemode": {
+						"type": "object",
+						"properties": {
+							"global": {
+								"type": "boolean"
+							},
+							"project": {
+								"type": "boolean"
+							}
+						}
+					},
+					"codemodeDefault": {
+						"type": "boolean"
+					},
+					"codemodeDisabled": {
+						"type": "boolean"
+					},
+					"toolSearchDisabled": {
+						"type": "boolean"
+					},
+					"unreachable": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/McpUnreachable"
+						}
+					}
+				},
+				"required": [
+					"autoEnableCodemode",
+					"codemodeDefault",
+					"codemodeDisabled",
+					"toolSearchDisabled",
+					"unreachable"
+				]
+			},
+			"McpUnreachable": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"exposures": {
+						"type": "array",
+						"items": {
+							"type": "string",
+							"enum": [
+								"codemode",
+								"deferred",
+								"direct",
+								"hidden"
+							]
+						}
+					}
+				},
+				"required": [
+					"name",
+					"exposures"
+				]
+			},
+			"McpLive": {
+				"type": "object",
+				"properties": {
+					"sessions": {
+						"type": "integer"
+					},
+					"servers": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"name": {
+									"type": "string"
+								},
+								"tools": {
+									"type": "integer"
+								}
+							},
+							"required": [
+								"name",
+								"tools"
+							]
+						}
+					},
+					"codemode": {
+						"type": "boolean"
+					},
+					"toolSearch": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"sessions",
+					"servers",
+					"codemode",
+					"toolSearch"
 				]
 			},
 			"SkillView": {
@@ -1117,7 +1233,7 @@
 						"$ref": "#/components/schemas/McpOverrideEntry"
 					},
 					{
-						"$ref": "#/components/schemas/McpInvalidEntry"
+						"$ref": "#/components/schemas/McpInvalidEntryDetail"
 					}
 				],
 				"discriminator": {
@@ -1125,7 +1241,7 @@
 					"mapping": {
 						"server": "#/components/schemas/McpServerEntryDetail",
 						"override": "#/components/schemas/McpOverrideEntry",
-						"invalid": "#/components/schemas/McpInvalidEntry"
+						"invalid": "#/components/schemas/McpInvalidEntryDetail"
 					}
 				}
 			},
@@ -1164,16 +1280,31 @@
 									"type": "string"
 								}
 							},
-							"oauthKeys": {
-								"type": "array",
-								"items": {
-									"type": "string"
+							"toolExposure": {
+								"type": "object",
+								"additionalProperties": {
+									"type": "string",
+									"enum": [
+										"codemode",
+										"deferred",
+										"direct",
+										"hidden"
+									]
 								}
+							},
+							"oauth": {
+								"$ref": "#/components/schemas/McpOAuth"
+							},
+							"oauthClientSecret": {
+								"type": "boolean"
 							},
 							"authProvider": {
 								"type": "string"
 							},
-							"toolExposureKeys": {
+							"credentialsStored": {
+								"type": "boolean"
+							},
+							"log": {
 								"type": "array",
 								"items": {
 									"type": "string"
@@ -1183,8 +1314,126 @@
 						"required": [
 							"envKeys",
 							"headerKeys",
-							"oauthKeys",
-							"toolExposureKeys"
+							"oauthClientSecret",
+							"credentialsStored",
+							"log"
+						]
+					}
+				]
+			},
+			"McpOAuth": {
+				"type": "object",
+				"properties": {
+					"clientId": {
+						"type": "string"
+					},
+					"callbackPort": {
+						"type": "integer"
+					},
+					"callbackUrl": {
+						"type": "string"
+					},
+					"scope": {
+						"type": "string"
+					},
+					"clientName": {
+						"type": "string"
+					},
+					"clientRegistration": {
+						"type": "string",
+						"enum": [
+							"dcr",
+							"cimd"
+						]
+					},
+					"authServerMetadataUrl": {
+						"type": "string"
+					}
+				}
+			},
+			"McpInvalidEntryDetail": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/McpInvalidEntry"
+					},
+					{
+						"type": "object",
+						"properties": {
+							"command": {
+								"type": "string"
+							},
+							"args": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							},
+							"envKeys": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							},
+							"cwd": {
+								"type": "string"
+							},
+							"url": {
+								"type": "string"
+							},
+							"headerKeys": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							},
+							"transport": {
+								"type": "string",
+								"enum": [
+									"stdio",
+									"http"
+								]
+							},
+							"description": {
+								"type": "string"
+							},
+							"exposure": {
+								"type": "string",
+								"enum": [
+									"codemode",
+									"deferred",
+									"direct",
+									"hidden"
+								]
+							},
+							"timeout": {
+								"type": "number"
+							},
+							"toolExposure": {
+								"type": "object",
+								"additionalProperties": {
+									"type": "string",
+									"enum": [
+										"codemode",
+										"deferred",
+										"direct",
+										"hidden"
+									]
+								}
+							},
+							"oauth": {
+								"$ref": "#/components/schemas/McpOAuth"
+							},
+							"oauthClientSecret": {
+								"type": "boolean"
+							},
+							"authProvider": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"envKeys",
+							"headerKeys",
+							"oauthClientSecret"
 						]
 					}
 				]
@@ -1217,6 +1466,18 @@
 									"direct",
 									"hidden"
 								]
+							},
+							"toolExposure": {
+								"type": "object",
+								"additionalProperties": {
+									"type": "string",
+									"enum": [
+										"codemode",
+										"deferred",
+										"direct",
+										"hidden"
+									]
+								}
 							},
 							"timeout": {
 								"type": "number",
@@ -1282,6 +1543,18 @@
 									"hidden"
 								]
 							},
+							"toolExposure": {
+								"type": "object",
+								"additionalProperties": {
+									"type": "string",
+									"enum": [
+										"codemode",
+										"deferred",
+										"direct",
+										"hidden"
+									]
+								}
+							},
 							"timeout": {
 								"type": "number",
 								"exclusiveMinimum": 0
@@ -1301,6 +1574,12 @@
 								"additionalProperties": {
 									"type": "string"
 								}
+							},
+							"oauth": {
+								"$ref": "#/components/schemas/McpOAuthInput"
+							},
+							"authProvider": {
+								"type": "string"
 							}
 						},
 						"required": [
@@ -1311,6 +1590,39 @@
 						]
 					}
 				]
+			},
+			"McpOAuthInput": {
+				"type": "object",
+				"properties": {
+					"clientId": {
+						"type": "string"
+					},
+					"clientSecret": {
+						"type": "string"
+					},
+					"callbackPort": {
+						"type": "integer"
+					},
+					"callbackUrl": {
+						"type": "string"
+					},
+					"scope": {
+						"type": "string"
+					},
+					"clientName": {
+						"type": "string"
+					},
+					"clientRegistration": {
+						"type": "string",
+						"enum": [
+							"dcr",
+							"cimd"
+						]
+					},
+					"authServerMetadataUrl": {
+						"type": "string"
+					}
+				}
 			},
 			"McpEnabledInput": {
 				"type": "object",
@@ -1357,6 +1669,25 @@
 				"required": [
 					"name",
 					"value"
+				]
+			},
+			"McpAutoEnableInput": {
+				"type": "object",
+				"properties": {
+					"scope": {
+						"type": "string",
+						"enum": [
+							"global",
+							"project"
+						]
+					},
+					"enabled": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"scope",
+					"enabled"
 				]
 			},
 			"SkillInput": {
@@ -1507,7 +1838,7 @@
 					"settings"
 				],
 				"operationId": "readSettings",
-				"description": "Providers, default model, MCP servers, skills and packages from the agent home",
+				"description": "Providers, default model, MCP servers with what they can reach, skills and packages from the agent home",
 				"responses": {
 					"200": {
 						"description": "The configuration Epsilon runs on",
@@ -1763,7 +2094,7 @@
 					"settings"
 				],
 				"operationId": "readMcpServer",
-				"description": "The editable detail of one MCP server, with variable and header names but no values",
+				"description": "The editable detail of one MCP server, with variable, header and secret names but no values, plus its log tail",
 				"parameters": [
 					{
 						"schema": {
@@ -1790,7 +2121,7 @@
 				],
 				"responses": {
 					"200": {
-						"description": "The server entry, its target and the names of its stored values",
+						"description": "The server entry, its target, the names of its stored values and its log",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1874,7 +2205,7 @@
 					"settings"
 				],
 				"operationId": "writeMcpServer",
-				"description": "Add or change an MCP server in the file its scope names",
+				"description": "Add or change an MCP server in the file its scope names. A save pi would skip is refused",
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -1956,6 +2287,40 @@
 				"responses": {
 					"204": {
 						"description": "The project file now carries the override, and live engines reloaded"
+					},
+					"400": {
+						"description": "The change was refused",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/mcp/auto-enable-codemode": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "setMcpAutoEnableCodemode",
+				"description": "Let a connecting codemode server activate codemode in its file. On removes the key, which is pi's default",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/McpAutoEnableInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The file now carries the setting, and live engines reloaded"
 					},
 					"400": {
 						"description": "The change was refused",

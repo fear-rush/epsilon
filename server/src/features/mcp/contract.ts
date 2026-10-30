@@ -6,9 +6,11 @@ import { createRoute, z } from "@hono/zod-openapi";
 import {
 	mcpExposureSchema,
 	mcpNameSchema,
+	mcpOAuthClientRegistrationSchema,
 	mcpOverrideKeySchema,
 	mcpRelationSchema,
 	mcpScopeSchema,
+	mcpToolExposureSchema,
 	mcpTransportSchema,
 } from "shared";
 
@@ -19,9 +21,44 @@ const mcpServerFields = {
 	scope: mcpScopeSchema,
 	description: z.string().optional(),
 	exposure: mcpExposureSchema.optional(),
+	/** Per-tool overrides: a tool name or `*` pattern, to an exposure. */
+	toolExposure: mcpToolExposureSchema.optional(),
 	/** Seconds, positive; pi's default is 60. */
 	timeout: z.number().positive().optional(),
 };
+
+/**
+ * The OAuth options pi resolves before it connects. `clientSecret` is a secret
+ * like an environment value: a blank one keeps what the file holds.
+ */
+const mcpOAuthInputSchema = z
+	.object({
+		clientId: z.string().optional(),
+		clientSecret: z.string().optional(),
+		callbackPort: z.number().int().optional(),
+		callbackUrl: z.string().optional(),
+		scope: z.string().optional(),
+		clientName: z.string().optional(),
+		clientRegistration: mcpOAuthClientRegistrationSchema.optional(),
+		authServerMetadataUrl: z.string().optional(),
+	})
+	.openapi("McpOAuthInput");
+
+/**
+ * The same options without the secret, which the browser never sees. `oauth`
+ * carries one of these and `oauthClientSecret` says whether one is stored.
+ */
+const mcpOAuthViewSchema = z
+	.object({
+		clientId: z.string().optional(),
+		callbackPort: z.number().int().optional(),
+		callbackUrl: z.string().optional(),
+		scope: z.string().optional(),
+		clientName: z.string().optional(),
+		clientRegistration: mcpOAuthClientRegistrationSchema.optional(),
+		authServerMetadataUrl: z.string().optional(),
+	})
+	.openapi("McpOAuth");
 
 /**
  * A transport decides which target a server needs, so the two are one shape:
@@ -47,6 +84,9 @@ const mcpServerInputSchema = z
 			/** http: the streamable HTTP endpoint. */
 			url: z.string().min(1),
 			headers: z.record(z.string(), z.string()).optional(),
+			oauth: mcpOAuthInputSchema.optional(),
+			/** A `/login` provider whose token is sent instead of using OAuth. Global only. */
+			authProvider: z.string().optional(),
 		}),
 	])
 	.openapi("McpServerInput");
@@ -76,6 +116,19 @@ const mcpInProjectInputSchema = z
 
 export type McpInProjectInput = z.infer<typeof mcpInProjectInputSchema>;
 
+/**
+ * The file-level switch that decides whether a connecting `codemode` server
+ * activates the codemode tool. `true` is pi's default, so it removes the key.
+ */
+const mcpAutoEnableInputSchema = z
+	.object({
+		scope: mcpScopeSchema,
+		enabled: z.boolean(),
+	})
+	.openapi("McpAutoEnableInput");
+
+export type McpAutoEnableInput = z.infer<typeof mcpAutoEnableInputSchema>;
+
 /** What every row shows for an entry pi can connect, resolved the way pi reads it. */
 const mcpConnectableFields = {
 	name: z.string(),
@@ -86,6 +139,8 @@ const mcpConnectableFields = {
 	/** Whether the server connects as pi reads it: its own `enabled`, with a project override applied. */
 	enabled: z.boolean(),
 	exposure: mcpExposureSchema.optional(),
+	/** Whether any of its tools needs codemode or `tool_search`, which are not always active. */
+	needsIndirect: z.boolean(),
 	timeout: z.number().optional(),
 };
 
@@ -132,36 +187,124 @@ export const mcpServerViewSchema = z
 export type McpServerView = z.infer<typeof mcpServerViewSchema>;
 
 /**
- * One server, editable. The transport still decides which target the write uses;
- * environment and header values have no place here, so only their names travel.
- * The `oauth*`, `authProvider` and `toolExposureKeys` fields are shown read-only:
- * the form keeps them, and the file is where they are edited. An override and an
- * invalid entry have nothing to edit, so their detail is their row.
+ * The target fields a server detail and an invalid detail share. An invalid entry
+ * has no `url`/`command` of its own, but what pi can still read of the raw object
+ * is a repair hint: without it the form would start from the name alone.
  */
+const mcpTargetDetailFields = {
+	command: z.string().optional(),
+	args: z.array(z.string()).optional(),
+	envKeys: z.array(z.string()),
+	cwd: z.string().optional(),
+	url: z.string().optional(),
+	headerKeys: z.array(z.string()),
+};
+
 const mcpServerEntryDetailSchema = mcpServerEntrySchema
 	.extend({
-		command: z.string().optional(),
-		args: z.array(z.string()).optional(),
-		envKeys: z.array(z.string()),
-		cwd: z.string().optional(),
-		url: z.string().optional(),
-		headerKeys: z.array(z.string()),
-		/** Names of the `oauth` keys that are set, never their values. */
-		oauthKeys: z.array(z.string()),
+		...mcpTargetDetailFields,
+		/** The per-tool overrides as written, which the form edits. */
+		toolExposure: mcpToolExposureSchema.optional(),
+		/** OAuth options with no secret in them. */
+		oauth: mcpOAuthViewSchema.optional(),
+		/** Whether the file holds an `oauth.clientSecret` this page did not receive. */
+		oauthClientSecret: z.boolean(),
 		authProvider: z.string().optional(),
-		toolExposureKeys: z.array(z.string()),
+		/** Whether `mcp-auth.json` holds a credential for this server. */
+		credentialsStored: z.boolean(),
+		/** The tail of pi's `mcp.log` for this server, one line per entry. */
+		log: z.array(z.string()),
 	})
 	.openapi("McpServerEntryDetail");
+
+/**
+ * An invalid entry still says what it was meant to be, so the form can repair it.
+ * `toolExposure` and `oauth` travel only when pi would accept them, so a repair
+ * keeps the credentials of an entry that broke for another reason and drops the
+ * key that broke it.
+ */
+const mcpInvalidEntryDetailSchema = mcpInvalidEntrySchema
+	.extend({
+		...mcpTargetDetailFields,
+		/** The transport the raw target implies, so a repair starts from the right one. */
+		transport: mcpTransportSchema.optional(),
+		description: z.string().optional(),
+		/** The tool options pi would still accept, so a repair keeps them. */
+		exposure: mcpExposureSchema.optional(),
+		timeout: z.number().optional(),
+		toolExposure: mcpToolExposureSchema.optional(),
+		oauth: mcpOAuthViewSchema.optional(),
+		oauthClientSecret: z.boolean(),
+		authProvider: z.string().optional(),
+	})
+	.openapi("McpInvalidEntryDetail");
 
 const mcpServerDetailSchema = z
 	.discriminatedUnion("kind", [
 		mcpServerEntryDetailSchema,
 		mcpOverrideEntrySchema,
-		mcpInvalidEntrySchema,
+		mcpInvalidEntryDetailSchema,
 	])
 	.openapi("McpServerDetail");
 
 export type McpServerDetail = z.infer<typeof mcpServerDetailSchema>;
+
+/**
+ * Whether the configured servers can be reached at all: pi activates `codemode`
+ * for a `codemode` server only while `autoEnableCodemode` is on, and `tool_search`
+ * for a `deferred` one. Everything here is read from the files, so it says what
+ * the next session will do.
+ */
+const mcpUnreachableSchema = z
+	.object({
+		name: z.string(),
+		/** The exposures of this server that need codemode or tool_search. */
+		exposures: z.array(mcpExposureSchema),
+	})
+	.openapi("McpUnreachable");
+
+export const mcpReachSchema = z
+	.object({
+		/** `autoEnableCodemode` as written per file; absent means pi's default of true. */
+		autoEnableCodemode: z.object({
+			global: z.boolean().optional(),
+			project: z.boolean().optional(),
+		}),
+		/** Whether `defaultTools` in `settings.json` already names codemode. */
+		codemodeDefault: z.boolean(),
+		/** `settings.json` disables the built-in that reaches these tools. */
+		codemodeDisabled: z.boolean(),
+		toolSearchDisabled: z.boolean(),
+		/** Enabled servers nothing can reach, with the exposures that need a reaching tool. */
+		unreachable: z.array(mcpUnreachableSchema),
+	})
+	.openapi("McpReach");
+
+export type McpReach = z.infer<typeof mcpReachSchema>;
+
+/**
+ * What the live engines report. pi exposes no connection state, only the tools a
+ * server registered once it connected, so this cannot tell failed from
+ * needs-sign-in from still-connecting; the panel says which one it means.
+ */
+export const mcpLiveSchema = z
+	.object({
+		/** Live engines that answered. Zero means no session is open in this process. */
+		sessions: z.number().int(),
+		/** Servers with at least one registered tool, and how many. */
+		servers: z.array(
+			z.object({
+				name: z.string(),
+				tools: z.number().int(),
+			}),
+		),
+		/** The reaching tools that are active in at least one live engine. */
+		codemode: z.boolean(),
+		toolSearch: z.boolean(),
+	})
+	.openapi("McpLive");
+
+export type McpLive = z.infer<typeof mcpLiveSchema>;
 
 const mcpParams = z.object({ scope: mcpScopeSchema, name: mcpNameSchema });
 
@@ -171,11 +314,11 @@ export const readMcpRoute = createRoute({
 	tags: ["settings"],
 	operationId: "readMcpServer",
 	description:
-		"The editable detail of one MCP server, with variable and header names but no values",
+		"The editable detail of one MCP server, with variable, header and secret names but no values, plus its log tail",
 	request: { params: mcpParams },
 	responses: {
 		200: {
-			description: "The server entry, its target and the names of its stored values",
+			description: "The server entry, its target, the names of its stored values and its log",
 			content: { "application/json": { schema: mcpServerDetailSchema } },
 		},
 		400: { description: "mcp.json could not be read", content: errorContent },
@@ -188,7 +331,8 @@ export const writeMcpRoute = createRoute({
 	path: "/api/settings/mcp",
 	tags: ["settings"],
 	operationId: "writeMcpServer",
-	description: "Add or change an MCP server in the file its scope names",
+	description:
+		"Add or change an MCP server in the file its scope names. A save pi would skip is refused",
 	request: {
 		body: { required: true, content: { "application/json": { schema: mcpServerInputSchema } } },
 	},
@@ -226,6 +370,22 @@ export const inProjectMcpRoute = createRoute({
 	},
 	responses: {
 		204: { description: "The project file now carries the override, and live engines reloaded" },
+		400: { description: "The change was refused", content: errorContent },
+	},
+});
+
+export const autoEnableMcpRoute = createRoute({
+	method: "post",
+	path: "/api/settings/mcp/auto-enable-codemode",
+	tags: ["settings"],
+	operationId: "setMcpAutoEnableCodemode",
+	description:
+		"Let a connecting codemode server activate codemode in its file. On removes the key, which is pi's default",
+	request: {
+		body: { required: true, content: { "application/json": { schema: mcpAutoEnableInputSchema } } },
+	},
+	responses: {
+		204: { description: "The file now carries the setting, and live engines reloaded" },
 		400: { description: "The change was refused", content: errorContent },
 	},
 });

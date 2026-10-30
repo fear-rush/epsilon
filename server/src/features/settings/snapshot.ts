@@ -7,6 +7,7 @@
 import type { AgentHome } from "../../platform/agent-home";
 import { modelRuntime } from "../../platform/pi";
 import { readModelsFrom } from "../conversation";
+import type { SessionRegistry } from "../conversation";
 import { readDefaultModel } from "../general";
 import { isMcpTurnedOff, listMcpServers } from "../mcp";
 import { listPackages } from "../packages";
@@ -36,6 +37,7 @@ const problemText = async (
 export const readSettings = async (
 	projectDir: string,
 	home: AgentHome,
+	engines: SessionRegistry,
 ): Promise<SettingsSnapshot> => {
 	const runtime = await modelRuntime(home);
 	const [providers, builtins, models, mcp, mcpDisabled, skills, packages] = await Promise.all([
@@ -55,6 +57,8 @@ export const readSettings = async (
 		builtins,
 		models,
 		mcp: mcp.servers,
+		mcpReach: mcp.reach,
+		mcpLive: engines.mcpLive(mcp.servers.map((server) => server.name)),
 		mcpDisabled,
 		skills,
 		packages,

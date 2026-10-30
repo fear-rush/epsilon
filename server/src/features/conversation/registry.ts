@@ -6,6 +6,8 @@
  * opening a second writer on one session file.
  */
 import type { AgentHome } from "../../platform/agent-home";
+import type { McpLive } from "../mcp";
+import { aggregateMcpLive } from "../mcp";
 import { LiveSession } from "./session";
 
 /** Where a session runs and which pi config it reads, from `main.ts` once. */
@@ -23,6 +25,25 @@ export class SessionRegistry {
 	find(sessionId: string): LiveSession | undefined {
 		const session = this.sessions.get(sessionId);
 		return session?.isOpen === true ? session : undefined;
+	}
+
+	/**
+	 * What the live engines can say about MCP: which servers registered tools and
+	 * whether a reaching tool is active. A server is reported by its configured
+	 * name, so the panel can match it to a row.
+	 */
+	mcpLive(names: readonly string[]): McpLive {
+		const states: McpLive[] = [];
+		for (const session of this.sessions.values()) {
+			if (!session.isOpen) continue;
+			try {
+				states.push(session.mcpLive(names));
+			} catch {
+				// A session mid-reload answers on the next read; the panel must not fail
+				// because one engine was rebuilding.
+			}
+		}
+		return aggregateMcpLive(states);
 	}
 
 	/** Every session this server holds an engine for, for the list badges. */

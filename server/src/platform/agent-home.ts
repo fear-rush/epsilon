@@ -11,6 +11,12 @@ export type AgentHome = {
 	readonly authFile: string;
 	readonly modelsFile: string;
 	readonly mcpFile: string;
+	/** MCP OAuth tokens, written by pi's sign-in. */
+	readonly mcpAuthFile: string;
+	/** The messages MCP servers send with `notifications/message`, rotated by pi. */
+	readonly mcpLogFile: string;
+	/** The previous `mcp.log`, kept until the next rotation overwrites it. */
+	readonly mcpLogRotatedFile: string;
 	readonly skillsDir: string;
 };
 
@@ -19,6 +25,9 @@ export const agentHome = (dir: string): AgentHome => ({
 	authFile: join(dir, "auth.json"),
 	modelsFile: join(dir, "models.json"),
 	mcpFile: join(dir, "mcp.json"),
+	mcpAuthFile: join(dir, "mcp-auth.json"),
+	mcpLogFile: join(dir, "mcp.log"),
+	mcpLogRotatedFile: join(dir, "mcp.log.1"),
 	skillsDir: join(dir, "skills"),
 });
 

@@ -8,8 +8,12 @@ type Schemas = components["schemas"];
 
 export type BuiltinProvider = Schemas["BuiltinProvider"];
 export type DefaultModel = Schemas["DefaultModel"];
+export type McpAutoEnableInput = Schemas["McpAutoEnableInput"];
 export type McpEnabledInput = Schemas["McpEnabledInput"];
 export type McpInProjectInput = Schemas["McpInProjectInput"];
+export type McpLive = Schemas["McpLive"];
+export type McpOAuthInput = Schemas["McpOAuthInput"];
+export type McpReach = Schemas["McpReach"];
 export type McpServerDetail = Schemas["McpServerDetail"];
 export type McpServerInput = Schemas["McpServerInput"];
 export type McpServerView = Schemas["McpServerView"];

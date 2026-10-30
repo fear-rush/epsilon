@@ -4,7 +4,7 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import { entriesOf } from "./domain";
+import { entriesOf, readTarget } from "./domain";
 import type { McpRawEntry, McpRawObject, McpServer } from "./domain";
 
 type Raw = McpRawObject;
@@ -234,5 +234,98 @@ describe("invalid project entries", () => {
 	test("an invalid override keeps its enabled flag", () => {
 		const entries = resolve({}, { files: { enabled: false } });
 		expect(find(entries, "project", "files")).toMatchObject({ kind: "invalid", enabled: false });
+	});
+});
+
+describe("pi's validator rules", () => {
+	const invalidCases: [string, Raw, string][] = [
+		[
+			"a callback URL with a query",
+			{ url: "https://x.test/mcp", oauth: { callbackUrl: "http://127.0.0.1:8080/callback?x=1" } },
+			"query or a fragment",
+		],
+		[
+			"a callback port out of range",
+			{ url: "https://x.test/mcp", oauth: { callbackPort: 70_000 } },
+			"port number",
+		],
+		[
+			"a callback URL and port that disagree",
+			{
+				url: "https://x.test/mcp",
+				oauth: { callbackUrl: "http://127.0.0.1:8080/callback", callbackPort: 9090 },
+			},
+			"different ports",
+		],
+		[
+			"cimd with a client id",
+			{ url: "https://x.test/mcp", oauth: { clientRegistration: "cimd", clientId: "a" } },
+			'"cimd" cannot be combined',
+		],
+		[
+			"a metadata URL on plain http",
+			{
+				url: "https://x.test/mcp",
+				oauth: { authServerMetadataUrl: "http://example.test/metadata" },
+			},
+			"https URL",
+		],
+		[
+			"auth over plain http off this machine",
+			{ url: "http://example.test/mcp", auth: { provider: "openai" } },
+			"auth requires an https URL",
+		],
+	];
+	test.each(invalidCases)("%s is invalid", (_label, entry, problem) => {
+		const [server] = resolve({ docs: entry }, {});
+		expect(server).toMatchObject({ kind: "invalid" });
+		expect(problemOf(server)).toContain(problem);
+	});
+
+	const validCases: [string, Raw][] = [
+		[
+			"a loopback callback",
+			{
+				url: "https://x.test/mcp",
+				oauth: { callbackUrl: "http://localhost:8080/callback", callbackPort: 8080 },
+			},
+		],
+		["cimd alone", { url: "https://x.test/mcp", oauth: { clientRegistration: "cimd" } }],
+		["auth on loopback http", { url: "http://127.0.0.1:3000/mcp", auth: { provider: "openai" } }],
+		[
+			"metadata on loopback http",
+			{
+				url: "https://x.test/mcp",
+				oauth: { authServerMetadataUrl: "http://localhost:9000/metadata" },
+			},
+		],
+	];
+	test.each(validCases)("%s is a server", (_label, entry) => {
+		expect(resolve({ docs: entry }, {})[0]?.kind).toBe("server");
+	});
+});
+
+describe("the raw target of an entry pi skips", () => {
+	test("keeps what has the right type and leaves out what does not", () => {
+		const target = readTarget({
+			command: "npx",
+			args: ["a", 2],
+			cwd: 7,
+			env: { TOKEN: "secret", BAD: 1 },
+			exposure: "loud",
+			description: "d",
+		});
+		expect(target).toEqual({
+			transport: "stdio",
+			command: "npx",
+			description: "d",
+			envKeys: ["TOKEN"],
+			headerKeys: [],
+		});
+	});
+
+	test("a url picks the http transport, and neither leaves it undefined", () => {
+		expect(readTarget({ url: "https://x.test/mcp" })).toMatchObject({ transport: "http" });
+		expect(readTarget({ command: 3 }).transport).toBeUndefined();
 	});
 });

@@ -5,6 +5,7 @@
 import { api } from "./client";
 import type {
 	DefaultModel,
+	McpAutoEnableInput,
 	McpEnabledInput,
 	McpInProjectInput,
 	McpServerDetail,
@@ -82,6 +83,10 @@ export const setMcpServerEnabled = async (input: McpEnabledInput): Promise<void>
 
 export const setMcpServerInProject = async (input: McpInProjectInput): Promise<void> => {
 	await api.POST("/api/settings/mcp/in-project", { body: input });
+};
+
+export const setMcpAutoEnableCodemode = async (input: McpAutoEnableInput): Promise<void> => {
+	await api.POST("/api/settings/mcp/auto-enable-codemode", { body: input });
 };
 
 export const fetchSkill = async (name: string): Promise<SkillInput> =>

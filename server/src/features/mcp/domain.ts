@@ -11,7 +11,14 @@
  */
 import { z } from "zod";
 import type { McpExposure, McpOverrideKey, McpRelation, McpScope, McpTransport } from "shared";
-import { mcpExposureSchema } from "shared";
+import {
+	authProviderProblem,
+	mcpExposureSchema,
+	mcpExposuresOf,
+	mcpNamespaceOf,
+	mcpOAuthSchema,
+	oauthProblem,
+} from "shared";
 
 /** The only keys a project entry may set when it overrides a global server. */
 const MCP_OVERRIDE_KEYS: readonly McpOverrideKey[] = ["enabled", "exposure", "toolExposure"];
@@ -21,17 +28,11 @@ const storedExposureSchema = z
 	.union([mcpExposureSchema, z.literal("codemode-deferred")])
 	.transform((value): McpExposure => (value === "codemode-deferred" ? "codemode" : value));
 
-/** OAuth options pi resolves before it connects; the form keeps them read-only. */
-const oauthSchema = z.looseObject({
-	clientId: z.string().optional(),
-	clientSecret: z.string().optional(),
-	callbackPort: z.number().int().optional(),
-	callbackUrl: z.string().optional(),
-	scope: z.string().optional(),
-	clientName: z.string().optional(),
-	clientRegistration: z.enum(["dcr", "cimd"]).optional(),
-	authServerMetadataUrl: z.string().optional(),
-});
+/** OAuth options pi resolves before it connects; the rules are shared with the form. */
+const oauthSchema = mcpOAuthSchema;
+
+/** A `/login` provider whose token an HTTP server may send instead of using OAuth. */
+const authSchema = z.looseObject({ provider: z.string().min(1) });
 
 /** One server entry of either transport. Unknown keys are kept by `looseObject`. */
 const mcpEntrySchema = z.looseObject({
@@ -43,7 +44,7 @@ const mcpEntrySchema = z.looseObject({
 	url: z.string().optional(),
 	headers: z.record(z.string(), z.string()).optional(),
 	oauth: oauthSchema.optional(),
-	auth: z.looseObject({ provider: z.string().min(1) }).optional(),
+	auth: authSchema.optional(),
 	exposure: storedExposureSchema.optional(),
 	toolExposure: z.record(z.string(), storedExposureSchema).optional(),
 	enabled: z.boolean().optional(),
@@ -160,8 +161,9 @@ export function targetOf(entry: McpEntry): string {
 
 /**
  * The rules pi's validator applies on top of the schema: a valid server name, no
- * legacy SSE, a target that exists, and an http(s) URL. Everything else (types,
- * exposures, a positive timeout) is the schema's.
+ * legacy SSE, a target that exists, an http(s) URL, and the `oauth` and `auth`
+ * options pi will only send over https or to this machine. Everything else
+ * (types, exposures, a positive timeout) is the schema's.
  */
 function entryProblem(name: string, entry: McpEntry): string | undefined {
 	if (!/^[A-Za-z0-9_-]+$/.test(name)) {
@@ -174,7 +176,16 @@ function entryProblem(name: string, entry: McpEntry): string | undefined {
 		entry.url !== undefined &&
 		(entry.type === undefined || entry.type === "http" || entry.type === "streamable-http");
 	if (http && entry.url !== undefined) {
-		return isHttpUrl(entry.url) ? undefined : "url must be an http or https URL.";
+		if (!isHttpUrl(entry.url)) return "url must be an http or https URL.";
+		if (entry.oauth !== undefined) {
+			const problem = oauthProblem(entry.oauth);
+			if (problem !== undefined) return problem;
+		}
+		if (entry.auth !== undefined) {
+			const problem = authProviderProblem(entry.url);
+			if (problem !== undefined) return problem;
+		}
+		return undefined;
 	}
 	const stdio = entry.command !== undefined && (entry.type === undefined || entry.type === "stdio");
 	if (stdio) return undefined;
@@ -197,6 +208,84 @@ export function readMcpEntry(name: string, value: McpRawEntry): McpEntryRead {
 	if (problem !== undefined) return { kind: "invalid", problem };
 	return { kind: "server", entry, transport: transportOf(entry) };
 }
+
+/**
+ * The keys of a stored map whose value is a string. One bad value hides one name
+ * rather than the whole map, which is what a repair needs to see.
+ */
+const storedStringKeys = (value: McpRawEntry | undefined): string[] => {
+	const parsed = z.record(z.string(), jsonSchema).safeParse(value);
+	if (!parsed.success) return [];
+	return Object.entries(parsed.data).flatMap(([key, entry]) =>
+		z.string().safeParse(entry).success ? [key] : [],
+	);
+};
+
+/**
+ * What an entry pi skips still says about its target, so the form can prefill a
+ * repair instead of starting from the name alone. A value is kept only when it
+ * has the type its field needs, and a key pi rejected (a bad `exposure`, say) is
+ * left out so the form starts from a valid default for it. `env` and `headers`
+ * contribute their names, never a stored value.
+ */
+export type McpTargetRead = {
+	transport?: McpTransport;
+	command?: string;
+	args?: string[];
+	cwd?: string;
+	url?: string;
+	description?: string;
+	envKeys: string[];
+	headerKeys: string[];
+};
+
+export function readTarget(value: McpRawEntry): McpTargetRead {
+	const raw = readRawObject(value);
+	const command = z.string().safeParse(raw.command);
+	const url = z.string().safeParse(raw.url);
+	const args = z.array(z.string()).safeParse(raw.args);
+	const cwd = z.string().safeParse(raw.cwd);
+	const description = z.string().safeParse(raw.description);
+	const target: McpTargetRead = {
+		envKeys: storedStringKeys(raw.env),
+		headerKeys: storedStringKeys(raw.headers),
+	};
+	if (url.success) target.transport = "http";
+	else if (command.success) target.transport = "stdio";
+	if (command.success) target.command = command.data;
+	if (args.success) target.args = args.data;
+	if (cwd.success) target.cwd = cwd.data;
+	if (url.success) target.url = url.data;
+	if (description.success) target.description = description.data;
+	return target;
+}
+
+/** The provider an entry names for `auth`, when it names a usable one. */
+export const readAuthProvider = (value: McpRawEntry | undefined): string | undefined => {
+	const parsed = authSchema.safeParse(value);
+	return parsed.success ? parsed.data.provider : undefined;
+};
+
+/**
+ * The tool options an invalid entry still sets with values pi reads: a repair
+ * keeps them instead of resetting what broke for another reason. A value pi
+ * rejects is left out, so the form starts from a valid default for it.
+ */
+export type McpRawSettings = { exposure?: McpExposure; timeout?: number };
+
+export function readRawSettings(value: McpRawEntry): McpRawSettings {
+	const raw = readRawObject(value);
+	const settings: McpRawSettings = {};
+	const exposure = storedExposureSchema.safeParse(raw.exposure);
+	if (exposure.success) settings.exposure = exposure.data;
+	const timeout = z.number().positive().safeParse(raw.timeout);
+	if (timeout.success) settings.timeout = timeout.data;
+	return settings;
+}
+
+/** The exposures of one config that only codemode or `tool_search` can reach. */
+export const indirectExposuresOf = (config: McpEntry): McpExposure[] =>
+	mcpExposuresOf(config).filter((exposure) => exposure === "codemode" || exposure === "deferred");
 
 /** The config pi connects for a project override: the global entry with the override's keys. */
 function applyOverride(base: McpEntry, override: McpEntry): McpEntry {
@@ -250,6 +339,8 @@ export type McpServer =
 			/** The entry's own `enabled`, so a row still shows Off while pi skips it. */
 			enabled: boolean;
 			overrideKeys?: McpOverrideKey[];
+			/** The file's object, so the form can prefill a repair from what pi can still read. */
+			raw: McpRawObject;
 	  };
 
 type GlobalServer = Extract<McpServer, { kind: "server" }>;
@@ -258,6 +349,7 @@ type InvalidServer = Extract<McpServer, { kind: "invalid" }>;
 /** Phase 1: one entry read on its own, plus the raw facts an invalid entry still shows. */
 interface ParsedEntry {
 	name: string;
+	raw: McpRawObject;
 	read: McpEntryRead;
 	enabled: boolean | undefined;
 	/** The override keys the raw object sets, when it has no command, url or type. */
@@ -267,13 +359,14 @@ interface ParsedEntry {
 const parseFile = (servers: Record<string, McpRawEntry>): ParsedEntry[] =>
 	Object.entries(servers).map(([name, value]) => ({
 		name,
+		raw: readRawObject(value),
 		read: readMcpEntry(name, value),
 		enabled: rawEnabled(value),
 		rawOverrideKeys: isRawOverride(value) ? rawOverrideKeys(value) : undefined,
 	}));
 
 /** Names that differ only in `-` and `_` would share pi's tool namespace. */
-const namespaceOf = (name: string): string => `mcp__${name.replace(/-/g, "_")}`;
+const namespaceOf = mcpNamespaceOf;
 
 const invalid = (
 	parsed: ParsedEntry,
@@ -287,6 +380,7 @@ const invalid = (
 	problem,
 	enabled: parsed.enabled ?? true,
 	overrideKeys,
+	raw: parsed.raw,
 });
 
 const clashProblem = (other: string): string =>

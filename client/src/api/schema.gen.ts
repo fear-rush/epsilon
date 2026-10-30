@@ -73,7 +73,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Providers, default model, MCP servers, skills and packages from the agent home */
+		/** Providers, default model, MCP servers with what they can reach, skills and packages from the agent home */
 		get: operations["readSettings"];
 		put?: never;
 		post?: never;
@@ -174,7 +174,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** The editable detail of one MCP server, with variable and header names but no values */
+		/** The editable detail of one MCP server, with variable, header and secret names but no values, plus its log tail */
 		get: operations["readMcpServer"];
 		put?: never;
 		post?: never;
@@ -194,7 +194,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Add or change an MCP server in the file its scope names */
+		/** Add or change an MCP server in the file its scope names. A save pi would skip is refused */
 		post: operations["writeMcpServer"];
 		delete?: never;
 		options?: never;
@@ -230,6 +230,23 @@ export interface paths {
 		put?: never;
 		/** Set a global server's state in this project: inherit the global setting, or write an override */
 		post: operations["setMcpServerInProject"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/mcp/auto-enable-codemode": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Let a connecting codemode server activate codemode in its file. On removes the key, which is pi's default */
+		post: operations["setMcpAutoEnableCodemode"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -326,6 +343,8 @@ export interface components {
 			builtins: components["schemas"]["BuiltinProvider"][];
 			models: components["schemas"]["SnapshotModel"][];
 			mcp: components["schemas"]["McpServerView"][];
+			mcpReach: components["schemas"]["McpReach"];
+			mcpLive: components["schemas"]["McpLive"];
 			mcpDisabled: boolean;
 			projectDir: string;
 			skills: components["schemas"]["SkillView"][];
@@ -369,6 +388,7 @@ export interface components {
 			description?: string;
 			enabled: boolean;
 			exposure?: "codemode" | "deferred" | "direct" | "hidden";
+			needsIndirect: boolean;
 			timeout?: number;
 			relation?: "replaces-global" | "replaced-by-project" | "overridden-by-project";
 		};
@@ -381,6 +401,7 @@ export interface components {
 			description?: string;
 			enabled: boolean;
 			exposure?: "codemode" | "deferred" | "direct" | "hidden";
+			needsIndirect: boolean;
 			timeout?: number;
 			overrideKeys: ("enabled" | "exposure" | "toolExposure")[];
 			overrideEnabled?: boolean;
@@ -392,6 +413,29 @@ export interface components {
 			problem: string;
 			enabled: boolean;
 			overrideKeys?: ("enabled" | "exposure" | "toolExposure")[];
+		};
+		McpReach: {
+			autoEnableCodemode: {
+				global?: boolean;
+				project?: boolean;
+			};
+			codemodeDefault: boolean;
+			codemodeDisabled: boolean;
+			toolSearchDisabled: boolean;
+			unreachable: components["schemas"]["McpUnreachable"][];
+		};
+		McpUnreachable: {
+			name: string;
+			exposures: ("codemode" | "deferred" | "direct" | "hidden")[];
+		};
+		McpLive: {
+			sessions: number;
+			servers: ({
+				name: string;
+				tools: number;
+			})[];
+			codemode: boolean;
+			toolSearch: boolean;
 		};
 		SkillView: {
 			name: string;
@@ -516,7 +560,7 @@ export interface components {
 				[key: string]: components["schemas"]["ModelOverride"];
 			};
 		};
-		McpServerDetail: components["schemas"]["McpServerEntryDetail"] | components["schemas"]["McpOverrideEntry"] | components["schemas"]["McpInvalidEntry"];
+		McpServerDetail: components["schemas"]["McpServerEntryDetail"] | components["schemas"]["McpOverrideEntry"] | components["schemas"]["McpInvalidEntryDetail"];
 		McpServerEntryDetail: components["schemas"]["McpServerEntry"] & ({
 			command?: string;
 			args?: string[];
@@ -524,15 +568,50 @@ export interface components {
 			cwd?: string;
 			url?: string;
 			headerKeys: string[];
-			oauthKeys: string[];
+			toolExposure?: {
+				[key: string]: "codemode" | "deferred" | "direct" | "hidden";
+			};
+			oauth?: components["schemas"]["McpOAuth"];
+			oauthClientSecret: boolean;
 			authProvider?: string;
-			toolExposureKeys: string[];
+			credentialsStored: boolean;
+			log: string[];
+		});
+		McpOAuth: {
+			clientId?: string;
+			callbackPort?: number;
+			callbackUrl?: string;
+			scope?: string;
+			clientName?: string;
+			clientRegistration?: "dcr" | "cimd";
+			authServerMetadataUrl?: string;
+		};
+		McpInvalidEntryDetail: components["schemas"]["McpInvalidEntry"] & ({
+			command?: string;
+			args?: string[];
+			envKeys: string[];
+			cwd?: string;
+			url?: string;
+			headerKeys: string[];
+			transport?: "stdio" | "http";
+			description?: string;
+			exposure?: "codemode" | "deferred" | "direct" | "hidden";
+			timeout?: number;
+			toolExposure?: {
+				[key: string]: "codemode" | "deferred" | "direct" | "hidden";
+			};
+			oauth?: components["schemas"]["McpOAuth"];
+			oauthClientSecret: boolean;
+			authProvider?: string;
 		});
 		McpServerInput: ({
 			name: string;
 			scope: "global" | "project";
 			description?: string;
 			exposure?: "codemode" | "deferred" | "direct" | "hidden";
+			toolExposure?: {
+				[key: string]: "codemode" | "deferred" | "direct" | "hidden";
+			};
 			timeout?: number;
 			transport: "stdio";
 			command: string;
@@ -546,13 +625,28 @@ export interface components {
 			scope: "global" | "project";
 			description?: string;
 			exposure?: "codemode" | "deferred" | "direct" | "hidden";
+			toolExposure?: {
+				[key: string]: "codemode" | "deferred" | "direct" | "hidden";
+			};
 			timeout?: number;
 			transport: "http";
 			url: string;
 			headers?: {
 				[key: string]: string;
 			};
+			oauth?: components["schemas"]["McpOAuthInput"];
+			authProvider?: string;
 		});
+		McpOAuthInput: {
+			clientId?: string;
+			clientSecret?: string;
+			callbackPort?: number;
+			callbackUrl?: string;
+			scope?: string;
+			clientName?: string;
+			clientRegistration?: "dcr" | "cimd";
+			authServerMetadataUrl?: string;
+		};
 		McpEnabledInput: {
 			scope: "global" | "project";
 			name: string;
@@ -561,6 +655,10 @@ export interface components {
 		McpInProjectInput: {
 			name: string;
 			value: "inherit" | "on" | "off";
+		};
+		McpAutoEnableInput: {
+			scope: "global" | "project";
+			enabled: boolean;
 		};
 		SkillInput: {
 			name: string;
@@ -672,7 +770,7 @@ interface operations {
 			};
 		};
 	};
-	/** Providers, default model, MCP servers, skills and packages from the agent home */
+	/** Providers, default model, MCP servers with what they can reach, skills and packages from the agent home */
 	readSettings: {
 		parameters: {
 			query?: never;
@@ -894,7 +992,7 @@ interface operations {
 			};
 		};
 	};
-	/** The editable detail of one MCP server, with variable and header names but no values */
+	/** The editable detail of one MCP server, with variable, header and secret names but no values, plus its log tail */
 	readMcpServer: {
 		parameters: {
 			query?: never;
@@ -907,7 +1005,7 @@ interface operations {
 		};
 		requestBody?: never;
 		responses: {
-			/** The server entry, its target and the names of its stored values */
+			/** The server entry, its target, the names of its stored values and its log */
 			200: {
 				headers: {
 					[name: string]: unknown;
@@ -967,7 +1065,7 @@ interface operations {
 			};
 		};
 	};
-	/** Add or change an MCP server in the file its scope names */
+	/** Add or change an MCP server in the file its scope names. A save pi would skip is refused */
 	writeMcpServer: {
 		parameters: {
 			query?: never;
@@ -1046,6 +1144,38 @@ interface operations {
 		};
 		responses: {
 			/** The project file now carries the override, and live engines reloaded */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The change was refused */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Let a connecting codemode server activate codemode in its file. On removes the key, which is pi's default */
+	setMcpAutoEnableCodemode: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["McpAutoEnableInput"];
+			};
+		};
+		responses: {
+			/** The file now carries the setting, and live engines reloaded */
 			204: {
 				headers: {
 					[name: string]: unknown;

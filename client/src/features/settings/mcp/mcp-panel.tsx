@@ -18,15 +18,16 @@ import {
 import { MasterListPanel } from "@/features/settings/kit/master-list-panel";
 import { useSettings } from "@/features/settings/queries";
 import { useSettingsRefresh } from "@/features/settings/queries";
-import { setMcpServerEnabled } from "@/api/endpoints";
-import type { McpServerView } from "@/api/types";
+import { setMcpAutoEnableCodemode, setMcpServerEnabled } from "@/api/endpoints";
+import type { McpLive, McpReach, McpServerView } from "@/api/types";
 import { MasterDetailLayout } from "@/features/settings/kit/master-detail-layout";
 import { asScope } from "./mcp-detail";
 
 /**
- * The left side of the MCP editor: this project's servers, the global servers,
- * and the add route. A server appears under the file it lives in; the same name
- * can appear twice, once per file, and the project entry wins where it does.
+ * The left side of the MCP editor: whether the configured servers can be reached
+ * at all, this project's servers, the global servers, and the add route. A server
+ * appears under the file it lives in; the same name can appear twice, once per
+ * file, and the project entry wins where it does.
  */
 
 type RowBadge = { label: string; variant: "warning" | "outline" | "secondary" };
@@ -58,21 +59,74 @@ const badgeFor = (server: McpServerView): RowBadge | undefined => {
 const targetOf = (server: McpServerView): string =>
 	server.kind === "invalid" ? "" : server.target;
 
-const targetLine = (server: McpServerView): string => {
+const targetLine = (server: McpServerView, tools: number | undefined): string => {
 	const transport = server.kind === "invalid" ? "unread" : server.transport;
 	const target = targetOf(server);
-	if (target === "") return transport;
-	return `${transport} · ${target}`;
+	const line = target === "" ? transport : `${transport} · ${target}`;
+	if (tools === undefined) return line;
+	return `${line} · ${tools} ${tools === 1 ? "tool" : "tools"}`;
 };
+
+/** Why no reaching tool will be active, in the operator's own words. */
+const unreachableReason = (reach: McpReach): string => {
+	if (reach.codemodeDisabled) {
+		return 'settings.json turns the codemode built-in off with "-builtin:codemode"';
+	}
+	if (reach.toolSearchDisabled) {
+		return 'settings.json turns the tool-search built-in off with "-builtin:tool-search"';
+	}
+	return "codemode auto-enable is off and settings.json defaultTools does not name codemode";
+};
+
+/**
+ * pi activates codemode for a connecting codemode server only while
+ * `autoEnableCodemode` is on, and `tool_search` for a deferred one. This is the
+ * switch that decides it, written to the file that decides it today.
+ */
+function CodemodeBlock({
+	reach,
+	pending,
+	onToggle,
+}: {
+	reach: McpReach;
+	pending: boolean;
+	onToggle: (scope: McpScope, enabled: boolean) => void;
+}) {
+	const scope: McpScope = reach.autoEnableCodemode.project !== undefined ? "project" : "global";
+	const enabled = (reach.autoEnableCodemode.project ?? reach.autoEnableCodemode.global) !== false;
+	const file = scope === "project" ? "this project's .pi/mcp.json" : "the global mcp.json";
+	return (
+		<div className="grid gap-1">
+			<label className="flex items-center justify-between gap-2" htmlFor="mcp-auto-codemode">
+				<span className="text-xs font-medium">Auto-enable codemode</span>
+				<Checkbox
+					id="mcp-auto-codemode"
+					checked={enabled}
+					disabled={pending}
+					onCheckedChange={(checked) => onToggle(scope, checked === true)}
+				/>
+			</label>
+			<p className="text-xs text-muted-foreground">
+				pi activates codemode when a codemode server connects. Written to {file}
+				{reach.codemodeDefault
+					? "; settings.json defaultTools already names codemode, so it stays reachable either way."
+					: "."}
+			</p>
+		</div>
+	);
+}
 
 function ServerRow({
 	server,
 	selected,
+	tools,
 	onToggle,
 	toggling,
 }: {
 	server: McpServerView;
 	selected: boolean;
+	/** Tools the server registered in a live session; undefined when no session reports it. */
+	tools: number | undefined;
 	onToggle: (server: McpServerView, enabled: boolean) => void;
 	toggling: boolean;
 }) {
@@ -80,7 +134,7 @@ function ServerRow({
 	return (
 		<div
 			className={cn(
-				"flex items-center gap-1 rounded-xl pr-1 transition-colors",
+				"flex items-center gap-1 rounded-md pr-1 transition-colors",
 				selected ? "bg-muted" : "hover:bg-muted/60",
 			)}
 		>
@@ -93,7 +147,9 @@ function ServerRow({
 					<span className="block min-w-0 flex-1 truncate text-sm font-medium">{server.name}</span>
 					{badge !== undefined && <Badge variant={badge.variant}>{badge.label}</Badge>}
 				</span>
-				<span className="block truncate text-xs text-muted-foreground">{targetLine(server)}</span>
+				<span className="block truncate text-xs text-muted-foreground">
+					{targetLine(server, tools)}
+				</span>
 			</Link>
 			<Checkbox
 				checked={server.enabled}
@@ -110,6 +166,7 @@ function ServerGroup({
 	description,
 	servers,
 	selected,
+	live,
 	onToggle,
 	toggling,
 }: {
@@ -117,6 +174,7 @@ function ServerGroup({
 	description?: string;
 	servers: McpServerView[];
 	selected: { scope: McpScope; name: string } | undefined;
+	live: McpLive | undefined;
 	onToggle: (server: McpServerView, enabled: boolean) => void;
 	toggling: boolean;
 }) {
@@ -138,6 +196,11 @@ function ServerGroup({
 						key={`${server.scope}\0${server.name}`}
 						server={server}
 						selected={selected?.scope === server.scope && selected.name === server.name}
+						tools={
+							server.kind === "server" && server.relation === "replaced-by-project"
+								? undefined
+								: live?.servers.find((entry) => entry.name === server.name)?.tools
+						}
 						onToggle={onToggle}
 						toggling={toggling}
 					/>
@@ -176,6 +239,34 @@ function McpPanel({
 			setMcpServerEnabled(input),
 		onSuccess: () => refresh(),
 	});
+	const codemode = useMutation({
+		mutationFn: (input: { scope: McpScope; enabled: boolean }) => setMcpAutoEnableCodemode(input),
+		onSuccess: () => refresh(),
+	});
+	const reach = settings.data?.mcpReach;
+	const live = settings.data?.mcpLive;
+	const mcpDisabled = settings.data?.mcpDisabled;
+	const unreachable = reach?.unreachable ?? [];
+	/**
+	 * What the files promise and what the live engines do can disagree: an
+	 * extension can replace codemode or tool_search without a `settings.json` flag.
+	 * When a live session has neither reaching tool, the panel says so with the
+	 * names it can see, instead of trusting the file.
+	 */
+	const unlisted =
+		live === undefined
+			? []
+			: live.servers.filter((entry) => !servers.some((v) => v.name === entry.name));
+	const stalled =
+		live !== undefined && live.sessions > 0 && !live.codemode && !live.toolSearch
+			? servers.filter(
+					(server) =>
+						server.kind !== "invalid" &&
+						server.enabled &&
+						server.needsIndirect &&
+						(server.kind !== "server" || server.relation !== "replaced-by-project"),
+				)
+			: [];
 
 	return (
 		<MasterListPanel
@@ -196,10 +287,42 @@ function McpPanel({
 							</Alert>
 						</div>
 					)}
+					{mcpDisabled !== true && unreachable.length > 0 && reach !== undefined && (
+						<div className="shrink-0 px-3 py-2">
+							<Alert>
+								<TriangleAlertIcon />
+								<AlertDescription className="text-xs">
+									The model cannot call {unreachable.map((server) => server.name).join(", ")}: pi
+									reaches {unreachable.length === 1 ? "its tools" : "their tools"} only through{" "}
+									<code>codemode</code> or <code>tool_search</code>, and {unreachableReason(reach)}.
+								</AlertDescription>
+							</Alert>
+						</div>
+					)}
+					{mcpDisabled !== true && unreachable.length === 0 && stalled.length > 0 && (
+						<div className="shrink-0 px-3 py-2">
+							<Alert>
+								<TriangleAlertIcon />
+								<AlertDescription className="text-xs">
+									No live session has <code>codemode</code> or <code>tool_search</code> active, so
+									the model cannot call {stalled.map((server) => server.name).join(", ")}. Check{" "}
+									<code>settings.json</code> for <code>-builtin:codemode</code>,{" "}
+									<code>-builtin:tool-search</code>, or an extension that replaces them.
+								</AlertDescription>
+							</Alert>
+						</div>
+					)}
 					{toggle.error !== null && (
 						<div className="shrink-0 px-3 py-2">
 							<Alert variant="destructive">
 								<AlertDescription className="text-xs">{toggle.error.message}</AlertDescription>
+							</Alert>
+						</div>
+					)}
+					{codemode.error !== null && (
+						<div className="shrink-0 px-3 py-2">
+							<Alert variant="destructive">
+								<AlertDescription className="text-xs">{codemode.error.message}</AlertDescription>
 							</Alert>
 						</div>
 					)}
@@ -218,28 +341,37 @@ function McpPanel({
 					: undefined
 			}
 			footer={
-				<DropdownMenu>
-					<DropdownMenuTrigger className={cn(buttonVariants({ variant: "outline" }), "w-full")}>
-						<PlusIcon />
-						Add MCP server
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="start" className="w-64">
-						<DropdownMenuItem
-							onClick={() =>
-								void navigate({ to: "/settings/mcp/$scope/new", params: { scope: "global" } })
-							}
-						>
-							Global
-						</DropdownMenuItem>
-						<DropdownMenuItem
-							onClick={() =>
-								void navigate({ to: "/settings/mcp/$scope/new", params: { scope: "project" } })
-							}
-						>
-							This project
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
+				<div className="grid gap-3">
+					{reach !== undefined && (
+						<CodemodeBlock
+							reach={reach}
+							pending={codemode.isPending}
+							onToggle={(scope, enabled) => codemode.mutate({ scope, enabled })}
+						/>
+					)}
+					<DropdownMenu>
+						<DropdownMenuTrigger className={cn(buttonVariants({ variant: "outline" }), "w-full")}>
+							<PlusIcon />
+							Add MCP server
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="start" className="w-(--anchor-width)">
+							<DropdownMenuItem
+								onClick={() =>
+									void navigate({ to: "/settings/mcp/$scope/new", params: { scope: "global" } })
+								}
+							>
+								Global
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								onClick={() =>
+									void navigate({ to: "/settings/mcp/$scope/new", params: { scope: "project" } })
+								}
+							>
+								This project
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</div>
 			}
 		>
 			<ServerGroup
@@ -247,6 +379,7 @@ function McpPanel({
 				description={projectDir}
 				servers={project}
 				selected={selected}
+				live={live}
 				onToggle={(server, enabled) =>
 					toggle.mutate({ scope: server.scope, name: server.name, enabled })
 				}
@@ -256,11 +389,30 @@ function McpPanel({
 				title="Global"
 				servers={global}
 				selected={selected}
+				live={live}
 				onToggle={(server, enabled) =>
 					toggle.mutate({ scope: server.scope, name: server.name, enabled })
 				}
 				toggling={toggle.isPending}
 			/>
+			{unlisted.length > 0 && (
+				<div className="grid gap-1">
+					<span className="px-2 pt-3 pb-1 text-xs font-medium">Registered by an extension</span>
+					<p className="px-2 pb-1 text-xs text-muted-foreground">
+						A loaded extension registered these for its session with{" "}
+						<code>pi.registerMcpServer()</code>. They are in neither file, and changes to them apply
+						only to that session.
+					</p>
+					{unlisted.map((server) => (
+						<div key={server.name} className="flex items-center gap-2 px-2 py-1">
+							<span className="min-w-0 flex-1 truncate text-sm">{server.name}</span>
+							<span className="text-xs text-muted-foreground">
+								{server.tools} {server.tools === 1 ? "tool" : "tools"}
+							</span>
+						</div>
+					))}
+				</div>
+			)}
 		</MasterListPanel>
 	);
 }

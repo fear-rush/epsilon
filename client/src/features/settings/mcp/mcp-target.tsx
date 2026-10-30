@@ -1,7 +1,8 @@
 /**
  * The target the selected transport needs: a command with arguments and an
- * environment, or a URL with headers. Only this target is sent; the other one
- * stays in the draft so switching back does not lose it.
+ * environment, or a URL with headers, its OAuth options and the provider whose
+ * token it may send. Only this target is sent; the other one stays in the draft
+ * so switching back does not lose it.
  */
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -9,18 +10,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { PairRows } from "@/features/settings/kit/pair-rows";
 import { SettingsBlock, SettingsGroup } from "@/features/settings/kit/settings-section";
 
+import { McpOAuthFields } from "./mcp-oauth";
 import type { McpDraft } from "./mcp-draft";
 import type { McpFieldErrors } from "./mcp-validation";
-
-const storedHint = "A stored value is not shown. Leave it blank to keep it.";
 
 export function McpTargetFields({
 	draft,
 	errors,
+	providerIds,
 	update,
 }: {
 	draft: McpDraft;
 	errors: McpFieldErrors;
+	providerIds: readonly string[];
 	update: (patch: Partial<McpDraft>) => void;
 }) {
 	if (draft.transport === "stdio") {
@@ -72,7 +74,6 @@ export function McpTargetFields({
 					keyLabel="Variable name"
 					valueLabel="Variable value"
 					keyPlaceholder="KEY"
-					description={storedHint}
 					rows={draft.env}
 					error={errors.env}
 					onChange={(env) => update({ env })}
@@ -109,10 +110,16 @@ export function McpTargetFields({
 				keyLabel="Header name"
 				valueLabel="Header value"
 				keyPlaceholder="Authorization"
-				description={storedHint}
 				rows={draft.headers}
 				error={errors.headers}
 				onChange={(headers) => update({ headers })}
+			/>
+			<McpOAuthFields
+				scope={draft.scope}
+				draft={draft}
+				errors={errors}
+				providerIds={providerIds}
+				update={update}
 			/>
 		</>
 	);

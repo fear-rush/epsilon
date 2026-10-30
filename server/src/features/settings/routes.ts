@@ -9,7 +9,8 @@ const settingsRoute = createRoute({
 	path: "/api/settings",
 	tags: ["settings"],
 	operationId: "readSettings",
-	description: "Providers, default model, MCP servers, skills and packages from the agent home",
+	description:
+		"Providers, default model, MCP servers with what they can reach, skills and packages from the agent home",
 	responses: {
 		200: {
 			description: "The configuration Epsilon runs on",
@@ -18,7 +19,7 @@ const settingsRoute = createRoute({
 	},
 });
 
-export const settingsRoutes = ({ home, projectDir }: Deps) =>
+export const settingsRoutes = ({ home, projectDir, engines }: Deps) =>
 	new OpenAPIHono().openapi(settingsRoute, async (c) =>
-		c.json(await readSettings(projectDir, home), 200),
+		c.json(await readSettings(projectDir, home, engines), 200),
 	);

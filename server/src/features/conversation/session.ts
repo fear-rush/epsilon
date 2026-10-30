@@ -8,6 +8,8 @@ import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-
 import type { Command, DialogAnswer, ProtocolErrorCode, ServerFrame, SnapshotModel } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
+import type { McpLive } from "../mcp";
+import { mcpLiveOf } from "../mcp";
 import { Dialogs } from "./dialogs";
 import type { AnswerOutcome, FrameSink } from "./dialogs";
 import { createEngine, toJsonEvent } from "./engine";
@@ -121,6 +123,23 @@ export class LiveSession {
 
 	get needsInput(): boolean {
 		return this.dialogs.needsInput;
+	}
+
+	/**
+	 * What this engine's MCP servers report through their tools. pi exposes no
+	 * connection state, so a server appears here once it registered a tool and
+	 * `sessions` is the only answer for "is anything connected yet".
+	 */
+	mcpLive(names: readonly string[]): McpLive {
+		const agent = this.agent;
+		if (agent === undefined)
+			return { sessions: 0, servers: [], codemode: false, toolSearch: false };
+		const namespaces: string[] = [];
+		for (const tool of agent.getAllTools()) {
+			const namespace = tool.namespace?.name;
+			if (namespace !== undefined && namespace.startsWith("mcp__")) namespaces.push(namespace);
+		}
+		return mcpLiveOf({ names, namespaces, active: agent.getActiveToolNames() });
 	}
 
 	/**

@@ -6,7 +6,7 @@
 import { z } from "@hono/zod-openapi";
 
 import { defaultModelSchema } from "../general";
-import { mcpServerViewSchema } from "../mcp";
+import { mcpLiveSchema, mcpReachSchema, mcpServerViewSchema } from "../mcp";
 import { packageViewSchema } from "../packages";
 import { builtinProviderSchema, catalogModelSchema, providerViewSchema } from "../providers";
 import { skillViewSchema } from "../skills";
@@ -22,6 +22,10 @@ export const settingsSnapshotSchema = z
 		/** Every model the engine accepts, for the default-model picker. */
 		models: z.array(catalogModelSchema),
 		mcp: z.array(mcpServerViewSchema),
+		/** What the configured servers can reach at all, read from both files and `settings.json`. */
+		mcpReach: mcpReachSchema,
+		/** What the live engines report, which is only ever "registered tools", never a connection state. */
+		mcpLive: mcpLiveSchema,
 		/** `settings.json` lists `-builtin:mcp`, so no session connects a configured server. */
 		mcpDisabled: z.boolean(),
 		/** The folder Epsilon runs in, and therefore the project `mcp.json` it reads. */

@@ -3,6 +3,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Deps } from "../../deps";
 import { configWrite, failure, toError } from "../../platform/http";
 import {
+	autoEnableMcpRoute,
 	deleteMcpRoute,
 	enabledMcpRoute,
 	inProjectMcpRoute,
@@ -12,6 +13,7 @@ import {
 import {
 	readMcpServer,
 	removeMcpServer,
+	setMcpAutoEnableCodemode,
 	setMcpServerEnabled,
 	setMcpServerInProject,
 	writeMcpServer,
@@ -41,6 +43,11 @@ export const mcpRoutes = ({ home, projectDir, engines }: Deps) =>
 		})
 		.openapi(inProjectMcpRoute, (c) =>
 			configWrite(c, engines, () => setMcpServerInProject(home, projectDir, c.req.valid("json"))),
+		)
+		.openapi(autoEnableMcpRoute, (c) =>
+			configWrite(c, engines, () =>
+				setMcpAutoEnableCodemode(home, projectDir, c.req.valid("json")),
+			),
 		)
 		.openapi(deleteMcpRoute, (c) => {
 			const { scope, name } = c.req.valid("param");

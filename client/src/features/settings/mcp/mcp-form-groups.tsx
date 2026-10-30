@@ -1,12 +1,15 @@
 /**
  * The two optional groups under an MCP server's form: what the server does in
- * this project, and the keys the form preserves without editing.
+ * this project, and what the file and pi's runtime say about it. Every key the
+ * form edits moved into the form itself, so nothing here is a read-only copy of
+ * a field above.
  */
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { SettingsBlock, SettingsGroup } from "@/features/settings/kit/settings-section";
+import type { McpLive } from "@/api/types";
 import type { McpServerEntryDetail } from "./mcp-detail";
 
 /** A global server's state in this project: its override, or the absence of one. */
@@ -67,35 +70,63 @@ export function McpProjectGroup({
 	);
 }
 
-/** OAuth, `auth` and `toolExposure`: named, never sent with their values, kept on save. */
-export function McpKeptGroup({ detail }: { detail: McpServerEntryDetail }) {
+/**
+ * What pi's runtime and the agent home say about this server. pi exposes no
+ * connection state through the SDK: a server's tools appear once it connected, so
+ * "connected" here means "registered tools in a live session", and the absence of
+ * tools is reported as exactly that, never as a failure.
+ */
+export function McpDiagnosticsGroup({
+	detail,
+	live,
+}: {
+	detail: McpServerEntryDetail;
+	live: McpLive | undefined;
+}) {
+	const replaced = detail.relation === "replaced-by-project";
+	const tools = replaced
+		? undefined
+		: live?.servers.find((server) => server.name === detail.name)?.tools;
+	const sessions = live?.sessions ?? 0;
+	const connected = replaced
+		? "This project's own entry replaces this server, so sessions here connect that one."
+		: tools === undefined
+			? sessions === 0
+				? "No session is open, so nothing has connected yet."
+				: `No tools are registered in the ${sessions} live ${sessions === 1 ? "session" : "sessions"}. pi does not report whether the server failed, needs a sign-in, or is still connecting.`
+			: `Connected in a live session, with ${tools} ${tools === 1 ? "tool" : "tools"} registered.`;
 	return (
-		<SettingsGroup title="Kept as written">
+		<SettingsGroup title="Runtime">
 			<SettingsBlock>
 				<dl className="grid gap-2 text-sm">
-					{detail.oauthKeys.length > 0 && (
+					<div className="flex flex-wrap gap-2">
+						<dt className="text-muted-foreground">Connection</dt>
+						<dd>{connected}</dd>
+					</div>
+					{detail.transport === "http" && (
 						<div className="flex flex-wrap gap-2">
-							<dt className="text-muted-foreground">OAuth</dt>
-							<dd>{detail.oauthKeys.join(", ")}</dd>
-						</div>
-					)}
-					{detail.authProvider !== undefined && (
-						<div className="flex flex-wrap gap-2">
-							<dt className="text-muted-foreground">Auth provider</dt>
-							<dd>{detail.authProvider}</dd>
-						</div>
-					)}
-					{detail.toolExposureKeys.length > 0 && (
-						<div className="flex flex-wrap gap-2">
-							<dt className="text-muted-foreground">Tool exposure rules</dt>
-							<dd>{detail.toolExposureKeys.join(", ")}</dd>
+							<dt className="text-muted-foreground">Sign-in</dt>
+							<dd>
+								{detail.credentialsStored
+									? "mcp-auth.json holds a credential for this server."
+									: "No stored credential."}{" "}
+								Signing in and out happens in a terminal using the same agent home, not here.
+							</dd>
 						</div>
 					)}
 				</dl>
-				<p className="mt-3 text-xs text-muted-foreground">
-					These keys are kept when you save. Edit them in the file; this form does not send their
-					values to the browser.
-				</p>
+				<div className="mt-3 grid gap-1">
+					<p className="text-xs font-medium">Server log</p>
+					{detail.log.length === 0 ? (
+						<p className="text-xs text-muted-foreground">
+							pi logged nothing for this server. Entries appear here once it sends log messages.
+						</p>
+					) : (
+						<pre className="max-h-48 overflow-auto rounded-md bg-muted p-2 text-xs whitespace-pre-wrap">
+							{detail.log.join("\n")}
+						</pre>
+					)}
+				</div>
 			</SettingsBlock>
 		</SettingsGroup>
 	);

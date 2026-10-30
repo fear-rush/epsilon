@@ -9,7 +9,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { agentHome } from "../../platform/agent-home";
-import { listMcpServers, readMcpServer, setMcpServerEnabled, writeMcpServer } from "./service";
+import {
+	listMcpServers,
+	readMcpServer,
+	setMcpAutoEnableCodemode,
+	setMcpServerEnabled,
+	writeMcpServer,
+} from "./service";
 
 const scratch = async () => {
 	const home = agentHome(await mkdtemp(join(tmpdir(), "epsilon-mcp-")));
@@ -165,5 +171,250 @@ describe("mcp reads", () => {
 		expect(override).not.toHaveProperty("envKeys");
 		expect((await readMcpServer(home, projectDir, "global", "broken"))?.kind).toBe("invalid");
 		expect(await readMcpServer(home, projectDir, "global", "none")).toBeUndefined();
+	});
+});
+
+describe("the keys the form writes", () => {
+	test("toolExposure, oauth and auth are written, and clearing them removes the keys", async () => {
+		const { home, projectDir } = await scratch();
+		await writeMcpServer(home, projectDir, {
+			scope: "global",
+			name: "docs",
+			transport: "http",
+			url: "https://example.test/mcp",
+			toolExposure: { "search_*": "direct", delete_all: "hidden" },
+			oauth: { clientId: "client", callbackPort: 8080, scope: "read write" },
+			authProvider: "openai",
+		});
+		expect((await stored(home.mcpFile)).mcpServers.docs).toMatchObject({
+			url: "https://example.test/mcp",
+			toolExposure: { "search_*": "direct", delete_all: "hidden" },
+			oauth: { clientId: "client", callbackPort: 8080, scope: "read write" },
+			auth: { provider: "openai" },
+		});
+
+		await writeMcpServer(home, projectDir, {
+			scope: "global",
+			name: "docs",
+			transport: "http",
+			url: "https://example.test/mcp",
+		});
+		const docs = (await stored(home.mcpFile)).mcpServers.docs;
+		expect(docs).toEqual({ url: "https://example.test/mcp" });
+	});
+
+	test("a blank client secret keeps the stored one and an unknown oauth key survives", async () => {
+		const { home, projectDir } = await scratch();
+		await writeFile(
+			home.mcpFile,
+			JSON.stringify({
+				mcpServers: {
+					docs: {
+						url: "https://example.test/mcp",
+						oauth: { clientId: "old", clientSecret: "secret", futureOption: "keep" },
+					},
+				},
+			}),
+		);
+		await writeMcpServer(home, projectDir, {
+			scope: "global",
+			name: "docs",
+			transport: "http",
+			url: "https://example.test/mcp",
+			oauth: { clientId: "new", clientSecret: "" },
+		});
+		expect((await stored(home.mcpFile)).mcpServers.docs.oauth).toEqual({
+			clientId: "new",
+			clientSecret: "secret",
+			futureOption: "keep",
+		});
+	});
+
+	test("a project file never carries auth, which pi refuses there", async () => {
+		const { home, projectDir } = await scratch();
+		await writeMcpServer(home, projectDir, {
+			scope: "project",
+			name: "docs",
+			transport: "http",
+			url: "https://example.test/mcp",
+			authProvider: "openai",
+		});
+		const file = JSON.parse(await readFile(join(projectDir, ".pi", "mcp.json"), "utf8"));
+		expect(file.mcpServers.docs).toEqual({ url: "https://example.test/mcp" });
+	});
+
+	test("a save pi would skip is refused with pi's reason and the file is unchanged", async () => {
+		const { home, projectDir } = await scratch();
+		await writeFile(home.mcpFile, JSON.stringify({ mcpServers: {} }));
+		await expect(
+			writeMcpServer(home, projectDir, {
+				scope: "global",
+				name: "docs",
+				transport: "http",
+				url: "https://example.test/mcp",
+				oauth: { callbackUrl: "http://127.0.0.1:8080/callback?x=1" },
+			}),
+		).rejects.toThrow("query or a fragment");
+		expect((await stored(home.mcpFile)).mcpServers).toEqual({});
+	});
+
+	test("an invalid entry is prefilled from its raw target and repaired by a save", async () => {
+		const { home, projectDir } = await scratch();
+		await writeFile(
+			home.mcpFile,
+			JSON.stringify({
+				mcpServers: { files: { command: "npx", args: ["-y", "pkg"], exposure: "loud" } },
+			}),
+		);
+		expect(await readMcpServer(home, projectDir, "global", "files")).toMatchObject({
+			kind: "invalid",
+			transport: "stdio",
+			command: "npx",
+			args: ["-y", "pkg"],
+		});
+
+		await writeMcpServer(home, projectDir, {
+			scope: "global",
+			name: "files",
+			transport: "stdio",
+			command: "npx",
+			args: ["-y", "pkg"],
+			exposure: "direct",
+		});
+		expect((await stored(home.mcpFile)).mcpServers.files).toEqual({
+			command: "npx",
+			args: ["-y", "pkg"],
+			exposure: "direct",
+		});
+	});
+
+	test("an invalid entry's detail carries the tool options pi would still accept", async () => {
+		const { home, projectDir } = await scratch();
+		await writeFile(
+			home.mcpFile,
+			JSON.stringify({
+				mcpServers: { files: { command: "npx", exposure: "direct", timeout: -1 } },
+			}),
+		);
+		const detail = await readMcpServer(home, projectDir, "global", "files");
+		expect(detail).toMatchObject({ kind: "invalid", exposure: "direct" });
+		expect(detail).not.toHaveProperty("timeout");
+	});
+});
+
+describe("autoEnableCodemode", () => {
+	test("off writes false and on removes the key", async () => {
+		const { home, projectDir } = await scratch();
+		await setMcpAutoEnableCodemode(home, projectDir, { scope: "global", enabled: false });
+		expect((await stored(home.mcpFile)).autoEnableCodemode).toBe(false);
+
+		await setMcpAutoEnableCodemode(home, projectDir, { scope: "global", enabled: true });
+		expect(await stored(home.mcpFile)).toEqual({ mcpServers: {} });
+	});
+
+	test("on writes true when the other file turns it off, or the other false would win", async () => {
+		const { home, projectDir } = await scratch();
+		await writeFile(home.mcpFile, JSON.stringify({ autoEnableCodemode: false, mcpServers: {} }));
+		await writeMcpServer(home, projectDir, {
+			scope: "project",
+			name: "docs",
+			transport: "http",
+			url: "https://example.test/mcp",
+		});
+		await setMcpAutoEnableCodemode(home, projectDir, { scope: "project", enabled: true });
+		const file = JSON.parse(await readFile(join(projectDir, ".pi", "mcp.json"), "utf8"));
+		expect(file.autoEnableCodemode).toBe(true);
+	});
+});
+
+describe("what a session can reach", () => {
+	const seedCodemodeServer = async () => {
+		const { home, projectDir } = await scratch();
+		await writeFile(
+			home.mcpFile,
+			JSON.stringify({
+				mcpServers: {
+					files: { command: "npx", exposure: "codemode" },
+					docs: { command: "npx", exposure: "direct" },
+				},
+			}),
+		);
+		return { home, projectDir };
+	};
+
+	test("a codemode server is unreachable while auto-enable is off", async () => {
+		const { home, projectDir } = await seedCodemodeServer();
+		await setMcpAutoEnableCodemode(home, projectDir, { scope: "global", enabled: false });
+		const listing = await listMcpServers(home, projectDir);
+		expect(listing.reach).toMatchObject({
+			autoEnableCodemode: { global: false },
+			codemodeDefault: false,
+			unreachable: [{ name: "files", exposures: ["codemode"] }],
+		});
+	});
+
+	test("defaultTools naming codemode keeps it reachable", async () => {
+		const { home, projectDir } = await seedCodemodeServer();
+		await writeFile(
+			join(home.dir, "settings.json"),
+			JSON.stringify({ defaultTools: ["+codemode"] }),
+		);
+		await setMcpAutoEnableCodemode(home, projectDir, { scope: "global", enabled: false });
+		const listing = await listMcpServers(home, projectDir);
+		expect(listing.reach).toMatchObject({ codemodeDefault: true, unreachable: [] });
+	});
+
+	test("a project value overrides the global one", async () => {
+		const { home, projectDir } = await seedCodemodeServer();
+		await setMcpAutoEnableCodemode(home, projectDir, { scope: "global", enabled: false });
+		await setMcpAutoEnableCodemode(home, projectDir, { scope: "project", enabled: true });
+		const listing = await listMcpServers(home, projectDir);
+		expect(listing.reach).toMatchObject({
+			autoEnableCodemode: { global: false, project: true },
+			unreachable: [],
+		});
+	});
+});
+
+describe("the runtime diagnostics of one server", () => {
+	test("the log tail and the stored credentials are read without a token", async () => {
+		const { home, projectDir } = await scratch();
+		await writeFile(
+			home.mcpFile,
+			JSON.stringify({ mcpServers: { docs: { url: "https://example.test/mcp" } } }),
+		);
+		await writeFile(
+			home.mcpLogFile,
+			[
+				"2026-01-01T00:00:00Z [other] info x: not mine",
+				"2026-01-01T00:00:01Z [docs] info fetch: started",
+				"2026-01-01T00:00:02Z [docs] error fetch: failed",
+			].join("\n"),
+		);
+		await writeFile(
+			home.mcpAuthFile,
+			JSON.stringify({ "mcp__docs|https://example.test/mcp": { tokens: { access: "secret" } } }),
+		);
+		const detail = await readMcpServer(home, projectDir, "global", "docs");
+		expect(detail).toMatchObject({ kind: "server", credentialsStored: true });
+		expect(detail?.kind === "server" && detail.log).toEqual([
+			"2026-01-01T00:00:01Z [docs] info fetch: started",
+			"2026-01-01T00:00:02Z [docs] error fetch: failed",
+		]);
+		expect(JSON.stringify(detail)).not.toContain("secret");
+	});
+
+	test("a server that only spoke before pi rotated the log is still read", async () => {
+		const { home, projectDir } = await scratch();
+		await writeFile(
+			home.mcpFile,
+			JSON.stringify({ mcpServers: { docs: { url: "https://example.test/mcp" } } }),
+		);
+		await writeFile(home.mcpLogFile, "2026-01-02T00:00:00Z [other] info x: not mine\n");
+		await writeFile(home.mcpLogRotatedFile, "2026-01-01T00:00:00Z [docs] info fetch: started\n");
+		const detail = await readMcpServer(home, projectDir, "global", "docs");
+		expect(detail?.kind === "server" && detail.log).toEqual([
+			"2026-01-01T00:00:00Z [docs] info fetch: started",
+		]);
 	});
 });

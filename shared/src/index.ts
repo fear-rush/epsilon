@@ -36,14 +36,35 @@ export {
 } from "./permission/rules";
 export type { PermissionMode } from "./permission/rules";
 export {
+	MCP_DEFAULT_EXPOSURE,
+	authProviderProblem,
+	callbackUrlProblem,
+	isLoopbackHostname,
 	mcpExposureSchema,
+	mcpExposuresOf,
 	mcpNameSchema,
+	mcpNamespaceOf,
+	mcpOAuthClientRegistrationSchema,
+	mcpOAuthJsonSchema,
+	mcpOAuthSchema,
 	mcpOverrideKeySchema,
 	mcpRelationSchema,
 	mcpScopeSchema,
+	mcpToolExposureSchema,
 	mcpTransportSchema,
+	oauthProblem,
 } from "./mcp/rules";
-export type { McpExposure, McpOverrideKey, McpRelation, McpScope, McpTransport } from "./mcp/rules";
+export type {
+	McpExposure,
+	McpOAuth,
+	McpOAuthClientRegistration,
+	McpOAuthJson,
+	McpOverrideKey,
+	McpRelation,
+	McpScope,
+	McpToolExposure,
+	McpTransport,
+} from "./mcp/rules";
 export { skillDescriptionSchema, skillNameSchema } from "./skills/rules";
 export { modelKey, providerApiSchema, providerIdSchema } from "./providers/rules";
 export type { ProviderApi } from "./providers/rules";
