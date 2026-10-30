@@ -27,6 +27,7 @@ import { ModelReasoningFields } from "./provider-reasoning-fields";
 import { reasoningFormOf, reasoningOf } from "./reasoning";
 import { TestLevelSelect } from "./test-level-select";
 import type { ReasoningForm } from "./reasoning";
+import { useDialogMotion } from "@/hooks/use-dialog-motion";
 import { keepUntouched } from "@/features/settings/kit/use-draft-form";
 import { modelFieldErrors, modelFields } from "./provider-validation";
 import type { ModelFieldErrors } from "./provider-validation";
@@ -74,8 +75,7 @@ const formOf = (model: ProviderModelInput | undefined): ModelForm => ({
 });
 
 export function ProviderModelDialog({
-	open,
-	onOpenChange,
+	onClose,
 	title,
 	description,
 	model,
@@ -84,8 +84,8 @@ export function ProviderModelDialog({
 	onSave,
 	onTest,
 }: {
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
+	/** Runs once the dialog finished closing, which is when its mount can drop it. */
+	onClose: () => void;
 	title: string;
 	description: string;
 	model: ProviderModelInput | undefined;
@@ -156,8 +156,16 @@ export function ProviderModelDialog({
 		}
 	};
 
+	const dialog = useDialogMotion();
+	const close = () => dialog.close(onClose);
+
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog
+			open={dialog.open}
+			onOpenChange={(next) => {
+				if (!next) close();
+			}}
+		>
 			<DialogContent className="sm:max-w-2xl">
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>
@@ -168,11 +176,12 @@ export function ProviderModelDialog({
 					className="grid gap-4"
 					onSubmit={(event) => {
 						event.preventDefault();
+						if (!dialog.open) return;
 						const found = modelFieldErrors(form);
 						setErrors(found);
 						if (Object.keys(found).length > 0) return;
 						onSave(valueOf());
-						onOpenChange(false);
+						close();
 					}}
 				>
 					<FieldGroup className="grid gap-4 sm:grid-cols-2">
@@ -244,7 +253,7 @@ export function ProviderModelDialog({
 					<ModelCostFields form={form} errors={errors} update={update} />
 
 					{testResult !== undefined && (
-						<Alert variant={testResult.ok ? "default" : "destructive"}>
+						<Alert variant={testResult.ok ? "default" : "destructive"} className="settle-in">
 							<AlertDescription className="break-words">{testResult.message}</AlertDescription>
 						</Alert>
 					)}
@@ -266,7 +275,7 @@ export function ProviderModelDialog({
 								Test model
 							</Button>
 						</div>
-						<Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+						<Button type="button" variant="ghost" onClick={close}>
 							Cancel
 						</Button>
 						<Button type="submit">Save model</Button>

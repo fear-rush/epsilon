@@ -1,4 +1,5 @@
 import type { DialogAnswer, DialogQuestion } from "shared";
+import { useDialogMotion } from "@/hooks/use-dialog-motion";
 import { useState } from "react";
 
 import {
@@ -34,11 +35,19 @@ export function ConfirmDialog({
 	question: ConfirmQuestion;
 	onAnswer: (answer: DialogAnswer) => void;
 }) {
+	const dialog = useDialogMotion();
+	// The answer is sent after the exit plays, so the dialog the store removes on the
+	// server's reply is already gone from the screen.
 	const answer = (confirmed: boolean) =>
-		onAnswer({ id: question.id, method: "confirm", confirmed });
+		dialog.close(() => onAnswer({ id: question.id, method: "confirm", confirmed }));
 
 	return (
-		<AlertDialog open onOpenChange={() => {}}>
+		<AlertDialog
+			open={dialog.open}
+			onOpenChange={(next) => {
+				if (!next) answer(false);
+			}}
+		>
 			<AlertDialogContent>
 				<AlertDialogHeader>
 					<AlertDialogTitle>{question.title}</AlertDialogTitle>
@@ -77,18 +86,25 @@ export function QuestionDialog({
 	question: Question;
 	onAnswer: (answer: DialogAnswer) => void;
 }) {
+	const dialog = useDialogMotion();
 	const [text, setText] = useState(question.method === "editor" ? (question.prefill ?? "") : "");
 	// The answer carries the method it belongs to, so the server can refuse one that
-	// was meant for another kind of question.
-	const answer = (value: string) => {
-		if (question.method === "select") onAnswer({ id: question.id, method: "select", value });
-		else if (question.method === "input") onAnswer({ id: question.id, method: "input", value });
-		else onAnswer({ id: question.id, method: "editor", value });
-	};
-	const cancel = () => onAnswer({ id: question.id, method: "cancel" });
+	// was meant for another kind of question. It is sent after the exit plays.
+	const answer = (value: string) =>
+		dialog.close(() => {
+			if (question.method === "select") onAnswer({ id: question.id, method: "select", value });
+			else if (question.method === "input") onAnswer({ id: question.id, method: "input", value });
+			else onAnswer({ id: question.id, method: "editor", value });
+		});
+	const cancel = () => dialog.close(() => onAnswer({ id: question.id, method: "cancel" }));
 
 	return (
-		<Dialog open onOpenChange={() => {}}>
+		<Dialog
+			open={dialog.open}
+			onOpenChange={(next) => {
+				if (!next) cancel();
+			}}
+		>
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>{question.title}</DialogTitle>

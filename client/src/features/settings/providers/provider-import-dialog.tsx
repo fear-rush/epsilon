@@ -21,27 +21,28 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
+import { useDialogMotion } from "@/hooks/use-dialog-motion";
 import { probeKeys } from "@/api/keys";
 import { importProviderModels } from "@/api/endpoints";
 import type { ProviderModelInput } from "@/api/types";
 
 export function ProviderImportDialog({
-	open,
-	onOpenChange,
+	onClose,
 	providerId,
 	baseUrl,
 	api,
 	apiKey,
 	onAdd,
 }: {
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
+	/** Runs once the dialog finished closing, which is when its mount can drop it. */
+	onClose: () => void;
 	providerId: string | undefined;
 	baseUrl: string;
 	api: ProviderApi;
 	apiKey: string;
 	onAdd: (models: ProviderModelInput[]) => void;
 }) {
+	const dialog = useDialogMotion();
 	const models = useQuery({
 		queryKey: probeKeys.providerModels(providerId, baseUrl, api, apiKey),
 		queryFn: () =>
@@ -51,7 +52,7 @@ export function ProviderImportDialog({
 				api,
 				apiKey: apiKey.trim() || undefined,
 			}),
-		enabled: open,
+		enabled: dialog.open,
 		retry: false,
 	});
 	const [picked, setPicked] = useState<ReadonlySet<string> | null>(null);
@@ -59,13 +60,19 @@ export function ProviderImportDialog({
 	const ids = models.data?.map((model) => model.id) ?? [];
 	const selected = picked ?? new Set(ids);
 	/** Reopening starts from every model again, whichever way the last one closed. */
-	const close = (next: boolean) => {
-		if (!next) setPicked(null);
-		onOpenChange(next);
-	};
+	const close = () =>
+		dialog.close(() => {
+			setPicked(null);
+			onClose();
+		});
 
 	return (
-		<Dialog open={open} onOpenChange={close}>
+		<Dialog
+			open={dialog.open}
+			onOpenChange={(next) => {
+				if (!next) close();
+			}}
+		>
 			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
 					<DialogTitle>Fetch models from provider</DialogTitle>
@@ -86,8 +93,9 @@ export function ProviderImportDialog({
 					<form
 						onSubmit={(event) => {
 							event.preventDefault();
+							if (!dialog.open) return;
 							onAdd(models.data.filter((model) => selected.has(model.id)));
-							close(false);
+							close();
 						}}
 					>
 						<div className="max-h-72 overflow-y-auto rounded-xl border p-2">
@@ -127,7 +135,7 @@ export function ProviderImportDialog({
 							)}
 						</div>
 						<DialogFooter className="mt-3">
-							<Button type="button" variant="ghost" onClick={() => close(false)}>
+							<Button type="button" variant="ghost" onClick={close}>
 								Cancel
 							</Button>
 							<Button type="submit" disabled={models.data.length === 0}>

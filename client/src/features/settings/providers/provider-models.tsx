@@ -17,7 +17,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { testProvider } from "@/api/endpoints";
+import { AnimatedRow } from "@/features/settings/kit/animated-row";
 import { SettingsBlock, SettingsGroup } from "@/features/settings/kit/settings-section";
+import { useAnimatedRows } from "@/features/settings/kit/use-animated-rows";
 import { testInputOf } from "./provider-draft";
 import type { ProviderDraft } from "./provider-draft";
 import { ProviderImportDialog } from "./provider-import-dialog";
@@ -159,9 +161,7 @@ export function ProviderModels({
 								<CustomModelRows
 									models={draft.models}
 									onEdit={(index, model) => setEditing({ model, index })}
-									onRemove={(index) =>
-										update({ models: draft.models.filter((_, at) => at !== index) })
-									}
+									onChange={(models) => update({ models })}
 								/>
 							)
 						) : catalog.length === 0 ? (
@@ -189,8 +189,7 @@ export function ProviderModels({
 			{editing !== undefined && (
 				<ProviderModelDialog
 					key={`${editing.index ?? "new"}-${editing.model?.id ?? ""}`}
-					open
-					onOpenChange={() => setEditing(undefined)}
+					onClose={() => setEditing(undefined)}
 					title={editing.index === undefined ? "Add a model" : "Edit model"}
 					description="Only the id is required. The rest uses pi's defaults when empty."
 					model={editing.model}
@@ -216,8 +215,7 @@ export function ProviderModels({
 			{overriding !== undefined && (
 				<ProviderModelDialog
 					key={`override-${overriding.id}`}
-					open
-					onOpenChange={() => setOverriding(undefined)}
+					onClose={() => setOverriding(undefined)}
 					title={`Override ${overriding.name ?? overriding.id}`}
 					description="Changes apply to this model without replacing the catalog pi ships."
 					model={overriding}
@@ -234,8 +232,7 @@ export function ProviderModels({
 
 			{importOpen && api !== undefined && (
 				<ProviderImportDialog
-					open
-					onOpenChange={() => setImportOpen(false)}
+					onClose={() => setImportOpen(false)}
 					providerId={detail?.id}
 					baseUrl={draft.baseUrl}
 					api={api}
@@ -298,33 +295,37 @@ function ModelRow({ name, id, children }: { name: string; id: string; children: 
 function CustomModelRows({
 	models,
 	onEdit,
-	onRemove,
+	onChange,
 }: {
 	models: ProviderModelInput[];
 	onEdit: (index: number, model: ProviderModelInput) => void;
-	onRemove: (index: number) => void;
+	/** The list after a removal, applied once the row has collapsed. */
+	onChange: (models: ProviderModelInput[]) => void;
 }) {
+	const { closing, remove } = useAnimatedRows(models, onChange);
 	return models.map((model, index) => (
-		<ModelRow key={`${model.id}-${index}`} name={model.name ?? model.id} id={model.id}>
-			<Button
-				type="button"
-				variant="ghost"
-				size="icon-sm"
-				aria-label={`Edit ${model.name ?? model.id}`}
-				onClick={() => onEdit(index, model)}
-			>
-				<PencilIcon />
-			</Button>
-			<Button
-				type="button"
-				variant="destructive"
-				size="icon-sm"
-				aria-label={`Remove ${model.name ?? model.id}`}
-				onClick={() => onRemove(index)}
-			>
-				<Trash2Icon />
-			</Button>
-		</ModelRow>
+		<AnimatedRow key={`${model.id}-${index}`} closing={closing === index}>
+			<ModelRow name={model.name ?? model.id} id={model.id}>
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon-sm"
+					aria-label={`Edit ${model.name ?? model.id}`}
+					onClick={() => onEdit(index, model)}
+				>
+					<PencilIcon />
+				</Button>
+				<Button
+					type="button"
+					variant="destructive"
+					size="icon-sm"
+					aria-label={`Remove ${model.name ?? model.id}`}
+					onClick={() => remove(index)}
+				>
+					<Trash2Icon />
+				</Button>
+			</ModelRow>
+		</AnimatedRow>
 	));
 }
 
