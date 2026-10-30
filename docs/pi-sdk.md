@@ -38,6 +38,17 @@ tool names the settings expect, and call `session.bindExtensions()` so MCP serve
 connect on session start. `createCodemodeExtension()` without options reads the
 `codemode.mode` setting; passing `{ mode: "on" }` overrides it.
 
+`codemode` and `tool_search` are registered inactive, so a tool is only reachable
+once something activates the one that reaches it. Two things do, and the host
+should not add a third: the `defaultTools` setting naming `codemode` (or
+`tool_search`), or the MCP extension itself, which activates `codemode` for a
+`codemode` server while the file's `autoEnableCodemode` is on and `tool_search` for a
+`deferred` one. Either reaching tool can call both kinds of MCP tool, which is why
+pi warns only when neither is active. Passing `tools` to `createAgentSession`
+restricts the session to the named tools and hides MCP tools; Epsilon passes none.
+pi's `docs/sdk.md#codemode-mcp` and `examples/sdk/14-codemode-mcp.ts` are the
+reference wiring.
+
 Register those three the way the CLI does, as
 `{ name, factory, replaceable: true, builtin: true }` in `dist/extensions/index.js`.
 That list is not exported; a host that wants CLI parity builds the same entries.
@@ -203,16 +214,17 @@ characters the provider returned.
 
 ## Files in the agent home
 
-| Path            | Owner | What it holds                                                      |
-| --------------- | ----- | ------------------------------------------------------------------ |
-| `settings.json` | pi    | Defaults, tools, compaction, packages, skill locations             |
-| `models.json`   | pi    | Provider endpoints, headers, model catalogs, `apiKey` overrides    |
-| `auth.json`     | pi    | Stored credentials, one per provider, written through login/logout |
-| `mcp.json`      | pi    | `mcpServers`, shared shape with other MCP clients                  |
-| `trust.json`    | pi    | Project trust decisions                                            |
-| `mcp-auth.json` | pi    | MCP OAuth tokens                                                   |
-| `skills/`       | pi    | User skills; each directory holds a `SKILL.md`                     |
-| `sessions/`     | pi    | One JSONL per session                                              |
+| Path            | Owner | What it holds                                                              |
+| --------------- | ----- | -------------------------------------------------------------------------- |
+| `settings.json` | pi    | Defaults, tools, compaction, packages, skill locations                     |
+| `models.json`   | pi    | Provider endpoints, headers, model catalogs, `apiKey` overrides            |
+| `auth.json`     | pi    | Stored credentials, one per provider, written through login/logout         |
+| `mcp.json`      | pi    | `mcpServers` and `autoEnableCodemode`, shared shape with other MCP clients |
+| `mcp.log`       | pi    | Messages MCP servers send with `notifications/message`, rotated at 5 MB    |
+| `trust.json`    | pi    | Project trust decisions                                                    |
+| `mcp-auth.json` | pi    | MCP OAuth tokens                                                           |
+| `skills/`       | pi    | User skills; each directory holds a `SKILL.md`                             |
+| `sessions/`     | pi    | One JSONL per session                                                      |
 
 Skills also load from `<cwd>/.pi/skills`, `<cwd>/.agents/skills`, `~/.agents/skills`
 and installed packages.
@@ -227,9 +239,44 @@ given.
 
 `updateMcpServerConfig()` writes `enabled: true` by deleting the key and
 `exposure: "codemode"` likewise; an override keeps both written because it
-replaces the global entry's values. `timeout` is in **seconds**. The package's
-`exports` map still exposes only `.` and `./rpc-entry`, so the dashboard parses
-the documented shape itself.
+replaces the global entry's values. `timeout` is in **seconds**. Those functions
+live in `pi-coding-agent`'s `dist/extensions/mcp/config`, and its `exports` map
+exposes only `.` and `./rpc-entry`, so the dashboard parses the documented shape
+itself.
+
+Two more published packages sit under that extension, and `pi-coding-agent`
+depends on the same versions (`1.4.0` here):
+
+- `@earendil-works/pi-mcp`: the MCP client (`McpClient`, `StdioTransport`,
+  `StreamableHttpTransport`, `toLlmContent`) and, at `/oauth`, the authorization
+  helpers (`McpOAuthProvider`, `OAuthCallbackServer`, `authorizeMcp`). It speaks
+  `2025-11-25` and older, and its README lists what it does not do: no sampling,
+  no tasks, no legacy SSE, no batch messages. It has **no configuration surface**
+  at all, so `mcp.json` is still pi-coding-agent's.
+- `@earendil-works/pi-codemode`: the QuickJS-in-WASM sandbox behind the
+  `codemode` tool, with no pi dependencies. The coding agent adds the tool and
+  the script globals the docs describe; the package itself is only the VM.
+
+`createMcpExtension()` and `createCodemodeExtension()` are wrappers over them, and
+that is the surface Epsilon uses. Importing the packages directly would mean a
+second MCP client: another connection per server, a second stdio process for
+every local server, and none of the `mcp.json` resolution, exposure, OAuth,
+resources or permission hooks the extension already applies.
+
+The top-level `autoEnableCodemode` (default `true`) is what lets a connecting
+`codemode` server activate the codemode tool, and a project value overrides the
+global one. Turning it off while `defaultTools` does not name codemode leaves the
+server connected but unreachable; the panel reads that state and says so. `oauth`
+and `auth.provider` decide how an HTTP server authenticates: `auth` sends a
+`/login` provider's token and is refused in a project file, and both `oauth` and
+`auth` are bounded to https or loopback hosts. Epsilon writes those keys and runs
+every save back through the same rules pi's validator applies, so a save either
+produces an entry pi loads or is refused with pi's reason.
+
+A settings write reaches the live engines through `session.reload()`, which emits
+`session_shutdown` (reason `reload`). The MCP extension closes every connection
+there and reconnects on the next `session_start`, so an edit in the panel applies
+to a session that is already open.
 
 ## Project trust
 
@@ -285,6 +332,13 @@ Turborepo or the runtime.
 - **`toJsonEvent` is not exported.** `package.json` exports only `.` and
   `./rpc-entry`; `dist/modes/json-event.js` is private. The host carries its own
   copy of the transform in `server/src/features/conversation/engine.ts`.
+- **pi exposes no MCP connection state.** A connected server's tools appear in
+  `session.getAllTools()` with `namespace.name === "mcp__<server>"`, and
+  `session.getActiveToolNames()` says whether `codemode`/`tool_search` are active.
+  That is all a host can read: failed, needs-sign-in and still-connecting are
+  indistinguishable, so the panel reports tool counts and says which question it
+  cannot answer. Servers an extension registers with `pi.registerMcpServer()` are
+  only visible from inside an extension (`pi.getMcpServers()`), not from the files.
 - **The embedded engine always trusts the project folder.** `SettingsManager.create`
   starts with `projectTrusted = true` and the SDK never runs the CLI's
   `resolveProjectTrusted()`, so `.pi/settings.json` and `.pi/mcp.json` load with an

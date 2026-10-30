@@ -19,7 +19,10 @@ Cost accepted: an engine or extension bug takes every live session down with the
 
 Not: an RPC child process (no inline extensions, no arbitration, no reload). A worker
 thread (the engine's services and MCP clients do not cross the boundary without
-rewriting a frontend). Two engines side by side (two vocabularies in one UI).
+rewriting a frontend). Two engines side by side (two vocabularies in one UI). A second
+MCP client from `@earendil-works/pi-mcp`, which is importable on its own: it would open
+a second connection, and a second stdio process, for every server, without the MCP
+extension's config resolution, exposure, OAuth or permission hooks.
 
 ## Socket vocabulary
 
@@ -80,8 +83,14 @@ call, disabled where an API family has no shared list shape.
 
 Stays in the terminal, because pi exposes no host API for it:
 OAuth and subscription login, MCP sign-in, project trust, and TUI-only toggles. The
-dashboard names that boundary. It never writes `auth.json` or `trust.json`; a credential
-changes only through `ModelRuntime.login()` and `logout()`.
+dashboard names that boundary without printing a command for it. It never writes
+`auth.json` or `trust.json`; a credential changes only through `ModelRuntime.login()`
+and `logout()`.
+
+An MCP server also reports what the next session can reach and what a live engine
+registered, because a configured server that no tool can call is a state the operator
+must see. Those are reads: the panel says sign-in stays in the terminal and how a
+stored credential is detected, and it never shows the credential.
 
 Why: the dashboard must be usable without a terminal, and most of the work is editing two
 documented files and calling two exported classes.
