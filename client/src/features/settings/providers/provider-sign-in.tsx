@@ -109,7 +109,7 @@ function SignInQuestion({
 
 	if (question.kind === "select") {
 		return (
-			<div className="sign-in-step flex flex-col gap-2">
+			<div className="settle-in flex flex-col gap-2">
 				<p className="text-sm font-medium">{question.message}</p>
 				<ItemGroup>
 					{(question.options ?? []).map((option) => (
@@ -145,7 +145,7 @@ function SignInQuestion({
 	const inputId = `login-answer-${question.id}`;
 	return (
 		<form
-			className="sign-in-step"
+			className="settle-in"
 			onSubmit={(event) => {
 				event.preventDefault();
 				if (value !== "" && !answering) onAnswer(question.id, value);
@@ -218,7 +218,7 @@ function SignInFlow({
 				</Item>
 
 				{authUrl !== undefined && (
-					<div className="sign-in-step flex flex-col items-start gap-2">
+					<div className="settle-in flex flex-col items-start gap-2">
 						<Button size="sm" render={<a href={authUrl.url} target="_blank" rel="noreferrer" />}>
 							<ExternalLinkIcon data-icon="inline-start" />
 							Open the sign-in page
@@ -230,7 +230,7 @@ function SignInFlow({
 				)}
 
 				{deviceCode !== undefined && (
-					<div className="sign-in-step">
+					<div className="settle-in">
 						<Item variant="outline" size="sm">
 							<ItemMedia variant="icon">
 								<KeyRoundIcon />
@@ -258,7 +258,7 @@ function SignInFlow({
 				)}
 
 				{flow.notices.length > 0 && (
-					<ul className="sign-in-step flex flex-col gap-1 text-xs text-muted-foreground">
+					<ul className="settle-in flex flex-col gap-1 text-xs text-muted-foreground">
 						{flow.notices.slice(-3).map((notice, index) => (
 							<li key={`${index}-${notice.message}`}>
 								{notice.message}
@@ -375,7 +375,7 @@ function SignInBlock({ detail }: { detail: ProviderDetail }) {
 						) : (
 							// Arriving back after a flow: the card fades in instead of popping. A
 							// first view of the page is not animated, so it matches its neighbours.
-							<div className={cn("flex flex-col gap-3", returned && "sign-in-step")}>
+							<div className={cn("flex flex-col gap-3", returned && "settle-in")}>
 								<div className="flex flex-col gap-1">
 									<p className="text-sm font-medium">{inUse.title}</p>
 									<p className="text-xs text-muted-foreground">{inUse.note}</p>

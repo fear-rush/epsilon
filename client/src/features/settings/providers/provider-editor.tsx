@@ -189,7 +189,7 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 					{testResult !== undefined && (
 						<div className="shrink-0 border-t">
 							<div className="mx-auto w-full max-w-5xl px-5 py-3 sm:px-8">
-								<Alert variant={testResult.ok ? "success" : "destructive"}>
+								<Alert variant={testResult.ok ? "success" : "destructive"} className="settle-in">
 									<AlertDescription className="break-words">{testResult.message}</AlertDescription>
 								</Alert>
 							</div>
@@ -245,7 +245,7 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 			/>
 
 			{save.error !== null && (
-				<Alert variant="destructive">
+				<Alert variant="destructive" className="settle-in">
 					<AlertDescription>{save.error.message}</AlertDescription>
 				</Alert>
 			)}
