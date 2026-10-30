@@ -1,6 +1,6 @@
 /**
  * Try a provider draft before it is saved. The call goes through pi's own client
- * on a throwaway runtime (`registerProvider` is runtime-only, per ADR-0012).
+ * on a throwaway runtime (`registerProvider` is runtime-only, per docs/DECISIONS.md, Configure in the dashboard).
  *
  * Two probes, because keyless endpoints exist: one with no auth header, and one
  * with the typed or saved key when there is a key. A provider that answers both

@@ -2,7 +2,7 @@
  * One live engine session and the state the browser cannot rebuild by itself.
  * The transcript is pi's session file; the dialogs and display state live in
  * `dialogs.ts`, and the fan-out to tabs in `frames.ts`. A command is a method
- * call on the embedded `AgentSession` (ADR-0008); no process speaks to this one.
+ * call on the embedded `AgentSession` (docs/DECISIONS.md, Embedded engine); no process speaks to this one.
  */
 import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import type { Command, DialogAnswer, ProtocolErrorCode, ServerFrame, SnapshotModel } from "shared";

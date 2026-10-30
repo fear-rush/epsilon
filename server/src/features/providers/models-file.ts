@@ -1,7 +1,7 @@
 /**
  * The `models.json` shape the dashboard edits. pi ships no writer for this file,
  * so the documented fields live in loose zod objects: unknown keys stay on every
- * object, and a write never drops a block this version does not model (ADR-0012).
+ * object, and a write never drops a block this version does not model (docs/DECISIONS.md, Configure in the dashboard).
  */
 import { z } from "zod";
 import { parseProviderApi } from "shared";

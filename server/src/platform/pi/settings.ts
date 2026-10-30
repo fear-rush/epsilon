@@ -1,7 +1,7 @@
 /**
  * pi's exported writers for its own settings and packages. They own scopes,
  * locking and merge order, so the dashboard calls them instead of writing
- * `settings.json` by hand (ADR-0012).
+ * `settings.json` by hand (docs/DECISIONS.md, Configure in the dashboard).
  */
 import { DefaultPackageManager, SettingsManager } from "@earendil-works/pi-coding-agent";
 

@@ -2,7 +2,7 @@
  * The model catalog. A provider pi ships keeps its catalog read-only and edits
  * fields through `modelOverrides`; a custom provider, or a built-in the operator
  * deliberately replaced, edits its `models` list. Adding a model to a built-in is
- * the one action that replaces pi's catalog, so it asks first (ADR-0012).
+ * the one action that replaces pi's catalog, so it asks first (docs/DECISIONS.md, Configure in the dashboard).
  */
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";

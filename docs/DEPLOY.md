@@ -1,7 +1,7 @@
 # Deploy
 
 Status: **design.** No Dockerfile or compose file exists yet; this page records
-what they must do. The reasons are in [adr/](adr/README.md).
+what they must do. The reasons are in [DECISIONS.md](DECISIONS.md).
 
 One deployment, one user, one agent home, one project. That scope is what the
 socket and the access rules are built for.
@@ -18,7 +18,7 @@ socket and the access rules are built for.
 
 The agent home is a named volume at pi's default path inside the container. It is
 not the operator's host home, which is the point
-([ADR-0005](adr/0005-deployment-owns-agent-home.md)).
+([DECISIONS.md](DECISIONS.md), Agent home).
 
 ## Requirements
 
@@ -29,8 +29,8 @@ not the operator's host home, which is the point
 
 `pi` does not have to be installed on the host. The image pins one version from
 `bun.lock`: the server embeds that package as its engine, and the same version
-provides the `pi` CLI for the terminal tab and setup
-([ADR-0008](adr/0008-embed-pi-engine-with-opinions.md)).
+provides the `pi` CLI for the terminal and setup
+([DECISIONS.md](DECISIONS.md), Embedded engine).
 
 ## Image
 
@@ -50,7 +50,6 @@ different one in the container would not match what the server drives.
 | Setting    | Value                                | Note                                                                         |
 | ---------- | ------------------------------------ | ---------------------------------------------------------------------------- |
 | volume     | `pi-agent-home:/root/.pi/agent`      | credentials, settings, packages, sessions                                    |
-| volume     | `epsilon-state:/root/.epsilon`       | `ui-state.json` only                                                         |
 | bind mount | `$PROJECT:/workspace`                | the code the agent works on                                                  |
 | env        | `EPSILON_PROJECT=/workspace`         | which project the session list is scoped to                                  |
 | env        | `EPSILON_AGENT_HOME=/root/.pi/agent` | the home the server passes to every engine; the volume above                 |
@@ -67,7 +66,7 @@ in front. Bind the publish to
 Open the dashboard, choose **Settings** at the bottom of the sidebar, and add a
 provider: its base URL, API family, key and models. That writes the documented
 `models.json` entry in the deployment's agent home
-([ADR-0012](adr/0012-configure-in-the-dashboard.md)). The same panel adds MCP
+([DECISIONS.md](DECISIONS.md), Configure in the dashboard). The same panel adds MCP
 servers, skills and packages.
 
 The image also installs the pinned CLI, for what a host cannot do:
@@ -115,7 +114,7 @@ developing; that is a read, not clutter.
 
 Inside the container the loop is the same with the repository bind mounted:
 
-- server: `bun --watch run src/serve.ts`
+- server: `bun --watch run src/main.ts`
 - client: Vite with HMR, proxying `/api` to the server
 - polling is required for file watching across a Docker Desktop bind mount on
   macOS, or edits do not reach the watcher
@@ -141,7 +140,7 @@ what a wrong command can reach.
 
 1. Rebuild the image. Dependencies and the pinned pi version come from the lockfile.
 2. Restart. The volume keeps settings, credentials, packages and sessions; running
-   turns die with the container, which [ADR-0008](adr/0008-embed-pi-engine-with-opinions.md)
+   turns die with the container, which [DECISIONS.md](DECISIONS.md), Embedded engine,
    accepts as the cost of running the engine in-process.
 3. After a pi upgrade, re-run the greps in
    [pi-sdk.md](pi-sdk.md) before trusting the surface again.
@@ -151,7 +150,7 @@ session. That is the reset button, not the update button.
 
 ## Sharing the host's home
 
-Opt-in, and it costs what [ADR-0005](adr/0005-deployment-owns-agent-home.md) says it
+Opt-in, and it costs what [DECISIONS.md](DECISIONS.md), Agent home, says it
 costs: the dashboard adopts the host's credentials, policy, extensions and
 sessions, and the isolation is gone. Install the home's packages
 inside the container first, so the platform matches.

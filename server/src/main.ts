@@ -3,7 +3,7 @@
  * (docs/ARCHITECTURE.md). It chooses the agent home and the project once, builds
  * the dependencies every feature receives, and serves. REST goes to the Hono app;
  * `/api/link` upgrades to the browser socket. Bound to loopback: access control is
- * loopback plus the tunnel in front (ADR-0005 and docs/DEPLOY.md).
+ * loopback plus the tunnel in front (docs/DEPLOY.md, docs/DECISIONS.md, Agent home).
  */
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";

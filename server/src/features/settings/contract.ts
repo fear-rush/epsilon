@@ -1,7 +1,7 @@
 /**
  * The dashboard configuration snapshot. The server writes pi's documented files
  * and calls pi's SDK where it exposes a writer; the browser only ever sees this
- * shape (docs/adr/0012-configure-in-the-dashboard.md).
+ * shape (docs/DECISIONS.md, Configure in the dashboard).
  */
 import { z } from "@hono/zod-openapi";
 

@@ -3,10 +3,10 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
-			"dependsOn": ["$TURBO_EXTENDS$", "api-types#generate"]
+			"dependsOn": ["$TURBO_EXTENDS$", "server#api:export"]
 		},
 		"type-check": {
-			"dependsOn": ["$TURBO_EXTENDS$", "api-types#generate"]
+			"dependsOn": ["$TURBO_EXTENDS$", "server#api:export"]
 		}
 	}
 }

@@ -7,8 +7,7 @@
 	"workspaces": [
 		"./server",
 		"./client",
-		"./shared",
-		"./tools/api-types"
+		"./shared"
 	],
 	"type": "module",
 	"scripts": {
@@ -27,7 +26,7 @@
 		"lint:fix": "oxlint --fix .",
 		"format": "oxfmt --write .",
 		"format:check": "oxfmt --check .",
-		"api:generate": "turbo run generate --filter=api-types",
+		"api:generate": "turbo run api:export --filter=server",
 		"routes:generate": "bun run --cwd client routes:generate",
 		"sandbox:clean": "rm -rf .sandbox",
 		"hooks:install": "prek install",

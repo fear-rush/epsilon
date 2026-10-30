@@ -1,6 +1,6 @@
 /**
  * The embedded engine: one `AgentSession` per open session id, created in this
- * process through pi's SDK (docs/adr/0008-embed-pi-engine-with-opinions.md).
+ * process through pi's SDK (docs/DECISIONS.md, Embedded engine).
  *
  * Two things live here because they are engine wiring, not session state: the
  * resource loader that adds the CLI's built-in extensions, and the JSON-event
@@ -42,7 +42,7 @@ const CLI_BUILTINS: InlineExtension[] = [
 ];
 
 /**
- * Epsilon's own defaults (ADR-0008 decision 3): code, not a file to copy, and
+ * Epsilon's own defaults (docs/DECISIONS.md, Default extensions): code, not a file to copy, and
  * `replaceable` so an operator extension using the same command or tool name wins
  * by rule. `builtin` lets them be disabled by name.
  */

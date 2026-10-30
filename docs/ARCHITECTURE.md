@@ -1,7 +1,7 @@
 # Architecture
 
 A one-page map. Code is the reality; this page says where things go and why. For the
-decisions behind it read [adr/](adr/README.md); for what pi exposes read
+decisions behind it read [DECISIONS.md](DECISIONS.md); for what pi exposes read
 [pi-sdk.md](pi-sdk.md).
 
 ## Bounded contexts
@@ -44,7 +44,7 @@ the agent home and project once and passes them in through `deps`.
   `hello` with `PROTOCOL_VERSION`; the server replies `welcome` or
   `error PROTOCOL_MISMATCH`, and the page shows a reload notice and stops attaching.
   The socket carries Epsilon's commands and events, never pi's RPC types
-  ([ADR-0009](adr/0009-socket-speaks-epsilon.md)). Bump the version when a frame
+  ([DECISIONS.md](DECISIONS.md), Socket vocabulary). Bump the version when a frame
   changes. On reconnect the client re-attaches and receives a snapshot per session;
   there is no replay log.
 
@@ -71,7 +71,7 @@ produces a notice naming it. Engine start failures, extension errors and refused
 commands arrive as error frames or `command-result { ok: false }`. An unsupported
 capability gets a notice, never a dead control. An engine bug takes every live
 session down with the server; session files survive
-([ADR-0008](adr/0008-embed-pi-engine-with-opinions.md)).
+([DECISIONS.md](DECISIONS.md), Embedded engine).
 
 ## UI rules that are not obvious from the code
 

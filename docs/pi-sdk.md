@@ -2,9 +2,9 @@
 
 Reference for what pi exposes to an embedding host and what it does not. Everything
 here was read from pi's shipped types and code, not from documentation prose.
-Epsilon embeds pi's engine through this SDK ([ADR-0008](adr/0008-embed-pi-engine-with-opinions.md))
+Epsilon embeds pi's engine through this SDK ([DECISIONS.md](DECISIONS.md), Embedded engine)
 and configures it through the same exports plus pi's documented files
-([ADR-0012](adr/0012-configure-in-the-dashboard.md)).
+([DECISIONS.md](DECISIONS.md), Configure in the dashboard).
 
 **Re-verify after every pi upgrade.** The sources of truth. Paths are relative to the
 pinned package, `server/node_modules/@earendil-works/pi-coding-agent`, which is the
@@ -64,7 +64,7 @@ Other facts worth having before embedding:
     `custom` exists and takes a component factory, so a host with no terminal cannot
     render it. Epsilon answers the first group, maps the text half of the second,
     and reports the rest once as unsupported
-    ([ADR-0002](adr/0002-own-the-ui-contract.md)).
+    ([DECISIONS.md](DECISIONS.md), UI contract).
 - `NewSessionOptions.id` creates a session with an exact id. `SessionManager` lists,
   opens, finds, creates and owns `getEntries()`, `getTree()` and `getSessionName()`;
   `AgentSessionRuntime` owns `newSession`, `switchSession`, `fork` and
@@ -168,7 +168,7 @@ The base URL is not interchangeable between families:
 - pi sets Google's `apiVersion` to empty when a `baseUrl` is present, so the base
   must include the version path (`https://generativelanguage.googleapis.com/v1beta`).
 
-`shared/src/provider-endpoints.ts` mirrors this table. The provider form's API
+`shared/src/providers/endpoints.ts` mirrors this table. The provider form's API
 picker labels each family with the path it appends, the base URL field names the
 request URL that results, and the model-list fetch reads `modelsPath` from the same
 list. A list that carries `supported_endpoints` (commandcode does) is read as a
@@ -250,7 +250,7 @@ pretending a decision exists.
 The SDK does expose `ProjectTrustStore` and `SettingsManager.setProjectTrusted`,
 so a host that wants pi's CLI behavior can implement it. This repository does not;
 trust decisions stay in a terminal inside the deployment
-([ADR-0012](adr/0012-configure-in-the-dashboard.md)).
+([DECISIONS.md](DECISIONS.md), Configure in the dashboard).
 
 See Traps: the embedded engine always trusts.
 
@@ -271,7 +271,7 @@ shell out to them.
 
 The dashboard writes the same files these commands write, but it does not call them:
 a server that spawns the CLI would duplicate argument parsing and lose structured
-errors ([ADR-0012](adr/0012-configure-in-the-dashboard.md)).
+errors ([DECISIONS.md](DECISIONS.md), Configure in the dashboard).
 
 ## Traps
 

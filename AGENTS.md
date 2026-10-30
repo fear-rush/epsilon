@@ -7,7 +7,7 @@ Settings configures it there.
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) first, [docs/pi-sdk.md](docs/pi-sdk.md)
 before touching anything pi, [docs/DEPLOY.md](docs/DEPLOY.md) for running it, and
-[docs/adr/](docs/adr/README.md) for why. Code wins over prose; fix a doc that
+[docs/DECISIONS.md](docs/DECISIONS.md) for why. Code wins over prose; fix a doc that
 disagrees in the same commit, and never copy code or file lists into a doc.
 
 ## Workspaces

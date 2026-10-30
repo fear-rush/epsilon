@@ -1,6 +1,6 @@
 /**
  * A skill is a directory with a `SKILL.md`, so the dashboard writes plain files
- * instead of a pi format (docs/adr/0012-configure-in-the-dashboard.md). The list
+ * instead of a pi format (docs/DECISIONS.md, Configure in the dashboard). The list
  * covers the user skills directory pi scans, `<agent home>/skills`; project and
  * package skills stay read-only here.
  *

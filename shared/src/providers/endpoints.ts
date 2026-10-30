@@ -77,7 +77,7 @@ export type ProviderBaseUrlProblem = {
 /**
  * A base URL that already ends in the path its family appends, which pi's clients
  * concatenate rather than resolve. `https://host/provider/v1` plus Anthropic's
- * `/v1/messages` becomes `/provider/v1/v1/messages` (ADR-0012).
+ * `/v1/messages` becomes `/provider/v1/v1/messages` (docs/DECISIONS.md, Configure in the dashboard).
  */
 export const providerBaseUrlProblem = (
 	api: ProviderApi,

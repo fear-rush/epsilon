@@ -30,4 +30,4 @@ bun run build && bun run type-check && bun run lint && bun run format:check && b
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): the map
 - [docs/DEPLOY.md](docs/DEPLOY.md): running it in a container
 - [docs/pi-sdk.md](docs/pi-sdk.md): what pi exposes, and its traps
-- [docs/adr/](docs/adr/README.md): decisions
+- [docs/DECISIONS.md](docs/DECISIONS.md): decisions and the options rejected

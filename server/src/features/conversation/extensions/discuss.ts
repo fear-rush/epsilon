@@ -1,7 +1,7 @@
 /**
  * Epsilon's ask-question tool: one `discuss` call, a question, optional preset
- * answers, and a free-text path (docs/adr/0008-embed-pi-engine-with-opinions.md,
- * decision 3). Ported from the operator extension of the same name, except for the
+ * answers, and a free-text path (docs/DECISIONS.md,
+ * Default extensions). Ported from the operator extension of the same name, except for the
  * popup: that version draws its own component through `ctx.ui.custom`, which only a
  * terminal can render. Here the question is the browser's `select` dialog and
  * "Type something." is its `input` dialog, which every tab can answer and a late

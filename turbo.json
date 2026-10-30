@@ -12,10 +12,6 @@
 			"dependsOn": ["^build"],
 			"cache": false
 		},
-		"generate": {
-			"dependsOn": ["server#api:export"],
-			"cache": false
-		},
 		"dev": {
 			"cache": false,
 			"persistent": true,

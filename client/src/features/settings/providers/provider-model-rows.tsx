@@ -1,7 +1,7 @@
 /**
  * The two model lists. A custom catalog edits its entries directly; pi's catalog
  * edits one override per model. Both rows expose the same actions: pencil to edit,
- * trash to remove, undo to clear an override (ADR-0012).
+ * trash to remove, undo to clear an override (docs/DECISIONS.md, Configure in the dashboard).
  */
 import { PencilIcon, Trash2Icon, Undo2Icon } from "lucide-react";
 import type { ReactNode } from "react";

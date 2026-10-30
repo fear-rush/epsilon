@@ -1,7 +1,7 @@
 /**
  * Epsilon's permission guard, shipped as an inline extension so a deployment gets
- * a policy without installing a file (docs/adr/0008-embed-pi-engine-with-opinions.md,
- * decision 3). Ported from the operator extension of the same name: the modes, the
+ * a policy without installing a file (docs/DECISIONS.md,
+ * Default extensions). Ported from the operator extension of the same name: the modes, the
  * flag, the command and the session entry are unchanged, so an operator whose own
  * copy wins keeps the behaviour they already have.
  *

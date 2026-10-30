@@ -1,7 +1,7 @@
 /**
  * The provider test is a real HTTP call through pi's client. These checks run a
  * loopback endpoint and read the request pi sent, so a draft that the form has
- * not saved is what gets tried (ADR-0012).
+ * not saved is what gets tried (docs/DECISIONS.md, Configure in the dashboard).
  */
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, writeFile } from "node:fs/promises";

@@ -6,8 +6,6 @@
 	// them, so only their whole-file unused state is reported.
 	"ignoreIssues": {
 		"client/src/components/ui/**": ["exports", "types"],
-		// openapi-typescript writes every top-level key of the document.
-		"client/src/api/schema.gen.ts": ["types"],
 	},
 	// Used as the `tsr` binary by the client's routes:generate script, and by
 	// the manual socket checks.
