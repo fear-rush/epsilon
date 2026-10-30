@@ -6,7 +6,7 @@
 import { z } from "@hono/zod-openapi";
 
 import { defaultModelSchema } from "../general";
-import { mcpServerViewSchema } from "../mcp/contract";
+import { mcpServerViewSchema } from "../mcp";
 import { packageViewSchema } from "../packages";
 import { builtinProviderSchema, catalogModelSchema, providerViewSchema } from "../providers";
 import { skillViewSchema } from "../skills";

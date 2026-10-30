@@ -8,7 +8,7 @@ import type { AgentHome } from "../../platform/agent-home";
 import { modelRuntime } from "../../platform/pi";
 import { readModelsFrom } from "../conversation";
 import { readDefaultModel } from "../general";
-import { isMcpTurnedOff, listMcpServers } from "../mcp/service";
+import { isMcpTurnedOff, listMcpServers } from "../mcp";
 import { listPackages } from "../packages";
 import { listBuiltins, listProviders, modelsDocument } from "../providers";
 import { listSkills } from "../skills";
