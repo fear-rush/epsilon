@@ -5,12 +5,12 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import type { ProviderDetail, ProviderModelInput, ThinkingLevel } from "shared";
+import type { ThinkingLevel } from "shared";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useProviderDetail } from "@/features/settings/providers/queries";
 import { useSettings } from "@/features/settings/queries";
-import { deleteProvider, saveProvider, testProvider } from "@/lib/api";
+import { deleteProvider, saveProvider, testProvider } from "@/api/endpoints";
 import { useSettingsRefresh } from "@/features/settings/refresh";
 import { DeleteDialog } from "@/features/settings/kit/delete-dialog";
 import { DetailLoader } from "@/features/settings/kit/detail-loader";
@@ -27,6 +27,7 @@ import { ProviderConnection } from "./provider-connection";
 import { CancelDialog } from "@/features/settings/kit/cancel-dialog";
 import { ProviderModels } from "./provider-models";
 import { ProviderTestMenu } from "./provider-test-menu";
+import type { ProviderDetail, ProviderModelInput } from "@/api/types";
 
 export function ProviderEditor({ providerId }: { providerId?: string }) {
 	const query = useProviderDetail(providerId);

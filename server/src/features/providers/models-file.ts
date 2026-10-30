@@ -4,10 +4,11 @@
  * object, and a write never drops a block this version does not model (ADR-0012).
  */
 import { z } from "zod";
-import type { ModelOverride, ReasoningCompat, ThinkingLevelMap } from "shared";
-import { parseProviderApi, reasoningCompatSchema, thinkingLevelMapSchema } from "shared";
+import { parseProviderApi } from "shared";
 
 import { setDefined, setOrDelete } from "../../platform/patch";
+import type { ModelOverride, ReasoningCompat, ThinkingLevelMap } from "./contract";
+import { reasoningCompatSchema, thinkingLevelMapSchema } from "./contract";
 
 const storedModelSchema = z.looseObject({
 	id: z.string(),

@@ -20,6 +20,21 @@ test("health endpoint responds", async () => {
 	expect(await response.json()).toEqual({ status: "ok" });
 });
 
+test("every REST answer, a refusal included, carries the contract id", async () => {
+	const app = await appOnScratchHome();
+	const ok = await app.request("/api/readiness");
+	const refused = await app.request("/api/settings/default-model", {
+		method: "PUT",
+		headers: { "content-type": "application/json" },
+		body: "{}",
+	});
+	const health = await app.request("/health");
+	const header = ok.headers.get("x-epsilon-contract");
+	expect(header).toMatch(/^[0-9a-f]{16}$/);
+	expect(refused.headers.get("x-epsilon-contract")).toBe(header);
+	expect(health.headers.get("x-epsilon-contract")).toBe(header);
+});
+
 test("a refused request in a feature router answers in the documented shape", async () => {
 	const app = await appOnScratchHome();
 	const response = await app.request("/api/settings/default-model", {

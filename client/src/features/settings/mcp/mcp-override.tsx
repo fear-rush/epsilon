@@ -10,7 +10,6 @@ import { useMutation } from "@tanstack/react-query";
 import { ArrowLeftIcon, TriangleAlertIcon } from "lucide-react";
 import { useState } from "react";
 import { cn } from "cn";
-import type { McpServerDetail } from "shared";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +18,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { DeleteDialog } from "@/features/settings/kit/delete-dialog";
 import { SettingsBlock, SettingsGroup } from "@/features/settings/kit/settings-section";
 import { useSettingsRefresh } from "@/features/settings/refresh";
-import { deleteMcpServer, setMcpServerEnabled, setMcpServerInProject } from "@/lib/api";
+import { deleteMcpServer, setMcpServerEnabled, setMcpServerInProject } from "@/api/endpoints";
+import type { McpServerDetail } from "@/api/types";
 
 const keyText = (keys: readonly string[]): string =>
 	keys.length === 0 ? "nothing" : keys.join(", ");

@@ -3,7 +3,7 @@
  * exist. Shown for the provider's default format and again inside the model
  * dialog, where a model override wins per key. Auto means pi detects it.
  */
-import type { ProviderApi, ReasoningCompat } from "shared";
+import type { ProviderApi } from "shared";
 
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import {
@@ -14,6 +14,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import type { ReasoningCompat } from "@/api/types";
 
 const THINKING_FORMATS = [
 	"openai",

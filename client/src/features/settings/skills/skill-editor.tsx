@@ -6,8 +6,8 @@
  */
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { skillInputSchema } from "shared";
-import type { SkillInput } from "shared";
+import { skillDescriptionSchema, skillNameSchema } from "shared";
+import { z } from "zod";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -21,11 +21,15 @@ import { UnsavedChangesBlock } from "@/features/settings/kit/unsaved-changes-blo
 import { useDraftForm } from "@/features/settings/kit/use-draft-form";
 import { useSettings } from "@/features/settings/queries";
 import { useSettingsRefresh } from "@/features/settings/refresh";
-import { deleteSkill, saveSkill } from "@/lib/api";
+import { deleteSkill, saveSkill } from "@/api/endpoints";
 
 import { useSkill } from "./queries";
+import type { SkillInput } from "@/api/types";
 
 type SkillField = keyof SkillInput;
+
+/** The rules the form checks before it sends; the server applies the same ones. */
+const skillFormSchema = z.object({ name: skillNameSchema, description: skillDescriptionSchema });
 
 const skillFields: readonly SkillField[] = ["name", "description", "body"];
 
@@ -83,7 +87,7 @@ function SkillForm({ detail }: { detail: SkillInput | undefined }) {
 
 	const submit = () => {
 		const found: Partial<Record<SkillField, string>> = {};
-		const parsed = skillInputSchema.safeParse(draft);
+		const parsed = skillFormSchema.safeParse(draft);
 		if (!parsed.success) {
 			for (const issue of parsed.error.issues) {
 				const key = issue.path[0];

@@ -16,7 +16,8 @@
 	"workspaces": [
 		"./server",
 		"./client",
-		"./shared"
+		"./shared",
+		"./tools/api-types"
 	],
 	"type": "module",
 	"scripts": {
@@ -31,10 +32,11 @@
 		"dead-code": "knip",
 		"type-check": "tsc --noEmit && turbo type-check",
 		"test": "turbo test",
-		"postinstall": "bun run routes:generate && turbo build --filter=shared --filter=server",
+		"postinstall": "bun run routes:generate && turbo build --filter=shared --filter=server && bun run api:generate",
 		"lint:fix": "oxlint --fix .",
 		"format": "oxfmt --write .",
 		"format:check": "oxfmt --check .",
+		"api:generate": "turbo run generate --filter=api-types",
 		"routes:generate": "bun run --cwd client routes:generate",
 		"sandbox:clean": "rm -rf .sandbox",
 		"hooks:install": "prek install",

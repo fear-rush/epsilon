@@ -10,13 +10,6 @@
  * config: provider fields are partial (omitted keeps, empty clears), a model is a
  * complete record, and unknown keys survive on every object.
  */
-import type {
-	BuiltinProvider,
-	ProviderDetail,
-	ProviderInput,
-	ProviderModelInput,
-	ProviderView,
-} from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { mergeSecrets, setOrDelete } from "../../platform/patch";
@@ -25,6 +18,13 @@ import type { ModelRuntime } from "../../platform/pi";
 import { apiOf, baseUrlOf, fieldsOf, mergeModelFields } from "./models-file";
 import type { ProviderEntry, StoredModel } from "./models-file";
 import { modelsDocument, readProvidersFile } from "./store";
+import type {
+	BuiltinProvider,
+	ProviderDetail,
+	ProviderInput,
+	ProviderModelInput,
+	ProviderView,
+} from "./contract";
 
 /**
  * The ids pi ships, independent of models.json. A second runtime with no models

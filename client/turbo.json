@@ -1,0 +1,12 @@
+{
+	"$schema": "../node_modules/turbo/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"build": {
+			"dependsOn": ["$TURBO_EXTENDS$", "api-types#generate"]
+		},
+		"type-check": {
+			"dependsOn": ["$TURBO_EXTENDS$", "api-types#generate"]
+		}
+	}
+}

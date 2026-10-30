@@ -6,7 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { useState } from "react";
 import { modelKey } from "shared";
-import type { SettingsSnapshot, SnapshotModel } from "shared";
+import type { SnapshotModel } from "shared";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -20,10 +20,11 @@ import {
 	CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { setDefaultModel } from "@/lib/api";
+import { setDefaultModel } from "@/api/endpoints";
 
 import { useSettingsRefresh } from "@/features/settings/refresh";
 import { SettingsGroup, SettingsPage, SettingsRow } from "@/features/settings/kit/settings-section";
+import type { SettingsSnapshot } from "@/api/types";
 
 const labelOf = (model: SnapshotModel) => `${model.provider}: ${model.name}`;
 

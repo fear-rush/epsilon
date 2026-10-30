@@ -4,9 +4,15 @@
  */
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { problemSchema } from "shared";
+import { z } from "@hono/zod-openapi";
 
 import type { SessionRegistry } from "../features/conversation/registry";
+
+/**
+ * The refusal body every REST route sends: one sentence the browser can show.
+ * A resource that needs a code extends this, so no route invents a second shape.
+ */
+export const problemSchema = z.object({ message: z.string() }).openapi("Problem");
 
 /** One refusal shape for every route: a sentence the panel can show. */
 export const errorContent = { "application/json": { schema: problemSchema } };

@@ -3,10 +3,10 @@
  * the install and the settings write are exported, so the panel calls them
  * instead of copying `pi install` (docs/reference/pi-sdk.md).
  */
-import type { PackageView } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { packageManager } from "../../platform/pi";
+import type { PackageView } from "./contract";
 
 export const listPackages = (projectDir: string, home: AgentHome): PackageView[] =>
 	packageManager(projectDir, home)

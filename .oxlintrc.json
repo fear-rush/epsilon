@@ -29,6 +29,8 @@
 		"**/build/**",
 		"**/.turbo/**",
 		"**/routeTree.gen.ts",
+		"client/src/api/*.gen.ts",
+		"client/src/api/openapi.json",
 		"**/drizzle/**",
 		".agent/**",
 		".agents/**",

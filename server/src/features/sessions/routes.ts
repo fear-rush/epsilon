@@ -1,10 +1,10 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
-import { sessionErrorSchema, sessionListSchema } from "shared";
 import { z } from "zod";
 
 import { listStoredSessions } from "../../platform/pi";
 import type { Deps } from "../../deps";
 import { deleteSession, joinSessions } from "./catalog";
+import { sessionErrorSchema, sessionListSchema } from "./contract";
 
 const sessionErrorContent = { "application/json": { schema: sessionErrorSchema } };
 

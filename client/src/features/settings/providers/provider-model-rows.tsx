@@ -5,10 +5,10 @@
  */
 import { PencilIcon, Trash2Icon, Undo2Icon } from "lucide-react";
 import type { ReactNode } from "react";
-import type { ModelOverride, ProviderModelInput } from "shared";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { ModelOverride, ProviderModelInput } from "@/api/types";
 
 function ModelRow({ name, id, children }: { name: string; id: string; children: ReactNode }) {
 	return (

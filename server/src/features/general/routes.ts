@@ -1,9 +1,9 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
-import { defaultModelSchema } from "shared";
 
 import type { Deps } from "../../deps";
 import { configWrite, errorContent } from "../../platform/http";
 import { modelRuntime } from "../../platform/pi";
+import { defaultModelSchema } from "./contract";
 import { writeDefaultModel } from "./defaults";
 
 const defaultModelRoute = createRoute({

@@ -1,4 +1,4 @@
-import type { SessionSummary } from "shared";
+import type { SessionSummary } from "@/api/types";
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;

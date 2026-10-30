@@ -3,10 +3,10 @@
  * exported writer for them. Using it keeps pi's scopes, locking and merge order
  * instead of writing settings.json by hand.
  */
-import type { DefaultModel } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { settingsManager } from "../../platform/pi";
+import type { DefaultModel } from "./contract";
 
 export const readDefaultModel = (projectDir: string, home: AgentHome): DefaultModel | null => {
 	const settings = settingsManager(projectDir, home);

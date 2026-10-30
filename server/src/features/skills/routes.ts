@@ -1,9 +1,10 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
-import { skillInputSchema, skillNameSchema } from "shared";
+import { skillNameSchema } from "shared";
 import { z } from "zod";
 
 import type { Deps } from "../../deps";
 import { configWrite, errorContent, failure } from "../../platform/http";
+import { skillInputSchema } from "./contract";
 import { readSkillFile, removeSkill, writeSkill } from "./store";
 
 const skillParams = z.object({ name: skillNameSchema });

@@ -9,7 +9,7 @@
  * the caller can put each message under its own control.
  */
 import { z } from "zod";
-import { providerApiSchema, providerInputSchema } from "shared";
+import { providerApiSchema, providerIdSchema } from "shared";
 
 import type { ProviderDraft } from "./provider-draft";
 
@@ -23,7 +23,7 @@ const providerId = z
 	.string()
 	.transform(trim)
 	.pipe(z.string().min(1, "A provider needs an id."))
-	.pipe(providerInputSchema.shape.id);
+	.pipe(providerIdSchema);
 
 export type ProviderField = "name" | "id" | "baseUrl" | "api" | "headers";
 

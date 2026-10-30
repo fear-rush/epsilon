@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { readinessKeys } from "@/api/keys";
-import { fetchReadiness } from "@/lib/api";
+import { fetchReadiness } from "@/api/endpoints";
 
 /**
  * Whether the deployment can run a turn, read from REST. The settings panel

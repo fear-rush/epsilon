@@ -5,14 +5,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
-import type { PackageView, SettingsSnapshot } from "shared";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { installPackage, removePackage } from "@/lib/api";
+import { installPackage, removePackage } from "@/api/endpoints";
 
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { DeleteDialog } from "@/features/settings/kit/delete-dialog";
@@ -23,6 +22,7 @@ import {
 	SettingsRow,
 } from "@/features/settings/kit/settings-section";
 import { useSettingsRefresh } from "@/features/settings/refresh";
+import type { PackageView, SettingsSnapshot } from "@/api/types";
 
 export function SettingsPackages({ snapshot }: { snapshot: SettingsSnapshot }) {
 	const [source, setSource] = useState("");

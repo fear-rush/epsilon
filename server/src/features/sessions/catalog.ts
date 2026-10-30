@@ -6,10 +6,10 @@
  * engine holds it. The browser never sends a path.
  */
 import { rm } from "node:fs/promises";
-import type { SessionErrorCode, SessionSummary } from "shared";
 
 import { findSessionFile } from "../../platform/pi";
 import type { StoredSession } from "../../platform/pi";
+import type { SessionErrorCode, SessionSummary } from "./contract";
 
 export const joinSessions = (
 	stored: StoredSession[],

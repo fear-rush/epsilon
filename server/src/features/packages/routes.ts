@@ -1,11 +1,8 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
-import { z } from "zod";
-
 import type { Deps } from "../../deps";
 import { configWrite, errorContent } from "../../platform/http";
+import { packageSourceSchema as sourceSchema } from "./contract";
 import { installPackage, removePackage } from "./service";
-
-const sourceSchema = z.object({ source: z.string().min(1) });
 
 const installPackageRoute = createRoute({
 	method: "post",

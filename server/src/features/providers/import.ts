@@ -6,12 +6,13 @@
  * the panel asks for those models by hand.
  */
 import { providerModelsEndpoint } from "shared";
-import type { ProviderApi, ProviderImportInput, ProviderModelInput } from "shared";
+import type { ProviderApi } from "shared";
 import { z } from "zod";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { modelRuntime } from "../../platform/pi";
 import type { ModelRuntime } from "../../platform/pi";
+import type { ProviderImportInput, ProviderModelInput } from "./contract";
 
 const TIMEOUT_MS = 10_000;
 const MAX_BYTES = 2_000_000;

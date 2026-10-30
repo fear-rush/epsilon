@@ -12,7 +12,7 @@ import { cn } from "cn";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { OFFLINE } from "@/lib/api";
+import { OFFLINE } from "@/api/client";
 
 import { OfflineNotice } from "./offline-notice";
 import type { MasterPath } from "./form-page";

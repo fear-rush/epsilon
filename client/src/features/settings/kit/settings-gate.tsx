@@ -5,10 +5,10 @@
  */
 import type { ComponentType } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { SettingsSnapshot } from "shared";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
+import type { SettingsSnapshot } from "@/api/types";
 
 export function SettingsGate({
 	query,

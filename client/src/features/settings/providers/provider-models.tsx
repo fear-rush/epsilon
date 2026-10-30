@@ -7,7 +7,7 @@
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { PROVIDER_APIS, parseProviderApi } from "shared";
-import type { ModelOverride, ProviderDetail, ProviderModelInput, ThinkingLevel } from "shared";
+import type { ThinkingLevel } from "shared";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -21,7 +21,7 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { testProvider } from "@/lib/api";
+import { testProvider } from "@/api/endpoints";
 import { SettingsBlock, SettingsGroup } from "@/features/settings/kit/settings-section";
 
 import { testInputOf } from "./provider-draft";
@@ -29,6 +29,7 @@ import type { ProviderDraft } from "./provider-draft";
 import { CatalogModelRows, CustomModelRows } from "./provider-model-rows";
 import { ProviderImportDialog } from "./provider-import-dialog";
 import { ProviderModelDialog } from "./provider-model-dialog";
+import type { ModelOverride, ProviderDetail, ProviderModelInput } from "@/api/types";
 
 type EditTarget = { model: ProviderModelInput | undefined; index: number | undefined };
 

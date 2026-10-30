@@ -86,7 +86,6 @@ export const protocolErrorCodeSchema = z.enum([
 	"AGENT_START_FAILED",
 	"AGENT_FAILED",
 	"EXTENSION_ERROR",
-	"HOST_NOT_ALLOWED",
 	"UNSUPPORTED_FRAME",
 ]);
 
@@ -96,14 +95,6 @@ export const clientFrameSchema = z.discriminatedUnion("t", [
 	z.object({ t: z.literal("detach"), sessionId: z.string() }),
 	z.object({ t: z.literal("command"), sessionId: z.string(), command: commandSchema }),
 	z.object({ t: z.literal("dialog"), sessionId: z.string(), answer: dialogAnswerSchema }),
-	z.object({ t: z.literal("terminal"), terminalId: z.string(), input: z.string() }),
-	z.object({
-		t: z.literal("terminal-resize"),
-		terminalId: z.string(),
-		cols: z.number().int(),
-		rows: z.number().int(),
-	}),
-	z.object({ t: z.literal("terminal-close"), terminalId: z.string() }),
 	z.object({ t: z.literal("ping") }),
 ]);
 
@@ -171,16 +162,6 @@ export const serverFrameSchema = z.discriminatedUnion("t", [
 		command: commandNameSchema,
 		ok: z.boolean(),
 		error: z.string().optional(),
-	}),
-	z.object({
-		t: z.literal("terminal"),
-		terminalId: z.string(),
-		output: z.string(),
-	}),
-	z.object({
-		t: z.literal("terminal-exit"),
-		terminalId: z.string(),
-		code: z.number().nullable(),
 	}),
 	z.object({
 		t: z.literal("error"),

@@ -4,9 +4,10 @@
  * the draft so switching back does not lose what was typed. `enabled` is not
  * here: the list's checkbox owns that key, so a save cannot undo a toggle.
  */
-import type { McpExposure, McpScope, McpServerDetail, McpServerInput, McpTransport } from "shared";
+import type { McpExposure, McpScope, McpTransport } from "shared";
 
 import type { PairRow } from "@/features/settings/kit/pair-rows";
+import type { McpServerDetail, McpServerInput } from "@/api/types";
 
 export type McpDraft = {
 	name: string;
