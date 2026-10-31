@@ -1,8 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { SettingsPackages } from "@/features/settings/packages";
-import { SettingsPage } from "@/features/settings/kit/settings-page";
+import { PackagesLayout } from "@/features/settings/packages/packages-panel";
 
-export const Route = createFileRoute("/settings/packages")({
-	component: () => <SettingsPage content={SettingsPackages} />,
-});
+export const Route = createFileRoute("/settings/packages")({ component: PackagesLayout });
