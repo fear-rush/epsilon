@@ -292,6 +292,7 @@ characters the provider returned.
 | `skills/`       | pi      | User skills; each directory holds a `SKILL.md`                             |
 | `sessions/`     | pi      | One JSONL per session, under `--<encoded cwd>--/`                          |
 | `chats/`        | Epsilon | The empty folder every chat runs in; it never holds a `.pi`                |
+| `trash/`        | Epsilon | Deleted chats: a JSONL and the record of where it came from                |
 
 Skills also load from `<cwd>/.pi/skills`, `<cwd>/.agents/skills`, `~/.agents/skills`
 and installed packages.

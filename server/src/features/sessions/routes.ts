@@ -8,8 +8,10 @@ import {
 	groupSessions,
 	moveSessionToProject,
 	pinSession,
+	purgeTrashedSession,
 	removeProject,
 	renameSession,
+	restoreTrashedSession,
 } from "./service";
 import {
 	moveSessionInputSchema,
@@ -18,10 +20,12 @@ import {
 	removedProjectSchema,
 	renameSessionInputSchema,
 	renamedSessionSchema,
+	restoredSessionSchema,
 	sessionErrorSchema,
 	sessionListSchema,
+	trashListSchema,
 } from "./contract";
-import { readPinned } from "./store";
+import { listTrash, readPinned } from "./store";
 
 const sessionErrorContent = { "application/json": { schema: sessionErrorSchema } };
 
@@ -43,9 +47,10 @@ const deleteSessionRoute = createRoute({
 	path: "/api/sessions/{id}",
 	tags: ["sessions"],
 	operationId: "deleteSession",
+	description: "Move a chat's session file to Epsilon's trash, where it can be restored",
 	request: { params: z.object({ id: z.string().min(1) }) },
 	responses: {
-		204: { description: "Session file removed" },
+		204: { description: "Session file moved to Epsilon's trash" },
 		404: { description: "No such session in the home", content: sessionErrorContent },
 		409: { description: "A live agent still holds this session", content: sessionErrorContent },
 	},
@@ -57,11 +62,11 @@ const removeProjectRoute = createRoute({
 	tags: ["sessions"],
 	operationId: "removeProject",
 	description:
-		"Take a project off the list by deleting every chat recorded in it; the folder and its trust stay",
+		"Take a project off the list by moving every chat recorded in it to Epsilon's trash; the folder and its trust stay",
 	request: { query: z.object({ path: z.string().min(1) }) },
 	responses: {
 		200: {
-			description: "How many chats were deleted",
+			description: "How many chats were moved to the trash",
 			content: { "application/json": { schema: removedProjectSchema } },
 		},
 		404: { description: "No chat is recorded in that folder", content: sessionErrorContent },
@@ -125,6 +130,50 @@ const pinSessionRoute = createRoute({
 	},
 });
 
+const listTrashRoute = createRoute({
+	method: "get",
+	path: "/api/sessions/trash",
+	tags: ["sessions"],
+	operationId: "listTrashedSessions",
+	description: "Every chat in Epsilon's own trash, newest deletion first",
+	responses: {
+		200: {
+			description: "Deleted chats that can be restored",
+			content: { "application/json": { schema: trashListSchema } },
+		},
+	},
+});
+
+const restoreTrashedSessionRoute = createRoute({
+	method: "post",
+	path: "/api/sessions/trash/{id}/restore",
+	tags: ["sessions"],
+	operationId: "restoreTrashedSession",
+	description: "Put a deleted chat's file back where pi's list finds it again",
+	request: { params: z.object({ id: z.string().min(1) }) },
+	responses: {
+		200: {
+			description: "The chat is back at its old path",
+			content: { "application/json": { schema: restoredSessionSchema } },
+		},
+		404: { description: "The trash holds no such chat", content: sessionErrorContent },
+		409: { description: "A session file already sits at that path", content: sessionErrorContent },
+	},
+});
+
+const purgeTrashedSessionRoute = createRoute({
+	method: "delete",
+	path: "/api/sessions/trash/{id}",
+	tags: ["sessions"],
+	operationId: "purgeTrashedSession",
+	description: "Destroy a trashed chat for good; a restore is impossible afterwards",
+	request: { params: z.object({ id: z.string().min(1) }) },
+	responses: {
+		204: { description: "The file and its record are gone" },
+		404: { description: "The trash holds no such chat", content: sessionErrorContent },
+	},
+});
+
 export const sessionsRoutes = ({ home, engines }: Deps) =>
 	new OpenAPIHono()
 		.openapi(listSessionsRoute, async (c) => {
@@ -174,6 +223,20 @@ export const sessionsRoutes = ({ home, engines }: Deps) =>
 		.openapi(pinSessionRoute, async (c) => {
 			const { id } = c.req.valid("param");
 			const outcome = await pinSession(home, id, c.req.valid("json").pinned);
+			if (outcome.ok) return c.body(null, 204);
+			return c.json({ code: outcome.code, message: outcome.message }, 404);
+		})
+		.openapi(listTrashRoute, async (c) => c.json(await listTrash(home), 200))
+		.openapi(restoreTrashedSessionRoute, async (c) => {
+			const { id } = c.req.valid("param");
+			const outcome = await restoreTrashedSession(home, id);
+			if (outcome.ok) return c.json(outcome.value, 200);
+			const problem = { code: outcome.code, message: outcome.message };
+			return outcome.code === "TRASH_PATH_TAKEN" ? c.json(problem, 409) : c.json(problem, 404);
+		})
+		.openapi(purgeTrashedSessionRoute, async (c) => {
+			const { id } = c.req.valid("param");
+			const outcome = await purgeTrashedSession(home, id);
 			if (outcome.ok) return c.body(null, 204);
 			return c.json({ code: outcome.code, message: outcome.message }, 404);
 		});

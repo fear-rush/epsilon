@@ -2,8 +2,9 @@
  * The sidebar: chats, then projects with their chats. pi owns the files; this
  * polls the REST route for the live badges and deletes through the same route,
  * confirming first. A project appears here once it has a chat on disk. The
- * section actions start a new chat and open a project. Connection problems are
- * the app banner's, not this column's.
+ * section actions start a new chat and open a project, and the search field
+ * filters both lists by name and first message. Connection problems are the app
+ * banner's, not this column's.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
@@ -16,14 +17,17 @@ import {
 	MessageSquareIcon,
 	MoreHorizontalIcon,
 	PlusIcon,
+	SearchXIcon,
 	Settings2Icon,
 	ShieldAlertIcon,
 	SquarePenIcon,
+	Trash2Icon,
 } from "lucide-react";
 import { useState } from "react";
 
 import { SessionItem } from "@/features/sessions/session-item";
 import { RenameDialog } from "@/features/sessions/rename-dialog";
+import { TrashDialog } from "@/features/sessions/trash-dialog";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -49,6 +53,8 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { PaneBar } from "@/components/patterns/pane/pane-bar";
+import { PaneBand } from "@/components/patterns/pane/pane-band";
+import { SearchField } from "@/components/patterns/list/search-field";
 import { errorView } from "@/components/patterns/status/error-view";
 import { InlineStatus } from "@/components/patterns/status/inline-status";
 import { LoadingState } from "@/components/patterns/status/loading-state";
@@ -73,6 +79,25 @@ import type { ProjectSessions, SessionList, SessionSummary } from "@/api/types";
 const LIVE_REFRESH_MS = 5_000;
 /** A row modified this close to the last poll is a chat that just arrived. */
 const FRESH_SESSION_MS = 10_000;
+
+/** The search reads what the list already carries: a chat's name and first message. */
+const chatMatches = (session: SessionSummary, needle: string): boolean =>
+	`${session.name ?? ""}\n${session.firstMessage}`.toLowerCase().includes(needle);
+
+const filteredChats = (chats: SessionSummary[], needle: string): SessionSummary[] =>
+	needle === "" ? chats : chats.filter((chat) => chatMatches(chat, needle));
+
+/** A project matches its folder name; one that does keeps every chat it holds. */
+const filteredProjects = (entries: ProjectSessions[], needle: string): ProjectSessions[] =>
+	needle === ""
+		? entries
+		: entries
+				.map((entry) =>
+					entry.project.name.toLowerCase().includes(needle)
+						? entry
+						: { ...entry, sessions: filteredChats(entry.sessions, needle) },
+				)
+				.filter((entry) => entry.sessions.length > 0);
 
 /** The same order the list route uses: pinned first, then newest. */
 const sortChats = (sessions: SessionSummary[]): SessionSummary[] =>
@@ -110,6 +135,8 @@ export function SessionSidebar() {
 	const [pendingProject, setPendingProject] = useState<ProjectSessions | undefined>(undefined);
 	const [renaming, setRenaming] = useState<SessionSummary | undefined>(undefined);
 	const [renameOpen, setRenameOpen] = useState(false);
+	const [trashOpen, setTrashOpen] = useState(false);
+	const [query, setQuery] = useState("");
 	const [opening, setOpening] = useState(false);
 	const sessions = useQuery({
 		queryKey: sessionKeys.all,
@@ -194,6 +221,13 @@ export function SessionSidebar() {
 		pinChat.mutate({ id: session.id, pinned: !session.pinned });
 	};
 	const projects = sessions.data?.projects ?? [];
+	const needle = query.trim().toLowerCase();
+	const searching = needle !== "";
+	const visibleProjects = filteredProjects(projects, needle);
+	const visibleChats = filteredChats(sessions.data?.chats ?? [], needle);
+	const noMatches = searching && visibleProjects.length === 0 && visibleChats.length === 0;
+	const showProjects = !searching || visibleProjects.length > 0;
+	const showChats = !searching || visibleChats.length > 0;
 	const freshAfter = sessions.dataUpdatedAt - FRESH_SESSION_MS;
 	const isFresh = (session: SessionSummary): boolean => Date.parse(session.modified) >= freshAfter;
 
@@ -203,13 +237,32 @@ export function SessionSidebar() {
 				title="epsilon"
 				className="animate-enter-fade"
 				actions={
-					!isMobile && (
-						<Tip label="Hide sidebar">
-							<SidebarTrigger />
+					<>
+						<Tip label="Recently deleted">
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								aria-label="Recently deleted"
+								className="text-muted-foreground"
+								onClick={() => setTrashOpen(true)}
+							>
+								<Trash2Icon />
+							</Button>
 						</Tip>
-					)
+						{!isMobile && (
+							<Tip label="Hide sidebar">
+								<SidebarTrigger />
+							</Tip>
+						)}
+					</>
 				}
 			/>
+
+			{sessions.data !== undefined && (
+				<PaneBand>
+					<SearchField value={query} onChange={setQuery} label="Search chats" />
+				</PaneBand>
+			)}
 
 			<SidebarContent>
 				{sessions.isPending ? (
@@ -220,72 +273,85 @@ export function SessionSidebar() {
 					<StatusView {...errorView(sessions.error)} />
 				) : (
 					<>
-						<SidebarGroup className="animate-enter-rise">
-							<SidebarGroupLabel>Projects</SidebarGroupLabel>
-							<Tip label="Open project">
-								<SidebarGroupAction
-									aria-label="Open project"
-									className="text-muted-foreground"
-									onClick={() => setOpening(true)}
-								>
-									<FolderPlusIcon />
-								</SidebarGroupAction>
-							</Tip>
-							<SidebarGroupContent>
-								<SidebarMenu>
-									{projects.map((entry) => (
-										<ProjectGroup
-											key={entry.project.path}
-											entry={entry}
-											activeId={activeId}
-											isFresh={isFresh}
-											onNewChat={() => startProjectChat(entry.project.path)}
-											onRemove={() => {
-												forgetProject.reset();
-												setPendingProject(entry);
-											}}
-											onRename={onRename}
-											onPin={onPin}
-											onDelete={onDelete}
-										/>
-									))}
-								</SidebarMenu>
-							</SidebarGroupContent>
-						</SidebarGroup>
-
-						<SidebarGroup className="animate-enter-rise">
-							<SidebarGroupLabel>Chats</SidebarGroupLabel>
-							<Tip label="New chat">
-								<SidebarGroupAction
-									aria-label="New chat"
-									className="text-muted-foreground"
-									onClick={newChat}
-								>
-									<SquarePenIcon />
-								</SidebarGroupAction>
-							</Tip>
-							<SidebarGroupContent>
-								{sessions.data.chats.length === 0 ? (
-									<div className="px-2">
-										<InlineStatus icon={MessageSquareIcon}>No chats yet</InlineStatus>
-									</div>
-								) : (
-									<SidebarMenu>
-										{sessions.data.chats.map((session) => (
-											<SessionItem
-												key={session.id}
-												session={session}
-												active={session.id === activeId}
-												animate={isFresh(session)}
-												onRename={onRename}
-												onPin={onPin}
-												onDelete={onDelete}
-											/>
-										))}
-									</SidebarMenu>
+						{noMatches ? (
+							<div className="flex min-h-0 flex-1 flex-col animate-enter-fade">
+								<StatusView icon={SearchXIcon} title="No chats match" />
+							</div>
+						) : (
+							<>
+								{showProjects && (
+									<SidebarGroup className="animate-enter-rise">
+										<SidebarGroupLabel>Projects</SidebarGroupLabel>
+										<Tip label="Open project">
+											<SidebarGroupAction
+												aria-label="Open project"
+												className="text-muted-foreground"
+												onClick={() => setOpening(true)}
+											>
+												<FolderPlusIcon />
+											</SidebarGroupAction>
+										</Tip>
+										<SidebarGroupContent>
+											<SidebarMenu>
+												{visibleProjects.map((entry) => (
+													<ProjectGroup
+														key={entry.project.path}
+														entry={entry}
+														activeId={activeId}
+														expanded={searching}
+														isFresh={isFresh}
+														onNewChat={() => startProjectChat(entry.project.path)}
+														onRemove={() => {
+															forgetProject.reset();
+															setPendingProject(entry);
+														}}
+														onRename={onRename}
+														onPin={onPin}
+														onDelete={onDelete}
+													/>
+												))}
+											</SidebarMenu>
+										</SidebarGroupContent>
+									</SidebarGroup>
 								)}
-							</SidebarGroupContent>
-						</SidebarGroup>
+
+								{showChats && (
+									<SidebarGroup className="animate-enter-rise">
+										<SidebarGroupLabel>Chats</SidebarGroupLabel>
+										<Tip label="New chat">
+											<SidebarGroupAction
+												aria-label="New chat"
+												className="text-muted-foreground"
+												onClick={newChat}
+											>
+												<SquarePenIcon />
+											</SidebarGroupAction>
+										</Tip>
+										<SidebarGroupContent>
+											{visibleChats.length === 0 ? (
+												<div className="px-2">
+													<InlineStatus icon={MessageSquareIcon}>No chats yet</InlineStatus>
+												</div>
+											) : (
+												<SidebarMenu>
+													{visibleChats.map((session) => (
+														<SessionItem
+															key={session.id}
+															session={session}
+															active={session.id === activeId}
+															animate={isFresh(session)}
+															onRename={onRename}
+															onPin={onPin}
+															onDelete={onDelete}
+														/>
+													))}
+												</SidebarMenu>
+											)}
+										</SidebarGroupContent>
+									</SidebarGroup>
+								)}
+							</>
+						)}
 					</>
 				)}
 				{sessions.data?.pinsProblem !== undefined && (
@@ -336,7 +402,7 @@ export function SessionSidebar() {
 				description={
 					pendingDelete === undefined
 						? ""
-						: `${sessionLabel(pendingDelete)} is removed from pi's list and its file is deleted.`
+						: `${sessionLabel(pendingDelete)} leaves the list, and its file moves to Epsilon's trash, where Recently deleted can restore it.`
 				}
 				error={remove.error}
 				pending={remove.isPending}
@@ -358,7 +424,7 @@ export function SessionSidebar() {
 				description={
 					pendingProject === undefined
 						? ""
-						: `Its ${pendingProject.sessions.length === 1 ? "chat is" : `${pendingProject.sessions.length} chats are`} deleted from pi's history. The folder ${pendingProject.project.path} and its files stay where they are, and opening it again starts fresh.`
+						: `Its ${pendingProject.sessions.length === 1 ? "chat moves" : `${pendingProject.sessions.length} chats move`} to Epsilon's trash, where Recently deleted can restore ${pendingProject.sessions.length === 1 ? "it" : "them"}. The folder ${pendingProject.project.path} and its files stay where they are, and opening it again starts fresh.`
 				}
 				error={forgetProject.error}
 				pending={forgetProject.isPending}
@@ -373,6 +439,8 @@ export function SessionSidebar() {
 					if (pendingProject !== undefined) forgetProject.mutate(pendingProject);
 				}}
 			/>
+
+			<TrashDialog open={trashOpen} onOpenChange={setTrashOpen} />
 		</Sidebar>
 	);
 }
@@ -385,6 +453,7 @@ export function SessionSidebar() {
 function ProjectGroup({
 	entry,
 	activeId,
+	expanded,
 	isFresh,
 	onNewChat,
 	onRemove,
@@ -394,6 +463,8 @@ function ProjectGroup({
 }: {
 	entry: ProjectSessions;
 	activeId: string | undefined;
+	/** A search is narrowing the list, so every surviving project shows its chats. */
+	expanded: boolean;
 	isFresh: (session: SessionSummary) => boolean;
 	onNewChat: () => void;
 	/** Takes the project off the list; the folder stays. */
@@ -410,8 +481,10 @@ function ProjectGroup({
 	const [open, setOpen] = useState(holdsActive);
 	return (
 		<Collapsible
-			open={open}
-			onOpenChange={setOpen}
+			open={expanded ? true : open}
+			onOpenChange={(next) => {
+				if (!expanded) setOpen(next);
+			}}
 			render={<SidebarMenuItem className="animate-enter-rise" />}
 		>
 			<div className="group/project flex items-center gap-1">

@@ -164,15 +164,22 @@ pin is Epsilon's own list preference: `pinned-sessions.json` in the agent home h
 the ids, and the list route joins them to pi's sessions. Pinned rows lead their place;
 a project's chats stay inside that project.
 
-Deleting a chat removes its session file and its pin; an idle engine on it is closed
-first, and only a turn in progress refuses. Removing a project deletes the session files
-recorded in that folder, which is all that puts it on the list; the folder and pi's trust
-record are left alone.
+Deleting a chat moves its session file to Epsilon's trash and drops its pin; an idle engine
+on it is closed first, and only a turn in progress refuses. Removing a project moves the
+session files recorded in that folder to the trash, which is all that puts it on the list;
+the folder and pi's trust record are left alone. The trash is `<agent home>/trash`, beside
+`sessions/` because pi lists every folder under `sessions/` as a live session: one file per
+chat, plus a sidecar naming the path it came from and the day it moved. A restore puts the
+file back, and refuses when something already sits at that path; only deleting it from the
+trash destroys it. A chat moved into a project is removed rather than trashed: its history
+lives on in the fork, so a second copy would only be confusing.
 
 Why: pi has no pin concept, and a browser-only pin would vanish on another tab or a
 reload. A pi session file with an unknown pin entry would be a second truth for pi's
-own data. Not: writing pins into a session transcript or keeping them in server
-memory.
+own data. A delete nobody can undo throws a conversation away for good. Not:
+writing pins into a session transcript or keeping them in server memory. Not: the `trash`
+CLI pi's own picker calls, which stock macOS does not have and which would only add a child
+process around two file moves.
 
 MCP servers, skills and packages each open on a Global | Project tab, the split pi
 makes between the home and a project's `.pi`. The tab decides what Add writes and

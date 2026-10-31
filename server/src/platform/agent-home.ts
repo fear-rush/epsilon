@@ -21,6 +21,12 @@ export type AgentHome = {
 	/** Epsilon's pinned chat ids. pi has no pin concept, so this file is ours. */
 	readonly pinsFile: string;
 	/**
+	 * Deleted chats waiting to be restored: one file per chat plus a sidecar naming
+	 * where it came from. Beside `sessions/`, never inside it, because pi lists every
+	 * folder under `sessions/` as a live session.
+	 */
+	readonly trashDir: string;
+	/**
 	 * The one folder every chat runs in. It holds no `.pi`, so a chat sees only the
 	 * home's resources, and pi groups every chat under one session directory.
 	 */
@@ -54,6 +60,7 @@ export const agentHome = (dir: string, options: AgentHomeOptions = {}): AgentHom
 	mcpLogRotatedFile: join(dir, "mcp.log.1"),
 	skillsDir: join(dir, "skills"),
 	pinsFile: join(dir, "pinned-sessions.json"),
+	trashDir: join(dir, "trash"),
 	chatsDir: join(dir, "chats"),
 });
 

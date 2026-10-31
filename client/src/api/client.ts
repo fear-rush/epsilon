@@ -41,6 +41,9 @@ export class RefusalError extends Error {
 const FAILURES = new Map([
 	["GET /api/sessions", "The session list did not load"],
 	["DELETE /api/sessions/{id}", "Delete failed"],
+	["GET /api/sessions/trash", "The trash did not load"],
+	["POST /api/sessions/trash/{id}/restore", "The chat was not restored"],
+	["DELETE /api/sessions/trash/{id}", "The chat was not deleted"],
 	["DELETE /api/projects/sessions", "The project was not removed"],
 	["POST /api/sessions/{id}/move", "The chat was not moved"],
 	["GET /api/projects/status", "The folder did not load"],

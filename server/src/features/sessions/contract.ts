@@ -67,6 +67,38 @@ export const removedProjectSchema = z
 	.object({ removed: z.number().int().nonnegative() })
 	.openapi("RemovedProject");
 
+/**
+ * One chat in Epsilon's trash: where its file came from, when it moved, and the
+ * label pi had derived for it. The label is recorded at the move because pi
+ * derives a session's name and first message while listing, not by opening a file.
+ */
+const trashedSessionSchema = z
+	.object({
+		id: z.string(),
+		/** The absolute path its file had in pi's `sessions/` folder, and where a restore puts it back. */
+		path: z.string(),
+		deletedAt: z.string(),
+		name: z.string().optional(),
+		firstMessage: z.string(),
+	})
+	.openapi("TrashedSession");
+
+export type TrashedSession = z.infer<typeof trashedSessionSchema>;
+
+export const trashListSchema = z
+	.object({
+		entries: z.array(trashedSessionSchema),
+		/** Why some deleted chats cannot be listed, when their record is missing or unusable. */
+		problem: z.string().optional(),
+	})
+	.openapi("TrashList");
+
+export type TrashList = z.infer<typeof trashListSchema>;
+
+export const restoredSessionSchema = z
+	.object({ id: z.string(), path: z.string() })
+	.openapi("RestoredSession");
+
 export const pinSessionInputSchema = z.object({ pinned: z.boolean() }).openapi("PinSessionInput");
 
 /** The refusals a session route can send. Each leaves the file alone. */
@@ -75,6 +107,8 @@ const sessionErrorCodeSchema = z.enum([
 	"SESSION_RUNNING",
 	"PROJECT_NOT_TRUSTED",
 	"PROJECT_INVALID",
+	"TRASH_NOT_FOUND",
+	"TRASH_PATH_TAKEN",
 ]);
 
 export type SessionErrorCode = z.infer<typeof sessionErrorCodeSchema>;
