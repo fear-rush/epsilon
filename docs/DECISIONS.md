@@ -224,13 +224,14 @@ the page navigates to it. A fork or a clone runs on an `AgentSessionRuntime` bui
 request alone and disposed in `finally`: pi's `fork` replaces the session a runtime holds,
 so a copy cannot borrow the live engine. The transient runtime is wired like the engine
 (same settings manager, same resource loader with the CLI's built-ins and Epsilon's
-defaults, same UI bridge, with no tab behind it), the source session's engine is closed
-first so one writer reads the file, and a chat that is still working refuses the copy
-instead of being stopped. Importing goes through `SessionManager.forkFrom`, the call that
-moves a chat into a project: it writes a fresh id and the header's folder. `importFromJsonl`
-keeps the source file's id and its recorded folder ([pi-sdk.md](pi-sdk.md), Embedding), so
-in a home of many sessions it produces duplicate ids and chats filed under a folder this
-machine may not have.
+defaults, same UI bridge, with no tab behind it), so an extension sees the same start and
+shutdown pair it would in a live engine and a copy pays one MCP connect and disconnect for
+it. The source session's engine is closed first, so one writer reads the file, and a chat
+that is still working refuses the copy instead of being stopped. Importing goes through
+`SessionManager.forkFrom`, the call that moves a chat into a project: it writes a fresh id
+and the header's folder. `importFromJsonl` keeps the source file's id and its recorded
+folder ([pi-sdk.md](pi-sdk.md), Embedding), so in a home of many sessions it produces
+duplicate ids and chats filed under a folder this machine may not have.
 
 Why: a copy exists so two chats continue separately, and the original file is left exactly
 as it was. A new id is the one thing the route, the socket attach and a sidebar row can all
