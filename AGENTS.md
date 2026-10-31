@@ -28,6 +28,12 @@ prose; fix a doc that disagrees in the same commit, and never copy code or file 
 | `bun run routes:generate`                        | Regenerate the client route tree                |
 | `bun run api:generate`                           | Regenerate the client from the server's OpenAPI |
 | `bun run hooks:install`                          | Install the commit hooks, once per clone        |
+| `bun run test:e2e`                               | Playwright against a scratch agent home         |
+| `bun run e2e:install`                            | Install Chromium for the e2e suite, once        |
+
+The e2e suite seeds its own agent home under the OS temp directory and starts both
+servers against it; it never reads or writes `~/.pi`. Fixtures live in
+`e2e/support/home.ts`.
 
 ## Invariants
 

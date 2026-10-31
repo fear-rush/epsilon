@@ -8,6 +8,8 @@
 	"include": [
 		"scripts/**/*.ts",
 		"tools/**/*.ts",
+		"e2e/**/*.ts",
+		"playwright.config.ts",
 		"server/drizzle.config.ts",
 		"server/scripts/**/*.ts",
 		"shared/scripts/**/*.ts",

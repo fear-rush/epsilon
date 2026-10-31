@@ -56,3 +56,9 @@ bun.lockb
 
 # TanStack Router generation cache
 client/.tanstack/
+
+# Playwright
+playwright-report
+test-results
+blob-report
+.playwright-cli
