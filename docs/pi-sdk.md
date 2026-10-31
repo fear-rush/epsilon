@@ -405,6 +405,10 @@ Turborepo or the runtime.
   `bashExecution` message without emitting `message_start`/`message_end`, and holds
   it until the run settles when streaming. Re-read the snapshot after a `bash`
   command and again at `agent_settled`.
+- **`isBashRunning` and `abortBash()` cover `executeBash` only.** The set behind them
+  is filled by `executeBash` (the composer's `!cmd` and extensions that call it).
+  The bash tool runs under the run's abort signal, so a tool call is stopped by
+  `abort()`, not `abortBash()`.
 - **`toJsonEvent` is not exported.** `package.json` exports only `.` and
   `./rpc-entry`; `dist/modes/json-event.js` is private. The host carries its own
   copy of the transform in `server/src/features/conversation/engine.ts`.

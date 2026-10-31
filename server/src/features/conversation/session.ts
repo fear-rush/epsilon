@@ -244,19 +244,21 @@ export class LiveSession {
 			case "prompt":
 				await this.prompt(command.text, command.behavior);
 				return;
-			case "steer":
-				await agent.steer(command.text, undefined, { source: "interactive" });
-				return;
 			case "abort":
 				this.dialogs.cancelAll();
 				await agent.abort();
 				return;
-			case "bash":
-				await agent.executeBash(command.command, undefined, {
+			case "bash": {
+				// `executeBash` resolves when the command finishes, so report the running
+				// state first: that is what lets a tab offer `abort_bash` while it runs.
+				const running = agent.executeBash(command.command, undefined, {
 					excludeFromContext: command.excludeFromContext,
 				});
 				this.resync();
+				await running;
+				this.resync();
 				return;
+			}
 			case "abort_bash":
 				agent.abortBash();
 				this.resync();

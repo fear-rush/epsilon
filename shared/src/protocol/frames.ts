@@ -15,7 +15,7 @@ import type { JsonAgentSessionEvent } from "../pi";
  * Bumped whenever a frame's shape changes. The client sends it in `hello` and
  * reloads on a mismatch instead of guessing.
  */
-export const PROTOCOL_VERSION = 8;
+export const PROTOCOL_VERSION = 9;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([
@@ -46,7 +46,6 @@ export type Place = z.infer<typeof placeSchema>;
 /** The commands a tab may send. */
 export const commandNameSchema = z.enum([
 	"prompt",
-	"steer",
 	"abort",
 	"bash",
 	"set_model",
@@ -79,7 +78,6 @@ export const commandSchema = z.discriminatedUnion("type", [
 		text: z.string(),
 		behavior: promptBehaviorSchema.optional(),
 	}),
-	z.object({ type: z.literal("steer"), text: z.string() }),
 	z.object({ type: z.literal("abort") }),
 	z.object({ type: z.literal("bash"), command: z.string(), excludeFromContext: z.boolean() }),
 	z.object({ type: z.literal("set_model"), provider: z.string(), modelId: z.string() }),

@@ -70,6 +70,8 @@ function DraftConversation({
 		thinkingLevel,
 		availableThinkingLevels,
 		codingTools,
+		contextUsage,
+		stats,
 	} = snapshot.state;
 	const where = snapshot.state.place ?? place;
 
@@ -96,6 +98,8 @@ function DraftConversation({
 				statuses={statuses}
 				commands={commands}
 				codingTools={codingTools}
+				contextUsage={contextUsage}
+				cost={stats.cost}
 				inline
 				onSent={start}
 				footer={
@@ -116,6 +120,8 @@ function DraftConversation({
 			statuses,
 			commands,
 			codingTools,
+			contextUsage,
+			stats.cost,
 			onChangeProject,
 			where,
 			start,

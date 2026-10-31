@@ -87,6 +87,8 @@ export type ConversationState = {
 	/** A turn is in progress. `agent_start` and `agent_end` carry this; a live
 	 * engine that is merely idle does not. */
 	busy: boolean;
+	/** pi is replacing the transcript with a summary. */
+	isCompacting: boolean;
 	/** What the model picker may offer, from the last snapshot. */
 	models: SnapshotModel[];
 	/** What `/` may expand to, from the last snapshot's `get_commands`. */
@@ -133,6 +135,7 @@ export const emptyConversation: ConversationState = {
 	statuses: [],
 	widgets: [],
 	busy: false,
+	isCompacting: false,
 	models: [],
 	commands: [],
 	model: undefined,

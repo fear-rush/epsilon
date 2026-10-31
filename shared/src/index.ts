@@ -6,6 +6,7 @@ export type {
 	ContextUsage,
 	Place,
 	PromptBehavior,
+	PromptQueue,
 	ProtocolErrorCode,
 	ServerFrame,
 	SessionStats,

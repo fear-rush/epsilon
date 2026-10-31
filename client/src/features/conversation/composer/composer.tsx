@@ -1,8 +1,16 @@
 import { ArrowUpIcon, SquareIcon } from "lucide-react";
 import { memo, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
-import type { SnapshotCommand, SnapshotModel, ThinkingLevel, UiStatus } from "shared";
+import type {
+	ContextUsage,
+	PromptBehavior,
+	SnapshotCommand,
+	SnapshotModel,
+	ThinkingLevel,
+	UiStatus,
+} from "shared";
 
+import { shortcut } from "@/components/patterns/shortcut";
 import { Tip } from "@/components/patterns/tip";
 import type { ConversationStore } from "@/features/conversation/store";
 import {
@@ -11,6 +19,7 @@ import {
 	InputGroupButton,
 	InputGroupTextarea,
 } from "@/components/ui/input-group";
+import { ContextMeter } from "./context-meter";
 import { ModelMenu } from "./model-menu";
 import { Palette } from "./palette";
 import { PermissionMenu } from "./permission-menu";
@@ -44,6 +53,10 @@ type ComposerProps = {
 	statuses: UiStatus[];
 	commands: SnapshotCommand[];
 	codingTools: boolean;
+	/** Absent while pi cannot read the context; the meter then shows nothing. */
+	contextUsage: ContextUsage | undefined;
+	/** What the session has spent, for the meter's Tip. */
+	cost: number;
 	/** An empty session draws the box in the page, not docked under a transcript. */
 	inline?: boolean;
 	/** Drawn under the box, inside its column: where this conversation runs. */
@@ -62,6 +75,8 @@ function ComposerImpl({
 	statuses,
 	commands,
 	codingTools,
+	contextUsage,
+	cost,
 	inline = false,
 	footer,
 	onSent,
@@ -99,7 +114,11 @@ function ComposerImpl({
 		setSelected(matches[next]?.name);
 	};
 
-	const submit = () => {
+	/**
+	 * Send the draft. `behavior` joins a run that is already going: Enter steers,
+	 * Ctrl/⌘+Enter waits for the run to settle. An idle composer ignores it.
+	 */
+	const submit = (behavior?: PromptBehavior) => {
 		const message = draft.trim();
 		if (message === "") return;
 		// `!cmd` runs in the shell, and `!!cmd` hides its output from the agent. A
@@ -118,8 +137,7 @@ function ComposerImpl({
 		if (message === "/reload") {
 			store.reload();
 		} else {
-			if (busy) store.steer(message);
-			else store.sendPrompt(message);
+			store.prompt(message, busy ? (behavior ?? "steer") : undefined);
 			onSent?.();
 		}
 		setDraft("");
@@ -154,7 +172,8 @@ function ComposerImpl({
 		}
 		if (event.key === "Enter" && !event.shiftKey) {
 			event.preventDefault();
-			formRef.current?.requestSubmit();
+			if (event.metaKey || event.ctrlKey) submit("followUp");
+			else formRef.current?.requestSubmit();
 		}
 	};
 
@@ -178,7 +197,7 @@ function ComposerImpl({
 							onKeyDown={onKeyDown}
 							placeholder={
 								busy
-									? "Steer the run (Enter steers, Esc stops)"
+									? `Steer this run: Enter steers, ${shortcut("Enter")} waits until it settles, Esc stops`
 									: "Message the agent (/ commands, ! shell, Enter sends)"
 							}
 							className="max-h-40 min-h-11 p-3"
@@ -189,6 +208,7 @@ function ComposerImpl({
 								model={model}
 								onSelect={(next) => store.setModel(next.provider, next.id)}
 							/>
+							<ContextMeter usage={contextUsage} cost={cost} />
 							<ThinkingMenu
 								level={thinkingLevel}
 								levels={availableThinkingLevels}
@@ -212,14 +232,14 @@ function ComposerImpl({
 									</InputGroupButton>
 								</Tip>
 							)}
-							<Tip label={busy ? "Steer" : "Send"}>
+							<Tip label={busy ? `Steer the run. ${shortcut("Enter")} sends a follow-up.` : "Send"}>
 								<InputGroupButton
 									type="submit"
 									size="icon-sm"
 									variant="default"
 									className="rounded-full"
 									disabled={draft.trim() === ""}
-									aria-label={busy ? "Steer" : "Send"}
+									aria-label={busy ? "Steer the run" : "Send"}
 								>
 									<ArrowUpIcon />
 								</InputGroupButton>

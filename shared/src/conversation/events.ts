@@ -172,13 +172,25 @@ export const reduceEvent = (
 			};
 		}
 		case "compaction_start":
-			return withNotice(state, "compaction", "Compacting the conversation");
+			return withNotice(
+				{ ...state, isCompacting: true },
+				"compaction",
+				"Compacting the conversation",
+			);
 		case "compaction_end":
-			return withNotice(state, "compaction", "Compaction finished");
+			return withNotice({ ...state, isCompacting: false }, "compaction", "Compaction finished");
 		case "auto_retry_start":
-			return withNotice(state, "retry", `Retrying the request (attempt ${event.attempt})`);
+			return withNotice(
+				{ ...state, isRetrying: true },
+				"retry",
+				`Retrying the request (attempt ${event.attempt})`,
+			);
 		case "auto_retry_end":
-			return withNotice(state, "retry", event.success ? "Retry succeeded" : "Retry failed");
+			return withNotice(
+				{ ...state, isRetrying: false },
+				"retry",
+				event.success ? "Retry succeeded" : "Retry failed",
+			);
 		default:
 			return state;
 	}
