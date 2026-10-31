@@ -4,12 +4,17 @@
  * `dialogs.ts`, and the fan-out to tabs in `SessionFrames` below. A command is a method
  * call on the embedded `AgentSession` (docs/DECISIONS.md, Embedded engine); no process speaks to this one.
  */
-import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
+import type {
+	AgentSession,
+	AgentSessionEvent,
+	PromptOptions,
+} from "@earendil-works/pi-coding-agent";
 import type {
 	Command,
 	DialogAnswer,
 	Place,
 	PromptBehavior,
+	PromptImage,
 	ProtocolErrorCode,
 	ServerFrame,
 	SnapshotModel,
@@ -242,7 +247,7 @@ export class LiveSession {
 		const agent = this.engine;
 		switch (command.type) {
 			case "prompt":
-				await this.prompt(command.text, command.behavior);
+				await this.prompt(command.text, command.behavior, command.images);
 				return;
 			case "abort":
 				this.dialogs.cancelAll();
@@ -347,24 +352,36 @@ export class LiveSession {
 	 * that pi accepted it. The preflight hook gives that answer before streaming.
 	 * `behavior` is what lets a message join a run that is already going: pi refuses
 	 * a prompt with no queue behavior while streaming, and `steer` cannot carry an
-	 * extension command at all.
+	 * extension command at all. An image travels as pi's `ImageContent`, which is
+	 * the shape the frame already carries; pi normalises it itself, so a prompt with
+	 * no images passes no image option at all.
 	 */
-	private prompt(text: string, behavior: PromptBehavior | undefined): Promise<void> {
+	private prompt(
+		text: string,
+		behavior: PromptBehavior | undefined,
+		images: PromptImage[] | undefined,
+	): Promise<void> {
 		return new Promise((resolve, reject) => {
 			let accepted = false;
-			void this.engine
-				.prompt(text, {
-					source: "interactive",
-					streamingBehavior: behavior,
-					preflightResult: () => {
-						accepted = true;
-						resolve();
-					},
-				})
-				.catch((error) => {
-					if (accepted) this.fail(error instanceof Error ? error : new Error(String(error)));
-					else reject(error);
-				});
+			const options: PromptOptions = {
+				source: "interactive",
+				streamingBehavior: behavior,
+				preflightResult: () => {
+					accepted = true;
+					resolve();
+				},
+			};
+			if (images !== undefined) {
+				options.images = images.map((image) => ({
+					type: "image",
+					data: image.data,
+					mimeType: image.mimeType,
+				}));
+			}
+			void this.engine.prompt(text, options).catch((error) => {
+				if (accepted) this.fail(error instanceof Error ? error : new Error(String(error)));
+				else reject(error);
+			});
 		});
 	}
 

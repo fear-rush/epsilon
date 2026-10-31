@@ -8,6 +8,7 @@ import type {
 	DialogAnswer,
 	Place,
 	PromptBehavior,
+	PromptImage,
 	ServerFrame,
 	ThinkingLevel,
 } from "shared";
@@ -103,13 +104,14 @@ export class ConversationStore {
 	readonly getSnapshot = (): ConversationSnapshot => this.snapshot;
 
 	/**
-	 * Send a message. While a run is active, `behavior` is how it joins that run:
-	 * `steer` interrupts it after the current turn's tools, `followUp` waits for it
-	 * to settle. pi also dispatches an extension command from a prompt immediately,
-	 * which is why the page never uses `steer` itself.
+	 * Send a message, with the images it carries. While a run is active, `behavior`
+	 * is how it joins that run: `steer` interrupts it after the current turn's tools,
+	 * `followUp` waits for it to settle. pi also dispatches an extension command from
+	 * a prompt immediately, which is why the page never uses `steer` itself. An image
+	 * is the base64 the browser read and its MIME type; pi decides how to resize it.
 	 */
-	prompt(text: string, behavior?: PromptBehavior): void {
-		this.sendCommand({ type: "prompt", text, behavior });
+	prompt(text: string, behavior?: PromptBehavior, images?: PromptImage[]): void {
+		this.sendCommand({ type: "prompt", text, behavior, images });
 	}
 
 	/** Replace this chat's history with a summary, optionally guided by `instructions`. */

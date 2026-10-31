@@ -1,17 +1,18 @@
 import { ChevronDownIcon } from "lucide-react";
+import { useState } from "react";
 import { modelKey } from "shared";
 import type { SnapshotModel } from "shared";
 
 import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuGroup,
-	DropdownMenuLabel,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+} from "@/components/ui/command";
 import { InputGroupButton } from "@/components/ui/input-group";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 type ModelMenuProps = {
@@ -40,21 +41,37 @@ const byProvider = (
 	}));
 };
 
+/** What the search reads: every field a model can be remembered by. */
+const searchText = (model: SnapshotModel): string =>
+	`${model.name} ${model.id} ${model.provider}`.toLowerCase();
+
 /**
- * The AI Elements model selector: a DropdownMenu with one radio group per
- * provider. pi offers 510 models here, so the current provider comes first and
- * the rest follow alphabetically inside one scrolling menu.
+ * The model picker: a `Command` in a `Popover`, because pi offers 510 models and
+ * scrolling a radio group is not a way to find one. The search matches the name,
+ * the id and the provider case-insensitively, the current provider's group leads,
+ * and the box opens scrolled to the model in use.
  */
 export function ModelMenu({ models, model, onSelect }: ModelMenuProps) {
+	const [open, setOpen] = useState(false);
+	const [query, setQuery] = useState("");
 	const current = model === undefined ? "" : modelKey(model);
-	const groups = byProvider(models, model?.provider);
+	const needle = query.trim().toLowerCase();
+	const matches =
+		needle === "" ? models : models.filter((candidate) => searchText(candidate).includes(needle));
+	const groups = byProvider(matches, model?.provider);
 
 	return (
-		<DropdownMenu>
+		<Popover
+			open={open}
+			onOpenChange={(next) => {
+				setOpen(next);
+				if (!next) setQuery("");
+			}}
+		>
 			<Tooltip>
 				<TooltipTrigger
 					render={
-						<DropdownMenuTrigger
+						<PopoverTrigger
 							render={
 								<InputGroupButton
 									size="sm"
@@ -69,30 +86,39 @@ export function ModelMenu({ models, model, onSelect }: ModelMenuProps) {
 				</TooltipTrigger>
 				<TooltipContent side="top">Choose the model this chat uses.</TooltipContent>
 			</Tooltip>
-			<DropdownMenuContent align="start" className="max-h-80 w-80">
-				<DropdownMenuRadioGroup
-					value={current}
-					onValueChange={(value: string) => {
-						const next = models.find((candidate) => modelKey(candidate) === value);
-						if (next !== undefined) onSelect(next);
-					}}
+			<PopoverContent side="top" align="start" className="w-80 p-0">
+				<Command
+					// The list is already filtered above, so cmdk neither filters again nor
+					// hides a row; `defaultValue` marks the model in use and scrolls to it.
+					shouldFilter={false}
+					defaultValue={current}
 				>
-					{groups.map((group) => (
-						<DropdownMenuGroup key={group.provider}>
-							<DropdownMenuLabel>{group.provider}</DropdownMenuLabel>
-							{group.models.map((candidate) => (
-								<DropdownMenuRadioItem
-									key={modelKey(candidate)}
-									value={modelKey(candidate)}
-									closeOnClick
-								>
-									{candidate.name}
-								</DropdownMenuRadioItem>
-							))}
-						</DropdownMenuGroup>
-					))}
-				</DropdownMenuRadioGroup>
-			</DropdownMenuContent>
-		</DropdownMenu>
+					<CommandInput placeholder="Search models…" value={query} onValueChange={setQuery} />
+					<CommandList>
+						<CommandEmpty>No model matches.</CommandEmpty>
+						{groups.map((group) => (
+							<CommandGroup key={group.provider} heading={group.provider}>
+								{group.models.map((candidate) => {
+									const value = modelKey(candidate);
+									return (
+										<CommandItem
+											key={value}
+											value={value}
+											data-checked={value === current}
+											onSelect={() => {
+												onSelect(candidate);
+												setOpen(false);
+											}}
+										>
+											<span className="truncate">{candidate.name}</span>
+										</CommandItem>
+									);
+								})}
+							</CommandGroup>
+						))}
+					</CommandList>
+				</Command>
+			</PopoverContent>
+		</Popover>
 	);
 }

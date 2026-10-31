@@ -15,7 +15,7 @@ import type { JsonAgentSessionEvent } from "../pi";
  * Bumped whenever a frame's shape changes. The client sends it in `hello` and
  * reloads on a mismatch instead of guessing.
  */
-export const PROTOCOL_VERSION = 10;
+export const PROTOCOL_VERSION = 11;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([
@@ -73,11 +73,61 @@ const promptBehaviorSchema = z.enum(["steer", "followUp"]);
 
 export type PromptBehavior = z.infer<typeof promptBehaviorSchema>;
 
+/*
+ * What a prompt may carry besides its text. pi normalises prompt images itself
+ * (the `images.autoResize` setting and the model's `inputLimits.images.resize`, and
+ * a rejected image becomes a hint in the run), so these caps only bound the frame:
+ * a decoded image of 2 MB is well past what the resize keeps, and four of them keep
+ * the whole `command` frame under the socket's 16 MB payload.
+ */
+
+/** One prompt carries at most four images. */
+export const PROMPT_IMAGE_MAX = 4;
+
+/**
+ * The raw bytes one image may hold: 2 MB, which is 2,796,204 base64 characters.
+ * pi resizes the image it receives anyway, so this is a memory bound, not a
+ * quality one.
+ */
+export const PROMPT_IMAGE_BYTES_MAX = 2 * 1024 * 1024;
+
+/** Base64 characters for some raw bytes: `ceil(bytes / 3) * 4`. */
+const base64Length = (bytes: number): number => Math.ceil(bytes / 3) * 4;
+
+/** `PROMPT_IMAGE_BYTES_MAX` as base64, which is what `data` may hold. */
+const PROMPT_IMAGE_BASE64_MAX = base64Length(PROMPT_IMAGE_BYTES_MAX);
+
+/** Every image of one prompt together: 12,000,000 base64 characters. */
+export const PROMPT_IMAGE_BASE64_TOTAL_MAX = 12_000_000;
+
+/** An image a prompt carries, byte for byte as the browser read it. */
+const promptImageSchema = z.object({
+	mimeType: z.string().min(1),
+	data: z.string().min(1).max(PROMPT_IMAGE_BASE64_MAX),
+});
+
+export type PromptImage = z.infer<typeof promptImageSchema>;
+
+/** The base64 length of every image together, which is what one frame carries. */
+export const promptImagesBase64Length = (images: readonly { data: string }[]): number =>
+	images.reduce((total, image) => total + image.data.length, 0);
+
+/** Between one and four images, whose base64 together stays inside the frame. */
+const promptImagesSchema = z
+	.array(promptImageSchema)
+	.min(1)
+	.max(PROMPT_IMAGE_MAX)
+	.refine((images) => promptImagesBase64Length(images) <= PROMPT_IMAGE_BASE64_TOTAL_MAX, {
+		message: `A prompt carries at most ${PROMPT_IMAGE_BASE64_TOTAL_MAX} base64 characters of images`,
+	});
+
 export const commandSchema = z.discriminatedUnion("type", [
 	z.object({
 		type: z.literal("prompt"),
 		text: z.string(),
 		behavior: promptBehaviorSchema.optional(),
+		/** Attached images, which pi hands to the model with the text. */
+		images: promptImagesSchema.optional(),
 	}),
 	z.object({ type: z.literal("abort") }),
 	z.object({ type: z.literal("bash"), command: z.string(), excludeFromContext: z.boolean() }),

@@ -27,11 +27,11 @@ extension's config resolution, exposure, OAuth or permission hooks.
 ## Socket vocabulary
 
 The browser socket carries Epsilon's own commands and zod shapes, defined in `shared/`.
-Commands are the ones the page can send: a prompt and the queue behavior it joins a
-running turn with, the aborts (turn, retry, compaction, bash), bash itself, the model,
-thinking-level and coding-tool switches, manual compaction, the auto-compaction and
-auto-retry toggles, the queue clear, the move to an earlier message of the branch,
-and reload. `commandNameSchema` in
+Commands are the ones the page can send: a prompt, the queue behavior it joins a
+running turn with and the images it carries, the aborts (turn, retry, compaction,
+bash), bash itself, the model, thinking-level and coding-tool switches, manual
+compaction, the auto-compaction and auto-retry toggles, the queue clear, the move to
+an earlier message of the branch, and reload. `commandNameSchema` in
 `shared/src/protocol/frames.ts` is the list. Each is answered by `command-result`
 naming the command. A frame change bumps `PROTOCOL_VERSION`, and a tab built for
 another version reloads.
@@ -215,6 +215,28 @@ rather than a retyped copy of it.
 Not: branch summarisation (`navigateTree`'s `summarize`), a tree of the other
 branches, and fork or clone. The missing parts are a model call in the middle of a
 navigation and a second session file, so they are not commands a tab asks for yet.
+
+## Attachments
+
+A prompt carries images beside its text: at most four, each at most 2 MB of raw bytes
+(2,796,204 base64 characters) and 12,000,000 base64 characters for all of them
+together. `shared/src/protocol/frames.ts` states the three numbers once; the zod schema
+and the composer's check both derive from them, so the two cannot drift. An image is
+the base64 the browser read and its MIME type, which is pi's own `ImageContent`; the
+composer takes one from the file picker, from a paste into the box or from a drop on
+it, shows it with a remove action, and says under the box which cap a refused file
+hit. `PROTOCOL_VERSION` 11 added the field.
+
+Why: pi normalises prompt images itself, resizing to the `images.autoResize` setting
+and the model's `inputLimits.images.resize` and turning an image it cannot use into a
+hint in the run, so a resize or a format check here would disagree with what the model
+received. What Epsilon must bound is the memory one socket frame can hold: four of
+these images stay well under the platform's 16 MB payload.
+
+Not: resizing, re-encoding or thumbnailing in the browser (pi does that with the
+active model's limits at hand). An upload endpoint or a second file route (the frame
+already carries the bytes). Images on `!cmd` or `/reload`, which are not prompts and
+have nowhere to put them: the composer refuses and says so instead of dropping them.
 
 ## Skills
 

@@ -100,6 +100,12 @@ Other facts worth having before embedding:
   `cacheWarmingStatus`, `setSessionName`, `navigateTree`, `exportToHtml`,
   `getAllTools` and the model and thinking setters. A socket feature uses one of these
   instead of inventing an RPC command.
+- `prompt()` takes images as `ImageContent` (`{ type: "image", data, mimeType }`, the
+  base64 without a `data:` prefix) in its `images` option, and pi normalises them
+  itself: it runs `processImage` with the `images.autoResize` setting and the model's
+  `inputLimits.images.resize`, and an image it rejects becomes a hint in the run
+  instead of a failed turn. A host therefore bounds only the memory one frame may
+  hold, not the format or the size the model finally sees.
 - `navigateTree(targetId)` moves the leaf within the same session file, and throws
   while the session is streaming or compacting (`Wait for the current response to
   finish…`), so a host that offers it needs no state of its own to keep a run safe.
