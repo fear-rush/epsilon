@@ -8,8 +8,11 @@ import type { SkillView } from "@/api/types";
  * tells them apart. A new skill takes only the `root` it will be written to.
  */
 export const skillSearchSchema = z.object({
-	root: z.enum(["home", "user-agents", "project-pi", "project-agents"]).optional(),
-	path: z.string().min(1).optional(),
+	root: z.enum(["home", "user-agents", "project-pi", "project-agents"]).optional().catch(undefined),
+	path: z.string().min(1).optional().catch(undefined),
+	/** The open view and raw file belong to the page, so a reload keeps them. */
+	tab: z.enum(["form", "raw"]).optional().catch(undefined),
+	file: z.string().min(1).optional().catch(undefined),
 });
 
 /** The identity a row and the route share. */

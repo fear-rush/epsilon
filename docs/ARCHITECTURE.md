@@ -51,7 +51,9 @@ There is no line limit. Split by meaning:
   `platform/` when a second feature needs it, never by reaching into a sibling.
 - What changes together lives together. No folder for one file; a subfolder needs
   about four siblings with a shared role.
-- Routes only wire: params and one feature component.
+- Routes only wire: the params, the loader that warms the page's reads, and one feature
+  component. A loader puts those reads in the Query cache and drops their failure, because
+  the pane already shows it in its own words.
 
 ## Two boundaries
 
@@ -81,7 +83,8 @@ sides run. REST shapes live in server `contract.ts`.
   last detach unless it is running, compacting or waiting on a dialog, so a closed
   tab does not stop a run and a reload sees a pending dialog again.
 - The browser holds view state only: scroll, drafts, open panels, the folder of a
-  project chat that has no file yet and the project Settings shows (both in the URL).
+  project chat that has no file yet, the project Settings shows, and the skill page's
+  tab and raw file (all in the URL).
 
 Nothing is stored only in the browser or only in server memory. The agent home is
 not recorded anywhere; it is derived, so a file naming it would be a second truth.

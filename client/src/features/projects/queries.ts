@@ -5,7 +5,10 @@ import { fetchProjectStatus, fetchSessions, trustProject } from "@/api/endpoints
 
 /** pi's trust decision for one folder, read before anything attaches to it. */
 export const useProjectStatus = (path: string) =>
-	useQuery({ queryKey: projectKeys.status(path), queryFn: () => fetchProjectStatus(path) });
+	useQuery({
+		queryKey: projectKeys.status(path),
+		queryFn: ({ signal }) => fetchProjectStatus(path, signal),
+	});
 
 /** Trust a folder in pi's `trust.json`; the sidebar's badges read the same answer. */
 export const useTrustProject = () => {
@@ -21,6 +24,9 @@ export const useTrustProject = () => {
 
 /** Folders that already hold sessions, newest first, for the folder dialog. */
 export const useRecentProjects = () => {
-	const sessions = useQuery({ queryKey: sessionKeys.all, queryFn: fetchSessions });
+	const sessions = useQuery({
+		queryKey: sessionKeys.all,
+		queryFn: ({ signal }) => fetchSessions(signal),
+	});
 	return sessions.data?.projects.map((entry) => entry.project) ?? [];
 };

@@ -62,8 +62,8 @@ const loginOrGone = async (request: Promise<LoginReply>): Promise<ProviderLoginS
 	}
 };
 
-export const fetchSessions = async (): Promise<SessionList> =>
-	body((await api.GET("/api/sessions")).data);
+export const fetchSessions = async (signal?: AbortSignal): Promise<SessionList> =>
+	body((await api.GET("/api/sessions", { signal })).data);
 
 export const deleteSession = async (id: string): Promise<void> => {
 	await api.DELETE("/api/sessions/{id}", { params: { path: { id } } });
@@ -97,8 +97,11 @@ export const moveSession = async (id: string, project: string): Promise<string> 
 		).data,
 	).id;
 
-export const fetchProjectStatus = async (path: string): Promise<ProjectStatus> =>
-	body((await api.GET("/api/projects/status", { params: { query: { path } } })).data);
+export const fetchProjectStatus = async (
+	path: string,
+	signal?: AbortSignal,
+): Promise<ProjectStatus> =>
+	body((await api.GET("/api/projects/status", { params: { query: { path } }, signal })).data);
 
 export const trustProject = async (path: string): Promise<ProjectStatus> =>
 	body((await api.POST("/api/projects/trust", { body: { path } })).data);
@@ -106,11 +109,13 @@ export const trustProject = async (path: string): Promise<ProjectStatus> =>
 export const fetchFolders = async (
 	path: string | undefined,
 	hidden = false,
+	signal?: AbortSignal,
 ): Promise<FolderListing> =>
 	body(
 		(
 			await api.GET("/api/projects/folders", {
 				params: { query: { path, hidden: hidden ? "true" : "false" } },
+				signal,
 			})
 		).data,
 	);
@@ -127,14 +132,20 @@ type Project = string | undefined;
 
 const scoped = (project: Project) => ({ query: { project } });
 
-export const fetchSettings = async (project: Project): Promise<SettingsSnapshot> =>
-	body((await api.GET("/api/settings", { params: scoped(project) })).data);
+export const fetchSettings = async (
+	project: Project,
+	signal?: AbortSignal,
+): Promise<SettingsSnapshot> =>
+	body((await api.GET("/api/settings", { params: scoped(project), signal })).data);
 
-export const fetchReadiness = async (): Promise<Readiness> =>
-	body((await api.GET("/api/readiness")).data);
+export const fetchReadiness = async (signal?: AbortSignal): Promise<Readiness> =>
+	body((await api.GET("/api/readiness", { signal })).data);
 
-export const fetchProviderDetail = async (id: string): Promise<ProviderDetail> =>
-	body((await api.GET("/api/settings/providers/{id}", { params: { path: { id } } })).data);
+export const fetchProviderDetail = async (
+	id: string,
+	signal?: AbortSignal,
+): Promise<ProviderDetail> =>
+	body((await api.GET("/api/settings/providers/{id}", { params: { path: { id } }, signal })).data);
 
 export const importProviderModels = async (
 	input: ProviderImportInput,
@@ -166,8 +177,11 @@ export const startProviderLogin = async (
 		).data,
 	);
 
-export const fetchProviderLogin = async (id: string): Promise<ProviderLoginSnapshot | null> =>
-	loginOrGone(api.GET("/api/settings/providers/{id}/login", { params: { path: { id } } }));
+export const fetchProviderLogin = async (
+	id: string,
+	signal?: AbortSignal,
+): Promise<ProviderLoginSnapshot | null> =>
+	loginOrGone(api.GET("/api/settings/providers/{id}/login", { params: { path: { id } }, signal }));
 
 export const answerProviderLogin = async (
 	id: string,
@@ -199,11 +213,13 @@ export const searchMcpRegistry = async (
 	source: McpRegistrySource,
 	q: string,
 	cursor: string | undefined,
+	signal?: AbortSignal,
 ): Promise<McpRegistrySearch> =>
 	body(
 		(
 			await api.GET("/api/settings/mcp/registry/search", {
 				params: { query: { source, q, cursor } },
+				signal,
 			})
 		).data,
 	);
@@ -211,21 +227,28 @@ export const searchMcpRegistry = async (
 export const fetchMcpRegistryServer = async (
 	source: McpRegistrySource,
 	name: string,
+	signal?: AbortSignal,
 ): Promise<McpRegistryDetail> =>
 	body(
-		(await api.GET("/api/settings/mcp/registry/server", { params: { query: { source, name } } }))
-			.data,
+		(
+			await api.GET("/api/settings/mcp/registry/server", {
+				params: { query: { source, name } },
+				signal,
+			})
+		).data,
 	);
 
 export const fetchMcpServer = async (
 	project: Project,
 	scope: McpScope,
 	name: string,
+	signal?: AbortSignal,
 ): Promise<McpServerDetail> =>
 	body(
 		(
 			await api.GET("/api/settings/mcp/{scope}/{name}", {
 				params: { path: { scope, name }, ...scoped(project) },
+				signal,
 			})
 		).data,
 	);
@@ -234,11 +257,13 @@ export const fetchMcpRaw = async (
 	project: Project,
 	scope: McpScope,
 	name: string,
+	signal?: AbortSignal,
 ): Promise<string> =>
 	body(
 		(
 			await api.GET("/api/settings/mcp/{scope}/{name}/raw", {
 				params: { path: { scope, name }, ...scoped(project) },
+				signal,
 			})
 		).data,
 	).text;
@@ -293,11 +318,13 @@ export const fetchSkill = async (
 	project: Project,
 	root: SkillRoot,
 	name: string,
+	signal?: AbortSignal,
 ): Promise<SkillFile> =>
 	body(
 		(
 			await api.GET("/api/settings/skills/{root}/{name}", {
 				params: { path: { root, name }, query: { project } },
+				signal,
 			})
 		).data,
 	);
@@ -306,11 +333,13 @@ export const fetchSkill = async (
 export const fetchListedSkill = async (
 	project: Project,
 	filePath: string,
+	signal?: AbortSignal,
 ): Promise<SkillDocument> =>
 	body(
 		(
 			await api.GET("/api/settings/skills/listed", {
 				params: { query: { project, filePath } },
+				signal,
 			})
 		).data,
 	);
@@ -342,11 +371,13 @@ export const fetchSkillFiles = async (
 	project: Project,
 	root: SkillRoot,
 	name: string,
+	signal?: AbortSignal,
 ): Promise<SkillBundleList> =>
 	body(
 		(
 			await api.GET("/api/settings/skills/{root}/{name}/files", {
 				params: { path: { root, name }, query: { project } },
+				signal,
 			})
 		).data,
 	);
@@ -357,11 +388,13 @@ export const fetchSkillBundleFile = async (
 	root: SkillRoot,
 	name: string,
 	path: string,
+	signal?: AbortSignal,
 ): Promise<string> =>
 	body(
 		(
 			await api.GET("/api/settings/skills/{root}/{name}/file", {
 				params: { path: { root, name }, query: { project, path } },
+				signal,
 			})
 		).data,
 	).text;
@@ -371,11 +404,13 @@ export const fetchSkillRaw = async (
 	project: Project,
 	root: SkillRoot,
 	name: string,
+	signal?: AbortSignal,
 ): Promise<string> =>
 	body(
 		(
 			await api.GET("/api/settings/skills/{root}/{name}/raw", {
 				params: { path: { root, name }, query: { project } },
+				signal,
 			})
 		).data,
 	).text;
@@ -397,11 +432,13 @@ export const saveSkillRaw = async (
 export const fetchListedSkillFiles = async (
 	project: Project,
 	filePath: string,
+	signal?: AbortSignal,
 ): Promise<SkillBundleList> =>
 	body(
 		(
 			await api.GET("/api/settings/skills/listed-files", {
 				params: { query: { project, filePath } },
+				signal,
 			})
 		).data,
 	);
@@ -411,11 +448,13 @@ export const fetchListedSkillFile = async (
 	project: Project,
 	filePath: string,
 	path: string,
+	signal?: AbortSignal,
 ): Promise<string> =>
 	body(
 		(
 			await api.GET("/api/settings/skills/listed-file", {
 				params: { query: { project, filePath, path } },
+				signal,
 			})
 		).data,
 	).text;
@@ -537,11 +576,13 @@ export const fetchPackageResources = async (
 	project: Project,
 	source: string,
 	scope: PackageScope,
+	signal?: AbortSignal,
 ): Promise<PackageResources> =>
 	body(
 		(
 			await api.GET("/api/settings/packages/resources", {
 				params: { query: { source, scope, project } },
+				signal,
 			})
 		).data,
 	);

@@ -9,9 +9,10 @@ import { z } from "zod";
 
 import { SettingsShell } from "@/features/settings/shell/settings-shell";
 
-const searchSchema = z.object({ project: z.string().min(1).optional() });
+const searchSchema = z.object({ project: z.string().min(1).optional().catch(undefined) });
 
 export const Route = createFileRoute("/settings")({
+	head: () => ({ meta: [{ title: "Settings · Epsilon" }] }),
 	validateSearch: searchSchema,
 	search: { middlewares: [retainSearchParams(["project"])] },
 	component: function SettingsLayout() {

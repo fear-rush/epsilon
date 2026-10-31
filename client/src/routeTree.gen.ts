@@ -9,32 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AppRouteImport } from './routes/_app'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as AppIndexRouteImport } from './routes/_app.index'
-import { Route as SettingsIndexRouteImport } from './routes/settings.index'
-import { Route as SettingsGeneralRouteImport } from './routes/settings.general'
-import { Route as SettingsMcpRouteImport } from './routes/settings.mcp'
-import { Route as SettingsPackagesRouteImport } from './routes/settings.packages'
-import { Route as SettingsProvidersRouteImport } from './routes/settings.providers'
-import { Route as SettingsSkillsRouteImport } from './routes/settings.skills'
-import { Route as AppSessionsSessionIdRouteImport } from './routes/_app.sessions.$sessionId'
-import { Route as SettingsMcpIndexRouteImport } from './routes/settings.mcp.index'
-import { Route as SettingsPackagesIndexRouteImport } from './routes/settings.packages.index'
-import { Route as SettingsProvidersIndexRouteImport } from './routes/settings.providers.index'
-import { Route as SettingsProvidersProviderIdRouteImport } from './routes/settings.providers.$providerId'
-import { Route as SettingsProvidersNewRouteImport } from './routes/settings.providers.new'
-import { Route as SettingsSkillsIndexRouteImport } from './routes/settings.skills.index'
-import { Route as SettingsSkillsNameRouteImport } from './routes/settings.skills.$name'
-import { Route as SettingsSkillsNewRouteImport } from './routes/settings.skills.new'
-import { Route as SettingsMcpScopeNameRouteImport } from './routes/settings.mcp.$scope.$name'
-import { Route as SettingsPackagesScopeSourceRouteImport } from './routes/settings.packages.$scope.$source'
+import { Route as AppRouteRouteImport } from './routes/_app/route'
+import { Route as SettingsRouteRouteImport } from './routes/settings/route'
+import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
+import { Route as SettingsGeneralRouteImport } from './routes/settings/general'
+import { Route as SettingsMcpRouteRouteImport } from './routes/settings/mcp/route'
+import { Route as SettingsPackagesRouteRouteImport } from './routes/settings/packages/route'
+import { Route as SettingsProvidersRouteRouteImport } from './routes/settings/providers/route'
+import { Route as SettingsSkillsRouteRouteImport } from './routes/settings/skills/route'
+import { Route as AppSessionsSessionIdRouteImport } from './routes/_app/sessions/$sessionId'
+import { Route as SettingsMcpIndexRouteImport } from './routes/settings/mcp/index'
+import { Route as SettingsPackagesIndexRouteImport } from './routes/settings/packages/index'
+import { Route as SettingsProvidersIndexRouteImport } from './routes/settings/providers/index'
+import { Route as SettingsProvidersProviderIdRouteImport } from './routes/settings/providers/$providerId'
+import { Route as SettingsProvidersNewRouteImport } from './routes/settings/providers/new'
+import { Route as SettingsSkillsIndexRouteImport } from './routes/settings/skills/index'
+import { Route as SettingsSkillsNameRouteImport } from './routes/settings/skills/$name'
+import { Route as SettingsSkillsNewRouteImport } from './routes/settings/skills/new'
+import { Route as SettingsMcpScopeNameRouteImport } from './routes/settings/mcp/$scope.$name'
+import { Route as SettingsPackagesScopeSourceRouteImport } from './routes/settings/packages/$scope.$source'
 
-const AppRoute = AppRouteImport.update({
+const AppRouteRoute = AppRouteRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsRoute = SettingsRouteImport.update({
+const SettingsRouteRoute = SettingsRouteRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => rootRouteImport,
@@ -42,104 +42,104 @@ const SettingsRoute = SettingsRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => AppRouteRoute,
 } as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => SettingsRoute,
+  getParentRoute: () => SettingsRouteRoute,
 } as any)
 const SettingsGeneralRoute = SettingsGeneralRouteImport.update({
   id: '/general',
   path: '/general',
-  getParentRoute: () => SettingsRoute,
+  getParentRoute: () => SettingsRouteRoute,
 } as any)
-const SettingsMcpRoute = SettingsMcpRouteImport.update({
+const SettingsMcpRouteRoute = SettingsMcpRouteRouteImport.update({
   id: '/mcp',
   path: '/mcp',
-  getParentRoute: () => SettingsRoute,
+  getParentRoute: () => SettingsRouteRoute,
 } as any)
-const SettingsPackagesRoute = SettingsPackagesRouteImport.update({
+const SettingsPackagesRouteRoute = SettingsPackagesRouteRouteImport.update({
   id: '/packages',
   path: '/packages',
-  getParentRoute: () => SettingsRoute,
+  getParentRoute: () => SettingsRouteRoute,
 } as any)
-const SettingsProvidersRoute = SettingsProvidersRouteImport.update({
+const SettingsProvidersRouteRoute = SettingsProvidersRouteRouteImport.update({
   id: '/providers',
   path: '/providers',
-  getParentRoute: () => SettingsRoute,
+  getParentRoute: () => SettingsRouteRoute,
 } as any)
-const SettingsSkillsRoute = SettingsSkillsRouteImport.update({
+const SettingsSkillsRouteRoute = SettingsSkillsRouteRouteImport.update({
   id: '/skills',
   path: '/skills',
-  getParentRoute: () => SettingsRoute,
+  getParentRoute: () => SettingsRouteRoute,
 } as any)
 const AppSessionsSessionIdRoute = AppSessionsSessionIdRouteImport.update({
   id: '/sessions/$sessionId',
   path: '/sessions/$sessionId',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => AppRouteRoute,
 } as any)
 const SettingsMcpIndexRoute = SettingsMcpIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => SettingsMcpRoute,
+  getParentRoute: () => SettingsMcpRouteRoute,
 } as any)
 const SettingsPackagesIndexRoute = SettingsPackagesIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => SettingsPackagesRoute,
+  getParentRoute: () => SettingsPackagesRouteRoute,
 } as any)
 const SettingsProvidersIndexRoute = SettingsProvidersIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => SettingsProvidersRoute,
+  getParentRoute: () => SettingsProvidersRouteRoute,
 } as any)
 const SettingsProvidersProviderIdRoute =
   SettingsProvidersProviderIdRouteImport.update({
     id: '/$providerId',
     path: '/$providerId',
-    getParentRoute: () => SettingsProvidersRoute,
+    getParentRoute: () => SettingsProvidersRouteRoute,
   } as any)
 const SettingsProvidersNewRoute = SettingsProvidersNewRouteImport.update({
   id: '/new',
   path: '/new',
-  getParentRoute: () => SettingsProvidersRoute,
+  getParentRoute: () => SettingsProvidersRouteRoute,
 } as any)
 const SettingsSkillsIndexRoute = SettingsSkillsIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => SettingsSkillsRoute,
+  getParentRoute: () => SettingsSkillsRouteRoute,
 } as any)
 const SettingsSkillsNameRoute = SettingsSkillsNameRouteImport.update({
   id: '/$name',
   path: '/$name',
-  getParentRoute: () => SettingsSkillsRoute,
+  getParentRoute: () => SettingsSkillsRouteRoute,
 } as any)
 const SettingsSkillsNewRoute = SettingsSkillsNewRouteImport.update({
   id: '/new',
   path: '/new',
-  getParentRoute: () => SettingsSkillsRoute,
+  getParentRoute: () => SettingsSkillsRouteRoute,
 } as any)
 const SettingsMcpScopeNameRoute = SettingsMcpScopeNameRouteImport.update({
   id: '/$scope/$name',
   path: '/$scope/$name',
-  getParentRoute: () => SettingsMcpRoute,
+  getParentRoute: () => SettingsMcpRouteRoute,
 } as any)
 const SettingsPackagesScopeSourceRoute =
   SettingsPackagesScopeSourceRouteImport.update({
     id: '/$scope/$source',
     path: '/$scope/$source',
-    getParentRoute: () => SettingsPackagesRoute,
+    getParentRoute: () => SettingsPackagesRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
-  '/settings': typeof SettingsRouteWithChildren
+  '/settings': typeof SettingsRouteRouteWithChildren
+  '/settings/mcp': typeof SettingsMcpRouteRouteWithChildren
+  '/settings/packages': typeof SettingsPackagesRouteRouteWithChildren
+  '/settings/providers': typeof SettingsProvidersRouteRouteWithChildren
+  '/settings/skills': typeof SettingsSkillsRouteRouteWithChildren
   '/settings/general': typeof SettingsGeneralRoute
-  '/settings/mcp': typeof SettingsMcpRouteWithChildren
-  '/settings/packages': typeof SettingsPackagesRouteWithChildren
-  '/settings/providers': typeof SettingsProvidersRouteWithChildren
-  '/settings/skills': typeof SettingsSkillsRouteWithChildren
   '/settings/': typeof SettingsIndexRoute
   '/sessions/$sessionId': typeof AppSessionsSessionIdRoute
   '/settings/providers/$providerId': typeof SettingsProvidersProviderIdRoute
@@ -171,13 +171,13 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_app': typeof AppRouteWithChildren
-  '/settings': typeof SettingsRouteWithChildren
+  '/_app': typeof AppRouteRouteWithChildren
+  '/settings': typeof SettingsRouteRouteWithChildren
+  '/settings/mcp': typeof SettingsMcpRouteRouteWithChildren
+  '/settings/packages': typeof SettingsPackagesRouteRouteWithChildren
+  '/settings/providers': typeof SettingsProvidersRouteRouteWithChildren
+  '/settings/skills': typeof SettingsSkillsRouteRouteWithChildren
   '/settings/general': typeof SettingsGeneralRoute
-  '/settings/mcp': typeof SettingsMcpRouteWithChildren
-  '/settings/packages': typeof SettingsPackagesRouteWithChildren
-  '/settings/providers': typeof SettingsProvidersRouteWithChildren
-  '/settings/skills': typeof SettingsSkillsRouteWithChildren
   '/_app/': typeof AppIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/_app/sessions/$sessionId': typeof AppSessionsSessionIdRoute
@@ -197,11 +197,11 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/settings'
-    | '/settings/general'
     | '/settings/mcp'
     | '/settings/packages'
     | '/settings/providers'
     | '/settings/skills'
+    | '/settings/general'
     | '/settings/'
     | '/sessions/$sessionId'
     | '/settings/providers/$providerId'
@@ -234,11 +234,11 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/settings'
-    | '/settings/general'
     | '/settings/mcp'
     | '/settings/packages'
     | '/settings/providers'
     | '/settings/skills'
+    | '/settings/general'
     | '/_app/'
     | '/settings/'
     | '/_app/sessions/$sessionId'
@@ -255,8 +255,8 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  AppRoute: typeof AppRouteWithChildren
-  SettingsRoute: typeof SettingsRouteWithChildren
+  AppRouteRoute: typeof AppRouteRouteWithChildren
+  SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -265,14 +265,14 @@ declare module '@tanstack/react-router' {
       id: '/_app'
       path: ''
       fullPath: '/'
-      preLoaderRoute: typeof AppRouteImport
+      preLoaderRoute: typeof AppRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
       id: '/settings'
       path: '/settings'
       fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
+      preLoaderRoute: typeof SettingsRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
@@ -280,225 +280,230 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppRouteRoute
     }
     '/settings/': {
       id: '/settings/'
       path: '/'
       fullPath: '/settings/'
       preLoaderRoute: typeof SettingsIndexRouteImport
-      parentRoute: typeof SettingsRoute
+      parentRoute: typeof SettingsRouteRoute
     }
     '/settings/general': {
       id: '/settings/general'
       path: '/general'
       fullPath: '/settings/general'
       preLoaderRoute: typeof SettingsGeneralRouteImport
-      parentRoute: typeof SettingsRoute
+      parentRoute: typeof SettingsRouteRoute
     }
     '/settings/mcp': {
       id: '/settings/mcp'
       path: '/mcp'
       fullPath: '/settings/mcp'
-      preLoaderRoute: typeof SettingsMcpRouteImport
-      parentRoute: typeof SettingsRoute
+      preLoaderRoute: typeof SettingsMcpRouteRouteImport
+      parentRoute: typeof SettingsRouteRoute
     }
     '/settings/packages': {
       id: '/settings/packages'
       path: '/packages'
       fullPath: '/settings/packages'
-      preLoaderRoute: typeof SettingsPackagesRouteImport
-      parentRoute: typeof SettingsRoute
+      preLoaderRoute: typeof SettingsPackagesRouteRouteImport
+      parentRoute: typeof SettingsRouteRoute
     }
     '/settings/providers': {
       id: '/settings/providers'
       path: '/providers'
       fullPath: '/settings/providers'
-      preLoaderRoute: typeof SettingsProvidersRouteImport
-      parentRoute: typeof SettingsRoute
+      preLoaderRoute: typeof SettingsProvidersRouteRouteImport
+      parentRoute: typeof SettingsRouteRoute
     }
     '/settings/skills': {
       id: '/settings/skills'
       path: '/skills'
       fullPath: '/settings/skills'
-      preLoaderRoute: typeof SettingsSkillsRouteImport
-      parentRoute: typeof SettingsRoute
+      preLoaderRoute: typeof SettingsSkillsRouteRouteImport
+      parentRoute: typeof SettingsRouteRoute
     }
     '/_app/sessions/$sessionId': {
       id: '/_app/sessions/$sessionId'
       path: '/sessions/$sessionId'
       fullPath: '/sessions/$sessionId'
       preLoaderRoute: typeof AppSessionsSessionIdRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppRouteRoute
     }
     '/settings/mcp/': {
       id: '/settings/mcp/'
       path: '/'
       fullPath: '/settings/mcp/'
       preLoaderRoute: typeof SettingsMcpIndexRouteImport
-      parentRoute: typeof SettingsMcpRoute
+      parentRoute: typeof SettingsMcpRouteRoute
     }
     '/settings/packages/': {
       id: '/settings/packages/'
       path: '/'
       fullPath: '/settings/packages/'
       preLoaderRoute: typeof SettingsPackagesIndexRouteImport
-      parentRoute: typeof SettingsPackagesRoute
+      parentRoute: typeof SettingsPackagesRouteRoute
     }
     '/settings/providers/': {
       id: '/settings/providers/'
       path: '/'
       fullPath: '/settings/providers/'
       preLoaderRoute: typeof SettingsProvidersIndexRouteImport
-      parentRoute: typeof SettingsProvidersRoute
+      parentRoute: typeof SettingsProvidersRouteRoute
     }
     '/settings/providers/$providerId': {
       id: '/settings/providers/$providerId'
       path: '/$providerId'
       fullPath: '/settings/providers/$providerId'
       preLoaderRoute: typeof SettingsProvidersProviderIdRouteImport
-      parentRoute: typeof SettingsProvidersRoute
+      parentRoute: typeof SettingsProvidersRouteRoute
     }
     '/settings/providers/new': {
       id: '/settings/providers/new'
       path: '/new'
       fullPath: '/settings/providers/new'
       preLoaderRoute: typeof SettingsProvidersNewRouteImport
-      parentRoute: typeof SettingsProvidersRoute
+      parentRoute: typeof SettingsProvidersRouteRoute
     }
     '/settings/skills/': {
       id: '/settings/skills/'
       path: '/'
       fullPath: '/settings/skills/'
       preLoaderRoute: typeof SettingsSkillsIndexRouteImport
-      parentRoute: typeof SettingsSkillsRoute
+      parentRoute: typeof SettingsSkillsRouteRoute
     }
     '/settings/skills/$name': {
       id: '/settings/skills/$name'
       path: '/$name'
       fullPath: '/settings/skills/$name'
       preLoaderRoute: typeof SettingsSkillsNameRouteImport
-      parentRoute: typeof SettingsSkillsRoute
+      parentRoute: typeof SettingsSkillsRouteRoute
     }
     '/settings/skills/new': {
       id: '/settings/skills/new'
       path: '/new'
       fullPath: '/settings/skills/new'
       preLoaderRoute: typeof SettingsSkillsNewRouteImport
-      parentRoute: typeof SettingsSkillsRoute
+      parentRoute: typeof SettingsSkillsRouteRoute
     }
     '/settings/mcp/$scope/$name': {
       id: '/settings/mcp/$scope/$name'
       path: '/$scope/$name'
       fullPath: '/settings/mcp/$scope/$name'
       preLoaderRoute: typeof SettingsMcpScopeNameRouteImport
-      parentRoute: typeof SettingsMcpRoute
+      parentRoute: typeof SettingsMcpRouteRoute
     }
     '/settings/packages/$scope/$source': {
       id: '/settings/packages/$scope/$source'
       path: '/$scope/$source'
       fullPath: '/settings/packages/$scope/$source'
       preLoaderRoute: typeof SettingsPackagesScopeSourceRouteImport
-      parentRoute: typeof SettingsPackagesRoute
+      parentRoute: typeof SettingsPackagesRouteRoute
     }
   }
 }
 
-interface AppRouteChildren {
+interface AppRouteRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppSessionsSessionIdRoute: typeof AppSessionsSessionIdRoute
 }
 
-const AppRouteChildren: AppRouteChildren = {
+const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppSessionsSessionIdRoute: AppSessionsSessionIdRoute,
 }
 
-const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
+  AppRouteRouteChildren,
+)
 
-interface SettingsMcpRouteChildren {
+interface SettingsMcpRouteRouteChildren {
   SettingsMcpIndexRoute: typeof SettingsMcpIndexRoute
   SettingsMcpScopeNameRoute: typeof SettingsMcpScopeNameRoute
 }
 
-const SettingsMcpRouteChildren: SettingsMcpRouteChildren = {
+const SettingsMcpRouteRouteChildren: SettingsMcpRouteRouteChildren = {
   SettingsMcpIndexRoute: SettingsMcpIndexRoute,
   SettingsMcpScopeNameRoute: SettingsMcpScopeNameRoute,
 }
 
-const SettingsMcpRouteWithChildren = SettingsMcpRoute._addFileChildren(
-  SettingsMcpRouteChildren,
-)
+const SettingsMcpRouteRouteWithChildren =
+  SettingsMcpRouteRoute._addFileChildren(SettingsMcpRouteRouteChildren)
 
-interface SettingsPackagesRouteChildren {
+interface SettingsPackagesRouteRouteChildren {
   SettingsPackagesIndexRoute: typeof SettingsPackagesIndexRoute
   SettingsPackagesScopeSourceRoute: typeof SettingsPackagesScopeSourceRoute
 }
 
-const SettingsPackagesRouteChildren: SettingsPackagesRouteChildren = {
+const SettingsPackagesRouteRouteChildren: SettingsPackagesRouteRouteChildren = {
   SettingsPackagesIndexRoute: SettingsPackagesIndexRoute,
   SettingsPackagesScopeSourceRoute: SettingsPackagesScopeSourceRoute,
 }
 
-const SettingsPackagesRouteWithChildren =
-  SettingsPackagesRoute._addFileChildren(SettingsPackagesRouteChildren)
+const SettingsPackagesRouteRouteWithChildren =
+  SettingsPackagesRouteRoute._addFileChildren(
+    SettingsPackagesRouteRouteChildren,
+  )
 
-interface SettingsProvidersRouteChildren {
+interface SettingsProvidersRouteRouteChildren {
   SettingsProvidersProviderIdRoute: typeof SettingsProvidersProviderIdRoute
   SettingsProvidersNewRoute: typeof SettingsProvidersNewRoute
   SettingsProvidersIndexRoute: typeof SettingsProvidersIndexRoute
 }
 
-const SettingsProvidersRouteChildren: SettingsProvidersRouteChildren = {
-  SettingsProvidersProviderIdRoute: SettingsProvidersProviderIdRoute,
-  SettingsProvidersNewRoute: SettingsProvidersNewRoute,
-  SettingsProvidersIndexRoute: SettingsProvidersIndexRoute,
-}
+const SettingsProvidersRouteRouteChildren: SettingsProvidersRouteRouteChildren =
+  {
+    SettingsProvidersProviderIdRoute: SettingsProvidersProviderIdRoute,
+    SettingsProvidersNewRoute: SettingsProvidersNewRoute,
+    SettingsProvidersIndexRoute: SettingsProvidersIndexRoute,
+  }
 
-const SettingsProvidersRouteWithChildren =
-  SettingsProvidersRoute._addFileChildren(SettingsProvidersRouteChildren)
+const SettingsProvidersRouteRouteWithChildren =
+  SettingsProvidersRouteRoute._addFileChildren(
+    SettingsProvidersRouteRouteChildren,
+  )
 
-interface SettingsSkillsRouteChildren {
+interface SettingsSkillsRouteRouteChildren {
   SettingsSkillsNameRoute: typeof SettingsSkillsNameRoute
   SettingsSkillsNewRoute: typeof SettingsSkillsNewRoute
   SettingsSkillsIndexRoute: typeof SettingsSkillsIndexRoute
 }
 
-const SettingsSkillsRouteChildren: SettingsSkillsRouteChildren = {
+const SettingsSkillsRouteRouteChildren: SettingsSkillsRouteRouteChildren = {
   SettingsSkillsNameRoute: SettingsSkillsNameRoute,
   SettingsSkillsNewRoute: SettingsSkillsNewRoute,
   SettingsSkillsIndexRoute: SettingsSkillsIndexRoute,
 }
 
-const SettingsSkillsRouteWithChildren = SettingsSkillsRoute._addFileChildren(
-  SettingsSkillsRouteChildren,
-)
+const SettingsSkillsRouteRouteWithChildren =
+  SettingsSkillsRouteRoute._addFileChildren(SettingsSkillsRouteRouteChildren)
 
-interface SettingsRouteChildren {
+interface SettingsRouteRouteChildren {
+  SettingsMcpRouteRoute: typeof SettingsMcpRouteRouteWithChildren
+  SettingsPackagesRouteRoute: typeof SettingsPackagesRouteRouteWithChildren
+  SettingsProvidersRouteRoute: typeof SettingsProvidersRouteRouteWithChildren
+  SettingsSkillsRouteRoute: typeof SettingsSkillsRouteRouteWithChildren
   SettingsGeneralRoute: typeof SettingsGeneralRoute
-  SettingsMcpRoute: typeof SettingsMcpRouteWithChildren
-  SettingsPackagesRoute: typeof SettingsPackagesRouteWithChildren
-  SettingsProvidersRoute: typeof SettingsProvidersRouteWithChildren
-  SettingsSkillsRoute: typeof SettingsSkillsRouteWithChildren
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
-const SettingsRouteChildren: SettingsRouteChildren = {
+const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
+  SettingsMcpRouteRoute: SettingsMcpRouteRouteWithChildren,
+  SettingsPackagesRouteRoute: SettingsPackagesRouteRouteWithChildren,
+  SettingsProvidersRouteRoute: SettingsProvidersRouteRouteWithChildren,
+  SettingsSkillsRouteRoute: SettingsSkillsRouteRouteWithChildren,
   SettingsGeneralRoute: SettingsGeneralRoute,
-  SettingsMcpRoute: SettingsMcpRouteWithChildren,
-  SettingsPackagesRoute: SettingsPackagesRouteWithChildren,
-  SettingsProvidersRoute: SettingsProvidersRouteWithChildren,
-  SettingsSkillsRoute: SettingsSkillsRouteWithChildren,
   SettingsIndexRoute: SettingsIndexRoute,
 }
 
-const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
-  SettingsRouteChildren,
+const SettingsRouteRouteWithChildren = SettingsRouteRoute._addFileChildren(
+  SettingsRouteRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
-  AppRoute: AppRouteWithChildren,
-  SettingsRoute: SettingsRouteWithChildren,
+  AppRouteRoute: AppRouteRouteWithChildren,
+  SettingsRouteRoute: SettingsRouteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

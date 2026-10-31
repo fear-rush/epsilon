@@ -14,3 +14,7 @@ export const packageLine = (entry: PackageView): string =>
 /** The tab a scope belongs to. */
 export const scopeOf = (project: string | undefined): PackageView["scope"] =>
 	project === undefined ? "user" : "project";
+
+/** The scope segment of a packages URL. Any scope that is not the project's is the home's. */
+export const scopeOfSegment = (segment: string): PackageView["scope"] =>
+	segment === "project" ? "project" : "user";

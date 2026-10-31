@@ -113,7 +113,7 @@ export function SessionSidebar() {
 	const [opening, setOpening] = useState(false);
 	const sessions = useQuery({
 		queryKey: sessionKeys.all,
-		queryFn: fetchSessions,
+		queryFn: ({ signal }) => fetchSessions(signal),
 		refetchInterval: LIVE_REFRESH_MS,
 	});
 	const remove = useMutation({

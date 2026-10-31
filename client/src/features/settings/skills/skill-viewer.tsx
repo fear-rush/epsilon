@@ -5,7 +5,6 @@
  * footer says why there is no editor.
  */
 import { FileQuestionIcon } from "lucide-react";
-import { useState } from "react";
 
 import type { SkillView } from "@/api/types";
 import { DetailPage } from "@/components/patterns/pane/detail-page";
@@ -18,8 +17,9 @@ import type { SkillDraft } from "./skill-draft";
 import { SkillInstructions } from "./skill-instructions";
 import { LoadedSwitch } from "./skill-loaded-switch";
 import { SkillNotices } from "./skill-notices";
-import { SKILL_MODES, SKILLS_BACK, type SkillTab } from "./skill-modes";
+import { SKILL_MODES, SKILLS_BACK } from "./skill-modes";
 import { SkillReader, SkillStatusPage } from "./skill-page";
+import { useSkillPage } from "./skill-page-state";
 import { SkillRaw } from "./skill-raw";
 import { useSkillLinks } from "./skill-references";
 import { readOnlyReason, useSkillToggle } from "./skill-status";
@@ -57,8 +57,7 @@ function LoadedSkill({ skill }: { skill: SkillView }) {
 	const query = useListedSkill(skill.filePath);
 	const links = useSkillLinks();
 	const toggle = useSkillToggle();
-	const [tab, setTab] = useState<SkillTab>("form");
-	const [rawPath, setRawPath] = useState("SKILL.md");
+	const { tab, rawPath, setTab, setRawPath, openRawFile } = useSkillPage();
 	return (
 		<SkillReader query={query} title={skill.name}>
 			{(file) => {
@@ -98,10 +97,7 @@ function LoadedSkill({ skill }: { skill: SkillView }) {
 									references={{
 										skillExists: links.exists,
 										openSkill: links.open,
-										openFile: (target) => {
-											setRawPath(target);
-											setTab("raw");
-										},
+										openFile: openRawFile,
 									}}
 								/>
 							</>

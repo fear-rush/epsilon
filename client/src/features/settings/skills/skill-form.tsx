@@ -48,6 +48,8 @@ export type SkillPageState = {
 	setTab: (tab: SkillTab) => void;
 	rawPath: string;
 	setRawPath: (path: string) => void;
+	/** Switch to Raw and open this file in one navigation. */
+	openRawFile: (path: string) => void;
 	/** Reads the skill again and drops the form's draft. */
 	reload: () => void;
 };
@@ -134,8 +136,12 @@ export function SkillForm({
 		openSkill: links.open,
 		openFile: (path: string) => {
 			if (page === undefined || filePaths?.includes(path) !== true) return;
-			page.setRawPath(path);
-			requestTab("raw");
+			if ((tab === "raw" && rawDirty.current) || (tab === "form" && form.dirty)) {
+				page.setRawPath(path);
+				setLeaving("raw");
+				return;
+			}
+			page.openRawFile(path);
 		},
 	};
 

@@ -8,9 +8,10 @@ import { z } from "zod";
 import { NewChat } from "@/features/conversation/new-chat";
 
 /** `project` names the folder a new project chat runs in; a chat has none. */
-const searchSchema = z.object({ project: z.string().min(1).optional() });
+const searchSchema = z.object({ project: z.string().min(1).optional().catch(undefined) });
 
 export const Route = createFileRoute("/_app/")({
+	head: () => ({ meta: [{ title: "New chat · Epsilon" }] }),
 	validateSearch: searchSchema,
 	component: function Home() {
 		const { project } = Route.useSearch();

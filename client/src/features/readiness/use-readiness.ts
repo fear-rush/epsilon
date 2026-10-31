@@ -8,12 +8,12 @@ import { fetchReadiness } from "@/api/endpoints";
  * invalidates this query after a change, and the interval catches a file edited
  * in a terminal using the same agent home.
  */
-const READINESS_REFRESH_MS = 5_000;
+const READINESS_REFRESH_MS = 15_000;
 
 export function useReadiness(options: { enabled?: boolean } = {}) {
 	return useQuery({
 		queryKey: readinessKeys.all,
-		queryFn: fetchReadiness,
+		queryFn: ({ signal }) => fetchReadiness(signal),
 		refetchInterval: READINESS_REFRESH_MS,
 		enabled: options.enabled ?? true,
 	});

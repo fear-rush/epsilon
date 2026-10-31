@@ -132,10 +132,10 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 /** The route owns which skill is selected; the panel only draws it. */
 export function SkillsLayout() {
 	const matchRoute = useMatchRoute();
-	const search = useSearch({ strict: false });
+	const path = useSearch({ from: "/settings/skills", select: (search) => search.path });
+	const root = useSearch({ from: "/settings/skills", select: (search) => search.root });
 	const matched = matchRoute({ to: "/settings/skills/$name" });
-	const selected =
-		matched === false ? undefined : (search.path ?? `${search.root ?? "home"}\0${matched.name}`);
+	const selected = matched === false ? undefined : (path ?? `${root ?? "home"}\0${matched.name}`);
 	const adding = matchRoute({ to: "/settings/skills/new" }) !== false;
 	return (
 		<MasterDetail
