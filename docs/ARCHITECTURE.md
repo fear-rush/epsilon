@@ -8,9 +8,9 @@ decisions behind it read [DECISIONS.md](DECISIONS.md); for what pi exposes read
 
 - **Conversation.** A live session: the embedded pi engine, its extension dialogs,
   the browser socket, and the reducer that turns pi events into a transcript.
-- **Session catalog.** Listing, renaming and deleting sessions by reading pi's
-  session files. It never builds an engine; deleting a session an engine holds is
-  refused.
+- **Session catalog.** Listing, renaming, deleting, restoring and pinning sessions
+  by reading pi's session files. It never builds an engine; deleting a session an
+  engine holds is refused.
 - **Agent configuration.** Providers, models, MCP servers, skills, packages and
   general settings, written to pi's documented files and exporters, plus readiness
   (does the home hold a usable model).
@@ -77,8 +77,9 @@ sides run. REST shapes live in server `contract.ts`.
   packages, project trust. Project MCP, skills, packages and overrides live in
   `<project>/.pi`. The session files name their folder, which is how chats and
   projects are told apart and how the project list is derived.
-- One Epsilon-owned file in the agent home: `pinned-sessions.json`, the pinned chat
-  ids. A chat's display name is pi's own session-name entry, not a second file.
+- Epsilon's own files in the agent home: `pinned-sessions.json`, the pinned chat
+  ids, and `trash/`, the chats a delete moved aside with the path each came from. A
+  chat's display name is pi's own session-name entry, not a second file.
 - Live engines in the server's registry. An engine is disposed ten seconds after its
   last detach unless it is running, compacting or waiting on a dialog, so a closed
   tab does not stop a run and a reload sees a pending dialog again.

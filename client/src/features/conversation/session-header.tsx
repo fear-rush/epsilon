@@ -23,6 +23,8 @@ import { sessionKeys } from "@/api/keys";
 import { moveSession } from "@/api/endpoints";
 import { Tip } from "@/components/patterns/tip";
 import { ChatBar } from "@/features/conversation/chat-bar";
+import { SessionControls } from "@/features/conversation/session-controls";
+import type { ConversationStore } from "@/features/conversation/store";
 import { FolderDialog, useRecentProjects } from "@/features/projects";
 
 const folderName = (path: string): string => path.split("/").filter(Boolean).at(-1) ?? path;
@@ -69,17 +71,25 @@ function PlaceBadge({ place }: { place: Place }) {
 
 function SessionHeaderImpl({
 	sessionId,
+	store,
 	title,
 	place,
 	busy,
 	empty,
+	autoCompaction,
+	autoRetry,
+	isCompacting,
 }: {
 	sessionId: string;
+	store: ConversationStore;
 	title?: string;
 	place: Place;
 	busy: boolean;
 	/** A chat with no messages has no file yet, so there is nothing to move. */
 	empty: boolean;
+	autoCompaction: boolean;
+	autoRetry: boolean;
+	isCompacting: boolean;
 }) {
 	const [moving, setMoving] = useState(false);
 
@@ -91,6 +101,13 @@ function SessionHeaderImpl({
 				actions={
 					<>
 						<PlaceBadge place={place} />
+						<SessionControls
+							store={store}
+							empty={empty}
+							autoCompaction={autoCompaction}
+							autoRetry={autoRetry}
+							isCompacting={isCompacting}
+						/>
 						{place.kind === "chat" && (
 							<DropdownMenu>
 								<Tip label="Chat actions">

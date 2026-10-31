@@ -15,7 +15,7 @@ import type { JsonAgentSessionEvent } from "../pi";
  * Bumped whenever a frame's shape changes. The client sends it in `hello` and
  * reloads on a mismatch instead of guessing.
  */
-export const PROTOCOL_VERSION = 7;
+export const PROTOCOL_VERSION = 11;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([
@@ -43,23 +43,92 @@ export const placeSchema = z.discriminatedUnion("kind", [
 
 export type Place = z.infer<typeof placeSchema>;
 
-/** The eight commands a tab may send. */
+/** The commands a tab may send. */
 export const commandNameSchema = z.enum([
 	"prompt",
-	"steer",
 	"abort",
 	"bash",
 	"set_model",
 	"set_thinking_level",
 	"set_coding_tools",
 	"reload",
+	"compact",
+	"abort_compaction",
+	"set_auto_compaction",
+	"cancel_retry",
+	"set_auto_retry",
+	"abort_bash",
+	"clear_queue",
+	"navigate_tree",
 ]);
 
 export type CommandName = z.infer<typeof commandNameSchema>;
 
+/**
+ * How a prompt waits when a run is already active: `steer` interrupts it after the
+ * current turn's tools, `followUp` waits until it settles. pi needs one to queue a
+ * prompt at all, and `steer` alone cannot carry an extension command.
+ */
+const promptBehaviorSchema = z.enum(["steer", "followUp"]);
+
+export type PromptBehavior = z.infer<typeof promptBehaviorSchema>;
+
+/*
+ * What a prompt may carry besides its text. pi normalises prompt images itself
+ * (the `images.autoResize` setting and the model's `inputLimits.images.resize`, and
+ * a rejected image becomes a hint in the run), so these caps only bound the frame:
+ * a decoded image of 2 MB is well past what the resize keeps, and four of them keep
+ * the whole `command` frame under the socket's 16 MB payload.
+ */
+
+/** One prompt carries at most four images. */
+export const PROMPT_IMAGE_MAX = 4;
+
+/**
+ * The raw bytes one image may hold: 2 MB, which is 2,796,204 base64 characters.
+ * pi resizes the image it receives anyway, so this is a memory bound, not a
+ * quality one.
+ */
+export const PROMPT_IMAGE_BYTES_MAX = 2 * 1024 * 1024;
+
+/** Base64 characters for some raw bytes: `ceil(bytes / 3) * 4`. */
+const base64Length = (bytes: number): number => Math.ceil(bytes / 3) * 4;
+
+/** `PROMPT_IMAGE_BYTES_MAX` as base64, which is what `data` may hold. */
+const PROMPT_IMAGE_BASE64_MAX = base64Length(PROMPT_IMAGE_BYTES_MAX);
+
+/** Every image of one prompt together: 12,000,000 base64 characters. */
+export const PROMPT_IMAGE_BASE64_TOTAL_MAX = 12_000_000;
+
+/** An image a prompt carries, byte for byte as the browser read it. */
+const promptImageSchema = z.object({
+	mimeType: z.string().min(1),
+	data: z.string().min(1).max(PROMPT_IMAGE_BASE64_MAX),
+});
+
+export type PromptImage = z.infer<typeof promptImageSchema>;
+
+/** The base64 length of every image together, which is what one frame carries. */
+export const promptImagesBase64Length = (images: readonly { data: string }[]): number =>
+	images.reduce((total, image) => total + image.data.length, 0);
+
+/** Between one and four images, whose base64 together stays inside the frame. */
+const promptImagesSchema = z
+	.array(promptImageSchema)
+	.min(1)
+	.max(PROMPT_IMAGE_MAX)
+	.refine((images) => promptImagesBase64Length(images) <= PROMPT_IMAGE_BASE64_TOTAL_MAX, {
+		message: `A prompt carries at most ${PROMPT_IMAGE_BASE64_TOTAL_MAX} base64 characters of images`,
+	});
+
 export const commandSchema = z.discriminatedUnion("type", [
-	z.object({ type: z.literal("prompt"), text: z.string() }),
-	z.object({ type: z.literal("steer"), text: z.string() }),
+	z.object({
+		type: z.literal("prompt"),
+		text: z.string(),
+		behavior: promptBehaviorSchema.optional(),
+		/** Attached images, which pi hands to the model with the text. */
+		images: promptImagesSchema.optional(),
+	}),
 	z.object({ type: z.literal("abort") }),
 	z.object({ type: z.literal("bash"), command: z.string(), excludeFromContext: z.boolean() }),
 	z.object({ type: z.literal("set_model"), provider: z.string(), modelId: z.string() }),
@@ -67,6 +136,21 @@ export const commandSchema = z.discriminatedUnion("type", [
 	/** Turn the tools that run commands and change files on or off for this session. */
 	z.object({ type: z.literal("set_coding_tools"), enabled: z.boolean() }),
 	z.object({ type: z.literal("reload") }),
+	/** Compact now, with optional instructions for the summary. */
+	z.object({ type: z.literal("compact"), instructions: z.string().optional() }),
+	z.object({ type: z.literal("abort_compaction") }),
+	z.object({ type: z.literal("set_auto_compaction"), enabled: z.boolean() }),
+	z.object({ type: z.literal("cancel_retry") }),
+	z.object({ type: z.literal("set_auto_retry"), enabled: z.boolean() }),
+	z.object({ type: z.literal("abort_bash") }),
+	/** Drop the prompts pi has queued for the active run. */
+	z.object({ type: z.literal("clear_queue") }),
+	/**
+	 * Go back to an entry of the active branch. pi moves the leaf there, so the next
+	 * prompt starts a sibling branch; a user message hands its text back for the
+	 * composer, which already has it, so only the move matters here.
+	 */
+	z.object({ type: z.literal("navigate_tree"), entryId: z.string().min(1) }),
 ]);
 
 export type Command = z.infer<typeof commandSchema>;
@@ -145,6 +229,55 @@ export const snapshotCommandSchema = z.object({
 
 export type SnapshotCommand = z.infer<typeof snapshotCommandSchema>;
 
+/**
+ * How full the context window is. Absent when pi cannot say: before the first
+ * request and right after a compaction, where it reports the tokens as unknown.
+ */
+const contextUsageSchema = z.object({
+	tokens: z.number().int(),
+	contextWindow: z.number().int(),
+	percent: z.number(),
+});
+
+export type ContextUsage = z.infer<typeof contextUsageSchema>;
+
+/**
+ * What the session has cost, over every entry pi keeps, including the history a
+ * compaction removed. Tokens are summed, not the current context size.
+ */
+const sessionStatsSchema = z.object({
+	tokens: z.object({
+		input: z.number().int(),
+		output: z.number().int(),
+		cacheRead: z.number().int(),
+		cacheWrite: z.number().int(),
+		total: z.number().int(),
+	}),
+	cost: z.number(),
+	userMessages: z.number().int(),
+	assistantMessages: z.number().int(),
+	toolCalls: z.number().int(),
+	totalMessages: z.number().int(),
+});
+
+export type SessionStats = z.infer<typeof sessionStatsSchema>;
+
+/** Prompts pi holds for a run that is already going, in pi's own order. */
+const promptQueueSchema = z.object({
+	steering: z.array(z.string()),
+	followUp: z.array(z.string()),
+});
+
+export type PromptQueue = z.infer<typeof promptQueueSchema>;
+
+/**
+ * A message the composer can go back to: one user message of the active branch.
+ * The text is whole, because picking it puts it back in the editor.
+ */
+const snapshotBranchSchema = z.object({ entryId: z.string(), text: z.string() });
+
+export type SnapshotBranch = z.infer<typeof snapshotBranchSchema>;
+
 /** What the transcript page reads from the engine, never from command replies. */
 export const snapshotStateSchema = z.object({
 	model: snapshotModelSchema.optional(),
@@ -156,6 +289,16 @@ export const snapshotStateSchema = z.object({
 	place: placeSchema,
 	/** Whether the tools that run commands and change files are active. */
 	codingTools: z.boolean(),
+	contextUsage: contextUsageSchema.optional(),
+	stats: sessionStatsSchema,
+	/** An automatic retry is waiting to run again after a failed request. */
+	isRetrying: z.boolean(),
+	isBashRunning: z.boolean(),
+	autoCompaction: z.boolean(),
+	autoRetry: z.boolean(),
+	queue: promptQueueSchema,
+	/** The active branch's user messages, root to leaf: what going back can reach. */
+	branches: z.array(snapshotBranchSchema),
 });
 
 export type SnapshotState = z.infer<typeof snapshotStateSchema>;

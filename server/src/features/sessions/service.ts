@@ -4,6 +4,7 @@
  * holds it and whether it waits for an answer. Removing a file is our own disk
  * operation (pi has no delete): it resolves the id through pi's own listing,
  * closes an idle engine first, and refuses only while a turn is still working.
+ * A deleted chat goes to Epsilon's trash, so the file comes back on a restore.
  * The browser never sends a session path.
  */
 import { rm, rmdir } from "node:fs/promises";
@@ -13,8 +14,14 @@ import type { AgentHome } from "../../platform/agent-home";
 import { forkSession, listAllSessions, locateSession, setSessionName } from "../../platform/pi";
 import type { StoredSession } from "../../platform/pi";
 import { ProjectNotTrustedError, placeOf, projectStatus, trustedProjectFolder } from "../projects";
-import type { SessionErrorCode, SessionList, SessionSummary } from "./contract";
-import { writePinned } from "./store";
+import type {
+	ExportedSession,
+	ExportFormat,
+	SessionErrorCode,
+	SessionList,
+	SessionSummary,
+} from "./contract";
+import { purgeTrash, restoreTrash, trashSession, writePinned } from "./store";
 
 type Live = { id: string; needsInput: boolean };
 
@@ -93,16 +100,15 @@ export const deleteSession = async (
 	const located = await locateSession(id);
 	if (located === undefined) return notFound;
 	if (!closeIfIdle(id)) return running;
-	// `force` makes a second delete of the same id succeed: the file is already gone.
-	await rm(located.file, { force: true });
+	await trashSession(home, located);
 	await forgetPin(home, id);
 	return { ok: true, value: null };
 };
 
 /**
- * Takes a project off Epsilon's list by deleting every session pi recorded in that
- * folder. The list has no other source (docs/DECISIONS.md, Chats and projects), so
- * nothing else is written; the folder and pi's trust record stay.
+ * Takes a project off Epsilon's list by moving every session pi recorded in that
+ * folder to the trash. The list has no other source (docs/DECISIONS.md, Chats and
+ * projects), so nothing else is written; the folder and pi's trust record stay.
  */
 export const removeProject = async (
 	home: AgentHome,
@@ -132,7 +138,7 @@ export const removeProject = async (
 	for (const session of sessions) {
 		const located = await locateSession(session.id);
 		if (located === undefined) continue;
-		await rm(located.file, { force: true });
+		await trashSession(home, located);
 		folders.add(dirname(located.file));
 		await forgetPin(home, session.id);
 	}
@@ -144,7 +150,9 @@ export const removeProject = async (
 /**
  * Move a chat into a trusted project: pi forks the whole history into a new
  * session in that folder, then the chat's own file is removed. The new session
- * runs with the project's resources from its next turn on.
+ * runs with the project's resources from its next turn on. The old file is
+ * removed rather than trashed: the history lives on in the fork, so nothing is
+ * lost and a second copy in the trash would only be confusing.
  */
 export const moveSessionToProject = async (
 	home: AgentHome,
@@ -187,6 +195,30 @@ export const renameSession = async (
 	return { ok: true, value: { id, name } };
 };
 
+/**
+ * Write one chat's transcript through pi's exporter. The callback owns the engine,
+ * because pi's export is a method on the live session and this feature builds none;
+ * it answers undefined for an id pi has no session for, and throws pi's own sentence
+ * for a transcript it refused to write.
+ */
+export const exportSession = async (
+	id: string,
+	format: ExportFormat,
+	exportLive: (id: string, format: ExportFormat) => Promise<ExportedSession | undefined>,
+): Promise<SessionOutcome<ExportedSession>> => {
+	try {
+		const exported = await exportLive(id, format);
+		if (exported === undefined) return notFound;
+		return { ok: true, value: exported };
+	} catch (error) {
+		return {
+			ok: false,
+			code: "EXPORT_FAILED",
+			message: error instanceof Error ? error.message : "pi could not write this chat's export.",
+		};
+	}
+};
+
 /** Pin is Epsilon's own preference, so only an existing session may be pinned. */
 export const pinSession = async (
 	home: AgentHome,
@@ -198,3 +230,37 @@ export const pinSession = async (
 	await writePinned(home, id, pinned);
 	return { ok: true, value: null };
 };
+
+const trashMissing: SessionOutcome<never> = {
+	ok: false,
+	code: "TRASH_NOT_FOUND",
+	message: "Epsilon's trash holds no such chat.",
+};
+
+/**
+ * Restore a deleted chat by putting its file back where pi listed it. A restore
+ * whose old path is occupied is refused: that file is a chat the operator still
+ * has, and overwriting it would be the loss this trash exists to prevent.
+ */
+export const restoreTrashedSession = async (
+	home: AgentHome,
+	id: string,
+): Promise<SessionOutcome<{ id: string; path: string }>> => {
+	const outcome = await restoreTrash(home, id);
+	if (outcome.ok) return { ok: true, value: { id, path: outcome.path } };
+	if (outcome.reason === "taken") {
+		return {
+			ok: false,
+			code: "TRASH_PATH_TAKEN",
+			message: "A chat file already exists where this one came from. Epsilon left both alone.",
+		};
+	}
+	return trashMissing;
+};
+
+/** Destroy a trashed chat for good, its file and its record alike. */
+export const purgeTrashedSession = async (
+	home: AgentHome,
+	id: string,
+): Promise<SessionOutcome<null>> =>
+	(await purgeTrash(home, id)) ? { ok: true, value: null } : trashMissing;

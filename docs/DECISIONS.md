@@ -27,9 +27,14 @@ extension's config resolution, exposure, OAuth or permission hooks.
 ## Socket vocabulary
 
 The browser socket carries Epsilon's own commands and zod shapes, defined in `shared/`.
-Commands are the ones the page can send (`prompt`, `steer`, `abort`, `bash`,
-`set_model`, `reload`); each is answered by `command-result` naming the command. A
-frame change bumps `PROTOCOL_VERSION`, and a tab built for another version reloads.
+Commands are the ones the page can send: a prompt, the queue behavior it joins a
+running turn with and the images it carries, the aborts (turn, retry, compaction,
+bash), bash itself, the model, thinking-level and coding-tool switches, manual
+compaction, the auto-compaction and auto-retry toggles, the queue clear, the move to
+an earlier message of the branch, and reload. `commandNameSchema` in
+`shared/src/protocol/frames.ts` is the list. Each is answered by `command-result`
+naming the command. A frame change bumps `PROTOCOL_VERSION`, and a tab built for
+another version reloads.
 
 Why: with no RPC envelope under it, pi's RPC types would be a translation layer, and a
 change to pi's private types would become a change to Epsilon's public contract.
@@ -160,15 +165,22 @@ pin is Epsilon's own list preference: `pinned-sessions.json` in the agent home h
 the ids, and the list route joins them to pi's sessions. Pinned rows lead their place;
 a project's chats stay inside that project.
 
-Deleting a chat removes its session file and its pin; an idle engine on it is closed
-first, and only a turn in progress refuses. Removing a project deletes the session files
-recorded in that folder, which is all that puts it on the list; the folder and pi's trust
-record are left alone.
+Deleting a chat moves its session file to Epsilon's trash and drops its pin; an idle engine
+on it is closed first, and only a turn in progress refuses. Removing a project moves the
+session files recorded in that folder to the trash, which is all that puts it on the list;
+the folder and pi's trust record are left alone. The trash is `<agent home>/trash`, beside
+`sessions/` because pi lists every folder under `sessions/` as a live session: one file per
+chat, plus a sidecar naming the path it came from and the day it moved. A restore puts the
+file back, and refuses when something already sits at that path; only deleting it from the
+trash destroys it. A chat moved into a project is removed rather than trashed: its history
+lives on in the fork, so a second copy would only be confusing.
 
 Why: pi has no pin concept, and a browser-only pin would vanish on another tab or a
 reload. A pi session file with an unknown pin entry would be a second truth for pi's
-own data. Not: writing pins into a session transcript or keeping them in server
-memory.
+own data. A delete nobody can undo throws a conversation away for good. Not:
+writing pins into a session transcript or keeping them in server memory. Not: the `trash`
+CLI pi's own picker calls, which stock macOS does not have and which would only add a child
+process around two file moves.
 
 MCP servers, skills and packages each open on a Global | Project tab, the split pi
 makes between the home and a project's `.pi`. The tab decides what Add writes and
@@ -186,6 +198,66 @@ Not: a chat with no folder (pi has no such mode). A chat in `$HOME` (its ancesto
 would become project resources). Always trusting an opened folder, which was only
 defensible when the folder was chosen at startup. Gating chats on trust (their folder
 is Epsilon's own). A stored project list (a second truth beside pi's session files).
+
+## Branching
+
+Going back is one direction of pi's session tree, and this is v1 of it: the composer
+lists the user messages of the branch the transcript shows, and picking one calls
+`AgentSession.navigateTree`, which moves the leaf to just before that message and
+hands its text back for the box. Sending it starts a new branch; the one it left
+stays in the session file. pi refuses the move while a run or a compaction is going,
+so the control is disabled with that reason.
+
+Why: moving the leaf is a command on the live engine, and the text coming back to the
+composer is what makes the new branch start from the message the operator picked
+rather than a retyped copy of it.
+
+Not: branch summarisation (`navigateTree`'s `summarize`), a tree of the other
+branches, and fork or clone. The missing parts are a model call in the middle of a
+navigation and a second session file, so they are not commands a tab asks for yet.
+
+## Export
+
+A chat's transcript leaves as an HTML page or a JSONL file, written by pi's own
+exporter and handed to the browser's download. Both are methods on `AgentSession`, so
+the server builds the session's engine for the export when nothing holds it, reads the
+file back into the response and releases the engine to its idle grace. Nothing is kept
+on the server: pi writes into a temporary folder that is removed after the read. The
+name the file is saved under is the chat's own name, else its id.
+
+Why: pi ships no exporter that takes a session file — its `exports` map exposes only
+the package root and the RPC entry — so a path around the engine would be a second
+implementation of pi's output, drifting from the page a terminal's `/export` writes.
+The HTML export also reads pi's bundled template and pre-renders extension tool output
+through the live extension runners, which only an open engine has. Export reads the
+transcript and changes nothing, so a run in progress does not refuse it.
+
+Not: serialising the socket's snapshot in the browser (it holds the rendered subset of
+the transcript, not the file). Not: a streaming download with `Content-Disposition`
+(the contract carries the bytes as a JSON field, and a second response shape for one
+control buys nothing at a few hundred kilobytes).
+
+## Attachments
+
+A prompt carries images beside its text: at most four, each at most 2 MB of raw bytes
+(2,796,204 base64 characters) and 12,000,000 base64 characters for all of them
+together. `shared/src/protocol/frames.ts` states the three numbers once; the zod schema
+and the composer's check both derive from them, so the two cannot drift. An image is
+the base64 the browser read and its MIME type, which is pi's own `ImageContent`; the
+composer takes one from the file picker, from a paste into the box or from a drop on
+it, shows it with a remove action, and says under the box which cap a refused file
+hit. `PROTOCOL_VERSION` 11 added the field.
+
+Why: pi normalises prompt images itself, resizing to the `images.autoResize` setting
+and the model's `inputLimits.images.resize` and turning an image it cannot use into a
+hint in the run, so a resize or a format check here would disagree with what the model
+received. What Epsilon must bound is the memory one socket frame can hold: four of
+these images stay well under the platform's 16 MB payload.
+
+Not: resizing, re-encoding or thumbnailing in the browser (pi does that with the
+active model's limits at hand). An upload endpoint or a second file route (the frame
+already carries the bytes). Images on `!cmd` or `/reload`, which are not prompts and
+have nowhere to put them: the composer refuses and says so instead of dropping them.
 
 ## Skills
 

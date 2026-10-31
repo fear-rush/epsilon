@@ -13,6 +13,7 @@ import { Transcript } from "@/features/conversation/transcript";
 import { Composer } from "@/features/conversation/composer/composer";
 import { useConversation } from "@/features/conversation/use-conversation";
 import { ChatBar } from "@/features/conversation/chat-bar";
+import { RunStatus } from "@/features/conversation/run-status";
 import { ComposerPlace, SessionHeader } from "@/features/conversation/session-header";
 import { ConversationWelcome } from "@/features/conversation/welcome";
 import { SessionLoader } from "@/features/conversation/session-loader";
@@ -39,6 +40,17 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 	const rows = transcript(snapshot.state);
 	const { busy, dialogs, statuses, widgets, title, sessionName, commands } = snapshot.state;
 	const { models, model, thinkingLevel, availableThinkingLevels, codingTools } = snapshot.state;
+	const {
+		contextUsage,
+		stats,
+		isCompacting,
+		isRetrying,
+		isBashRunning,
+		autoCompaction,
+		autoRetry,
+		queue,
+		branches,
+	} = snapshot.state;
 	const confirmations = dialogs.filter(isConfirm);
 	const questions = dialogs.filter((dialog) => !isConfirm(dialog));
 	const aboveComposer = widgets.filter((widget) => widget.placement === "aboveEditor");
@@ -52,6 +64,8 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 			<Composer
 				store={store}
 				busy={busy}
+				isCompacting={isCompacting}
+				branches={branches}
 				models={models}
 				model={model}
 				thinkingLevel={thinkingLevel}
@@ -59,6 +73,8 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				statuses={statuses}
 				commands={commands}
 				codingTools={codingTools}
+				contextUsage={contextUsage}
+				cost={stats.cost}
 				inline={empty}
 				footer={<ComposerPlace place={where} />}
 			/>
@@ -66,6 +82,8 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 		[
 			store,
 			busy,
+			isCompacting,
+			branches,
 			models,
 			model,
 			thinkingLevel,
@@ -73,9 +91,29 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 			statuses,
 			commands,
 			codingTools,
+			contextUsage,
+			stats.cost,
 			empty,
 			where,
 		],
+	);
+
+	/** The rows above the composer change with a queue or a run state, never with a token. */
+	const runStatus = useMemo(
+		() => (
+			<RunStatus
+				isCompacting={isCompacting}
+				isRetrying={isRetrying}
+				isBashRunning={isBashRunning}
+				bashCommand={snapshot.bashCommand}
+				queue={queue}
+				onAbortCompaction={() => store.abortCompaction()}
+				onCancelRetry={() => store.cancelRetry()}
+				onAbortBash={() => store.abortBash()}
+				onClearQueue={() => store.clearQueue()}
+			/>
+		),
+		[store, isCompacting, isRetrying, isBashRunning, snapshot.bashCommand, queue],
 	);
 
 	// A session that has no snapshot yet shows a loader, not an empty transcript.
@@ -92,10 +130,14 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 		<div className="flex min-h-0 flex-1 flex-col">
 			<SessionHeader
 				sessionId={sessionId}
+				store={store}
 				title={title ?? sessionName}
 				place={snapshot.state.place ?? place}
 				busy={busy}
 				empty={rows.length === 0}
+				autoCompaction={autoCompaction}
+				autoRetry={autoRetry}
+				isCompacting={isCompacting}
 			/>
 
 			{questions.map((question) => (
@@ -115,7 +157,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 
 			{empty ? (
 				// A conversation opens on the box that starts it, not a card above a footer.
-				<ConversationWelcome place={where} composer={composer} />
+				<ConversationWelcome place={where} composer={composer} status={runStatus} />
 			) : (
 				<>
 					<Transcript rows={rows} />
@@ -130,6 +172,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 						</div>
 					)}
 
+					{runStatus}
 					<div className="composer-settle">{composer}</div>
 				</>
 			)}

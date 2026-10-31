@@ -8,6 +8,8 @@ type Schemas = components["schemas"];
 
 export type BuiltinProvider = Schemas["BuiltinProvider"];
 export type DefaultModel = Schemas["DefaultModel"];
+export type ExportedSession = Schemas["ExportedSession"];
+export type ExportFormat = Schemas["ExportFormat"];
 export type McpAutoEnableInput = Schemas["McpAutoEnableInput"];
 export type McpEnabledInput = Schemas["McpEnabledInput"];
 export type McpInProjectInput = Schemas["McpInProjectInput"];
@@ -41,6 +43,8 @@ export type ReasoningCompat = Schemas["ReasoningCompat"];
 export type Readiness = Schemas["Readiness"];
 export type SessionList = Schemas["SessionList"];
 export type SessionSummary = Schemas["SessionSummary"];
+export type TrashList = Schemas["TrashList"];
+export type TrashedSession = Schemas["TrashedSession"];
 export type SettingsSnapshot = Schemas["SettingsSnapshot"];
 export type ForeignSkillView = Schemas["ForeignSkillView"];
 export type SkillBundleList = Schemas["SkillBundleList"];

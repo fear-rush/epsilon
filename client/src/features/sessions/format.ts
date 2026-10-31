@@ -19,7 +19,7 @@ export function formatWhen(iso: string): string {
 }
 
 /** The first line of the first user message, or the name the user set. */
-export const sessionLabel = (session: SessionSummary): string => {
+export const sessionLabel = (session: Pick<SessionSummary, "name" | "firstMessage">): string => {
 	if (session.name !== undefined) return session.name;
 	const firstLine = session.firstMessage.split("\n")[0]?.trim() ?? "";
 	return firstLine === "" ? "Untitled chat" : firstLine;

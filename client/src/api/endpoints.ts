@@ -5,6 +5,8 @@
 import { api, RefusalError } from "./client";
 import type {
 	DefaultModel,
+	ExportedSession,
+	ExportFormat,
 	FolderListing,
 	McpAutoEnableInput,
 	McpEnabledInput,
@@ -35,6 +37,7 @@ import type {
 	SkillImportReport,
 	SkillInput,
 	SkillRoot,
+	TrashList,
 } from "./types";
 import type { McpScope } from "shared";
 
@@ -69,12 +72,40 @@ export const deleteSession = async (id: string): Promise<void> => {
 	await api.DELETE("/api/sessions/{id}", { params: { path: { id } } });
 };
 
+/** Chats a delete moved to Epsilon's trash, newest first, with the record of where each came from. */
+export const fetchTrash = async (signal?: AbortSignal): Promise<TrashList> =>
+	body((await api.GET("/api/sessions/trash", { signal })).data);
+
+/** Puts a deleted chat's file back where pi's list finds it again. Answers that path. */
+export const restoreTrashedSession = async (id: string): Promise<string> =>
+	body((await api.POST("/api/sessions/trash/{id}/restore", { params: { path: { id } } })).data)
+		.path;
+
+/** The one way a chat's file leaves the disk for good. */
+export const purgeTrashedSession = async (id: string): Promise<void> => {
+	await api.DELETE("/api/sessions/trash/{id}", { params: { path: { id } } });
+};
+
 /**
- * Takes a project off the list by deleting its chats. The folder itself and its
- * trust are left alone. Answers how many chats were deleted.
+ * Takes a project off the list by moving its chats to the trash. The folder itself
+ * and its trust are left alone. Answers how many chats moved.
  */
 export const removeProject = async (path: string): Promise<number> =>
 	body((await api.DELETE("/api/projects/sessions", { params: { query: { path } } })).data).removed;
+
+/**
+ * pi writes the export to a file on the server, which reads it back and removes it: the
+ * answer is the bytes, with the name and type the browser saves them under.
+ */
+export const exportSession = async (id: string, format: ExportFormat): Promise<ExportedSession> =>
+	body(
+		(
+			await api.POST("/api/sessions/{id}/export", {
+				params: { path: { id } },
+				body: { format },
+			})
+		).data,
+	);
 
 /** Set the display name pi records in the session file. */
 export const renameSession = async (id: string, name: string): Promise<void> => {

@@ -131,16 +131,19 @@ const summaryOf = (session: SessionInfo): StoredSession => ({
 export const listAllSessions = async (): Promise<StoredSession[]> =>
 	(await SessionManager.listAll()).map(summaryOf);
 
+/** A session from the listing plus the file it lives in. */
+export type LocatedSession = StoredSession & { file: string };
+
 /**
- * The file and folder of one id, or undefined when the home has no such session.
- * An id is unique across folders, and pi records the folder in the file, so a
- * caller never needs a path from the browser to find a session.
+ * The file, folder and summary of one id, or undefined when the home has no such
+ * session. An id is unique across folders, and pi records the folder in the file,
+ * so a caller never needs a path from the browser to find a session. The name and
+ * first message come with it because pi derives them while listing, not while
+ * opening a file.
  */
-export const locateSession = async (
-	id: string,
-): Promise<{ file: string; cwd: string } | undefined> => {
+export const locateSession = async (id: string): Promise<LocatedSession | undefined> => {
 	const session = (await SessionManager.listAll()).find((candidate) => candidate.id === id);
-	return session === undefined ? undefined : { file: session.path, cwd: session.cwd };
+	return session === undefined ? undefined : { ...summaryOf(session), file: session.path };
 };
 
 /**

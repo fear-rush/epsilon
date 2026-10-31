@@ -64,6 +64,7 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				// Attaching mid-run must show the run as live, not as idle until the next
 				// `agent_start`, which has already happened.
 				busy: frame.snapshot.state.isStreaming,
+				isCompacting: frame.snapshot.state.isCompacting,
 				models: frame.snapshot.models,
 				commands: frame.snapshot.commands,
 				sessionName: frame.snapshot.state.sessionName,
@@ -71,6 +72,14 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				availableThinkingLevels: frame.snapshot.state.availableThinkingLevels,
 				place: frame.snapshot.state.place,
 				codingTools: frame.snapshot.state.codingTools,
+				contextUsage: frame.snapshot.state.contextUsage,
+				stats: frame.snapshot.state.stats,
+				isRetrying: frame.snapshot.state.isRetrying,
+				isBashRunning: frame.snapshot.state.isBashRunning,
+				autoCompaction: frame.snapshot.state.autoCompaction,
+				autoRetry: frame.snapshot.state.autoRetry,
+				queue: frame.snapshot.state.queue,
+				branches: frame.snapshot.state.branches,
 				model:
 					current === undefined
 						? undefined

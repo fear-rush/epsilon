@@ -4,11 +4,21 @@
  * `dialogs.ts`, and the fan-out to tabs in `SessionFrames` below. A command is a method
  * call on the embedded `AgentSession` (docs/DECISIONS.md, Embedded engine); no process speaks to this one.
  */
-import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import type {
+	AgentSession,
+	AgentSessionEvent,
+	PromptOptions,
+} from "@earendil-works/pi-coding-agent";
 import type {
 	Command,
 	DialogAnswer,
 	Place,
+	PromptBehavior,
+	PromptImage,
 	ProtocolErrorCode,
 	ServerFrame,
 	SnapshotModel,
@@ -72,6 +82,28 @@ export class SessionFrames {
  */
 const IDLE_DISPOSE_MS = 10_000;
 
+/** The two files pi writes a transcript as, and the type a browser saves each under. */
+export type ExportFormat = "html" | "jsonl";
+
+const EXPORT_FILE: Record<ExportFormat, { extension: string; mimeType: string }> = {
+	html: { extension: "html", mimeType: "text/html;charset=utf-8" },
+	jsonl: { extension: "jsonl", mimeType: "application/x-ndjson" },
+};
+
+/** What a browser saves: the bytes pi wrote, and the name to save them under. */
+export type ExportedSession = { filename: string; mimeType: string; text: string };
+
+/**
+ * The stem of a download's name. The chat's own name when it has one, else its id,
+ * with everything a file system or a browser would read as a path removed.
+ */
+const exportStem = (name: string | undefined, sessionId: string): string => {
+	const cleaned = (name ?? "").replace(/[^\p{L}\p{N}._-]+/gu, "-").replace(/^[-.]+|[-.]+$/g, "");
+	// Count code points, so a truncation cannot cut a character in half.
+	const stem = [...cleaned].slice(0, 80).join("");
+	return stem === "" ? `session-${sessionId}` : stem;
+};
+
 export type LiveSessionOptions = {
 	sessionId: string;
 	cwd: string;
@@ -94,8 +126,6 @@ export class LiveSession {
 	private unsubscribe: (() => void) | undefined;
 	/** The models the picker offers, refreshed when the engine's providers change. */
 	private models: SnapshotModel[] = [];
-	private streaming = false;
-	private bashUnsettled = false;
 	private idleTimer: ReturnType<typeof setTimeout> | undefined;
 
 	private constructor(sessionId: string, place: Place, onEmpty: () => void) {
@@ -194,6 +224,30 @@ export class LiveSession {
 		return true;
 	}
 
+	/**
+	 * pi's own exporter, which only writes to a file: it runs into a scratch folder
+	 * that is read back and removed, so the engine keeps nothing. The caller owns the
+	 * engine, so nothing here disposes or releases it (docs/DECISIONS.md, Export).
+	 */
+	async export(format: ExportFormat): Promise<ExportedSession> {
+		const agent = this.engine;
+		const { extension, mimeType } = EXPORT_FILE[format];
+		const folder = await mkdtemp(join(tmpdir(), "epsilon-export-"));
+		const path = join(folder, `session.${extension}`);
+		try {
+			if (format === "html") await agent.exportToHtml(path);
+			else agent.exportToJsonl(path);
+			const text = await readFile(path, "utf8");
+			return {
+				filename: `${exportStem(agent.sessionName, this.sessionId)}.${extension}`,
+				mimeType,
+				text,
+			};
+		} finally {
+			await rm(folder, { recursive: true, force: true });
+		}
+	}
+
 	/** Run one command and report it to every tab watching this session. */
 	async run(command: Command): Promise<void> {
 		try {
@@ -243,24 +297,55 @@ export class LiveSession {
 		const agent = this.engine;
 		switch (command.type) {
 			case "prompt":
-				await this.prompt(command.text);
-				return;
-			case "steer":
-				await agent.steer(command.text, undefined, { source: "interactive" });
+				await this.prompt(command.text, command.behavior, command.images);
 				return;
 			case "abort":
 				this.dialogs.cancelAll();
 				await agent.abort();
 				return;
-			case "bash":
-				await agent.executeBash(command.command, undefined, {
+			case "bash": {
+				// `executeBash` resolves when the command finishes, so report the running
+				// state first: that is what lets a tab offer `abort_bash` while it runs.
+				const running = agent.executeBash(command.command, undefined, {
 					excludeFromContext: command.excludeFromContext,
 				});
-				if (this.streaming) this.bashUnsettled = true;
+				this.resync();
+				await running;
+				this.resync();
+				return;
+			}
+			case "abort_bash":
+				agent.abortBash();
 				this.resync();
 				return;
 			case "reload":
 				await this.reload();
+				return;
+			case "compact":
+				// pi aborts the running turn before it compacts, so a busy session takes
+				// this. A refusal (`Nothing to compact`) is pi's message to the tab.
+				await agent.compact(command.instructions);
+				this.resync();
+				return;
+			case "abort_compaction":
+				agent.abortCompaction();
+				this.resync();
+				return;
+			case "set_auto_compaction":
+				agent.setAutoCompactionEnabled(command.enabled);
+				this.resync();
+				return;
+			case "cancel_retry":
+				agent.abortRetry();
+				this.resync();
+				return;
+			case "set_auto_retry":
+				agent.setAutoRetryEnabled(command.enabled);
+				this.resync();
+				return;
+			case "clear_queue":
+				agent.clearQueue();
+				this.resync();
 				return;
 			case "set_model": {
 				// Resolve against the list the browser was offered, so a pick can never
@@ -287,6 +372,16 @@ export class LiveSession {
 				this.resync();
 				return;
 			}
+			case "navigate_tree": {
+				// pi refuses while a run or a compaction is going, and that refusal is the
+				// tab's answer. A user message moves the leaf to its parent and hands its
+				// text back for the editor; the tab already holds it, so the snapshot says
+				// the rest: the transcript ends before the message and the branch is new.
+				const result = await agent.navigateTree(command.entryId);
+				if (result.cancelled) throw new Error("Navigation was cancelled");
+				this.resync();
+				return;
+			}
 		}
 	}
 
@@ -305,22 +400,38 @@ export class LiveSession {
 	/**
 	 * `prompt` resolves when the run finishes, but the browser only needs to know
 	 * that pi accepted it. The preflight hook gives that answer before streaming.
+	 * `behavior` is what lets a message join a run that is already going: pi refuses
+	 * a prompt with no queue behavior while streaming, and `steer` cannot carry an
+	 * extension command at all. An image travels as pi's `ImageContent`, which is
+	 * the shape the frame already carries; pi normalises it itself, so a prompt with
+	 * no images passes no image option at all.
 	 */
-	private prompt(text: string): Promise<void> {
+	private prompt(
+		text: string,
+		behavior: PromptBehavior | undefined,
+		images: PromptImage[] | undefined,
+	): Promise<void> {
 		return new Promise((resolve, reject) => {
 			let accepted = false;
-			void this.engine
-				.prompt(text, {
-					source: "interactive",
-					preflightResult: () => {
-						accepted = true;
-						resolve();
-					},
-				})
-				.catch((error) => {
-					if (accepted) this.fail(error instanceof Error ? error : new Error(String(error)));
-					else reject(error);
-				});
+			const options: PromptOptions = {
+				source: "interactive",
+				streamingBehavior: behavior,
+				preflightResult: () => {
+					accepted = true;
+					resolve();
+				},
+			};
+			if (images !== undefined) {
+				options.images = images.map((image) => ({
+					type: "image",
+					data: image.data,
+					mimeType: image.mimeType,
+				}));
+			}
+			void this.engine.prompt(text, options).catch((error) => {
+				if (accepted) this.fail(error instanceof Error ? error : new Error(String(error)));
+				else reject(error);
+			});
 		});
 	}
 
@@ -343,13 +454,11 @@ export class LiveSession {
 	}
 
 	private receive(event: AgentSessionEvent): void {
-		if (event.type === "agent_start") this.streaming = true;
 		if (event.type === "agent_settled") {
-			this.streaming = false;
-			if (this.bashUnsettled) {
-				this.bashUnsettled = false;
-				this.resync();
-			}
+			// Token totals, context usage and the queue all move with a run, so a
+			// settled engine re-reads the snapshot once instead of leaving the tab on
+			// numbers from its attach.
+			this.resync();
 			this.scheduleIdle();
 		}
 		try {
@@ -377,11 +486,14 @@ export class LiveSession {
 		this.frames.emit(this.snapshotFrame());
 	}
 
-	/** Keep an unwatched session while it runs, waits for an answer or compacts. */
+	/** Keep an unwatched session while it runs, waits for an answer, retries or compacts. */
 	private get busy(): boolean {
 		return (
 			this.agent !== undefined &&
-			(this.agent.isStreaming || this.agent.isCompacting || this.dialogs.needsInput)
+			(this.agent.isStreaming ||
+				this.agent.isCompacting ||
+				this.agent.isRetrying ||
+				this.dialogs.needsInput)
 		);
 	}
 

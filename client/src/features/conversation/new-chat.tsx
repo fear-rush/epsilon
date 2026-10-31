@@ -63,6 +63,8 @@ function DraftConversation({
 	const { store, snapshot } = useConversation(sessionId, place);
 	const {
 		busy,
+		isCompacting,
+		branches,
 		statuses,
 		commands,
 		models,
@@ -70,6 +72,8 @@ function DraftConversation({
 		thinkingLevel,
 		availableThinkingLevels,
 		codingTools,
+		contextUsage,
+		stats,
 	} = snapshot.state;
 	const where = snapshot.state.place ?? place;
 
@@ -89,6 +93,8 @@ function DraftConversation({
 			<Composer
 				store={store}
 				busy={busy}
+				isCompacting={isCompacting}
+				branches={branches}
 				models={models}
 				model={model}
 				thinkingLevel={thinkingLevel}
@@ -96,6 +102,8 @@ function DraftConversation({
 				statuses={statuses}
 				commands={commands}
 				codingTools={codingTools}
+				contextUsage={contextUsage}
+				cost={stats.cost}
 				inline
 				onSent={start}
 				footer={
@@ -109,6 +117,8 @@ function DraftConversation({
 		[
 			store,
 			busy,
+			isCompacting,
+			branches,
 			models,
 			model,
 			thinkingLevel,
@@ -116,6 +126,8 @@ function DraftConversation({
 			statuses,
 			commands,
 			codingTools,
+			contextUsage,
+			stats.cost,
 			onChangeProject,
 			where,
 			start,

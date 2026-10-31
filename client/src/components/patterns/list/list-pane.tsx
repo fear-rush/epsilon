@@ -1,8 +1,7 @@
-import { InboxIcon, SearchIcon } from "lucide-react";
+import { InboxIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-import { Input } from "@/components/ui/input";
 import { PaneBand } from "@/components/patterns/pane/pane-band";
 import { PaneBar } from "@/components/patterns/pane/pane-bar";
 import { PaneFooter } from "@/components/patterns/pane/pane-footer";
@@ -12,6 +11,7 @@ import { StatusView } from "@/components/patterns/status/status-view";
 import { errorView } from "@/components/patterns/status/error-view";
 import { ProjectPicker, ScopeTabs } from "@/components/patterns/tabs/scope-tabs";
 import type { ScopedSection } from "@/components/patterns/tabs/scope-tabs";
+import { SearchField } from "@/components/patterns/list/search-field";
 
 /**
  * The list column of a master/detail section: a bar with the title and count, a
@@ -59,18 +59,7 @@ export function ListPane({
 	footerStacked?: boolean;
 }) {
 	const failure = error === undefined || error === null ? undefined : errorView(error);
-	const search = (
-		<div className="relative w-full">
-			<SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
-			<Input
-				value={query}
-				placeholder={searchLabel}
-				aria-label={searchLabel}
-				className="pl-8"
-				onChange={(event) => onQueryChange(event.target.value)}
-			/>
-		</div>
-	);
+	const search = <SearchField value={query} onChange={onQueryChange} label={searchLabel} />;
 	return (
 		<Pane border className="h-full w-full">
 			<PaneBar title={title} meta={count} />

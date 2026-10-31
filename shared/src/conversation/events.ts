@@ -104,6 +104,13 @@ export const reduceEvent = (
 			return { ...state, busy: false, streaming: null };
 		case "thinking_level_changed":
 			return { ...state, thinkingLevel: event.level };
+		case "queue_update":
+			// pi says which prompts it still holds after every queue change, so the
+			// composer shows what a run accepted instead of guessing.
+			return {
+				...state,
+				queue: { steering: [...event.steering], followUp: [...event.followUp] },
+			};
 		case "message_start":
 			if (event.message.role !== "assistant") return state;
 			return { ...state, streaming: { text: "", thinking: "" } };
@@ -165,13 +172,25 @@ export const reduceEvent = (
 			};
 		}
 		case "compaction_start":
-			return withNotice(state, "compaction", "Compacting the conversation");
+			return withNotice(
+				{ ...state, isCompacting: true },
+				"compaction",
+				"Compacting the conversation",
+			);
 		case "compaction_end":
-			return withNotice(state, "compaction", "Compaction finished");
+			return withNotice({ ...state, isCompacting: false }, "compaction", "Compaction finished");
 		case "auto_retry_start":
-			return withNotice(state, "retry", `Retrying the request (attempt ${event.attempt})`);
+			return withNotice(
+				{ ...state, isRetrying: true },
+				"retry",
+				`Retrying the request (attempt ${event.attempt})`,
+			);
 		case "auto_retry_end":
-			return withNotice(state, "retry", event.success ? "Retry succeeded" : "Retry failed");
+			return withNotice(
+				{ ...state, isRetrying: false },
+				"retry",
+				event.success ? "Retry succeeded" : "Retry failed",
+			);
 		default:
 			return state;
 	}

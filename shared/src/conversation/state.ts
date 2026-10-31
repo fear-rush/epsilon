@@ -4,7 +4,16 @@
  */
 import type { DialogQuestion } from "../protocol/extui";
 import type { JsonAgentSessionEvent } from "../pi";
-import type { Place, SnapshotCommand, SnapshotModel, ThinkingLevel } from "../protocol/frames";
+import type {
+	ContextUsage,
+	Place,
+	PromptQueue,
+	SessionStats,
+	SnapshotBranch,
+	SnapshotCommand,
+	SnapshotModel,
+	ThinkingLevel,
+} from "../protocol/frames";
 
 type EventMessage = Extract<JsonAgentSessionEvent, { type: "message_end" }>["message"];
 
@@ -79,6 +88,8 @@ export type ConversationState = {
 	/** A turn is in progress. `agent_start` and `agent_end` carry this; a live
 	 * engine that is merely idle does not. */
 	busy: boolean;
+	/** pi is replacing the transcript with a summary. */
+	isCompacting: boolean;
 	/** What the model picker may offer, from the last snapshot. */
 	models: SnapshotModel[];
 	/** What `/` may expand to, from the last snapshot's `get_commands`. */
@@ -92,7 +103,30 @@ export type ConversationState = {
 	place: Place | undefined;
 	/** Whether the tools that run commands and change files are active. */
 	codingTools: boolean;
+	/** How full the context window is now, or absent while pi cannot tell. */
+	contextUsage: ContextUsage | undefined;
+	/** What the session has spent over its whole history, from the last snapshot. */
+	stats: SessionStats;
+	/** An automatic retry is waiting to run again after a failed request. */
+	isRetrying: boolean;
+	isBashRunning: boolean;
+	/** pi's two automatic settings; both are on in pi's defaults (settings-defaults.js). */
+	autoCompaction: boolean;
+	autoRetry: boolean;
+	/** Prompts pi holds for the run that is already going. */
+	queue: PromptQueue;
+	/** The active branch's user messages, root to leaf, from the last snapshot. */
+	branches: SnapshotBranch[];
 	nextNoticeId: number;
+};
+
+const noStats: SessionStats = {
+	tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+	cost: 0,
+	userMessages: 0,
+	assistantMessages: 0,
+	toolCalls: 0,
+	totalMessages: 0,
 };
 
 export const emptyConversation: ConversationState = {
@@ -104,6 +138,7 @@ export const emptyConversation: ConversationState = {
 	statuses: [],
 	widgets: [],
 	busy: false,
+	isCompacting: false,
 	models: [],
 	commands: [],
 	model: undefined,
@@ -111,5 +146,13 @@ export const emptyConversation: ConversationState = {
 	availableThinkingLevels: [],
 	place: undefined,
 	codingTools: false,
+	contextUsage: undefined,
+	stats: noStats,
+	isRetrying: false,
+	isBashRunning: false,
+	autoCompaction: true,
+	autoRetry: true,
+	queue: { steering: [], followUp: [] },
+	branches: [],
 	nextNoticeId: 0,
 };

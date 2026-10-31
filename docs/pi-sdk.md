@@ -62,6 +62,16 @@ Other facts worth having before embedding:
   `mode === "tui"`.
 - `InputSource` is `"interactive" | "rpc" | "extension"`. A prompt typed by a person
   in the browser is `"interactive"`.
+- Adding to a run that is already going goes through `prompt`, never `steer`: while
+  streaming, `prompt` needs `streamingBehavior` (`"steer"` interrupts after the
+  current turn's tools, `"followUp"` waits for the run to settle), and it dispatches a
+  registered extension command immediately. `steer()` and `followUp()` throw
+  `Extension command "/x" cannot be queued`.
+- `getContextUsage()` is `undefined` until a model is chosen, and answers `null`
+  tokens and percent after a compaction until an assistant has responded again.
+  `getSessionStats()` sums every entry in the session file, including the history a
+  compaction removed. `compact()` aborts the running turn before it compacts, and
+  answers `Nothing to compact (session too small)` when it cannot.
 - A `uiContext` is required for dialogs; without one a `confirm` has nowhere to go.
   `ExtensionUIContext` has 25 methods, in three groups:
   - **answer** a person: `select`, `confirm`, `input`, `editor`
@@ -82,10 +92,40 @@ Other facts worth having before embedding:
   `importFromJsonl`, and replaces the active session. Subscriptions belong to the old
   session and must be rebound. Epsilon uses the `SessionManager` half and opens one
   session per engine.
-- `AgentSession` also has `setSessionName`, `navigateTree`, `exportToHtml`,
-  `getSessionStats`, `getContextUsage`, `compact`, `abortCompaction`,
-  `abortRetry`, `executeBash`, `abortBash`, `getAllTools` and the model and thinking
-  setters. A socket feature uses one of these instead of inventing an RPC command.
+- `AgentSession` also carries the controls around a turn: `prompt` (with
+  `streamingBehavior`), `steer`, `followUp`, `abort`, `clearQueue`,
+  `getSteeringMessages`, `getFollowUpMessages`, `getSessionStats`, `getContextUsage`,
+  `compact`, `abortCompaction`, `setAutoCompactionEnabled`, `abortRetry`,
+  `setAutoRetryEnabled`, `isRetrying`, `executeBash`, `abortBash`, `isBashRunning`,
+  `cacheWarmingStatus`, `setSessionName`, `navigateTree`, `exportToHtml`,
+  `exportToJsonl`, `getAllTools` and the model and thinking setters. A socket feature
+  uses one of these instead of inventing an RPC command.
+- `exportToHtml(outputPath?, options?)` and `exportToJsonl(outputPath?)` write a file
+  and answer its path; neither hands back the bytes. `exportToHtml` refuses a session
+  with nothing written yet (`Nothing to export yet - start a conversation first`, and
+  `Cannot export in-memory session to HTML` when it has no file at all), fills pi's
+  bundled template (read from pi's own package directory, which `PI_PACKAGE_DIR` can
+  move) into one self-contained page, and pre-renders custom tool output through the
+  live extension runners, so it needs the engine, not just the file. `exportToJsonl`
+  serialises the current branch, header first, and needs no file. The package's
+  `exports` map exposes only `.` and `./rpc-entry`, so `dist/core/session-export.*`
+  is private: a host exports through a live session rather than a standalone call.
+- `prompt()` takes images as `ImageContent` (`{ type: "image", data, mimeType }`, the
+  base64 without a `data:` prefix) in its `images` option, and pi normalises them
+  itself: it runs `processImage` with the `images.autoResize` setting and the model's
+  `inputLimits.images.resize`, and an image it rejects becomes a hint in the run
+  instead of a failed turn. A host therefore bounds only the memory one frame may
+  hold, not the format or the size the model finally sees.
+- `navigateTree(targetId)` moves the leaf within the same session file, and throws
+  while the session is streaming or compacting (`Wait for the current response to
+  finish…`), so a host that offers it needs no state of its own to keep a run safe.
+  A target that is a user message sets the leaf to that message's **parent** and
+  returns its text as `editorText`; the next prompt then starts a sibling branch.
+  Any other entry becomes the leaf itself. Either way the switch refreshes
+  `agent.messages` and restores the active tools before it resolves, and
+  `sessionManager.getBranch()` answers the new branch, root to leaf.
+  `getUserMessagesForForking()` is not a branch list: it returns the user messages
+  of every branch in the file.
 - `toJsonEvent` is the transformation between a live event and the JSON the reducer
   consumes: `message_update` loses its `partial` payload and `toolcall_start` gains
   `id` and `toolName`. It is **not exported**. A host carries the transform itself
@@ -278,6 +318,7 @@ characters the provider returned.
 | `skills/`       | pi      | User skills; each directory holds a `SKILL.md`                             |
 | `sessions/`     | pi      | One JSONL per session, under `--<encoded cwd>--/`                          |
 | `chats/`        | Epsilon | The empty folder every chat runs in; it never holds a `.pi`                |
+| `trash/`        | Epsilon | Deleted chats: a JSONL and the record of where it came from                |
 
 Skills also load from `<cwd>/.pi/skills`, `<cwd>/.agents/skills`, `~/.agents/skills`
 and installed packages.
@@ -391,6 +432,10 @@ Turborepo or the runtime.
   `bashExecution` message without emitting `message_start`/`message_end`, and holds
   it until the run settles when streaming. Re-read the snapshot after a `bash`
   command and again at `agent_settled`.
+- **`isBashRunning` and `abortBash()` cover `executeBash` only.** The set behind them
+  is filled by `executeBash` (the composer's `!cmd` and extensions that call it).
+  The bash tool runs under the run's abort signal, so a tool call is stopped by
+  `abort()`, not `abortBash()`.
 - **`toJsonEvent` is not exported.** `package.json` exports only `.` and
   `./rpc-entry`; `dist/modes/json-event.js` is private. The host carries its own
   copy of the transform in `server/src/features/conversation/engine.ts`.

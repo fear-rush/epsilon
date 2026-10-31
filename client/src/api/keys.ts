@@ -43,6 +43,8 @@ export const readinessKeys = {
 
 export const sessionKeys = {
 	all: ["sessions"] as const,
+	/** Chats in Epsilon's trash. Under `all`, so a delete or restore refreshes it too. */
+	trash: ["sessions", "trash"] as const,
 };
 
 export const projectKeys = {
