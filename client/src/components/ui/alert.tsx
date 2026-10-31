@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 const alertVariants = cva(
 	"group/alert relative grid w-full gap-0.5 rounded-xl border px-4 py-3 text-left text-sm has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2.5 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-4",
@@ -12,6 +12,9 @@ const alertVariants = cva(
 					"bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90 *:[svg]:text-current",
 				success:
 					"bg-card text-success *:data-[slot=alert-description]:text-success/90 *:[svg]:text-current",
+				info: "border-info/40 bg-info/10 text-info *:data-[slot=alert-description]:text-current *:[svg]:text-info",
+				warning:
+					"border-warning/40 bg-warning/10 text-warning-foreground dark:text-warning *:data-[slot=alert-description]:text-current *:[svg]:text-warning",
 			},
 		},
 		defaultVariants: {

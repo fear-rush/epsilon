@@ -243,6 +243,17 @@
 			}
 		},
 		{
+			// Class names use the design tokens (client/src/styles/tokens.css). Warn while
+			// the features migrate; components/ui (vendored) and styles are out of scope.
+			"files": [
+				"client/src/features/**/*.{ts,tsx}",
+				"client/src/components/patterns/**/*.{ts,tsx}"
+			],
+			"rules": {
+				"anti-slop/design-tokens": ["error", { "allow": ["grid-cols-[minmax(0,1fr)]"] }]
+			}
+		},
+		{
 			"files": ["client/src/components/ui/**/*.tsx"],
 			"rules": {
 				"react/only-export-components": "off",

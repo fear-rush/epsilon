@@ -1,0 +1,121 @@
+/*
+ * Epsilon's design tokens: the only place a raw size, colour or timing lives.
+ * Features and patterns use the utilities these generate (`h-bar`, `px-pane`,
+ * `gap-field`, `text-title`, `max-w-page`, `animate-enter-rise`, `pad-row`…), and
+ * the `design-tokens` lint rule refuses raw values outside `components/ui`.
+ */
+
+@theme {
+	/* Layout. Every column's top bar and tabs band share these heights, so the
+	   settings nav, a list pane and a detail page line up on one rule. */
+	--spacing-bar: 3rem;
+	--spacing-band: 3.5rem;
+	--spacing-nav: 16rem;
+	--spacing-list: 20rem;
+	/* Horizontal gutters: a nav or list pane, and a detail page. */
+	--spacing-pane: 0.75rem;
+	--spacing-page: 2rem;
+	/* Gaps by role: rows in a list, fields in a form, cards in a section, sections. */
+	--spacing-row: 0.25rem;
+	--spacing-field: 0.75rem;
+	--spacing-card: 1.5rem;
+	--spacing-section: 2rem;
+	/* The widest a detail page's content grows. Named apart from the `page` gutter:
+	   Tailwind resolves `max-w-<name>` from spacing first, so a shared name would
+	   make the width the gutter. */
+	--container-content: 56rem;
+	/* Dialog widths and the fixed body heights that keep a dialog from resizing. */
+	--container-dialog-sm: 28rem;
+	--container-dialog-md: 42rem;
+	--container-dialog-lg: 56rem;
+	--spacing-dialog-body-sm: 16rem;
+	--spacing-dialog-body-md: 24rem;
+	--spacing-dialog-body-lg: 36rem;
+
+	/* Type roles. A page uses these, not raw sizes. */
+	--text-display: 1.5rem;
+	--text-display--line-height: 1.25;
+	--text-display--font-weight: 600;
+	--text-display--letter-spacing: -0.015em;
+	--text-title: 0.9375rem;
+	--text-title--line-height: 1.4;
+	--text-title--font-weight: 600;
+	--text-section: 0.875rem;
+	--text-section--line-height: 1.4;
+	--text-section--font-weight: 500;
+	--text-body: 0.875rem;
+	--text-body--line-height: 1.5;
+	--text-meta: 0.75rem;
+	--text-meta--line-height: 1.4;
+	--text-code: 0.75rem;
+	--text-code--line-height: 1.5;
+
+	/* Motion: one curve, three durations, five entrances. Things under a bar (tabs,
+	   search, a picker) drop in from above; things over a footer rise from below. */
+	--ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
+	--animate-enter-fade: enter-fade 220ms var(--ease-settle) both;
+	--animate-enter-rise: enter-rise 360ms var(--ease-settle) both;
+	--animate-enter-drop: enter-drop 360ms var(--ease-settle) both;
+	--animate-enter-left: enter-left 300ms var(--ease-settle) both;
+	--animate-enter-right: enter-right 300ms var(--ease-settle) both;
+
+	@keyframes enter-fade {
+		from {
+			opacity: 0;
+		}
+	}
+	@keyframes enter-rise {
+		from {
+			opacity: 0;
+			translate: 0 0.5rem;
+		}
+	}
+	@keyframes enter-drop {
+		from {
+			opacity: 0;
+			translate: 0 -0.5rem;
+		}
+	}
+	@keyframes enter-left {
+		from {
+			opacity: 0;
+			translate: -0.75rem 0;
+		}
+	}
+	@keyframes enter-right {
+		from {
+			opacity: 0;
+			translate: 0.75rem 0;
+		}
+	}
+}
+
+/* Padding presets, by role. */
+@utility pad-row {
+	padding: 0.75rem 1rem;
+}
+@utility pad-item {
+	padding: 0.5rem;
+}
+
+/* Stagger steps for entrances: a pane's parts arrive one after another. */
+@utility enter-delay-1 {
+	animation-delay: 60ms;
+}
+@utility enter-delay-2 {
+	animation-delay: 120ms;
+}
+@utility enter-delay-3 {
+	animation-delay: 180ms;
+}
+
+/* Durations, for `transition-*` utilities. */
+@utility duration-fast {
+	transition-duration: 150ms;
+}
+@utility duration-base {
+	transition-duration: 220ms;
+}
+@utility duration-slow {
+	transition-duration: 360ms;
+}

@@ -4,7 +4,7 @@ import * as React from "react";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { PanelLeftIcon } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -294,5 +294,93 @@ export function SidebarMenuButton({
 		),
 		render,
 		state: { slot: "sidebar-menu-button", sidebar: "menu-button" },
+	});
+}
+
+/* Rebuilt from the registry: header, footer, group content and the group and menu actions. */
+export function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="sidebar-header"
+			data-sidebar="header"
+			className={cn("flex flex-col gap-2 p-2 [--radius:var(--radius-xl)]", className)}
+			{...props}
+		/>
+	);
+}
+
+export function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="sidebar-footer"
+			data-sidebar="footer"
+			className={cn("flex flex-col gap-2 p-2", className)}
+			{...props}
+		/>
+	);
+}
+
+export function SidebarGroupContent({ className, ...props }: React.ComponentProps<"div">) {
+	return (
+		<div
+			data-slot="sidebar-group-content"
+			data-sidebar="group-content"
+			className={cn("w-full text-sm", className)}
+			{...props}
+		/>
+	);
+}
+
+export function SidebarGroupAction({
+	className,
+	render,
+	...props
+}: useRender.ComponentProps<"button"> & React.ComponentProps<"button">) {
+	return useRender({
+		defaultTagName: "button",
+		props: mergeProps<"button">(
+			{
+				className: cn(
+					"absolute top-3.5 right-3 flex aspect-square w-5 items-center justify-center rounded-xl p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-transform group-data-[collapsible=icon]:hidden after:absolute after:-inset-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-3 md:after:hidden [&>svg]:size-4 [&>svg]:shrink-0",
+					className,
+				),
+			},
+			props,
+		),
+		render,
+		state: {
+			slot: "sidebar-group-action",
+			sidebar: "group-action",
+		},
+	});
+}
+
+export function SidebarMenuAction({
+	className,
+	render,
+	showOnHover = false,
+	...props
+}: useRender.ComponentProps<"button"> &
+	React.ComponentProps<"button"> & {
+		showOnHover?: boolean;
+	}) {
+	return useRender({
+		defaultTagName: "button",
+		props: mergeProps<"button">(
+			{
+				className: cn(
+					"absolute top-1.5 right-1 flex aspect-square w-5 items-center justify-center rounded-xl p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-transform group-data-[collapsible=icon]:hidden peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[size=default]/menu-button:top-1.5 peer-data-[size=lg]/menu-button:top-2.5 peer-data-[size=sm]/menu-button:top-1 after:absolute after:-inset-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-3 md:after:hidden [&>svg]:size-4 [&>svg]:shrink-0",
+					showOnHover &&
+						"group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 peer-data-active/menu-button:text-sidebar-accent-foreground aria-expanded:opacity-100 md:opacity-0",
+					className,
+				),
+			},
+			props,
+		),
+		render,
+		state: {
+			slot: "sidebar-menu-action",
+			sidebar: "menu-action",
+		},
 	});
 }

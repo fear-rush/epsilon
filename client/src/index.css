@@ -2,16 +2,10 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "./typeset.css";
+@import "./styles/tokens.css";
+@import "./styles/motion.css";
 
 @custom-variant dark (&:is(.dark *));
-
-.typeset-docs {
-	--typeset-font-heading: var(--font-sans);
-	--typeset-font-mono: var(--font-mono);
-	--typeset-size: 15px;
-	--typeset-leading: 1.75;
-	--typeset-flow: 1.25em;
-}
 
 @theme inline {
 	--font-heading: var(--font-sans);
@@ -36,6 +30,8 @@
 	--color-warning-foreground: var(--warning-foreground);
 	--color-success: var(--success);
 	--color-success-foreground: var(--success-foreground);
+	--color-info: var(--info);
+	--color-info-foreground: var(--info-foreground);
 	--color-accent-foreground: var(--accent-foreground);
 	--color-accent: var(--accent);
 	--color-muted-foreground: var(--muted-foreground);
@@ -75,10 +71,12 @@
 	--accent: oklch(0.97 0 0);
 	--accent-foreground: oklch(0.205 0 0);
 	--destructive: oklch(0.577 0.245 27.325);
-	--warning: oklch(0.666 0.179 58.318);
+	--warning: oklch(0.795 0.184 86.047);
 	--warning-foreground: oklch(0.216 0.006 56.043);
 	--success: oklch(0.627 0.194 149.214);
 	--success-foreground: oklch(0.985 0 0);
+	--info: oklch(0.546 0.245 262.881);
+	--info-foreground: oklch(0.985 0 0);
 	--border: oklch(0.922 0 0);
 	--input: oklch(0.885 0 0);
 	--ring: oklch(0.708 0 0);
@@ -118,6 +116,8 @@
 	--warning-foreground: oklch(0.216 0.006 56.043);
 	--success: oklch(0.765 0.177 163.223);
 	--success-foreground: oklch(0.985 0 0);
+	--info: oklch(0.707 0.165 254.624);
+	--info-foreground: oklch(0.145 0 0);
 	--border: oklch(1 0 0 / 10%);
 	--input: oklch(1 0 0 / 15%);
 	--ring: oklch(0.556 0 0);
@@ -173,54 +173,5 @@
 	/* Typeset styles the elements; chat prose keeps the transcript's own size. */
 	.typeset-chat {
 		font-size: inherit;
-	}
-}
-
-/* A settings row grows and collapses instead of popping in and out. The starting
-   style plays when React inserts the row; data-closing holds it while it
-   closes. `kit/animating-rows.tsx` owns the timings on the React side. */
-.settings-row-anim {
-	display: grid;
-	grid-template-rows: 1fr;
-	transition:
-		grid-template-rows 200ms ease-out,
-		opacity 200ms ease-out;
-}
-
-.settings-row-anim > * {
-	min-height: 0;
-}
-
-.settings-row-anim[data-closing="true"] {
-	grid-template-rows: 0fr;
-	opacity: 0;
-}
-
-@starting-style {
-	.settings-row-anim {
-		grid-template-rows: 0fr;
-		opacity: 0;
-	}
-}
-
-/* A block that appears because of a click, such as the question pi asks mid-flow or
-   the result of a test. It arrives a hair oversized and transparent, so it settles
-   into place instead of popping into a page that was still catching up. */
-.settle-in {
-	transition:
-		opacity 200ms ease-out,
-		scale 200ms ease-out;
-}
-
-@starting-style {
-	.settle-in {
-		opacity: 0;
-		scale: 1.02;
-	}
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.settle-in {
-		transition: none;
 	}
 }

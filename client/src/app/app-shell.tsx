@@ -4,8 +4,8 @@
  */
 import { Outlet } from "@tanstack/react-router";
 
+import { LoadingState } from "@/components/patterns/status/loading-state";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { Spinner } from "@/components/ui/spinner";
 import { NotReady } from "@/features/readiness/not-ready";
 import { useReadiness } from "@/features/readiness/use-readiness";
 import { SessionSidebar } from "@/features/sessions/session-sidebar";
@@ -19,12 +19,12 @@ export function AppShell() {
 	// Do not mount a session route (and therefore an engine) until the answer is
 	// in. An unconfigured home must show its notice first, not build an engine.
 	return (
-		<SidebarProvider>
+		<SidebarProvider className="h-full min-h-0">
 			<SessionSidebar />
-			<SidebarInset className="h-svh min-h-0 overflow-hidden">
+			<SidebarInset className="min-h-0 animate-enter-fade overflow-hidden">
 				{readiness.isPending ? (
 					<div className="flex flex-1 items-center justify-center">
-						<Spinner className="text-muted-foreground" />
+						<LoadingState label="Starting…" />
 					</div>
 				) : unsupported === undefined ? (
 					<Outlet />

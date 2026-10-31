@@ -9,9 +9,10 @@ import { PlusIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { AnimatedRow } from "@/features/settings/kit/animated-row";
-import { useAnimatedRows } from "@/features/settings/kit/use-animated-rows";
-import { SettingsBlock, SettingsGroup } from "@/features/settings/kit/settings-section";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { AnimatedRow } from "./animated-row";
+import { useAnimatedRows } from "./use-animated-rows";
+import { Section } from "./section";
 
 export type PairRow = {
 	key: string;
@@ -23,7 +24,6 @@ export type PairRow = {
 export function PairRows({
 	title,
 	addLabel,
-	description,
 	rows,
 	error,
 	keyLabel,
@@ -33,7 +33,6 @@ export function PairRows({
 }: {
 	title: string;
 	addLabel: string;
-	description?: string;
 	rows: PairRow[];
 	error?: string;
 	keyLabel: string;
@@ -46,8 +45,8 @@ export function PairRows({
 		onChange(rows.map((row, at) => (at === index ? { ...row, ...patch } : row)));
 
 	return (
-		<SettingsGroup title={title} description={description}>
-			<SettingsBlock>
+		<Section title={title}>
+			<div className="p-4">
 				<div className="grid gap-2">
 					{rows.map((row, index) => (
 						<AnimatedRow key={index} closing={closing === index}>
@@ -65,16 +64,23 @@ export function PairRows({
 									aria-label={valueLabel}
 									onChange={(event) => update(index, { value: event.target.value })}
 								/>
-								<Button
-									type="button"
-									variant="destructive"
-									size="icon-sm"
-									aria-label={`Remove ${row.key || "row"}`}
-									disabled={closing !== undefined}
-									onClick={() => remove(index)}
-								>
-									<Trash2Icon />
-								</Button>
+								<Tooltip>
+									<TooltipTrigger
+										render={
+											<Button
+												type="button"
+												variant="destructive"
+												size="icon-sm"
+												aria-label={`Remove ${row.key || "row"}`}
+												disabled={closing !== undefined}
+												onClick={() => remove(index)}
+											/>
+										}
+									>
+										<Trash2Icon />
+									</TooltipTrigger>
+									<TooltipContent>Remove</TooltipContent>
+								</Tooltip>
 							</div>
 						</AnimatedRow>
 					))}
@@ -91,7 +97,7 @@ export function PairRows({
 					</div>
 					{error !== undefined && <FieldError>{error}</FieldError>}
 				</div>
-			</SettingsBlock>
-		</SettingsGroup>
+			</div>
+		</Section>
 	);
 }
