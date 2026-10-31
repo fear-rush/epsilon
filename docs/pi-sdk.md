@@ -100,6 +100,16 @@ Other facts worth having before embedding:
   `cacheWarmingStatus`, `setSessionName`, `navigateTree`, `exportToHtml`,
   `getAllTools` and the model and thinking setters. A socket feature uses one of these
   instead of inventing an RPC command.
+- `navigateTree(targetId)` moves the leaf within the same session file, and throws
+  while the session is streaming or compacting (`Wait for the current response to
+  finish…`), so a host that offers it needs no state of its own to keep a run safe.
+  A target that is a user message sets the leaf to that message's **parent** and
+  returns its text as `editorText`; the next prompt then starts a sibling branch.
+  Any other entry becomes the leaf itself. Either way the switch refreshes
+  `agent.messages` and restores the active tools before it resolves, and
+  `sessionManager.getBranch()` answers the new branch, root to leaf.
+  `getUserMessagesForForking()` is not a branch list: it returns the user messages
+  of every branch in the file.
 - `toJsonEvent` is the transformation between a live event and the JSON the reducer
   consumes: `message_update` loses its `partial` payload and `toolcall_start` gains
   `id` and `toolName`. It is **not exported**. A host carries the transform itself

@@ -9,6 +9,7 @@ import type {
 	Place,
 	PromptQueue,
 	SessionStats,
+	SnapshotBranch,
 	SnapshotCommand,
 	SnapshotModel,
 	ThinkingLevel,
@@ -114,6 +115,8 @@ export type ConversationState = {
 	autoRetry: boolean;
 	/** Prompts pi holds for the run that is already going. */
 	queue: PromptQueue;
+	/** The active branch's user messages, root to leaf, from the last snapshot. */
+	branches: SnapshotBranch[];
 	nextNoticeId: number;
 };
 
@@ -150,5 +153,6 @@ export const emptyConversation: ConversationState = {
 	autoCompaction: true,
 	autoRetry: true,
 	queue: { steering: [], followUp: [] },
+	branches: [],
 	nextNoticeId: 0,
 };

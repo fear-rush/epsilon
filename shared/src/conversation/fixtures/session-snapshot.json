@@ -74,7 +74,17 @@
 			"queue": {
 				"steering": [],
 				"followUp": []
-			}
+			},
+			"branches": [
+				{
+					"entryId": "user-1",
+					"text": "Read file.txt and reply with its contents."
+				},
+				{
+					"entryId": "user-2",
+					"text": "Run bash 'echo s1-ok' and reply with its output."
+				}
+			]
 		},
 		"models": [],
 		"messages": [

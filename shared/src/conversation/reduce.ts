@@ -79,6 +79,7 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				autoCompaction: frame.snapshot.state.autoCompaction,
 				autoRetry: frame.snapshot.state.autoRetry,
 				queue: frame.snapshot.state.queue,
+				branches: frame.snapshot.state.branches,
 				model:
 					current === undefined
 						? undefined

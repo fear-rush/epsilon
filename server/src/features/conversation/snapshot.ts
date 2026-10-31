@@ -17,6 +17,7 @@ import type {
 	AgentSession,
 	ContextUsage as PiContextUsage,
 	ModelRuntime,
+	SessionMessageEntry,
 	SessionStats as PiSessionStats,
 } from "@earendil-works/pi-coding-agent";
 import { isVisibleMessage } from "shared";
@@ -24,6 +25,7 @@ import type {
 	ContextUsage,
 	Place,
 	Snapshot,
+	SnapshotBranch,
 	SnapshotCommand,
 	SnapshotModel,
 	SessionStats,
@@ -100,6 +102,33 @@ const statsOf = (stats: PiSessionStats): SessionStats => ({
 	totalMessages: stats.totalMessages,
 });
 
+/**
+ * A user message's content is a string or content parts of text and images. The
+ * composer gets the text back whole: it is a draft to edit, not a preview.
+ */
+type UserContent = Extract<SessionMessageEntry["message"], { role: "user" }>["content"];
+
+const textOfContent = (content: UserContent): string => {
+	if (!Array.isArray(content)) return content;
+	return content.map((part) => (part.type === "text" ? part.text : "")).join("");
+};
+
+/**
+ * The user messages of the branch pi currently holds, root to leaf. Going back to
+ * one of them moves the leaf to just before it and starts a sibling branch from the
+ * next prompt; other branches are not listed (docs/DECISIONS.md, Branching).
+ */
+const branchesOf = (agent: AgentSession): SnapshotBranch[] => {
+	const branches: SnapshotBranch[] = [];
+	for (const entry of agent.sessionManager.getBranch()) {
+		if (entry.type !== "message" || entry.message.role !== "user") continue;
+		const text = textOfContent(entry.message.content);
+		if (text.trim() === "") continue;
+		branches.push({ entryId: entry.id, text });
+	}
+	return branches;
+};
+
 export const buildSnapshot = (
 	agent: AgentSession,
 	models: SnapshotModel[],
@@ -129,6 +158,7 @@ export const buildSnapshot = (
 				steering: [...agent.getSteeringMessages()],
 				followUp: [...agent.getFollowUpMessages()],
 			},
+			branches: branchesOf(agent),
 		},
 		messages: agent.messages.filter(isVisibleMessage),
 		// The list the session carries, so the picker and `set_model` agree

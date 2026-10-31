@@ -49,6 +49,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 		autoCompaction,
 		autoRetry,
 		queue,
+		branches,
 	} = snapshot.state;
 	const confirmations = dialogs.filter(isConfirm);
 	const questions = dialogs.filter((dialog) => !isConfirm(dialog));
@@ -63,6 +64,8 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 			<Composer
 				store={store}
 				busy={busy}
+				isCompacting={isCompacting}
+				branches={branches}
 				models={models}
 				model={model}
 				thinkingLevel={thinkingLevel}
@@ -79,6 +82,8 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 		[
 			store,
 			busy,
+			isCompacting,
+			branches,
 			models,
 			model,
 			thinkingLevel,

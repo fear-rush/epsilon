@@ -165,6 +165,15 @@ export class ConversationStore {
 		this.sendCommand({ type: "bash", command, excludeFromContext });
 	}
 
+	/**
+	 * Go back to a user message of this branch: pi moves the leaf to just before it,
+	 * so the next message starts a sibling branch. The tab fills its own draft with
+	 * the text; this only moves the engine.
+	 */
+	navigateTree(entryId: string): void {
+		this.sendCommand({ type: "navigate_tree", entryId });
+	}
+
 	/** pi answers with a fresh snapshot, so the menu shows the model it chose. */
 	setModel(provider: string, modelId: string): void {
 		this.sendCommand({ type: "set_model", provider, modelId });

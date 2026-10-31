@@ -27,4 +27,6 @@ One `snapshot` frame from a live attach: eight messages, no model list. It was
 recorded before protocol 3 added `commands`, so an empty list was added by hand
 when the schema started checking the frame. Protocol 6 added
 `availableThinkingLevels`, which was added by hand from the model's
-`thinkingLevelMap`; the messages are the recording.
+`thinkingLevelMap`; the messages are the recording. Protocol 10 added `branches`,
+the active branch's user messages, added by hand from the two user messages: the
+recording carries no entry ids, so the ids are placeholders.

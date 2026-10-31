@@ -11,6 +11,7 @@ export type {
 	ServerFrame,
 	SessionStats,
 	Snapshot,
+	SnapshotBranch,
 	SnapshotCommand,
 	SnapshotModel,
 	SnapshotState,

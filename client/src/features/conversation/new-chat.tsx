@@ -63,6 +63,8 @@ function DraftConversation({
 	const { store, snapshot } = useConversation(sessionId, place);
 	const {
 		busy,
+		isCompacting,
+		branches,
 		statuses,
 		commands,
 		models,
@@ -91,6 +93,8 @@ function DraftConversation({
 			<Composer
 				store={store}
 				busy={busy}
+				isCompacting={isCompacting}
+				branches={branches}
 				models={models}
 				model={model}
 				thinkingLevel={thinkingLevel}
@@ -113,6 +117,8 @@ function DraftConversation({
 		[
 			store,
 			busy,
+			isCompacting,
+			branches,
 			models,
 			model,
 			thinkingLevel,

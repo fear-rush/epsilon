@@ -15,7 +15,7 @@ import type { JsonAgentSessionEvent } from "../pi";
  * Bumped whenever a frame's shape changes. The client sends it in `hello` and
  * reloads on a mismatch instead of guessing.
  */
-export const PROTOCOL_VERSION = 9;
+export const PROTOCOL_VERSION = 10;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([
@@ -59,6 +59,7 @@ export const commandNameSchema = z.enum([
 	"set_auto_retry",
 	"abort_bash",
 	"clear_queue",
+	"navigate_tree",
 ]);
 
 export type CommandName = z.infer<typeof commandNameSchema>;
@@ -94,6 +95,12 @@ export const commandSchema = z.discriminatedUnion("type", [
 	z.object({ type: z.literal("abort_bash") }),
 	/** Drop the prompts pi has queued for the active run. */
 	z.object({ type: z.literal("clear_queue") }),
+	/**
+	 * Go back to an entry of the active branch. pi moves the leaf there, so the next
+	 * prompt starts a sibling branch; a user message hands its text back for the
+	 * composer, which already has it, so only the move matters here.
+	 */
+	z.object({ type: z.literal("navigate_tree"), entryId: z.string().min(1) }),
 ]);
 
 export type Command = z.infer<typeof commandSchema>;
@@ -213,6 +220,14 @@ const promptQueueSchema = z.object({
 
 export type PromptQueue = z.infer<typeof promptQueueSchema>;
 
+/**
+ * A message the composer can go back to: one user message of the active branch.
+ * The text is whole, because picking it puts it back in the editor.
+ */
+const snapshotBranchSchema = z.object({ entryId: z.string(), text: z.string() });
+
+export type SnapshotBranch = z.infer<typeof snapshotBranchSchema>;
+
 /** What the transcript page reads from the engine, never from command replies. */
 export const snapshotStateSchema = z.object({
 	model: snapshotModelSchema.optional(),
@@ -232,6 +247,8 @@ export const snapshotStateSchema = z.object({
 	autoCompaction: z.boolean(),
 	autoRetry: z.boolean(),
 	queue: promptQueueSchema,
+	/** The active branch's user messages, root to leaf: what going back can reach. */
+	branches: z.array(snapshotBranchSchema),
 });
 
 export type SnapshotState = z.infer<typeof snapshotStateSchema>;

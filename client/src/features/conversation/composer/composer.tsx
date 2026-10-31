@@ -4,6 +4,7 @@ import type { KeyboardEvent, ReactNode } from "react";
 import type {
 	ContextUsage,
 	PromptBehavior,
+	SnapshotBranch,
 	SnapshotCommand,
 	SnapshotModel,
 	ThinkingLevel,
@@ -19,6 +20,7 @@ import {
 	InputGroupButton,
 	InputGroupTextarea,
 } from "@/components/ui/input-group";
+import { BranchMenu } from "./branch-menu";
 import { ContextMeter } from "./context-meter";
 import { ModelMenu } from "./model-menu";
 import { Palette } from "./palette";
@@ -46,6 +48,10 @@ const commandQuery = (draft: string): string | undefined => {
 type ComposerProps = {
 	store: ConversationStore;
 	busy: boolean;
+	/** pi is replacing the transcript, so a move in the tree is refused as well. */
+	isCompacting: boolean;
+	/** The active branch's user messages, which going back can reach. */
+	branches: SnapshotBranch[];
 	models: SnapshotModel[];
 	model: SnapshotModel | undefined;
 	thinkingLevel: ThinkingLevel;
@@ -68,6 +74,8 @@ type ComposerProps = {
 function ComposerImpl({
 	store,
 	busy,
+	isCompacting,
+	branches,
 	models,
 	model,
 	thinkingLevel,
@@ -142,6 +150,23 @@ function ComposerImpl({
 		}
 		setDraft("");
 	};
+
+	/**
+	 * Go back to an earlier message of this branch. The text goes into the box first,
+	 * so it is ready whether or not the engine accepted the move; sending it then
+	 * starts a new branch in place of what followed the message.
+	 */
+	const goBack = (branch: SnapshotBranch) => {
+		setDraft(branch.text);
+		store.navigateTree(branch.entryId);
+	};
+
+	/** pi refuses a move while the tree is busy, so the control says why instead. */
+	const goBackBlocked = busy
+		? "Wait for the run to finish: pi refuses to move the tree while it streams"
+		: isCompacting
+			? "Wait for the compaction to finish: pi refuses to move the tree while it compacts"
+			: undefined;
 
 	const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
 		if (paletteOpen) {
@@ -219,6 +244,7 @@ function ComposerImpl({
 								onSelect={(enabled) => store.setCodingTools(enabled)}
 							/>
 							<PermissionMenu statuses={statuses} onSelect={(mode) => store.setPermission(mode)} />
+							<BranchMenu branches={branches} blocked={goBackBlocked} onGoBack={goBack} />
 							{busy && (
 								<Tip label="Stop the run">
 									<InputGroupButton

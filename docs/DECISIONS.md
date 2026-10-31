@@ -30,7 +30,8 @@ The browser socket carries Epsilon's own commands and zod shapes, defined in `sh
 Commands are the ones the page can send: a prompt and the queue behavior it joins a
 running turn with, the aborts (turn, retry, compaction, bash), bash itself, the model,
 thinking-level and coding-tool switches, manual compaction, the auto-compaction and
-auto-retry toggles, the queue clear, and reload. `commandNameSchema` in
+auto-retry toggles, the queue clear, the move to an earlier message of the branch,
+and reload. `commandNameSchema` in
 `shared/src/protocol/frames.ts` is the list. Each is answered by `command-result`
 naming the command. A frame change bumps `PROTOCOL_VERSION`, and a tab built for
 another version reloads.
@@ -197,6 +198,23 @@ Not: a chat with no folder (pi has no such mode). A chat in `$HOME` (its ancesto
 would become project resources). Always trusting an opened folder, which was only
 defensible when the folder was chosen at startup. Gating chats on trust (their folder
 is Epsilon's own). A stored project list (a second truth beside pi's session files).
+
+## Branching
+
+Going back is one direction of pi's session tree, and this is v1 of it: the composer
+lists the user messages of the branch the transcript shows, and picking one calls
+`AgentSession.navigateTree`, which moves the leaf to just before that message and
+hands its text back for the box. Sending it starts a new branch; the one it left
+stays in the session file. pi refuses the move while a run or a compaction is going,
+so the control is disabled with that reason.
+
+Why: moving the leaf is a command on the live engine, and the text coming back to the
+composer is what makes the new branch start from the message the operator picked
+rather than a retyped copy of it.
+
+Not: branch summarisation (`navigateTree`'s `summarize`), a tree of the other
+branches, and fork or clone. The missing parts are a model call in the middle of a
+navigation and a second session file, so they are not commands a tab asks for yet.
 
 ## Skills
 
