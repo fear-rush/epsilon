@@ -65,6 +65,8 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				// `agent_start`, which has already happened.
 				busy: frame.snapshot.state.isStreaming,
 				isCompacting: frame.snapshot.state.isCompacting,
+				// A snapshot is the engine's own read of the file; whatever drifted is gone.
+				drift: undefined,
 				models: frame.snapshot.models,
 				commands: frame.snapshot.commands,
 				sessionName: frame.snapshot.state.sessionName,
@@ -99,6 +101,11 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 			};
 		case "ui":
 			return reduceDisplay(state, frame);
+		case "notice":
+			return {
+				...withNotice(state, "notice", frame.text),
+				drift: frame.text,
+			};
 		case "command-result":
 			// A command the engine refused must not vanish. The frame names it, so
 			// the notice can too.

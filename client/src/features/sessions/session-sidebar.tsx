@@ -11,6 +11,7 @@ import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { flushSync } from "react-dom";
 import {
 	ChevronRightIcon,
+	FileUpIcon,
 	FolderIcon,
 	FolderMinusIcon,
 	FolderPlusIcon,
@@ -26,8 +27,10 @@ import {
 import { useState } from "react";
 
 import { SessionItem } from "@/features/sessions/session-item";
+import { ImportSessionDialog } from "@/features/sessions/import-dialog";
 import { RenameDialog } from "@/features/sessions/rename-dialog";
 import { TrashDialog } from "@/features/sessions/trash-dialog";
+import { useCurrentProject } from "@/features/sessions/use-current-project";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -138,6 +141,8 @@ export function SessionSidebar() {
 	const [trashOpen, setTrashOpen] = useState(false);
 	const [query, setQuery] = useState("");
 	const [opening, setOpening] = useState(false);
+	const [importing, setImporting] = useState(false);
+	const project = useCurrentProject();
 	const sessions = useQuery({
 		queryKey: sessionKeys.all,
 		queryFn: ({ signal }) => fetchSessions(signal),
@@ -238,6 +243,17 @@ export function SessionSidebar() {
 				className="animate-enter-fade"
 				actions={
 					<>
+						<Tip label="Import a session">
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								aria-label="Import a session"
+								className="text-muted-foreground"
+								onClick={() => setImporting(true)}
+							>
+								<FileUpIcon />
+							</Button>
+						</Tip>
 						<Tip label="Recently deleted">
 							<Button
 								variant="ghost"
@@ -441,6 +457,8 @@ export function SessionSidebar() {
 			/>
 
 			<TrashDialog open={trashOpen} onOpenChange={setTrashOpen} />
+
+			<ImportSessionDialog open={importing} onOpenChange={setImporting} project={project} />
 		</Sidebar>
 	);
 }

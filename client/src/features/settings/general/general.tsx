@@ -17,6 +17,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { setDefaultModel } from "@/api/endpoints";
 import { useSettings, useSettingsRefresh } from "@/features/settings/queries";
+import { AgentLimitsForm } from "./agent-limits";
 import { DetailPage } from "@/components/patterns/pane/detail-page";
 import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
@@ -106,6 +107,7 @@ function GeneralBody({ snapshot }: { snapshot: SettingsSnapshot }) {
 					/>
 				</Row>
 			</Section>
+			<AgentLimitsForm limits={snapshot.agent} scope={snapshot.modelScope} />
 			{defaults.error !== null && <Notice tone="error">{defaults.error.message}</Notice>}
 		</div>
 	);

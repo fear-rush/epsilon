@@ -182,8 +182,13 @@ export class ConversationStore {
 	 * so the next message starts a sibling branch. The tab fills its own draft with
 	 * the text; this only moves the engine.
 	 */
-	navigateTree(entryId: string): void {
-		this.sendCommand({ type: "navigate_tree", entryId });
+	navigateTree(entryId: string, summarize: boolean): void {
+		this.sendCommand({ type: "navigate_tree", entryId, summarize });
+	}
+
+	/** pi's own writer changed the file outside Epsilon; rebuild the engine from disk. */
+	reloadSession(): void {
+		this.sendCommand({ type: "reload_session" });
 	}
 
 	/** pi answers with a fresh snapshot, so the menu shows the model it chose. */

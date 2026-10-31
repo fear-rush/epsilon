@@ -273,9 +273,9 @@ function ComposerImpl({
 	 * so it is ready whether or not the engine accepted the move; sending it then
 	 * starts a new branch in place of what followed the message.
 	 */
-	const goBack = (branch: SnapshotBranch) => {
+	const goBack = (branch: SnapshotBranch, summarize: boolean) => {
 		setDraft(branch.text);
-		store.navigateTree(branch.entryId);
+		store.navigateTree(branch.entryId, summarize);
 	};
 
 	/** pi refuses a move while the tree is busy, so the control says why instead. */

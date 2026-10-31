@@ -101,6 +101,57 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/sessions/{id}/fork": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** pi's fork: a new session holding the chat up to the message picked, and the original file unchanged */
+		post: operations["forkSession"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/sessions/{id}/clone": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Clone a chat: a new session holding the branch up to where this one is now, and the original unchanged */
+		post: operations["cloneSession"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/sessions/import": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Copy a JSONL session file in as a new chat, in the chats folder or the project named */
+		post: operations["importSession"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/sessions/{id}/name": {
 		parameters: {
 			query?: never;
@@ -263,6 +314,23 @@ export interface paths {
 		/** Providers, default model, MCP servers with what they can reach, skills and packages from the agent home, plus a trusted project's .pi when one is named */
 		get: operations["readSettings"];
 		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/agent-limits": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Write the agent-wide compaction and retry limits and the model scope; a project can still override them */
+		put: operations["setAgentLimits"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -876,7 +944,7 @@ export interface components {
 			hasProjectResources: boolean;
 		};
 		SessionError: components["schemas"]["Problem"] & ({
-			code: "SESSION_NOT_FOUND" | "SESSION_RUNNING" | "PROJECT_NOT_TRUSTED" | "PROJECT_INVALID" | "TRASH_NOT_FOUND" | "TRASH_PATH_TAKEN" | "EXPORT_FAILED";
+			code: "SESSION_NOT_FOUND" | "SESSION_RUNNING" | "PROJECT_NOT_TRUSTED" | "PROJECT_INVALID" | "TRASH_NOT_FOUND" | "TRASH_PATH_TAKEN" | "EXPORT_FAILED" | "SESSION_COPY_FAILED";
 		});
 		Problem: {
 			message: string;
@@ -889,6 +957,16 @@ export interface components {
 		};
 		MoveSessionInput: {
 			project: string;
+		};
+		CopiedSession: {
+			id: string;
+		};
+		ForkSessionInput: {
+			entryId: string;
+		};
+		ImportSessionInput: {
+			path: string;
+			project?: string;
 		};
 		RenamedSession: {
 			id: string;
@@ -946,6 +1024,12 @@ export interface components {
 		SettingsSnapshot: {
 			home: string;
 			defaultModel: components["schemas"]["DefaultModel"];
+			agent: components["schemas"]["AgentLimits"];
+			modelScope: {
+				matched: number;
+				available: number;
+				diagnostics: string[];
+			};
 			providers: components["schemas"]["ProviderView"][];
 			builtins: components["schemas"]["BuiltinProvider"][];
 			models: components["schemas"]["SnapshotModel"][];
@@ -966,6 +1050,14 @@ export interface components {
 			provider: string;
 			modelId: string;
 		}) | null;
+		AgentLimits: {
+			compactionEnabled: boolean;
+			compactionReserveTokens: number;
+			compactionKeepRecentTokens: number;
+			retryEnabled: boolean;
+			retryMaxRetries: number;
+			enabledModels: (string[]) | null;
+		};
 		ProviderView: {
 			id: string;
 			name: string;
@@ -1747,6 +1839,144 @@ interface operations {
 			};
 		};
 	};
+	/** pi's fork: a new session holding the chat up to the message picked, and the original file unchanged */
+	forkSession: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ForkSessionInput"];
+			};
+		};
+		responses: {
+			/** The new session's id, which is where the chat continues */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CopiedSession"];
+				};
+			};
+			/** pi refused the fork */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionError"];
+				};
+			};
+			/** No such session in the home */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionError"];
+				};
+			};
+			/** A live agent still holds this session */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionError"];
+				};
+			};
+		};
+	};
+	/** Clone a chat: a new session holding the branch up to where this one is now, and the original unchanged */
+	cloneSession: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The new session's id, which is where the chat continues */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CopiedSession"];
+				};
+			};
+			/** pi refused the clone */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionError"];
+				};
+			};
+			/** No such session in the home */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionError"];
+				};
+			};
+			/** A live agent still holds this session */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionError"];
+				};
+			};
+		};
+	};
+	/** Copy a JSONL session file in as a new chat, in the chats folder or the project named */
+	importSession: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ImportSessionInput"];
+			};
+		};
+		responses: {
+			/** The imported session's id, which is where the page opens it */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CopiedSession"];
+				};
+			};
+			/** The file is not a session pi can read, or the folder cannot hold it */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionError"];
+				};
+			};
+		};
+	};
 	/** Set the display name of a chat */
 	renameSession: {
 		parameters: {
@@ -2108,6 +2338,38 @@ interface operations {
 				};
 			};
 			/** The project is not a trusted folder */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Write the agent-wide compaction and retry limits and the model scope; a project can still override them */
+	setAgentLimits: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["AgentLimits"];
+			};
+		};
+		responses: {
+			/** pi's settings.json now holds these limits */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** settings.json could not be parsed, so nothing was written */
 			400: {
 				headers: {
 					[name: string]: unknown;

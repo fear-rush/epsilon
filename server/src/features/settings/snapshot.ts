@@ -8,7 +8,7 @@ import type { AgentHome } from "../../platform/agent-home";
 import { modelRuntime } from "../../platform/pi";
 import { readModelsFrom } from "../conversation";
 import type { SessionRegistry } from "../conversation";
-import { readDefaultModel } from "../general";
+import { readAgentLimits, readDefaultModel } from "../general";
 import { isMcpTurnedOff, listMcpServers } from "../mcp";
 import { listPackages } from "../packages";
 import { projectStatus } from "../projects";
@@ -47,10 +47,11 @@ export const readSettings = async (
 ): Promise<SettingsSnapshot> => {
 	const project = folder === home.chatsDir ? null : projectStatus(home, folder);
 	const runtime = await modelRuntime(home);
-	const [providers, builtins, models, mcp, mcpDisabled, skills, packages] = await Promise.all([
+	const agent = readAgentLimits(home);
+	const [providers, builtins, offers, mcp, mcpDisabled, skills, packages] = await Promise.all([
 		listProviders(home, runtime),
 		listBuiltins(home, runtime),
-		readModelsFrom(runtime),
+		readModelsFrom(runtime, agent.enabledModels),
 		listMcpServers(home, folder),
 		isMcpTurnedOff(folder, home),
 		listSkills(folder, home, project === null ? null : folder),
@@ -62,7 +63,15 @@ export const readSettings = async (
 		project,
 		providers,
 		builtins,
-		models,
+		// The panel's picker offers every model; the scope is reported beside it, so
+		// an operator can see what it matches without the list going blank.
+		models: offers.models,
+		agent,
+		modelScope: offers.scope ?? {
+			matched: offers.models.length,
+			available: offers.models.length,
+			diagnostics: [],
+		},
 		mcp: mcp.servers,
 		mcpReach: mcp.reach,
 		mcpLive: engines.mcpLive(mcp.servers.map((server) => server.name)),
@@ -70,7 +79,7 @@ export const readSettings = async (
 		skills: project !== null && !project.trusted ? await untrustedSkills(folder) : skills,
 		foreignSkills: listForeignSkills(folder, home, userHome, project === null ? null : folder),
 		packages,
-		ready: models.length > 0,
+		ready: offers.models.length > 0,
 		error: await problemText(home, runtime.getError(), mcp.error),
 	};
 };

@@ -8,7 +8,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { FolderIcon, MoreHorizontalIcon } from "lucide-react";
 import { memo, useState } from "react";
 import { cn } from "@/lib/cn";
-import type { Place } from "shared";
+import type { Place, SnapshotBranch } from "shared";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -79,17 +79,20 @@ function SessionHeaderImpl({
 	autoCompaction,
 	autoRetry,
 	isCompacting,
+	branches,
 }: {
 	sessionId: string;
 	store: ConversationStore;
 	title?: string;
 	place: Place;
 	busy: boolean;
-	/** A chat with no messages has no file yet, so there is nothing to move. */
+	/** A chat with no messages has no file yet, so there is nothing to move or copy. */
 	empty: boolean;
 	autoCompaction: boolean;
 	autoRetry: boolean;
 	isCompacting: boolean;
+	/** The active branch's user messages, which the fork dialog lists. */
+	branches: SnapshotBranch[];
 }) {
 	const [moving, setMoving] = useState(false);
 
@@ -107,6 +110,8 @@ function SessionHeaderImpl({
 							autoCompaction={autoCompaction}
 							autoRetry={autoRetry}
 							isCompacting={isCompacting}
+							project={place.kind === "project" ? place.path : undefined}
+							branches={branches}
 						/>
 						{place.kind === "chat" && (
 							<DropdownMenu>

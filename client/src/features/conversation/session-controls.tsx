@@ -2,10 +2,22 @@
  * The session's own controls. Compaction belongs to this chat; pi's two automatic
  * settings are global, so the menu says they apply to every chat instead of
  * pretending they are per-session switches. Export reads the transcript and writes
- * a copy, so a run in progress does not block it.
+ * a copy, so a run in progress does not block it. A fork or a clone answers a new
+ * session id, so the page moves to that chat instead of replacing this one
+ * (docs/DECISIONS.md, Session copies).
  */
-import { FileDownIcon, FileJsonIcon, Minimize2Icon, SlidersHorizontalIcon } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import {
+	CopyIcon,
+	FileDownIcon,
+	FileJsonIcon,
+	GitForkIcon,
+	Minimize2Icon,
+	SlidersHorizontalIcon,
+} from "lucide-react";
 import { useState } from "react";
+import type { SnapshotBranch } from "shared";
 
 import { Tip } from "@/components/patterns/tip";
 import { Button } from "@/components/ui/button";
@@ -19,9 +31,11 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { exportSession } from "@/api/endpoints";
+import { cloneSession, exportSession } from "@/api/endpoints";
+import { sessionKeys } from "@/api/keys";
 import type { ExportedSession, ExportFormat } from "@/api/types";
 import { CompactContextDialog } from "./compact-context-dialog";
+import { ForkSessionDialog } from "./fork-dialog";
 import type { ConversationStore } from "./store";
 
 /** Hand the answer's text to the browser's own download, under the name the server chose. */
@@ -43,16 +57,26 @@ export function SessionControls({
 	autoCompaction,
 	autoRetry,
 	isCompacting,
+	project,
+	branches,
 }: {
 	store: ConversationStore;
-	/** A chat with no messages has no session file yet, so pi has nothing to export. */
+	/** A chat with no messages has no session file yet, so pi has nothing to copy. */
 	empty: boolean;
 	autoCompaction: boolean;
 	autoRetry: boolean;
 	isCompacting: boolean;
+	/** The folder a project chat runs in, so a copy opens in the same place. */
+	project: string | undefined;
+	/** The active branch's user messages: what "fork from a message" can reach. */
+	branches: SnapshotBranch[];
 }) {
+	const navigate = useNavigate();
+	const queryClient = useQueryClient();
 	const [compacting, setCompacting] = useState(false);
 	const [exporting, setExporting] = useState(false);
+	const [cloning, setCloning] = useState(false);
+	const [forking, setForking] = useState(false);
 
 	/** A refusal goes where a refused command goes, because there is no dialog to hold it. */
 	const exportAs = async (format: ExportFormat): Promise<void> => {
@@ -63,6 +87,24 @@ export function SessionControls({
 			store.reportProblem(cause instanceof Error ? cause.message : String(cause));
 		} finally {
 			setExporting(false);
+		}
+	};
+
+	/** pi copies the branch up to where this chat is now, under a new id to open next. */
+	const cloneChat = async (): Promise<void> => {
+		setCloning(true);
+		try {
+			const id = await cloneSession(store.sessionId);
+			await queryClient.invalidateQueries({ queryKey: sessionKeys.all });
+			await navigate({
+				to: "/sessions/$sessionId",
+				params: { sessionId: id },
+				search: { project },
+			});
+		} catch (cause) {
+			store.reportProblem(cause instanceof Error ? cause.message : String(cause));
+		} finally {
+			setCloning(false);
 		}
 	};
 
@@ -97,6 +139,14 @@ export function SessionControls({
 						<DropdownMenuItem disabled={empty || exporting} onClick={() => void exportAs("jsonl")}>
 							<FileJsonIcon />
 							Export as JSONL
+						</DropdownMenuItem>
+						<DropdownMenuItem disabled={empty || cloning} onClick={() => void cloneChat()}>
+							<CopyIcon />
+							Clone this chat
+						</DropdownMenuItem>
+						<DropdownMenuItem disabled={empty} onClick={() => setForking(true)}>
+							<GitForkIcon />
+							Fork from a message…
 						</DropdownMenuItem>
 					</DropdownMenuGroup>
 					<DropdownMenuSeparator />
@@ -133,6 +183,13 @@ export function SessionControls({
 				open={compacting}
 				onOpenChange={setCompacting}
 				onCompact={(instructions) => store.compact(instructions)}
+			/>
+			<ForkSessionDialog
+				open={forking}
+				onOpenChange={setForking}
+				sessionId={store.sessionId}
+				project={project}
+				branches={branches}
 			/>
 		</>
 	);

@@ -50,6 +50,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 		autoRetry,
 		queue,
 		branches,
+		drift,
 	} = snapshot.state;
 	const confirmations = dialogs.filter(isConfirm);
 	const questions = dialogs.filter((dialog) => !isConfirm(dialog));
@@ -107,13 +108,15 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				isBashRunning={isBashRunning}
 				bashCommand={snapshot.bashCommand}
 				queue={queue}
+				drift={drift}
+				onReload={() => store.reloadSession()}
 				onAbortCompaction={() => store.abortCompaction()}
 				onCancelRetry={() => store.cancelRetry()}
 				onAbortBash={() => store.abortBash()}
 				onClearQueue={() => store.clearQueue()}
 			/>
 		),
-		[store, isCompacting, isRetrying, isBashRunning, snapshot.bashCommand, queue],
+		[store, isCompacting, isRetrying, isBashRunning, snapshot.bashCommand, queue, drift],
 	);
 
 	// A session that has no snapshot yet shows a loader, not an empty transcript.
@@ -138,6 +141,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				autoCompaction={autoCompaction}
 				autoRetry={autoRetry}
 				isCompacting={isCompacting}
+				branches={branches}
 			/>
 
 			{questions.map((question) => (

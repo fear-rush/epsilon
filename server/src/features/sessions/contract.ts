@@ -55,6 +55,22 @@ export const moveSessionInputSchema = z
 
 export const movedSessionSchema = z.object({ id: z.string() }).openapi("MovedSession");
 
+/** The input a fork needs: the message it copies up to. */
+export const forkSessionInputSchema = z
+	.object({ entryId: z.string().min(1) })
+	.openapi("ForkSessionInput");
+
+/**
+ * A copy of a chat, as a new session: a fork at a message, a clone of where the chat
+ * is, or an imported file. The page opens the new id, so every copy route answers it.
+ */
+export const copiedSessionSchema = z.object({ id: z.string() }).openapi("CopiedSession");
+
+/** A JSONL file to bring in, and the project to land it in; without one it is a chat. */
+export const importSessionInputSchema = z
+	.object({ path: z.string().min(1), project: z.string().min(1).optional() })
+	.openapi("ImportSessionInput");
+
 /** The two files pi writes a transcript as. */
 const exportFormatSchema = z.enum(["html", "jsonl"]).openapi("ExportFormat");
 
@@ -130,6 +146,12 @@ const sessionErrorCodeSchema = z.enum([
 	"TRASH_PATH_TAKEN",
 	/** pi refused to write the export; its own sentence says why. */
 	"EXPORT_FAILED",
+	/**
+	 * pi, or the file, refused the copy: an entry a fork cannot start from, a chat with
+	 * no file yet, an import of something that is not a session, or a JSONL that does
+	 * not parse. pi's own sentence says which.
+	 */
+	"SESSION_COPY_FAILED",
 ]);
 
 export type SessionErrorCode = z.infer<typeof sessionErrorCodeSchema>;

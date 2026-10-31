@@ -52,6 +52,33 @@ const EPSILON_DEFAULTS: InlineExtension[] = [
 ];
 
 /**
+ * The extensions every engine in this process loads: the CLI's built-ins and
+ * Epsilon's defaults, so a copy's transient runtime sees the same set
+ * (docs/DECISIONS.md, Default extensions).
+ */
+export const builtinExtensions = (): InlineExtension[] => [...CLI_BUILTINS, ...EPSILON_DEFAULTS];
+
+/**
+ * Bind pi's extensions to a session: the browser's dialogs, `"json"` for a headless
+ * host, and extension failures reported where the caller shows errors. pi's runtime
+ * rebinds a replaced session with the same call, because the subscriptions and the
+ * extension context belong to the session that was replaced.
+ */
+export const bindEngine = (agent: AgentSession, ui: UiHost): Promise<void> =>
+	agent.bindExtensions({
+		uiContext: createUiContext(ui),
+		// "json" is pi's name for a headless host that reads events, which is what
+		// this server is. Extensions guard terminal-only UI with `mode === "tui"`.
+		mode: "json",
+		onError: (error) => {
+			ui.fail(
+				new Error(`extension ${error.extensionPath} failed in ${error.event}: ${error.error}`),
+				"EXTENSION_ERROR",
+			);
+		},
+	});
+
+/**
  * An existing session opens from the file the registry located. A fresh id, which
  * the browser mints for "New chat", creates pi's session with that exact id; pi
  * writes the file on the first message.
@@ -104,7 +131,7 @@ export const createEngine = async (options: {
 		cwd: options.cwd,
 		agentDir: options.home.dir,
 		settingsManager,
-		extensionFactories: [...CLI_BUILTINS, ...EPSILON_DEFAULTS],
+		extensionFactories: builtinExtensions(),
 	});
 	await resourceLoader.reload();
 	const { session } = await createAgentSession({
@@ -117,18 +144,7 @@ export const createEngine = async (options: {
 	// Only the project's folder is trusted, and only because the registry checked
 	// pi's trust store before building this engine. A chat's folder holds no `.pi`.
 	settingsManager.setProjectTrusted(!options.chat);
-	await session.bindExtensions({
-		uiContext: createUiContext(options.ui),
-		// "json" is pi's name for a headless host that reads events, which is what
-		// this server is. Extensions guard terminal-only UI with `mode === "tui"`.
-		mode: "json",
-		onError: (error) => {
-			options.ui.fail(
-				new Error(`extension ${error.extensionPath} failed in ${error.event}: ${error.error}`),
-				"EXTENSION_ERROR",
-			);
-		},
-	});
+	await bindEngine(session, options.ui);
 	if (options.chat && options.file === undefined) setCodingTools(session, false);
 	return session;
 };

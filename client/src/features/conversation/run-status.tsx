@@ -17,6 +17,9 @@ type RunStatusProps = {
 	/** The command this tab sent, when it still knows it; another tab's has no name here. */
 	bashCommand: string | undefined;
 	queue: PromptQueue;
+	/** A message naming a change another process made to this chat's file. */
+	drift: string | undefined;
+	onReload: () => void;
 	onAbortCompaction: () => void;
 	onCancelRetry: () => void;
 	onAbortBash: () => void;
@@ -29,6 +32,8 @@ export function RunStatus({
 	isBashRunning,
 	bashCommand,
 	queue,
+	drift,
+	onReload,
 	onAbortCompaction,
 	onCancelRetry,
 	onAbortBash,
@@ -38,10 +43,19 @@ export function RunStatus({
 		...queue.steering.map((text) => ({ text, label: "Steering" })),
 		...queue.followUp.map((text) => ({ text, label: "Follow-up" })),
 	];
-	if (!isCompacting && !isRetrying && !isBashRunning && queued.length === 0) return null;
+	if (!isCompacting && !isRetrying && !isBashRunning && drift === undefined && queued.length === 0)
+		return null;
 
 	return (
 		<div className="mx-auto flex w-full max-w-3xl flex-col gap-2 px-3 pt-3">
+			{drift !== undefined && (
+				<div className="flex items-center gap-2 rounded-xl border bg-background px-3 py-2 text-meta">
+					<span className="min-w-0 flex-1">{drift}</span>
+					<Button size="sm" variant="outline" onClick={onReload}>
+						Reload
+					</Button>
+				</div>
+			)}
 			{isCompacting && (
 				<div className="flex items-center gap-2 rounded-xl border bg-background px-3 py-2 text-meta">
 					<Spinner />

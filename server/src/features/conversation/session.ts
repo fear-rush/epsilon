@@ -4,6 +4,8 @@
  * `dialogs.ts`, and the fan-out to tabs in `SessionFrames` below. A command is a method
  * call on the embedded `AgentSession` (docs/DECISIONS.md, Embedded engine); no process speaks to this one.
  */
+import { watch } from "node:fs";
+import type { FSWatcher } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -25,6 +27,7 @@ import type {
 } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
+import { globalSettings } from "../../platform/pi";
 import type { McpLive } from "../mcp";
 import { mcpLiveOf } from "../mcp";
 import { Dialogs } from "./dialogs";
@@ -82,6 +85,10 @@ export class SessionFrames {
  */
 const IDLE_DISPOSE_MS = 10_000;
 
+/** pi's model scope for this home; null means every model is offered. */
+const patternsOf = (home: AgentHome): string[] | null =>
+	globalSettings(home).getEnabledModels() ?? null;
+
 /** The two files pi writes a transcript as, and the type a browser saves each under. */
 export type ExportFormat = "html" | "jsonl";
 
@@ -119,6 +126,7 @@ export class LiveSession {
 	readonly sessionId: string;
 	readonly place: Place;
 	private readonly onEmpty: () => void;
+	private readonly home: AgentHome;
 	private readonly frames: SessionFrames;
 	private readonly dialogs: Dialogs;
 	private readonly bridge: UiBridge;
@@ -127,11 +135,25 @@ export class LiveSession {
 	/** The models the picker offers, refreshed when the engine's providers change. */
 	private models: SnapshotModel[] = [];
 	private idleTimer: ReturnType<typeof setTimeout> | undefined;
+	/** The file as it was handed in, so a reload after an outside change reads it again. */
+	private file: string | undefined;
+	private readonly cwd: string;
+	private readonly chat: boolean;
+	private watcher: FSWatcher | undefined;
+	/** When this engine last wrote or produced an event, to tell its writes from another's. */
+	private lastOwnActivity = 0;
+	/** Set once a change is reported, so one write does not fill the transcript with rows. */
+	private driftSeen = false;
 
-	private constructor(sessionId: string, place: Place, onEmpty: () => void) {
+	private constructor(options: LiveSessionOptions) {
+		const { sessionId, place, onEmpty, home } = options;
 		this.sessionId = sessionId;
 		this.place = place;
 		this.onEmpty = onEmpty;
+		this.home = home;
+		this.cwd = options.cwd;
+		this.file = options.file;
+		this.chat = place.kind === "chat";
 		this.frames = new SessionFrames(() => this.onFrameCount());
 		this.dialogs = new Dialogs(
 			sessionId,
@@ -146,19 +168,25 @@ export class LiveSession {
 	}
 
 	static async open(options: LiveSessionOptions): Promise<LiveSession> {
-		const session = new LiveSession(options.sessionId, options.place, options.onEmpty);
-		const agent = await createEngine({
-			sessionId: options.sessionId,
-			cwd: options.cwd,
-			file: options.file,
-			chat: options.place.kind === "chat",
-			home: options.home,
-			ui: session.bridge.host,
-		});
-		session.agent = agent;
-		session.unsubscribe = agent.subscribe((event) => session.receive(event));
-		session.models = await readModelsFrom(agent.modelRuntime);
+		const session = new LiveSession(options);
+		await session.start();
 		return session;
+	}
+
+	/** Build the engine, bind its events and start watching the file it writes. */
+	private async start(): Promise<void> {
+		const agent = await createEngine({
+			sessionId: this.sessionId,
+			cwd: this.cwd,
+			file: this.file,
+			chat: this.chat,
+			home: this.home,
+			ui: this.bridge.host,
+		});
+		this.agent = agent;
+		this.unsubscribe = agent.subscribe((event) => this.receive(event));
+		this.models = (await readModelsFrom(agent.modelRuntime, patternsOf(this.home))).scoped;
+		this.watch();
 	}
 
 	get isOpen(): boolean {
@@ -252,6 +280,7 @@ export class LiveSession {
 	async run(command: Command): Promise<void> {
 		try {
 			await this.dispatch(command);
+			this.lastOwnActivity = Date.now();
 			this.emit({
 				t: "command-result",
 				sessionId: this.sessionId,
@@ -271,6 +300,7 @@ export class LiveSession {
 
 	/** Drop the engine. A later attach rebuilds it from the session file. */
 	dispose(): void {
+		this.stopWatch();
 		const agent = this.agent;
 		if (agent === undefined) return;
 		// Clear the reference first: cancelling dialogs asks the session to
@@ -282,6 +312,63 @@ export class LiveSession {
 		this.unsubscribe?.();
 		agent.dispose();
 		this.onEmpty();
+	}
+
+	/**
+	 * Read the session file again after another process changed it. The engine is
+	 * rebuilt from disk, which is the only honest way back: pi holds the transcript
+	 * it loaded, so merging a file that grew underneath it would invent an order.
+	 */
+	async reloadFromDisk(): Promise<void> {
+		if (this.busy) throw new Error("Stop the run before reloading this chat.");
+		const agent = this.agent;
+		if (agent === undefined) return;
+		this.stopWatch();
+		this.agent = undefined;
+		this.unsubscribe?.();
+		agent.dispose();
+		this.unsubscribe = undefined;
+		this.driftSeen = false;
+		await this.start();
+		this.resync();
+	}
+
+	/**
+	 * Another process writing this chat is invisible to pi, which reads the file
+	 * once. A change while nothing runs is reported once; the tab offers a reload.
+	 * Our own writes land during a run, which is why busy changes are ignored.
+	 */
+	private watch(): void {
+		this.stopWatch();
+		const file = this.file ?? this.agent?.sessionFile;
+		if (file === undefined) return;
+		this.file = file;
+		try {
+			this.watcher = watch(file, { persistent: false }, () => this.sawFileChange());
+		} catch {
+			// A session pi has not written yet has no file to watch; the first
+			// message creates it and the next attach watches it.
+			this.watcher = undefined;
+		}
+	}
+
+	private stopWatch(): void {
+		this.watcher?.close();
+		this.watcher = undefined;
+	}
+
+	private sawFileChange(): void {
+		if (this.agent === undefined || this.busy || this.driftSeen) return;
+		// pi writes on every message and result, so a change within this window is
+		// this engine's own work, not another process's.
+		if (Date.now() - this.lastOwnActivity < 2_000) return;
+		this.driftSeen = true;
+		this.emit({
+			t: "notice",
+			sessionId: this.sessionId,
+			kind: "external-change",
+			text: "This chat's file changed outside Epsilon. Reload to read what is on disk now.",
+		});
 	}
 
 	/**
@@ -320,6 +407,9 @@ export class LiveSession {
 				return;
 			case "reload":
 				await this.reload();
+				return;
+			case "reload_session":
+				await this.reloadFromDisk();
 				return;
 			case "compact":
 				// pi aborts the running turn before it compacts, so a busy session takes
@@ -377,7 +467,9 @@ export class LiveSession {
 				// tab's answer. A user message moves the leaf to its parent and hands its
 				// text back for the editor; the tab already holds it, so the snapshot says
 				// the rest: the transcript ends before the message and the branch is new.
-				const result = await agent.navigateTree(command.entryId);
+				const result = await agent.navigateTree(command.entryId, {
+					summarize: command.summarize === true,
+				});
 				if (result.cancelled) throw new Error("Navigation was cancelled");
 				this.resync();
 				return;
@@ -393,7 +485,7 @@ export class LiveSession {
 	async reload(): Promise<void> {
 		const agent = this.engine;
 		await agent.reload();
-		this.models = await readModelsFrom(agent.modelRuntime);
+		this.models = (await readModelsFrom(agent.modelRuntime, patternsOf(this.home))).scoped;
 		this.resync();
 	}
 
@@ -454,12 +546,16 @@ export class LiveSession {
 	}
 
 	private receive(event: AgentSessionEvent): void {
+		this.lastOwnActivity = Date.now();
 		if (event.type === "agent_settled") {
 			// Token totals, context usage and the queue all move with a run, so a
 			// settled engine re-reads the snapshot once instead of leaving the tab on
 			// numbers from its attach.
 			this.resync();
 			this.scheduleIdle();
+			// pi writes the file on the first entry, so a new chat has nothing to
+			// watch until a run settles.
+			if (this.watcher === undefined) this.watch();
 		}
 		try {
 			this.emit({ t: "event", sessionId: this.sessionId, event: toJsonEvent(event) });
