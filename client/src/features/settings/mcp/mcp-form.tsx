@@ -1,226 +1,247 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { useMutation } from "@tanstack/react-query";
-import { TriangleAlertIcon } from "lucide-react";
-import { cn } from "cn";
+import { useNavigate } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import type { McpScope } from "shared";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
-import { CancelDialog } from "@/features/settings/kit/dialogs";
-import { DeleteDialog } from "@/features/settings/kit/dialogs";
-import { FormFooter, FormPage } from "@/features/settings/kit/form-page";
-import { UnsavedChangesBlock } from "@/features/settings/kit/dialogs";
-import { useDraftForm } from "@/features/settings/kit/use-draft-form";
-import { useSettingsRefresh } from "@/features/settings/queries";
-import { useSettings } from "@/features/settings/queries";
-import { deleteMcpServer, saveMcpServer, setMcpServerInProject } from "@/api/endpoints";
-import { draftOf, inputOf } from "./mcp-draft";
-import { McpFields } from "./mcp-fields";
-import { McpDiagnosticsGroup, McpProjectGroup } from "./mcp-form-groups";
-import { McpOverrideForm } from "./mcp-override";
+import { CodeIcon, FileTextIcon, ServerIcon } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { EnabledSwitch } from "@/components/patterns/controls/enabled-switch";
+import {
+	CancelDialog,
+	DeleteDialog,
+	UnsavedChangesBlock,
+} from "@/components/patterns/dialog/confirm-dialogs";
+import { DetailPage } from "@/components/patterns/pane/detail-page";
+import { Notice } from "@/components/patterns/status/notice";
+import { StatusView } from "@/components/patterns/status/status-view";
+import { errorView } from "@/components/patterns/status/error-view";
+import { ModeTabs } from "@/components/patterns/tabs/mode-tabs";
+import { LoadingState } from "@/components/patterns/status/loading-state";
+import { useDraftForm } from "@/components/patterns/form/use-draft-form";
+import {
+	useMcpServer,
+	useSettings,
+	useSettingsProject,
+	useSettingsRefresh,
+} from "@/features/settings/queries";
+import { deleteMcpServer, saveMcpServer, setMcpServerEnabled } from "@/api/endpoints";
+import { settingsKeys } from "@/api/keys";
+import type { McpServerDetail, McpServerInput } from "@/api/types";
+import { McpAdvanced } from "./mcp-advanced";
+import { McpConnection } from "./mcp-connection";
 import { isOverrideSubject } from "./mcp-detail";
-import { McpTargetFields } from "./mcp-target";
+import { draftOf, inputOf } from "./mcp-draft";
+import { McpOverrideForm } from "./mcp-override";
+import { McpRawPane } from "./mcp-raw";
+import { useMcpRawDraft } from "./mcp-raw-draft";
+import { McpServerCard } from "./mcp-server-card";
+import { McpTools } from "./mcp-tools";
 import { mcpFieldErrors, mcpFields } from "./mcp-validation";
 import type { McpDraft } from "./mcp-draft";
 import type { McpField } from "./mcp-validation";
-import type { McpServerDetail, McpServerInput } from "@/api/types";
-import { DetailLoader } from "@/features/settings/kit/detail-loader";
-import { useMcpServer } from "@/features/settings/queries";
 
 /**
- * One MCP server, read and written into the file its scope names. The form holds
- * a draft so nothing is written until Save; a new server becomes a real route
- * after its first save. An override (`kind: "override"`) is not editable as a
- * server: `McpOverrideForm` shows it instead.
+ * One MCP server, read from the file its scope names. Editing happens in a draft
+ * that nothing writes until Save; only the on/off switch writes at once, as it
+ * always did. An override (`kind: "override"`) is not editable as a server:
+ * `McpOverrideForm` shows it instead.
  */
 
-const scopeLabel = (scope: McpScope): string => (scope === "global" ? "Global" : "This project");
+type McpTab = "form" | "raw";
 
-function McpForm({ detail, scope }: { detail: McpServerDetail | undefined; scope: McpScope }) {
+const MODES = [
+	{ value: "form", label: "Form", icon: FileTextIcon },
+	{ value: "raw", label: "Raw", icon: CodeIcon },
+] as const;
+
+function McpForm({
+	detail,
+	scope,
+	tab,
+	onTab,
+	onReset,
+}: {
+	detail: McpServerDetail;
+	scope: McpScope;
+	tab: McpTab;
+	onTab: (tab: McpTab) => void;
+	/** Drop the draft and read the server again. */
+	onReset: () => void;
+}) {
 	if (isOverrideSubject(detail)) return <McpOverrideForm detail={detail} />;
-	return <McpServerForm detail={detail} scope={scope} />;
+	return <McpServerForm detail={detail} scope={scope} tab={tab} onTab={onTab} onReset={onReset} />;
 }
 
 function McpServerForm({
 	detail,
 	scope,
+	tab,
+	onTab,
+	onReset,
 }: {
-	detail: McpServerDetail | undefined;
+	detail: Exclude<McpServerDetail, { kind: "override" }>;
 	scope: McpScope;
+	tab: McpTab;
+	onTab: (tab: McpTab) => void;
+	onReset: () => void;
 }) {
 	const navigate = useNavigate();
+	const queryClient = useQueryClient();
 	const refresh = useSettingsRefresh();
 	const settings = useSettings();
+	const project = useSettingsProject();
 	const form = useDraftForm<McpDraft, McpField>({
 		initial: () => draftOf(detail, scope),
 		fields: mcpFields,
 	});
 	const { draft, update, errors, setErrors } = form;
-	const server = detail?.kind === "server" ? detail : undefined;
-	const relation = server?.relation;
-	const providers = settings.data?.providers ?? [];
-	const providerIds = providers.map((provider) => provider.id);
-	const live = settings.data?.mcpLive;
-
-	/** Names already used in this file, so a new server cannot replace one by accident. */
-	const taken = new Set(
-		(settings.data?.mcp ?? [])
-			.filter((server) => server.scope === scope && server.name !== detail?.name)
-			.map((server) => server.name),
-	);
+	const raw = useMcpRawDraft(scope, detail.name);
+	const [pendingTab, setPendingTab] = useState<McpTab>();
+	const server = detail.kind === "server" ? detail : undefined;
+	const providerIds = (settings.data?.providers ?? []).map((provider) => provider.id);
+	const liveServer = settings.data?.mcpLive?.servers.find((entry) => entry.name === detail.name);
 
 	const save = useMutation({
-		mutationFn: saveMcpServer,
-		onSuccess: () => {
+		mutationFn: (input: McpServerInput) => saveMcpServer(project, input),
+		onSuccess: async () => {
 			form.markSaved();
 			refresh();
-			if (detail === undefined) {
-				form.allowLeave();
-				void navigate({
-					to: "/settings/mcp/$scope/$name",
-					params: { scope, name: draft.name.trim() },
-					replace: true,
-				});
-			}
+			// Read the saved server before the draft starts over, so stored rows are current.
+			await queryClient.invalidateQueries({ queryKey: settingsKeys.all });
+			onReset();
 		},
 	});
+	const enable = useMutation({
+		mutationFn: (enabled: boolean) =>
+			setMcpServerEnabled(project, { scope: detail.scope, name: detail.name, enabled }),
+		onSuccess: () => refresh(),
+	});
 	const remove = useMutation({
-		mutationFn: (target: { scope: McpScope; name: string }) =>
-			deleteMcpServer(target.scope, target.name),
+		mutationFn: () => deleteMcpServer(project, detail.scope, detail.name),
 		onSuccess: () => {
 			form.allowLeave();
+			raw.allowLeave();
 			// Leave first: a refresh while this page is mounted refetches the deleted entry.
 			void navigate({ to: "/settings/mcp" }).then(refresh);
 		},
 	});
-	const inProject = useMutation({
-		mutationFn: (input: { name: string; value: "inherit" | "on" | "off" }) =>
-			setMcpServerInProject(input),
-		onSuccess: () => refresh(),
-	});
 
 	const submit = () => {
-		const found = mcpFieldErrors(draft, taken, new Set(providerIds));
+		const found = mcpFieldErrors(draft, new Set(), new Set(providerIds));
 		setErrors(found);
 		if (Object.keys(found).length > 0) return;
-		const input: McpServerInput = inputOf(draft);
-		save.mutate(input);
+		save.mutate(inputOf(draft));
 	};
-	const overrideLink =
-		detail !== undefined &&
-		(relation === "overridden-by-project" || relation === "replaced-by-project") ? (
-			<Link
-				to="/settings/mcp/$scope/$name"
-				params={{ scope: "project", name: detail.name }}
-				className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-			>
-				Show the project entry
-			</Link>
-		) : undefined;
+
+	const signIn =
+		draft.transport === "http" &&
+		(detail.oauth !== undefined || (server?.credentialsStored ?? false));
+	const failure = save.error ?? enable.error;
+	const onRaw = tab === "raw";
+	const leavingDirty = onRaw ? raw.dirty : form.dirty;
+
+	const switchTo = (next: McpTab) => {
+		if (next === tab) return;
+		if (leavingDirty) setPendingTab(next);
+		else onTab(next);
+	};
+	const discardAndSwitch = () => {
+		if (pendingTab === undefined) return;
+		if (onRaw) raw.discard();
+		else {
+			form.allowLeave();
+			onReset();
+		}
+		onTab(pendingTab);
+		setPendingTab(undefined);
+	};
+
+	const dirty = onRaw ? raw.dirty : form.dirty;
+	const saving = onRaw ? raw.save.isPending : save.isPending;
+	const failed = onRaw ? raw.save.error : failure;
 
 	return (
-		<FormPage
-			backTo="/settings/mcp"
-			backLabel="MCP servers"
-			title={detail?.name ?? "New MCP server"}
-			badge={<Badge variant="secondary">{scopeLabel(scope)}</Badge>}
+		<DetailPage
+			title={detail.name}
+			back={{ to: "/settings/mcp", label: "MCP servers" }}
+			fill={onRaw}
+			bodyKey={tab}
+			actions={
+				<>
+					{enable.isPending && <Spinner />}
+					<EnabledSwitch
+						checked={detail.enabled}
+						disabled={enable.isPending}
+						label={detail.name}
+						onCheckedChange={(enabled) => enable.mutate(enabled)}
+					/>
+				</>
+			}
+			tabs={<ModeTabs items={MODES} value={tab} onValueChange={switchTo} />}
+			footerStatus={dirty ? "Unsaved changes" : undefined}
 			footer={
-				<FormFooter
-					dirty={form.dirty}
-					isNew={detail === undefined}
-					saving={save.isPending}
-					onSave={submit}
-					onCancel={() => form.setCancelOpen(true)}
-					onDelete={() => {
-						remove.reset();
-						form.setDeleteOpen(true);
-					}}
-				/>
+				<>
+					<Button
+						type="button"
+						variant="destructive"
+						onClick={() => {
+							remove.reset();
+							form.setDeleteOpen(true);
+						}}
+					>
+						Delete
+					</Button>
+					{onRaw && raw.dirty && (
+						<Button type="button" variant="destructive" onClick={raw.discard}>
+							Discard
+						</Button>
+					)}
+					<Button type="button" disabled={saving} onClick={onRaw ? raw.submit : submit}>
+						{saving && <Spinner data-icon="inline-start" />}
+						Save
+					</Button>
+				</>
 			}
 		>
-			{detail?.kind === "invalid" && (
-				<Alert variant="destructive">
-					<TriangleAlertIcon />
-					<AlertTitle>pi skips this entry</AlertTitle>
-					<AlertDescription>
-						{detail.problem} The form is filled in from what pi could still read, and a save
-						rewrites every key it edits and checks the result with pi&apos;s own rules, so fixing
-						the target, exposure or timeout here repairs the entry.
-					</AlertDescription>
-				</Alert>
-			)}
-			{relation === "replaced-by-project" && (
-				<Alert>
-					<AlertTitle>Replaced in this project</AlertTitle>
-					<AlertDescription>
-						This project&apos;s .pi/mcp.json defines its own server with this name, so sessions here
-						connect that one instead. {overrideLink}
-					</AlertDescription>
-				</Alert>
-			)}
-			{relation === "overridden-by-project" && (
-				<Alert>
-					<AlertTitle>Changed in this project</AlertTitle>
-					<AlertDescription>
-						This project&apos;s .pi/mcp.json changes this server, so sessions here use the
-						project&apos;s value. {overrideLink}
-					</AlertDescription>
-				</Alert>
+			{detail.kind === "invalid" && <Notice tone="error">{detail.problem}</Notice>}
+
+			{onRaw ? (
+				<McpRawPane raw={raw} />
+			) : (
+				<>
+					<McpServerCard draft={draft} update={update} />
+					<McpConnection draft={draft} errors={errors} update={update} />
+					<McpTools draft={draft} toolNames={liveServer?.toolNames} update={update} />
+					<McpAdvanced
+						draft={draft}
+						errors={errors}
+						providerIds={providerIds}
+						detail={server}
+						signInName={signIn ? detail.name : undefined}
+						update={update}
+					/>
+				</>
 			)}
 
-			<McpFields draft={draft} errors={errors} editing={detail !== undefined} update={update} />
-			<McpTargetFields draft={draft} errors={errors} providerIds={providerIds} update={update} />
+			{failed !== null && <Notice tone="error">{failed.message}</Notice>}
 
-			{scope === "project" && (
-				<Alert>
-					<TriangleAlertIcon />
-					<AlertTitle>This file belongs to the repository</AlertTitle>
-					<AlertDescription>
-						The entry is written to this project&apos;s .pi/mcp.json, which is usually committed.
-						Use <code>{"${NAME}"}</code> where a secret is needed; pi reads it from the
-						dashboard&apos;s environment. A value that starts with <code>!</code> runs a shell
-						command on the dashboard host at every connection.
-					</AlertDescription>
-				</Alert>
-			)}
+			<UnsavedChangesBlock blocked={() => form.blocked() || raw.blocked()} subject="MCP server" />
 
-			{server !== undefined && server.scope === "global" && (
-				<McpProjectGroup
-					detail={server}
-					projectDir={settings.data?.projectDir}
-					pending={inProject.isPending}
-					error={inProject.error}
-					onAction={(value) => inProject.mutate({ name: server.name, value })}
-				/>
-			)}
-
-			{server !== undefined && <McpDiagnosticsGroup detail={server} live={live} />}
-
-			{save.error !== null && (
-				<Alert variant="destructive">
-					<AlertDescription>{save.error.message}</AlertDescription>
-				</Alert>
-			)}
-
-			{detail === undefined && (
-				<CancelDialog
-					open={form.cancelOpen}
-					title="Cancel this MCP server?"
-					description="Nothing is saved until you press Save. The name, transport and target you entered will be lost."
-					onOpenChange={form.setCancelOpen}
-					onDiscard={() => {
-						form.allowLeave();
-						void navigate({ to: "/settings/mcp" });
-					}}
-				/>
-			)}
-
-			<UnsavedChangesBlock blocked={form.blocked} subject="MCP server" />
+			<CancelDialog
+				open={pendingTab !== undefined}
+				title="Discard unsaved changes?"
+				description="Your edits on this tab will be lost."
+				onOpenChange={(open) => {
+					if (!open) setPendingTab(undefined);
+				}}
+				onDiscard={discardAndSwitch}
+			/>
 
 			<DeleteDialog
 				open={form.deleteOpen}
-				title={`Remove ${detail?.name ?? draft.name}?`}
+				title={`Remove ${detail.name}?`}
 				description={
 					scope === "global"
 						? "The entry leaves the agent home's mcp.json, so no session connects to it again. An OAuth token it stored stays in mcp-auth.json."
@@ -229,30 +250,49 @@ function McpServerForm({
 				error={remove.error}
 				pending={remove.isPending}
 				onOpenChange={form.setDeleteOpen}
-				onConfirm={() => {
-					if (detail !== undefined) remove.mutate({ scope: detail.scope, name: detail.name });
-				}}
+				onConfirm={() => remove.mutate()}
 			/>
-		</FormPage>
+		</DetailPage>
 	);
 }
 
-/**
- * One MCP server route: read the entry from the file its scope names, then render
- * its form. A new server skips the read and starts from an empty draft.
- */
+const BACK = { to: "/settings/mcp", label: "MCP servers" } as const;
 
-export function McpEditor({ scope, name }: { scope: McpScope; name?: string }) {
+/** One MCP server route: read the entry from the file its scope names, then render its page. */
+export function McpEditor({ scope, name }: { scope: McpScope; name: string }) {
 	const query = useMcpServer(scope, name);
+	const [epoch, setEpoch] = useState(0);
+	const [tab, setTab] = useState<McpTab>("form");
+	if (query.isPending) {
+		return (
+			<DetailPage title={name} back={BACK}>
+				<LoadingState label="Reading the MCP server…" />
+			</DetailPage>
+		);
+	}
+	if (query.error !== null) {
+		return (
+			<DetailPage title={name} back={BACK}>
+				<StatusView {...errorView(query.error)} />
+			</DetailPage>
+		);
+	}
+	const detail = query.data;
+	if (detail === undefined) {
+		return (
+			<DetailPage title={name} back={BACK}>
+				<StatusView icon={ServerIcon} title="Not found" />
+			</DetailPage>
+		);
+	}
 	return (
-		<DetailLoader
-			query={query}
-			reading={name !== undefined}
-			noun="MCP server"
-			backTo="/settings/mcp"
-			backLabel="MCP servers"
-		>
-			{(detail) => <McpForm key={`${scope}\0${detail?.name}`} detail={detail} scope={scope} />}
-		</DetailLoader>
+		<McpForm
+			key={`${scope}\0${detail.name}\0${epoch}`}
+			detail={detail}
+			scope={scope}
+			tab={tab}
+			onTab={setTab}
+			onReset={() => setEpoch((current) => current + 1)}
+		/>
 	);
 }

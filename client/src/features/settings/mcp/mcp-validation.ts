@@ -11,7 +11,7 @@
 import { z } from "zod";
 import { mcpNameSchema, mcpOAuthSchema, authProviderProblem, oauthProblem } from "shared";
 
-import type { PairRow } from "@/features/settings/kit/pair-rows";
+import type { PairRow } from "@/components/patterns/section/pair-rows";
 import type { McpDraft } from "./mcp-draft";
 
 export type McpField =

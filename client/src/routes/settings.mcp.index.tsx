@@ -1,11 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ServerIcon } from "lucide-react";
 
-import { MasterDetailPlaceholder } from "@/features/settings/kit/master-detail-layout";
+import { DetailPlaceholder } from "@/components/patterns/pane/detail-placeholder";
 
 export const Route = createFileRoute("/settings/mcp/")({
-	component: () => (
-		<MasterDetailPlaceholder>
-			Select an MCP server on the left, or add one below the list.
-		</MasterDetailPlaceholder>
-	),
+	component: () => <DetailPlaceholder icon={ServerIcon} title="Select an MCP server" />,
 });

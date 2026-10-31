@@ -15,6 +15,7 @@ import {
 } from "shared";
 
 import { errorContent } from "../../platform/http";
+import { settingsScopeQuerySchema } from "../projects";
 
 const mcpServerFields = {
 	name: mcpNameSchema,
@@ -291,11 +292,13 @@ export const mcpLiveSchema = z
 	.object({
 		/** Live engines that answered. Zero means no session is open in this process. */
 		sessions: z.number().int(),
-		/** Servers with at least one registered tool, and how many. */
+		/** Servers with at least one registered tool, how many, and the names pi registered them under. */
 		servers: z.array(
 			z.object({
 				name: z.string(),
 				tools: z.number().int(),
+				/** The server's own tool names, as far as the registered name lets them be recovered. */
+				toolNames: z.array(z.string()),
 			}),
 		),
 		/** The reaching tools that are active in at least one live engine. */
@@ -315,7 +318,7 @@ export const readMcpRoute = createRoute({
 	operationId: "readMcpServer",
 	description:
 		"The editable detail of one MCP server, with variable, header and secret names but no values, plus its log tail",
-	request: { params: mcpParams },
+	request: { params: mcpParams, query: settingsScopeQuerySchema },
 	responses: {
 		200: {
 			description: "The server entry, its target, the names of its stored values and its log",
@@ -334,6 +337,7 @@ export const writeMcpRoute = createRoute({
 	description:
 		"Add or change an MCP server in the file its scope names. A save pi would skip is refused",
 	request: {
+		query: settingsScopeQuerySchema,
 		body: { required: true, content: { "application/json": { schema: mcpServerInputSchema } } },
 	},
 	responses: {
@@ -350,6 +354,7 @@ export const enabledMcpRoute = createRoute({
 	description:
 		"Turn one server on or off in its own file. Off writes `enabled: false`; on removes the key",
 	request: {
+		query: settingsScopeQuerySchema,
 		body: { required: true, content: { "application/json": { schema: mcpEnabledInputSchema } } },
 	},
 	responses: {
@@ -366,6 +371,7 @@ export const inProjectMcpRoute = createRoute({
 	description:
 		"Set a global server's state in this project: inherit the global setting, or write an override",
 	request: {
+		query: settingsScopeQuerySchema,
 		body: { required: true, content: { "application/json": { schema: mcpInProjectInputSchema } } },
 	},
 	responses: {
@@ -382,6 +388,7 @@ export const autoEnableMcpRoute = createRoute({
 	description:
 		"Let a connecting codemode server activate codemode in its file. On removes the key, which is pi's default",
 	request: {
+		query: settingsScopeQuerySchema,
 		body: { required: true, content: { "application/json": { schema: mcpAutoEnableInputSchema } } },
 	},
 	responses: {
@@ -396,9 +403,47 @@ export const deleteMcpRoute = createRoute({
 	tags: ["settings"],
 	operationId: "deleteMcpServer",
 	description: "Remove an MCP server, or a project override, from its file",
-	request: { params: mcpParams },
+	request: { params: mcpParams, query: settingsScopeQuerySchema },
 	responses: {
 		204: { description: "The entry is gone from its file" },
 		400: { description: "The file could not be written", content: errorContent },
+	},
+});
+
+const mcpRawSchema = z.object({ text: z.string() }).openapi("McpRaw");
+
+export const readMcpRawRoute = createRoute({
+	method: "get",
+	path: "/api/settings/mcp/{scope}/{name}/raw",
+	tags: ["settings"],
+	operationId: "readMcpRaw",
+	description:
+		"One server's entry in its mcp.json as JSON text. Stored env, header and OAuth secret values are replaced by the text <stored>",
+	request: { params: mcpParams, query: settingsScopeQuerySchema },
+	responses: {
+		200: {
+			description: "The entry as JSON text",
+			content: { "application/json": { schema: mcpRawSchema } },
+		},
+		400: { description: "mcp.json could not be read", content: errorContent },
+		404: { description: "No server with this name in that file", content: errorContent },
+	},
+});
+
+export const writeMcpRawRoute = createRoute({
+	method: "put",
+	path: "/api/settings/mcp/{scope}/{name}/raw",
+	tags: ["settings"],
+	operationId: "writeMcpRaw",
+	description:
+		"Replace one server's entry from JSON text. Each <stored> value keeps what the file holds at that path; nothing else in the file changes",
+	request: {
+		params: mcpParams,
+		query: settingsScopeQuerySchema,
+		body: { required: true, content: { "application/json": { schema: mcpRawSchema } } },
+	},
+	responses: {
+		204: { description: "The file now carries the entry, and live engines reloaded" },
+		400: { description: "The text was refused and nothing was written", content: errorContent },
 	},
 });

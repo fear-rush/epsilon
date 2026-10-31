@@ -11,7 +11,7 @@
  */
 import type { McpExposure, McpOAuthClientRegistration, McpScope, McpTransport } from "shared";
 
-import type { PairRow } from "@/features/settings/kit/pair-rows";
+import type { PairRow } from "@/components/patterns/section/pair-rows";
 import type { McpOAuthInput, McpServerDetail, McpServerInput } from "@/api/types";
 
 /** One `toolExposure` row: a tool name or `*` pattern, and how the model reaches it. */

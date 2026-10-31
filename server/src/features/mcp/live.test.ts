@@ -7,26 +7,41 @@ import { describe, expect, test } from "bun:test";
 
 import { aggregateMcpLive, mcpLiveOf } from "./live";
 
+const tool = (namespace: string, name: string) => ({ namespace, name });
+
 describe("one live engine", () => {
-	test("tools are counted per server under the configured name", () => {
+	test("tools are listed per server under the configured name, without the registered prefix", () => {
 		const live = mcpLiveOf({
 			names: ["my-server"],
-			namespaces: ["mcp__my_server", "mcp__my_server", "mcp__other"],
+			tools: [
+				tool("mcp__my_server", "mcp__my_server__search"),
+				tool("mcp__my_server", "mcp__my_server__get_page"),
+				tool("mcp__other", "mcp__other__ping"),
+			],
 			active: ["codemode"],
 		});
 		expect(live).toEqual({
 			sessions: 1,
 			servers: [
-				{ name: "my-server", tools: 2 },
-				{ name: "other", tools: 1 },
+				{ name: "my-server", tools: 2, toolNames: ["get_page", "search"] },
+				{ name: "other", tools: 1, toolNames: ["ping"] },
 			],
 			codemode: true,
 			toolSearch: false,
 		});
 	});
 
+	test("a name that does not carry the namespace is kept as registered", () => {
+		const live = mcpLiveOf({
+			names: ["files"],
+			tools: [tool("mcp__files", "read_mcp_resource")],
+			active: [],
+		});
+		expect(live.servers).toEqual([{ name: "files", tools: 1, toolNames: ["read_mcp_resource"] }]);
+	});
+
 	test("a server with no tool registered is not reported, and nothing active stays false", () => {
-		expect(mcpLiveOf({ names: ["files"], namespaces: [], active: ["read"] })).toEqual({
+		expect(mcpLiveOf({ names: ["files"], tools: [], active: ["read"] })).toEqual({
 			sessions: 1,
 			servers: [],
 			codemode: false,
@@ -36,20 +51,28 @@ describe("one live engine", () => {
 });
 
 describe("several live engines", () => {
-	test("the union keeps the largest count per server and any active reaching tool", () => {
+	test("the union keeps every tool name per server and any active reaching tool", () => {
 		const live = aggregateMcpLive([
-			mcpLiveOf({ names: ["files"], namespaces: ["mcp__files"], active: ["read"] }),
+			mcpLiveOf({
+				names: ["files"],
+				tools: [tool("mcp__files", "mcp__files__read")],
+				active: ["read"],
+			}),
 			mcpLiveOf({
 				names: ["files", "docs"],
-				namespaces: ["mcp__files", "mcp__files", "mcp__docs"],
+				tools: [
+					tool("mcp__files", "mcp__files__read"),
+					tool("mcp__files", "mcp__files__write"),
+					tool("mcp__docs", "mcp__docs__find"),
+				],
 				active: ["tool_search"],
 			}),
 		]);
 		expect(live).toEqual({
 			sessions: 2,
 			servers: [
-				{ name: "docs", tools: 1 },
-				{ name: "files", tools: 2 },
+				{ name: "docs", tools: 1, toolNames: ["find"] },
+				{ name: "files", tools: 2, toolNames: ["read", "write"] },
 			],
 			codemode: false,
 			toolSearch: true,
