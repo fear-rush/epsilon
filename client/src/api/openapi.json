@@ -54,19 +54,25 @@
 			"SessionList": {
 				"type": "object",
 				"properties": {
-					"project": {
-						"type": "string"
-					},
-					"sessions": {
+					"chats": {
 						"type": "array",
 						"items": {
 							"$ref": "#/components/schemas/SessionSummary"
 						}
+					},
+					"projects": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ProjectSessions"
+						}
+					},
+					"pinsProblem": {
+						"type": "string"
 					}
 				},
 				"required": [
-					"project",
-					"sessions"
+					"chats",
+					"projects"
 				]
 			},
 			"SessionSummary": {
@@ -99,6 +105,9 @@
 					},
 					"needsInput": {
 						"type": "boolean"
+					},
+					"pinned": {
+						"type": "boolean"
 					}
 				},
 				"required": [
@@ -109,7 +118,49 @@
 					"messageCount",
 					"firstMessage",
 					"running",
-					"needsInput"
+					"needsInput",
+					"pinned"
+				]
+			},
+			"ProjectSessions": {
+				"type": "object",
+				"properties": {
+					"project": {
+						"$ref": "#/components/schemas/ProjectStatus"
+					},
+					"sessions": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/SessionSummary"
+						}
+					}
+				},
+				"required": [
+					"project",
+					"sessions"
+				]
+			},
+			"ProjectStatus": {
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"trusted": {
+						"type": "boolean"
+					},
+					"hasProjectResources": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"path",
+					"name",
+					"trusted",
+					"hasProjectResources"
 				]
 			},
 			"SessionError": {
@@ -124,7 +175,9 @@
 								"type": "string",
 								"enum": [
 									"SESSION_NOT_FOUND",
-									"SESSION_RUNNING"
+									"SESSION_RUNNING",
+									"PROJECT_NOT_TRUSTED",
+									"PROJECT_INVALID"
 								]
 							}
 						},
@@ -143,6 +196,162 @@
 				},
 				"required": [
 					"message"
+				]
+			},
+			"RemovedProject": {
+				"type": "object",
+				"properties": {
+					"removed": {
+						"type": "integer",
+						"minimum": 0
+					}
+				},
+				"required": [
+					"removed"
+				]
+			},
+			"MovedSession": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id"
+				]
+			},
+			"MoveSessionInput": {
+				"type": "object",
+				"properties": {
+					"project": {
+						"type": "string",
+						"minLength": 1
+					}
+				},
+				"required": [
+					"project"
+				]
+			},
+			"RenamedSession": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"name"
+				]
+			},
+			"RenameSessionInput": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 200
+					}
+				},
+				"required": [
+					"name"
+				]
+			},
+			"PinSessionInput": {
+				"type": "object",
+				"properties": {
+					"pinned": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"pinned"
+				]
+			},
+			"ProjectPathInput": {
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"minLength": 1
+					}
+				},
+				"required": [
+					"path"
+				]
+			},
+			"FolderListing": {
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string"
+					},
+					"parent": {
+						"type": [
+							"string",
+							"null"
+						]
+					},
+					"folders": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"name": {
+									"type": "string"
+								},
+								"path": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"name",
+								"path"
+							]
+						}
+					},
+					"truncated": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"path",
+					"parent",
+					"folders",
+					"truncated"
+				]
+			},
+			"CreatedFolder": {
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"path"
+				]
+			},
+			"NewFolderInput": {
+				"type": "object",
+				"properties": {
+					"parent": {
+						"type": "string",
+						"minLength": 1
+					},
+					"name": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 255
+					}
+				},
+				"required": [
+					"parent",
+					"name"
 				]
 			},
 			"SettingsSnapshot": {
@@ -187,13 +396,29 @@
 					"mcpDisabled": {
 						"type": "boolean"
 					},
-					"projectDir": {
-						"type": "string"
+					"project": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/ProjectStatus"
+							},
+							{
+								"type": [
+									"object",
+									"null"
+								]
+							}
+						]
 					},
 					"skills": {
 						"type": "array",
 						"items": {
 							"$ref": "#/components/schemas/SkillView"
+						}
+					},
+					"foreignSkills": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ForeignSkillView"
 						}
 					},
 					"packages": {
@@ -219,8 +444,9 @@
 					"mcpReach",
 					"mcpLive",
 					"mcpDisabled",
-					"projectDir",
+					"project",
 					"skills",
+					"foreignSkills",
 					"packages",
 					"ready"
 				]
@@ -657,11 +883,18 @@
 								},
 								"tools": {
 									"type": "integer"
+								},
+								"toolNames": {
+									"type": "array",
+									"items": {
+										"type": "string"
+									}
 								}
 							},
 							"required": [
 								"name",
-								"tools"
+								"tools",
+								"toolNames"
 							]
 						}
 					},
@@ -688,14 +921,158 @@
 					"description": {
 						"type": "string"
 					},
-					"path": {
+					"filePath": {
 						"type": "string"
+					},
+					"dir": {
+						"type": "string"
+					},
+					"origin": {
+						"$ref": "#/components/schemas/SkillOrigin"
+					},
+					"packageSource": {
+						"type": "string"
+					},
+					"scope": {
+						"type": "string",
+						"enum": [
+							"user",
+							"project"
+						]
+					},
+					"editable": {
+						"type": "boolean"
+					},
+					"root": {
+						"$ref": "#/components/schemas/SkillRoot"
+					},
+					"modelInvocation": {
+						"type": "boolean"
+					},
+					"status": {
+						"$ref": "#/components/schemas/SkillStatus"
+					},
+					"shadowedBy": {
+						"type": "string"
+					},
+					"message": {
+						"type": "string"
+					},
+					"toggle": {
+						"$ref": "#/components/schemas/SkillToggle"
+					},
+					"warnings": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
 					}
 				},
 				"required": [
 					"name",
 					"description",
-					"path"
+					"filePath",
+					"dir",
+					"origin",
+					"scope",
+					"editable",
+					"modelInvocation",
+					"status",
+					"toggle",
+					"warnings"
+				]
+			},
+			"SkillOrigin": {
+				"type": "string",
+				"enum": [
+					"home",
+					"user-agents",
+					"project-pi",
+					"project-agents",
+					"settings-path",
+					"package",
+					"extension"
+				]
+			},
+			"SkillRoot": {
+				"type": "string",
+				"enum": [
+					"home",
+					"user-agents",
+					"project-pi",
+					"project-agents"
+				]
+			},
+			"SkillStatus": {
+				"type": "string",
+				"enum": [
+					"active",
+					"manual",
+					"disabled",
+					"shadowed",
+					"invalid",
+					"untrusted"
+				]
+			},
+			"SkillToggle": {
+				"type": "string",
+				"enum": [
+					"settings",
+					"package",
+					"none"
+				]
+			},
+			"ForeignSkillView": {
+				"type": "object",
+				"properties": {
+					"agent": {
+						"$ref": "#/components/schemas/ForeignAgent"
+					},
+					"scope": {
+						"type": "string",
+						"enum": [
+							"user",
+							"project"
+						]
+					},
+					"folder": {
+						"type": "string"
+					},
+					"linked": {
+						"type": "boolean"
+					},
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"filePath": {
+						"type": "string"
+					},
+					"warnings": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					}
+				},
+				"required": [
+					"agent",
+					"scope",
+					"folder",
+					"linked",
+					"name",
+					"description",
+					"filePath",
+					"warnings"
+				]
+			},
+			"ForeignAgent": {
+				"type": "string",
+				"enum": [
+					"claude-code",
+					"codex"
 				]
 			},
 			"PackageView": {
@@ -1451,6 +1828,237 @@
 					"id"
 				]
 			},
+			"McpRegistrySearch": {
+				"type": "object",
+				"properties": {
+					"items": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/McpRegistryItem"
+						}
+					},
+					"nextCursor": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"items"
+				]
+			},
+			"McpRegistryItem": {
+				"type": "object",
+				"properties": {
+					"source": {
+						"$ref": "#/components/schemas/McpRegistrySource"
+					},
+					"name": {
+						"type": "string"
+					},
+					"title": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"version": {
+						"type": "string"
+					},
+					"repositoryUrl": {
+						"type": "string"
+					},
+					"kinds": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					}
+				},
+				"required": [
+					"source",
+					"name",
+					"title",
+					"description",
+					"version",
+					"kinds"
+				]
+			},
+			"McpRegistrySource": {
+				"type": "string",
+				"enum": [
+					"official",
+					"github"
+				]
+			},
+			"McpRegistryDetail": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"title": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"repositoryUrl": {
+						"type": "string"
+					},
+					"options": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/McpRegistryOption"
+						}
+					},
+					"note": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"name",
+					"title",
+					"description",
+					"options"
+				]
+			},
+			"McpRegistryOption": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"label": {
+						"type": "string"
+					},
+					"supported": {
+						"type": "boolean"
+					},
+					"reason": {
+						"type": "string"
+					},
+					"entry": {
+						"$ref": "#/components/schemas/McpRegistryEntry"
+					},
+					"inputs": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/McpRegistryInput"
+						}
+					}
+				},
+				"required": [
+					"id",
+					"label",
+					"supported",
+					"inputs"
+				]
+			},
+			"McpRegistryEntry": {
+				"oneOf": [
+					{
+						"type": "object",
+						"properties": {
+							"transport": {
+								"type": "string",
+								"enum": [
+									"stdio"
+								]
+							},
+							"command": {
+								"type": "string"
+							},
+							"args": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							},
+							"env": {
+								"type": "object",
+								"additionalProperties": {
+									"type": "string"
+								}
+							}
+						},
+						"required": [
+							"transport",
+							"command",
+							"args",
+							"env"
+						]
+					},
+					{
+						"type": "object",
+						"properties": {
+							"transport": {
+								"type": "string",
+								"enum": [
+									"http"
+								]
+							},
+							"url": {
+								"type": "string"
+							},
+							"headers": {
+								"type": "object",
+								"additionalProperties": {
+									"type": "string"
+								}
+							}
+						},
+						"required": [
+							"transport",
+							"url",
+							"headers"
+						]
+					}
+				]
+			},
+			"McpRegistryInput": {
+				"type": "object",
+				"properties": {
+					"key": {
+						"type": "string"
+					},
+					"target": {
+						"type": "string",
+						"enum": [
+							"env",
+							"header",
+							"arg",
+							"url"
+						]
+					},
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"required": {
+						"type": "boolean"
+					},
+					"secret": {
+						"type": "boolean"
+					},
+					"default": {
+						"type": "string"
+					},
+					"choices": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					}
+				},
+				"required": [
+					"key",
+					"target",
+					"name",
+					"required",
+					"secret"
+				]
+			},
 			"McpServerDetail": {
 				"oneOf": [
 					{
@@ -1663,6 +2271,17 @@
 							"oauthClientSecret"
 						]
 					}
+				]
+			},
+			"McpRaw": {
+				"type": "object",
+				"properties": {
+					"text": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"text"
 				]
 			},
 			"McpServerInput": {
@@ -1917,26 +2536,573 @@
 					"enabled"
 				]
 			},
-			"SkillInput": {
+			"SkillImportReport": {
+				"type": "object",
+				"properties": {
+					"stageId": {
+						"type": "string"
+					},
+					"source": {
+						"type": "string"
+					},
+					"candidates": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/SkillImportCandidate"
+						}
+					},
+					"packageOption": {
+						"type": "object",
+						"properties": {
+							"available": {
+								"type": "boolean"
+							},
+							"source": {
+								"type": "string"
+							},
+							"reason": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"available",
+							"reason"
+						]
+					}
+				},
+				"required": [
+					"stageId",
+					"source",
+					"candidates",
+					"packageOption"
+				]
+			},
+			"SkillImportCandidate": {
 				"type": "object",
 				"properties": {
 					"name": {
-						"type": "string",
-						"minLength": 1,
-						"pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+						"type": "string"
+					},
+					"dir": {
+						"type": "string"
 					},
 					"description": {
+						"type": "string"
+					},
+					"files": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"path": {
+									"type": "string"
+								},
+								"size": {
+									"type": "number"
+								}
+							},
+							"required": [
+								"path",
+								"size"
+							]
+						}
+					},
+					"scripts": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"errors": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/SkillImportIssue"
+						}
+					},
+					"warnings": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/SkillImportIssue"
+						}
+					},
+					"removed": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"modelInvocation": {
+						"type": "boolean"
+					},
+					"existing": {
+						"type": "object",
+						"properties": {
+							"global": {
+								"type": "boolean"
+							},
+							"project": {
+								"type": "boolean"
+							}
+						},
+						"required": [
+							"global",
+							"project"
+						]
+					}
+				},
+				"required": [
+					"name",
+					"dir",
+					"description",
+					"files",
+					"scripts",
+					"errors",
+					"warnings",
+					"removed",
+					"modelInvocation",
+					"existing"
+				]
+			},
+			"SkillImportIssue": {
+				"type": "object",
+				"properties": {
+					"code": {
+						"type": "string"
+					},
+					"message": {
+						"type": "string"
+					},
+					"path": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"code",
+					"message"
+				]
+			},
+			"SkillImportSource": {
+				"type": "object",
+				"properties": {
+					"input": {
 						"type": "string",
-						"minLength": 1
+						"minLength": 1,
+						"maxLength": 2000,
+						"description": "A skills install command, a GitHub or GitLab URL, a git URL or owner/repo"
+					}
+				},
+				"required": [
+					"input"
+				]
+			},
+			"SkillImportCommit": {
+				"type": "object",
+				"properties": {
+					"skills": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"minItems": 1
+					},
+					"target": {
+						"type": "string",
+						"enum": [
+							"global",
+							"project"
+						]
+					},
+					"replace": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"default": []
+					},
+					"mode": {
+						"type": "string",
+						"enum": [
+							"copy",
+							"package"
+						],
+						"default": "copy"
+					}
+				},
+				"required": [
+					"skills",
+					"target"
+				]
+			},
+			"SkillFile": {
+				"type": "object",
+				"properties": {
+					"root": {
+						"$ref": "#/components/schemas/SkillRoot"
+					},
+					"name": {
+						"type": "string"
+					},
+					"filePath": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
 					},
 					"body": {
+						"type": "string"
+					},
+					"modelInvocation": {
+						"type": "boolean"
+					},
+					"license": {
+						"type": "string"
+					},
+					"compatibility": {
+						"type": "string"
+					},
+					"metadata": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						}
+					},
+					"fields": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/SkillField"
+						}
+					},
+					"bodyWarnings": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"parseError": {
+						"type": "string"
+					},
+					"raw": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"root",
+					"name",
+					"filePath",
+					"description",
+					"body",
+					"modelInvocation",
+					"fields",
+					"bodyWarnings"
+				]
+			},
+			"SkillField": {
+				"type": "object",
+				"properties": {
+					"key": {
+						"type": "string"
+					},
+					"owner": {
+						"type": "string",
+						"enum": [
+							"pi",
+							"spec",
+							"claude-code",
+							"unknown"
+						]
+					},
+					"value": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"key",
+					"owner",
+					"value"
+				]
+			},
+			"SkillDocument": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"filePath": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"body": {
+						"type": "string"
+					},
+					"modelInvocation": {
+						"type": "boolean"
+					},
+					"license": {
+						"type": "string"
+					},
+					"compatibility": {
+						"type": "string"
+					},
+					"metadata": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						}
+					},
+					"fields": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/SkillField"
+						}
+					},
+					"bodyWarnings": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"parseError": {
+						"type": "string"
+					},
+					"raw": {
 						"type": "string"
 					}
 				},
 				"required": [
 					"name",
+					"filePath",
 					"description",
-					"body"
+					"body",
+					"modelInvocation",
+					"fields",
+					"bodyWarnings"
+				]
+			},
+			"SkillBundleList": {
+				"type": "object",
+				"properties": {
+					"files": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/SkillBundleEntry"
+						}
+					},
+					"skipped": {
+						"type": "integer"
+					}
+				},
+				"required": [
+					"files",
+					"skipped"
+				]
+			},
+			"SkillBundleEntry": {
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string"
+					},
+					"size": {
+						"type": "integer"
+					},
+					"text": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"path",
+					"size",
+					"text"
+				]
+			},
+			"SkillBundleFile": {
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string"
+					},
+					"text": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"path",
+					"text"
+				]
+			},
+			"SkillBundleFileInput": {
+				"type": "object",
+				"properties": {
+					"text": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"text"
+				]
+			},
+			"SkillInput": {
+				"type": "object",
+				"properties": {
+					"description": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 1024
+					},
+					"body": {
+						"type": "string"
+					},
+					"modelInvocation": {
+						"type": "boolean"
+					},
+					"license": {
+						"type": "string",
+						"maxLength": 500
+					},
+					"compatibility": {
+						"type": "string",
+						"maxLength": 500
+					},
+					"metadata": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						}
+					}
+				},
+				"required": [
+					"description",
+					"body",
+					"modelInvocation"
+				]
+			},
+			"SkillEnabledInput": {
+				"type": "object",
+				"properties": {
+					"filePath": {
+						"type": "string",
+						"minLength": 1
+					},
+					"enabled": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"filePath",
+					"enabled"
+				]
+			},
+			"SkillFolderInput": {
+				"type": "object",
+				"properties": {
+					"folder": {
+						"type": "string",
+						"minLength": 1
+					}
+				},
+				"required": [
+					"folder"
+				]
+			},
+			"PackageResources": {
+				"type": "object",
+				"properties": {
+					"extensions": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"path": {
+									"type": "string"
+								},
+								"name": {
+									"type": "string"
+								},
+								"enabled": {
+									"type": "boolean"
+								}
+							},
+							"required": [
+								"path",
+								"name",
+								"enabled"
+							]
+						}
+					},
+					"skills": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"path": {
+									"type": "string"
+								},
+								"name": {
+									"type": "string"
+								},
+								"enabled": {
+									"type": "boolean"
+								}
+							},
+							"required": [
+								"path",
+								"name",
+								"enabled"
+							]
+						}
+					},
+					"prompts": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"path": {
+									"type": "string"
+								},
+								"name": {
+									"type": "string"
+								},
+								"enabled": {
+									"type": "boolean"
+								}
+							},
+							"required": [
+								"path",
+								"name",
+								"enabled"
+							]
+						}
+					},
+					"themes": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"path": {
+									"type": "string"
+								},
+								"name": {
+									"type": "string"
+								},
+								"enabled": {
+									"type": "boolean"
+								}
+							},
+							"required": [
+								"path",
+								"name",
+								"enabled"
+							]
+						}
+					}
+				},
+				"required": [
+					"extensions",
+					"skills",
+					"prompts",
+					"themes"
 				]
 			}
 		},
@@ -2003,7 +3169,7 @@
 				"operationId": "listSessions",
 				"responses": {
 					"200": {
-						"description": "Sessions pi recorded for the configured project, newest first",
+						"description": "Every session pi recorded in the home, split into chats and projects",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2037,7 +3203,7 @@
 						"description": "Session file removed"
 					},
 					"404": {
-						"description": "No such session in this project",
+						"description": "No such session in the home",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2059,13 +3225,421 @@
 				}
 			}
 		},
+		"/api/projects/sessions": {
+			"delete": {
+				"tags": [
+					"sessions"
+				],
+				"operationId": "removeProject",
+				"description": "Take a project off the list by deleting every chat recorded in it; the folder and its trust stay",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						},
+						"required": true,
+						"name": "path",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "How many chats were deleted",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RemovedProject"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No chat is recorded in that folder",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "A chat in the project is still working",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/sessions/{id}/move": {
+			"post": {
+				"tags": [
+					"sessions"
+				],
+				"operationId": "moveSession",
+				"description": "Fork a session's history into a trusted project and remove the original",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						},
+						"required": true,
+						"name": "id",
+						"in": "path"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/MoveSessionInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "The session in its new folder, under a new id",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/MovedSession"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The folder cannot hold the session",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No such session in the home",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "A live agent still holds this session",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/sessions/{id}/name": {
+			"patch": {
+				"tags": [
+					"sessions"
+				],
+				"operationId": "renameSession",
+				"description": "Set the display name of a chat",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						},
+						"required": true,
+						"name": "id",
+						"in": "path"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/RenameSessionInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "The session's new name",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RenamedSession"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No such session in the home",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/sessions/{id}/pin": {
+			"patch": {
+				"tags": [
+					"sessions"
+				],
+				"operationId": "pinSession",
+				"description": "Pin or unpin a chat in the session list",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						},
+						"required": true,
+						"name": "id",
+						"in": "path"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/PinSessionInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The pin file now holds this decision"
+					},
+					"404": {
+						"description": "No such session in the home",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/projects/status": {
+			"get": {
+				"tags": [
+					"projects"
+				],
+				"operationId": "projectStatus",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						},
+						"required": true,
+						"name": "path",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The folder, and whether pi trusts it",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProjectStatus"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The path is not a folder that can be a project",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/projects/trust": {
+			"post": {
+				"tags": [
+					"projects"
+				],
+				"operationId": "trustProject",
+				"description": "Trust a folder in pi's trust.json, through pi's own store",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ProjectPathInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "The folder, now trusted",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProjectStatus"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The path is not a folder that can be a project",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/projects/folders": {
+			"get": {
+				"tags": [
+					"projects"
+				],
+				"operationId": "browseFolders",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						},
+						"required": false,
+						"name": "path",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"enum": [
+								"true",
+								"false"
+							]
+						},
+						"required": false,
+						"name": "hidden",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The subfolders of one folder, the operator's home by default",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/FolderListing"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The path is not a readable folder",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"tags": [
+					"projects"
+				],
+				"operationId": "createFolder",
+				"description": "Create one folder inside an existing folder",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/NewFolderInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "The new folder's real path",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CreatedFolder"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The parent or the folder name is invalid",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
 		"/api/settings": {
 			"get": {
 				"tags": [
 					"settings"
 				],
 				"operationId": "readSettings",
-				"description": "Providers, default model, MCP servers with what they can reach, skills and packages from the agent home",
+				"description": "Providers, default model, MCP servers with what they can reach, skills and packages from the agent home, plus a trusted project's .pi when one is named",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
 				"responses": {
 					"200": {
 						"description": "The configuration Epsilon runs on",
@@ -2073,6 +3647,16 @@
 							"application/json": {
 								"schema": {
 									"$ref": "#/components/schemas/SettingsSnapshot"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The project is not a trusted folder",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
 								}
 							}
 						}
@@ -2541,6 +4125,123 @@
 				}
 			}
 		},
+		"/api/settings/mcp/registry/search": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "searchMcpRegistry",
+				"description": "Search or browse the MCP server registry, twenty servers a page",
+				"parameters": [
+					{
+						"schema": {
+							"$ref": "#/components/schemas/McpRegistrySource"
+						},
+						"required": true,
+						"name": "source",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string"
+						},
+						"required": false,
+						"name": "q",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string"
+						},
+						"required": false,
+						"name": "cursor",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "A page of servers and the cursor of the next one",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/McpRegistrySearch"
+								}
+							}
+						}
+					},
+					"502": {
+						"description": "The registry did not answer",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/mcp/registry/server": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "readMcpRegistryServer",
+				"description": "One registry server with the ways to install it, as mcp.json entries",
+				"parameters": [
+					{
+						"schema": {
+							"$ref": "#/components/schemas/McpRegistrySource"
+						},
+						"required": true,
+						"name": "source",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						},
+						"required": true,
+						"name": "name",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The server and its install options",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/McpRegistryDetail"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "The registry has no server of this name",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"502": {
+						"description": "The registry did not answer",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
 		"/api/settings/mcp/{scope}/{name}": {
 			"get": {
 				"tags": [
@@ -2570,6 +4271,17 @@
 						"required": true,
 						"name": "name",
 						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
 					}
 				],
 				"responses": {
@@ -2633,6 +4345,17 @@
 						"required": true,
 						"name": "name",
 						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
 					}
 				],
 				"responses": {
@@ -2652,6 +4375,149 @@
 				}
 			}
 		},
+		"/api/settings/mcp/{scope}/{name}/raw": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "readMcpRaw",
+				"description": "One server's entry in its mcp.json as JSON text. Stored env, header and OAuth secret values are replaced by the text <stored>",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"enum": [
+								"global",
+								"project"
+							]
+						},
+						"required": true,
+						"name": "scope",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"pattern": "^[A-Za-z0-9_-]+$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The entry as JSON text",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/McpRaw"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "mcp.json could not be read",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No server with this name in that file",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			},
+			"put": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "writeMcpRaw",
+				"description": "Replace one server's entry from JSON text. Each <stored> value keeps what the file holds at that path; nothing else in the file changes",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"enum": [
+								"global",
+								"project"
+							]
+						},
+						"required": true,
+						"name": "scope",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"pattern": "^[A-Za-z0-9_-]+$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/McpRaw"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The file now carries the entry, and live engines reloaded"
+					},
+					"400": {
+						"description": "The text was refused and nothing was written",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
 		"/api/settings/mcp": {
 			"post": {
 				"tags": [
@@ -2659,6 +4525,19 @@
 				],
 				"operationId": "writeMcpServer",
 				"description": "Add or change an MCP server in the file its scope names. A save pi would skip is refused",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -2693,6 +4572,19 @@
 				],
 				"operationId": "setMcpServerEnabled",
 				"description": "Turn one server on or off in its own file. Off writes `enabled: false`; on removes the key",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -2727,6 +4619,19 @@
 				],
 				"operationId": "setMcpServerInProject",
 				"description": "Set a global server's state in this project: inherit the global setting, or write an override",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -2761,6 +4666,19 @@
 				],
 				"operationId": "setMcpAutoEnableCodemode",
 				"description": "Let a connecting codemode server activate codemode in its file. On removes the key, which is pi's default",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -2788,80 +4706,59 @@
 				}
 			}
 		},
-		"/api/settings/skills/{name}": {
-			"get": {
+		"/api/settings/skills/import/upload": {
+			"post": {
 				"tags": [
 					"settings"
 				],
-				"operationId": "readSkill",
+				"operationId": "stageSkillUpload",
+				"description": "Stage the files of a picked folder, or one archive, and report the skills in it",
 				"parameters": [
 					{
 						"schema": {
 							"type": "string",
 							"minLength": 1,
-							"pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+							"description": "A trusted project folder. Absent means the agent home alone"
 						},
-						"required": true,
-						"name": "name",
-						"in": "path"
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
 					}
 				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"files": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"format": "binary"
+										},
+										"description": "Either the files of one picked folder, each named by its path inside that folder, or a single .zip, .tar, .tar.gz or .tgz archive"
+									}
+								}
+							}
+						}
+					}
+				},
 				"responses": {
 					"200": {
-						"description": "The skill file, for the edit form",
+						"description": "The staged skills and what is wrong with each",
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/SkillInput"
+									"$ref": "#/components/schemas/SkillImportReport"
 								}
 							}
 						}
 					},
 					"400": {
-						"description": "The name is not a skill directory",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/Problem"
-								}
-							}
-						}
-					},
-					"404": {
-						"description": "No such skill under the agent home",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/Problem"
-								}
-							}
-						}
-					}
-				}
-			},
-			"delete": {
-				"tags": [
-					"settings"
-				],
-				"operationId": "deleteSkill",
-				"parameters": [
-					{
-						"schema": {
-							"type": "string",
-							"minLength": 1,
-							"pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
-						},
-						"required": true,
-						"name": "name",
-						"in": "path"
-					}
-				],
-				"responses": {
-					"204": {
-						"description": "The skill directory is gone"
-					},
-					"400": {
-						"description": "The skill could not be removed",
+						"description": "The upload was refused",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2873,13 +4770,270 @@
 				}
 			}
 		},
-		"/api/settings/skills": {
+		"/api/settings/skills/import/source": {
 			"post": {
 				"tags": [
 					"settings"
 				],
+				"operationId": "stageSkillSource",
+				"description": "Fetch a pasted install command or repository address into staging and report its skills",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SkillImportSource"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "The staged skills and what is wrong with each",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SkillImportReport"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The source was refused or could not be fetched",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/skills/import/{stageId}/commit": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "commitSkillImport",
+				"description": "Install the chosen skills of a staged import, and reload live engines",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"format": "uuid"
+						},
+						"required": true,
+						"name": "stageId",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SkillImportCommit"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The skills are installed and the stage is deleted"
+					},
+					"400": {
+						"description": "The import was refused",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "The staged import has expired",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/skills/import/{stageId}": {
+			"delete": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "discardSkillImport",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"format": "uuid"
+						},
+						"required": true,
+						"name": "stageId",
+						"in": "path"
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "The staged import is deleted"
+					},
+					"400": {
+						"description": "The stage could not be deleted",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/skills/{root}/{name}": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "readSkill",
+				"description": "One skill file for the edit form: managed fields, the fields it keeps untouched, or the raw text when the frontmatter does not parse",
+				"parameters": [
+					{
+						"schema": {
+							"$ref": "#/components/schemas/SkillRoot"
+						},
+						"required": true,
+						"name": "root",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 64,
+							"pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The skill file",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SkillFile"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The root or project cannot be used",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No such skill in that root",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			},
+			"put": {
+				"tags": [
+					"settings"
+				],
 				"operationId": "writeSkill",
-				"description": "Create or replace a user skill under the agent home",
+				"description": "Create or update a skill in an editable root. Frontmatter keys the panel does not manage are kept; a file that does not parse is refused",
+				"parameters": [
+					{
+						"schema": {
+							"$ref": "#/components/schemas/SkillRoot"
+						},
+						"required": true,
+						"name": "root",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 64,
+							"pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -2905,6 +5059,810 @@
 						}
 					}
 				}
+			},
+			"delete": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "deleteSkill",
+				"parameters": [
+					{
+						"schema": {
+							"$ref": "#/components/schemas/SkillRoot"
+						},
+						"required": true,
+						"name": "root",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 64,
+							"pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "The skill directory is gone"
+					},
+					"400": {
+						"description": "The skill could not be removed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/skills/listed": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "readListedSkill",
+				"description": "The parsed SKILL.md of any skill the inventory lists, looked up by its file path, for display only. A path the inventory does not list is refused",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "The SKILL.md path of a skill the inventory lists"
+						},
+						"required": true,
+						"description": "The SKILL.md path of a skill the inventory lists",
+						"name": "filePath",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The skill file",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SkillDocument"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The project cannot be used",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No listed skill has that path",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/skills/listed-files": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "listListedSkillFiles",
+				"description": "Every file in the folder of a skill the inventory lists, for display. A path the inventory does not list is refused",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "The SKILL.md path of a skill the inventory lists"
+						},
+						"required": true,
+						"description": "The SKILL.md path of a skill the inventory lists",
+						"name": "filePath",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The files, sorted by path",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SkillBundleList"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The skill folder cannot be listed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No listed skill has that path",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/skills/listed-file": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "readListedSkillFile",
+				"description": "The text of one file in the folder of a skill the inventory lists, SKILL.md included. Binary files, files over 1 MB and unsafe paths are refused",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "The SKILL.md path of a skill the inventory lists"
+						},
+						"required": true,
+						"description": "The SKILL.md path of a skill the inventory lists",
+						"name": "filePath",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "The file's path inside the skill folder, with / between folders"
+						},
+						"required": true,
+						"description": "The file's path inside the skill folder, with / between folders",
+						"name": "path",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The file's text",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SkillBundleFile"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The file cannot be read",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No listed skill has that path",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/skills/{root}/{name}/raw": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "readSkillRaw",
+				"description": "The exact text of one editable skill's SKILL.md, frontmatter included",
+				"parameters": [
+					{
+						"schema": {
+							"$ref": "#/components/schemas/SkillRoot"
+						},
+						"required": true,
+						"name": "root",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 64,
+							"pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The file's text",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SkillBundleFile"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The file cannot be read",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			},
+			"put": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "writeSkillRaw",
+				"description": "Replace SKILL.md with the given text, byte for byte. The frontmatter must parse, its name must equal the folder name, and its description must pass the description rules",
+				"parameters": [
+					{
+						"schema": {
+							"$ref": "#/components/schemas/SkillRoot"
+						},
+						"required": true,
+						"name": "root",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 64,
+							"pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SkillBundleFileInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "SKILL.md is written, and live engines reloaded"
+					},
+					"400": {
+						"description": "The text was refused",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/skills/{root}/{name}/files": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "listSkillFiles",
+				"description": "Every file in one editable skill folder, SKILL.md included. Symlinks are not listed; skipped counts them",
+				"parameters": [
+					{
+						"schema": {
+							"$ref": "#/components/schemas/SkillRoot"
+						},
+						"required": true,
+						"name": "root",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 64,
+							"pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The files, sorted by path",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SkillBundleList"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The skill folder cannot be listed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/skills/{root}/{name}/file": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "readSkillBundleFile",
+				"description": "The text of one bundled file. SKILL.md, binary files and files over 1 MB are refused",
+				"parameters": [
+					{
+						"schema": {
+							"$ref": "#/components/schemas/SkillRoot"
+						},
+						"required": true,
+						"name": "root",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 64,
+							"pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "The file's path inside the skill folder, with / between folders"
+						},
+						"required": true,
+						"description": "The file's path inside the skill folder, with / between folders",
+						"name": "path",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The file's text",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SkillBundleFile"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The file cannot be read",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			},
+			"put": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "writeSkillBundleFile",
+				"description": "Create or replace one bundled text file, creating its folders. SKILL.md, unsafe paths, symlinks and a skill folder over the size limit are refused",
+				"parameters": [
+					{
+						"schema": {
+							"$ref": "#/components/schemas/SkillRoot"
+						},
+						"required": true,
+						"name": "root",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 64,
+							"pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "The file's path inside the skill folder, with / between folders"
+						},
+						"required": true,
+						"description": "The file's path inside the skill folder, with / between folders",
+						"name": "path",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SkillBundleFileInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The file is written, and live engines reloaded"
+					},
+					"400": {
+						"description": "The file was refused",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "deleteSkillBundleFile",
+				"description": "Delete one bundled file and the folders it leaves empty. SKILL.md is refused",
+				"parameters": [
+					{
+						"schema": {
+							"$ref": "#/components/schemas/SkillRoot"
+						},
+						"required": true,
+						"name": "root",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 64,
+							"pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "The file's path inside the skill folder, with / between folders"
+						},
+						"required": true,
+						"description": "The file's path inside the skill folder, with / between folders",
+						"name": "path",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "The file is gone, and live engines reloaded"
+					},
+					"400": {
+						"description": "The file could not be removed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/skills/enabled": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "setSkillEnabled",
+				"description": "Turn one listed skill off or on with a -path entry in the skills setting. A package skill is refused: turn it off from Packages",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SkillEnabledInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The setting is written, and live engines reloaded"
+					},
+					"400": {
+						"description": "The skill could not be switched",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/skills/folders/link": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "linkSkillFolder",
+				"description": "Add another agent's skill folder to the skills setting, so pi loads it where it is",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SkillFolderInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The folder is in the skills setting, and live engines reloaded"
+					},
+					"400": {
+						"description": "The folder could not be linked",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/skills/folders/unlink": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "unlinkSkillFolder",
+				"description": "Remove another agent's skill folder from the skills setting",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SkillFolderInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The folder is out of the skills setting, and live engines reloaded"
+					},
+					"400": {
+						"description": "The folder could not be unlinked",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
 			}
 		},
 		"/api/settings/packages": {
@@ -2913,7 +5871,20 @@
 					"settings"
 				],
 				"operationId": "installPackage",
-				"description": "Install a package and declare it in pi's settings",
+				"description": "Install a package and declare it in pi's settings, for the home or a project",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -2924,6 +5895,14 @@
 									"source": {
 										"type": "string",
 										"minLength": 1
+									},
+									"scope": {
+										"type": "string",
+										"enum": [
+											"user",
+											"project"
+										],
+										"default": "user"
 									}
 								},
 								"required": [
@@ -2963,6 +5942,30 @@
 						"required": true,
 						"name": "source",
 						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"enum": [
+								"user",
+								"project"
+							],
+							"default": "user"
+						},
+						"required": false,
+						"name": "scope",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
 					}
 				],
 				"responses": {
@@ -2971,6 +5974,72 @@
 					},
 					"400": {
 						"description": "No declared package matched",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/packages/resources": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "getPackageResources",
+				"description": "What a declared package provides: extensions, skills, prompts and themes",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						},
+						"required": true,
+						"name": "source",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"enum": [
+								"user",
+								"project"
+							],
+							"default": "user"
+						},
+						"required": false,
+						"name": "scope",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The package's resources",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PackageResources"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The read failed",
 						"content": {
 							"application/json": {
 								"schema": {

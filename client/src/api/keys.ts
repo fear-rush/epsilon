@@ -6,13 +6,35 @@
  */
 import type { McpScope } from "shared";
 
+import type { SkillRoot } from "./types";
+
+/** Reads that depend on the Settings project carry it, so a switch is a new key. */
 export const settingsKeys = {
 	all: ["settings"] as const,
-	snapshot: () => [...settingsKeys.all, "snapshot"] as const,
+	snapshot: (project: string | undefined) => [...settingsKeys.all, "snapshot", project] as const,
 	provider: (id: string | undefined) => [...settingsKeys.all, "provider", id] as const,
-	mcp: (scope: McpScope, name: string | undefined) =>
-		[...settingsKeys.all, "mcp", scope, name] as const,
-	skill: (name: string | undefined) => [...settingsKeys.all, "skill", name] as const,
+	mcp: (project: string | undefined, scope: McpScope, name: string | undefined) =>
+		[...settingsKeys.all, "mcp", project, scope, name] as const,
+	mcpRaw: (project: string | undefined, scope: McpScope, name: string) =>
+		[...settingsKeys.all, "mcp-raw", project, scope, name] as const,
+	mcpRegistrySearch: (source: string, q: string) =>
+		[...settingsKeys.all, "mcp-registry", source, q] as const,
+	mcpRegistryServer: (source: string, name: string | undefined) =>
+		[...settingsKeys.all, "mcp-registry-server", source, name] as const,
+	skill: (project: string | undefined, root: SkillRoot, name: string | undefined) =>
+		[...settingsKeys.all, "skill", project, root, name] as const,
+	skillListed: (project: string | undefined, filePath: string) =>
+		[...settingsKeys.all, "skill-listed", project, filePath] as const,
+	skillListedFiles: (project: string | undefined, filePath: string) =>
+		[...settingsKeys.all, "skill-listed-files", project, filePath] as const,
+	skillListedFile: (project: string | undefined, filePath: string, path: string) =>
+		[...settingsKeys.all, "skill-listed-file", project, filePath, path] as const,
+	skillFiles: (project: string | undefined, root: SkillRoot, name: string) =>
+		[...settingsKeys.all, "skill-files", project, root, name] as const,
+	packageResources: (project: string | undefined, scope: string, source: string) =>
+		[...settingsKeys.all, "package-resources", project, scope, source] as const,
+	skillFile: (project: string | undefined, root: SkillRoot, name: string, path: string) =>
+		[...settingsKeys.all, "skill-file", project, root, name, path] as const,
 };
 
 export const readinessKeys = {
@@ -21,6 +43,12 @@ export const readinessKeys = {
 
 export const sessionKeys = {
 	all: ["sessions"] as const,
+};
+
+export const projectKeys = {
+	status: (path: string) => ["project", "status", path] as const,
+	folders: (path: string | undefined, hidden = false) =>
+		["project", "folders", path, hidden] as const,
 };
 
 /** A live probe of a provider's endpoint. It is not configuration, so it sits outside `settingsKeys`. */

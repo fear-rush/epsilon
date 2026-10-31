@@ -3,6 +3,7 @@ export type {
 	ClientFrame,
 	Command,
 	CommandName,
+	Place,
 	ProtocolErrorCode,
 	ServerFrame,
 	Snapshot,
@@ -17,6 +18,7 @@ export {
 	clientFrameSchema,
 	commandNameSchema,
 	commandSchema,
+	placeSchema,
 	protocolErrorCodeSchema,
 	serverFrameSchema,
 	snapshotCommandSchema,
@@ -54,6 +56,22 @@ export {
 	mcpTransportSchema,
 	oauthProblem,
 } from "./mcp/rules";
+export {
+	isEnvReference,
+	isPlaceholderValue,
+	missingValueId,
+	missingValuesOf,
+	parseMcpPaste,
+	withValues,
+} from "./mcp/import";
+export type { ImportedEntry, ImportedServer, ImportedTarget, ParsedMcpPaste } from "./mcp/import";
+export {
+	effectiveToolExposure,
+	isToolReachable,
+	toolPatternMatches,
+	withToolReachable,
+} from "./mcp/tools";
+export type { ToolRule } from "./mcp/tools";
 export type {
 	McpExposure,
 	McpOAuth,
@@ -65,7 +83,15 @@ export type {
 	McpToolExposure,
 	McpTransport,
 } from "./mcp/rules";
-export { skillDescriptionSchema, skillNameSchema } from "./skills/rules";
+export {
+	SKILL_DESCRIPTION_MAX,
+	SKILL_NAME_MAX,
+	foreignBodySyntax,
+	skillDescriptionSchema,
+	skillFieldOwner,
+	skillNameSchema,
+} from "./skills/rules";
+export type { SkillFieldOwner } from "./skills/rules";
 export { modelKey, providerApiSchema, providerIdSchema } from "./providers/rules";
 export type { ProviderApi } from "./providers/rules";
 export {
@@ -99,3 +125,32 @@ export {
 } from "./conversation/tools";
 export type { TranscriptRow } from "./conversation/selectors";
 export type { JsonAgentSessionEvent } from "./pi";
+export {
+	IMPORT_MAX_FILES,
+	IMPORT_MAX_SKILL_BYTES,
+	IMPORT_MAX_UPLOAD_BYTES,
+	SKILL_BODY_ADVISED_LINES,
+	isStrippedPath,
+	misnamedSkillFiles,
+	skillLimitIssues,
+	skillPathProblem,
+	uploadPathIssues,
+} from "./skills/validation";
+export type { BundleFile, SkillIssue } from "./skills/validation";
+export {
+	bodyLinks,
+	bodySize,
+	isRelativeTarget,
+	missingBodyLinks,
+	relativeBodyLinks,
+	relativeTargetPath,
+	resolveBodyLinkPath,
+} from "./skills/body";
+export type { BodyLink } from "./skills/body";
+export {
+	linkSkillReferences,
+	skillLinkName,
+	skillReferences,
+	usesSkillTool,
+} from "./skills/references";
+export type { SkillReference } from "./skills/references";

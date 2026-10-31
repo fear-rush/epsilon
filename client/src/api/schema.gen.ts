@@ -66,6 +66,124 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/projects/sessions": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/** Take a project off the list by deleting every chat recorded in it; the folder and its trust stay */
+		delete: operations["removeProject"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/sessions/{id}/move": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Fork a session's history into a trusted project and remove the original */
+		post: operations["moveSession"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/sessions/{id}/name": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		/** Set the display name of a chat */
+		patch: operations["renameSession"];
+		trace?: never;
+	};
+	"/api/sessions/{id}/pin": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		/** Pin or unpin a chat in the session list */
+		patch: operations["pinSession"];
+		trace?: never;
+	};
+	"/api/projects/status": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get: operations["projectStatus"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/projects/trust": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Trust a folder in pi's trust.json, through pi's own store */
+		post: operations["trustProject"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/projects/folders": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get: operations["browseFolders"];
+		put?: never;
+		/** Create one folder inside an existing folder */
+		post: operations["createFolder"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/settings": {
 		parameters: {
 			query?: never;
@@ -73,7 +191,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Providers, default model, MCP servers with what they can reach, skills and packages from the agent home */
+		/** Providers, default model, MCP servers with what they can reach, skills and packages from the agent home, plus a trusted project's .pi when one is named */
 		get: operations["readSettings"];
 		put?: never;
 		post?: never;
@@ -236,6 +354,40 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/settings/mcp/registry/search": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Search or browse the MCP server registry, twenty servers a page */
+		get: operations["searchMcpRegistry"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/mcp/registry/server": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** One registry server with the ways to install it, as mcp.json entries */
+		get: operations["readMcpRegistryServer"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/settings/mcp/{scope}/{name}": {
 		parameters: {
 			query?: never;
@@ -249,6 +401,24 @@ export interface paths {
 		post?: never;
 		/** Remove an MCP server, or a project override, from its file */
 		delete: operations["deleteMcpServer"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/mcp/{scope}/{name}/raw": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** One server's entry in its mcp.json as JSON text. Stored env, header and OAuth secret values are replaced by the text <stored> */
+		get: operations["readMcpRaw"];
+		/** Replace one server's entry from JSON text. Each <stored> value keeps what the file holds at that path; nothing else in the file changes */
+		put: operations["writeMcpRaw"];
+		post?: never;
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -322,23 +492,7 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/settings/skills/{name}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get: operations["readSkill"];
-		put?: never;
-		post?: never;
-		delete: operations["deleteSkill"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/settings/skills": {
+	"/api/settings/skills/import/upload": {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -347,8 +501,232 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Create or replace a user skill under the agent home */
-		post: operations["writeSkill"];
+		/** Stage the files of a picked folder, or one archive, and report the skills in it */
+		post: operations["stageSkillUpload"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/skills/import/source": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Fetch a pasted install command or repository address into staging and report its skills */
+		post: operations["stageSkillSource"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/skills/import/{stageId}/commit": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Install the chosen skills of a staged import, and reload live engines */
+		post: operations["commitSkillImport"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/skills/import/{stageId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		delete: operations["discardSkillImport"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/skills/{root}/{name}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** One skill file for the edit form: managed fields, the fields it keeps untouched, or the raw text when the frontmatter does not parse */
+		get: operations["readSkill"];
+		/** Create or update a skill in an editable root. Frontmatter keys the panel does not manage are kept; a file that does not parse is refused */
+		put: operations["writeSkill"];
+		post?: never;
+		delete: operations["deleteSkill"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/skills/listed": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** The parsed SKILL.md of any skill the inventory lists, looked up by its file path, for display only. A path the inventory does not list is refused */
+		get: operations["readListedSkill"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/skills/listed-files": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Every file in the folder of a skill the inventory lists, for display. A path the inventory does not list is refused */
+		get: operations["listListedSkillFiles"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/skills/listed-file": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** The text of one file in the folder of a skill the inventory lists, SKILL.md included. Binary files, files over 1 MB and unsafe paths are refused */
+		get: operations["readListedSkillFile"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/skills/{root}/{name}/raw": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** The exact text of one editable skill's SKILL.md, frontmatter included */
+		get: operations["readSkillRaw"];
+		/** Replace SKILL.md with the given text, byte for byte. The frontmatter must parse, its name must equal the folder name, and its description must pass the description rules */
+		put: operations["writeSkillRaw"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/skills/{root}/{name}/files": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Every file in one editable skill folder, SKILL.md included. Symlinks are not listed; skipped counts them */
+		get: operations["listSkillFiles"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/skills/{root}/{name}/file": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** The text of one bundled file. SKILL.md, binary files and files over 1 MB are refused */
+		get: operations["readSkillBundleFile"];
+		/** Create or replace one bundled text file, creating its folders. SKILL.md, unsafe paths, symlinks and a skill folder over the size limit are refused */
+		put: operations["writeSkillBundleFile"];
+		post?: never;
+		/** Delete one bundled file and the folders it leaves empty. SKILL.md is refused */
+		delete: operations["deleteSkillBundleFile"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/skills/enabled": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Turn one listed skill off or on with a -path entry in the skills setting. A package skill is refused: turn it off from Packages */
+		post: operations["setSkillEnabled"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/skills/folders/link": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Add another agent's skill folder to the skills setting, so pi loads it where it is */
+		post: operations["linkSkillFolder"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/skills/folders/unlink": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Remove another agent's skill folder from the skills setting */
+		post: operations["unlinkSkillFolder"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -364,9 +742,26 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Install a package and declare it in pi's settings */
+		/** Install a package and declare it in pi's settings, for the home or a project */
 		post: operations["installPackage"];
 		delete: operations["removePackage"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/packages/resources": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** What a declared package provides: extensions, skills, prompts and themes */
+		get: operations["getPackageResources"];
+		put?: never;
+		post?: never;
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -385,8 +780,9 @@ export interface components {
 			home: string;
 		});
 		SessionList: {
-			project: string;
-			sessions: components["schemas"]["SessionSummary"][];
+			chats: components["schemas"]["SessionSummary"][];
+			projects: components["schemas"]["ProjectSessions"][];
+			pinsProblem?: string;
 		};
 		SessionSummary: {
 			id: string;
@@ -398,12 +794,61 @@ export interface components {
 			firstMessage: string;
 			running: boolean;
 			needsInput: boolean;
+			pinned: boolean;
+		};
+		ProjectSessions: {
+			project: components["schemas"]["ProjectStatus"];
+			sessions: components["schemas"]["SessionSummary"][];
+		};
+		ProjectStatus: {
+			path: string;
+			name: string;
+			trusted: boolean;
+			hasProjectResources: boolean;
 		};
 		SessionError: components["schemas"]["Problem"] & ({
-			code: "SESSION_NOT_FOUND" | "SESSION_RUNNING";
+			code: "SESSION_NOT_FOUND" | "SESSION_RUNNING" | "PROJECT_NOT_TRUSTED" | "PROJECT_INVALID";
 		});
 		Problem: {
 			message: string;
+		};
+		RemovedProject: {
+			removed: number;
+		};
+		MovedSession: {
+			id: string;
+		};
+		MoveSessionInput: {
+			project: string;
+		};
+		RenamedSession: {
+			id: string;
+			name: string;
+		};
+		RenameSessionInput: {
+			name: string;
+		};
+		PinSessionInput: {
+			pinned: boolean;
+		};
+		ProjectPathInput: {
+			path: string;
+		};
+		FolderListing: {
+			path: string;
+			parent: string | null;
+			folders: ({
+				name: string;
+				path: string;
+			})[];
+			truncated: boolean;
+		};
+		CreatedFolder: {
+			path: string;
+		};
+		NewFolderInput: {
+			parent: string;
+			name: string;
 		};
 		SettingsSnapshot: {
 			home: string;
@@ -415,8 +860,11 @@ export interface components {
 			mcpReach: components["schemas"]["McpReach"];
 			mcpLive: components["schemas"]["McpLive"];
 			mcpDisabled: boolean;
-			projectDir: string;
+			project: components["schemas"]["ProjectStatus"] & (({
+				[key: string]: unknown;
+			}) | null);
 			skills: components["schemas"]["SkillView"][];
+			foreignSkills: components["schemas"]["ForeignSkillView"][];
 			packages: components["schemas"]["PackageView"][];
 			ready: boolean;
 			error?: string;
@@ -512,6 +960,7 @@ export interface components {
 			servers: ({
 				name: string;
 				tools: number;
+				toolNames: string[];
 			})[];
 			codemode: boolean;
 			toolSearch: boolean;
@@ -519,8 +968,35 @@ export interface components {
 		SkillView: {
 			name: string;
 			description: string;
-			path: string;
+			filePath: string;
+			dir: string;
+			origin: components["schemas"]["SkillOrigin"];
+			packageSource?: string;
+			scope: "user" | "project";
+			editable: boolean;
+			root?: components["schemas"]["SkillRoot"];
+			modelInvocation: boolean;
+			status: components["schemas"]["SkillStatus"];
+			shadowedBy?: string;
+			message?: string;
+			toggle: components["schemas"]["SkillToggle"];
+			warnings: string[];
 		};
+		SkillOrigin: "home" | "user-agents" | "project-pi" | "project-agents" | "settings-path" | "package" | "extension";
+		SkillRoot: "home" | "user-agents" | "project-pi" | "project-agents";
+		SkillStatus: "active" | "manual" | "disabled" | "shadowed" | "invalid" | "untrusted";
+		SkillToggle: "settings" | "package" | "none";
+		ForeignSkillView: {
+			agent: components["schemas"]["ForeignAgent"];
+			scope: "user" | "project";
+			folder: string;
+			linked: boolean;
+			name: string;
+			description: string;
+			filePath: string;
+			warnings: string[];
+		};
+		ForeignAgent: "claude-code" | "codex";
 		PackageView: {
 			source: string;
 			scope: "user" | "project";
@@ -684,6 +1160,60 @@ export interface components {
 				[key: string]: components["schemas"]["ModelOverride"];
 			};
 		};
+		McpRegistrySearch: {
+			items: components["schemas"]["McpRegistryItem"][];
+			nextCursor?: string;
+		};
+		McpRegistryItem: {
+			source: components["schemas"]["McpRegistrySource"];
+			name: string;
+			title: string;
+			description: string;
+			version: string;
+			repositoryUrl?: string;
+			kinds: string[];
+		};
+		McpRegistrySource: "official" | "github";
+		McpRegistryDetail: {
+			name: string;
+			title: string;
+			description: string;
+			repositoryUrl?: string;
+			options: components["schemas"]["McpRegistryOption"][];
+			note?: string;
+		};
+		McpRegistryOption: {
+			id: string;
+			label: string;
+			supported: boolean;
+			reason?: string;
+			entry?: components["schemas"]["McpRegistryEntry"];
+			inputs: components["schemas"]["McpRegistryInput"][];
+		};
+		McpRegistryEntry: ({
+			transport: "stdio";
+			command: string;
+			args: string[];
+			env: {
+				[key: string]: string;
+			};
+		}) | ({
+			transport: "http";
+			url: string;
+			headers: {
+				[key: string]: string;
+			};
+		});
+		McpRegistryInput: {
+			key: string;
+			target: "env" | "header" | "arg" | "url";
+			name: string;
+			description?: string;
+			required: boolean;
+			secret: boolean;
+			default?: string;
+			choices?: string[];
+		};
 		McpServerDetail: components["schemas"]["McpServerEntryDetail"] | components["schemas"]["McpOverrideEntry"] | components["schemas"]["McpInvalidEntryDetail"];
 		McpServerEntryDetail: components["schemas"]["McpServerEntry"] & ({
 			command?: string;
@@ -728,6 +1258,9 @@ export interface components {
 			oauthClientSecret: boolean;
 			authProvider?: string;
 		});
+		McpRaw: {
+			text: string;
+		};
 		McpServerInput: ({
 			name: string;
 			scope: "global" | "project";
@@ -784,10 +1317,141 @@ export interface components {
 			scope: "global" | "project";
 			enabled: boolean;
 		};
-		SkillInput: {
+		SkillImportReport: {
+			stageId: string;
+			source: string;
+			candidates: components["schemas"]["SkillImportCandidate"][];
+			packageOption: {
+				available: boolean;
+				source?: string;
+				reason: string;
+			};
+		};
+		SkillImportCandidate: {
 			name: string;
+			dir: string;
+			description: string;
+			files: ({
+				path: string;
+				size: number;
+			})[];
+			scripts: string[];
+			errors: components["schemas"]["SkillImportIssue"][];
+			warnings: components["schemas"]["SkillImportIssue"][];
+			removed: string[];
+			modelInvocation: boolean;
+			existing: {
+				global: boolean;
+				project: boolean;
+			};
+		};
+		SkillImportIssue: {
+			code: string;
+			message: string;
+			path?: string;
+		};
+		SkillImportSource: {
+			/** A skills install command, a GitHub or GitLab URL, a git URL or owner/repo */
+			input: string;
+		};
+		SkillImportCommit: {
+			skills: string[];
+			target: "global" | "project";
+			replace?: string[];
+			mode?: "copy" | "package";
+		};
+		SkillFile: {
+			root: components["schemas"]["SkillRoot"];
+			name: string;
+			filePath: string;
 			description: string;
 			body: string;
+			modelInvocation: boolean;
+			license?: string;
+			compatibility?: string;
+			metadata?: {
+				[key: string]: string;
+			};
+			fields: components["schemas"]["SkillField"][];
+			bodyWarnings: string[];
+			parseError?: string;
+			raw?: string;
+		};
+		SkillField: {
+			key: string;
+			owner: "pi" | "spec" | "claude-code" | "unknown";
+			value: string;
+		};
+		SkillDocument: {
+			name: string;
+			filePath: string;
+			description: string;
+			body: string;
+			modelInvocation: boolean;
+			license?: string;
+			compatibility?: string;
+			metadata?: {
+				[key: string]: string;
+			};
+			fields: components["schemas"]["SkillField"][];
+			bodyWarnings: string[];
+			parseError?: string;
+			raw?: string;
+		};
+		SkillBundleList: {
+			files: components["schemas"]["SkillBundleEntry"][];
+			skipped: number;
+		};
+		SkillBundleEntry: {
+			path: string;
+			size: number;
+			text: boolean;
+		};
+		SkillBundleFile: {
+			path: string;
+			text: string;
+		};
+		SkillBundleFileInput: {
+			text: string;
+		};
+		SkillInput: {
+			description: string;
+			body: string;
+			modelInvocation: boolean;
+			license?: string;
+			compatibility?: string;
+			metadata?: {
+				[key: string]: string;
+			};
+		};
+		SkillEnabledInput: {
+			filePath: string;
+			enabled: boolean;
+		};
+		SkillFolderInput: {
+			folder: string;
+		};
+		PackageResources: {
+			extensions: ({
+				path: string;
+				name: string;
+				enabled: boolean;
+			})[];
+			skills: ({
+				path: string;
+				name: string;
+				enabled: boolean;
+			})[];
+			prompts: ({
+				path: string;
+				name: string;
+				enabled: boolean;
+			})[];
+			themes: ({
+				path: string;
+				name: string;
+				enabled: boolean;
+			})[];
 		};
 	};
 }
@@ -845,7 +1509,7 @@ interface operations {
 		};
 		requestBody?: never;
 		responses: {
-			/** Sessions pi recorded for the configured project, newest first */
+			/** Every session pi recorded in the home, split into chats and projects */
 			200: {
 				headers: {
 					[name: string]: unknown;
@@ -874,7 +1538,7 @@ interface operations {
 				};
 				content?: never;
 			};
-			/** No such session in this project */
+			/** No such session in the home */
 			404: {
 				headers: {
 					[name: string]: unknown;
@@ -894,10 +1558,309 @@ interface operations {
 			};
 		};
 	};
-	/** Providers, default model, MCP servers with what they can reach, skills and packages from the agent home */
-	readSettings: {
+	/** Take a project off the list by deleting every chat recorded in it; the folder and its trust stay */
+	removeProject: {
+		parameters: {
+			query: {
+				path: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** How many chats were deleted */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["RemovedProject"];
+				};
+			};
+			/** No chat is recorded in that folder */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionError"];
+				};
+			};
+			/** A chat in the project is still working */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionError"];
+				};
+			};
+		};
+	};
+	/** Fork a session's history into a trusted project and remove the original */
+	moveSession: {
 		parameters: {
 			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["MoveSessionInput"];
+			};
+		};
+		responses: {
+			/** The session in its new folder, under a new id */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["MovedSession"];
+				};
+			};
+			/** The folder cannot hold the session */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionError"];
+				};
+			};
+			/** No such session in the home */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionError"];
+				};
+			};
+			/** A live agent still holds this session */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionError"];
+				};
+			};
+		};
+	};
+	/** Set the display name of a chat */
+	renameSession: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RenameSessionInput"];
+			};
+		};
+		responses: {
+			/** The session's new name */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["RenamedSession"];
+				};
+			};
+			/** No such session in the home */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionError"];
+				};
+			};
+		};
+	};
+	/** Pin or unpin a chat in the session list */
+	pinSession: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["PinSessionInput"];
+			};
+		};
+		responses: {
+			/** The pin file now holds this decision */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** No such session in the home */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionError"];
+				};
+			};
+		};
+	};
+	projectStatus: {
+		parameters: {
+			query: {
+				path: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The folder, and whether pi trusts it */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ProjectStatus"];
+				};
+			};
+			/** The path is not a folder that can be a project */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Trust a folder in pi's trust.json, through pi's own store */
+	trustProject: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ProjectPathInput"];
+			};
+		};
+		responses: {
+			/** The folder, now trusted */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ProjectStatus"];
+				};
+			};
+			/** The path is not a folder that can be a project */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	browseFolders: {
+		parameters: {
+			query?: {
+				path?: string;
+				hidden?: "true" | "false";
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The subfolders of one folder, the operator's home by default */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["FolderListing"];
+				};
+			};
+			/** The path is not a readable folder */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Create one folder inside an existing folder */
+	createFolder: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["NewFolderInput"];
+			};
+		};
+		responses: {
+			/** The new folder's real path */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CreatedFolder"];
+				};
+			};
+			/** The parent or the folder name is invalid */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Providers, default model, MCP servers with what they can reach, skills and packages from the agent home, plus a trusted project's .pi when one is named */
+	readSettings: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
 			header?: never;
 			path?: never;
 			cookie?: never;
@@ -911,6 +1874,15 @@ interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["SettingsSnapshot"];
+				};
+			};
+			/** The project is not a trusted folder */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
 				};
 			};
 		};
@@ -1282,10 +2254,89 @@ interface operations {
 			};
 		};
 	};
+	/** Search or browse the MCP server registry, twenty servers a page */
+	searchMcpRegistry: {
+		parameters: {
+			query: {
+				source: components["schemas"]["McpRegistrySource"];
+				q?: string;
+				cursor?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** A page of servers and the cursor of the next one */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["McpRegistrySearch"];
+				};
+			};
+			/** The registry did not answer */
+			502: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** One registry server with the ways to install it, as mcp.json entries */
+	readMcpRegistryServer: {
+		parameters: {
+			query: {
+				source: components["schemas"]["McpRegistrySource"];
+				name: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The server and its install options */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["McpRegistryDetail"];
+				};
+			};
+			/** The registry has no server of this name */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+			/** The registry did not answer */
+			502: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
 	/** The editable detail of one MCP server, with variable, header and secret names but no values, plus its log tail */
 	readMcpServer: {
 		parameters: {
-			query?: never;
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
 			header?: never;
 			path: {
 				scope: "global" | "project";
@@ -1327,7 +2378,10 @@ interface operations {
 	/** Remove an MCP server, or a project override, from its file */
 	deleteMcpServer: {
 		parameters: {
-			query?: never;
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
 			header?: never;
 			path: {
 				scope: "global" | "project";
@@ -1355,10 +2409,96 @@ interface operations {
 			};
 		};
 	};
+	/** One server's entry in its mcp.json as JSON text. Stored env, header and OAuth secret values are replaced by the text <stored> */
+	readMcpRaw: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path: {
+				scope: "global" | "project";
+				name: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The entry as JSON text */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["McpRaw"];
+				};
+			};
+			/** mcp.json could not be read */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+			/** No server with this name in that file */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Replace one server's entry from JSON text. Each <stored> value keeps what the file holds at that path; nothing else in the file changes */
+	writeMcpRaw: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path: {
+				scope: "global" | "project";
+				name: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["McpRaw"];
+			};
+		};
+		responses: {
+			/** The file now carries the entry, and live engines reloaded */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The text was refused and nothing was written */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
 	/** Add or change an MCP server in the file its scope names. A save pi would skip is refused */
 	writeMcpServer: {
 		parameters: {
-			query?: never;
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
 			header?: never;
 			path?: never;
 			cookie?: never;
@@ -1390,7 +2530,10 @@ interface operations {
 	/** Turn one server on or off in its own file. Off writes `enabled: false`; on removes the key */
 	setMcpServerEnabled: {
 		parameters: {
-			query?: never;
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
 			header?: never;
 			path?: never;
 			cookie?: never;
@@ -1422,7 +2565,10 @@ interface operations {
 	/** Set a global server's state in this project: inherit the global setting, or write an override */
 	setMcpServerInProject: {
 		parameters: {
-			query?: never;
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
 			header?: never;
 			path?: never;
 			cookie?: never;
@@ -1454,7 +2600,10 @@ interface operations {
 	/** Let a connecting codemode server activate codemode in its file. On removes the key, which is pi's default */
 	setMcpAutoEnableCodemode: {
 		parameters: {
-			query?: never;
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
 			header?: never;
 			path?: never;
 			cookie?: never;
@@ -1483,27 +2632,36 @@ interface operations {
 			};
 		};
 	};
-	readSkill: {
+	/** Stage the files of a picked folder, or one archive, and report the skills in it */
+	stageSkillUpload: {
 		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				name: string;
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
 			};
+			header?: never;
+			path?: never;
 			cookie?: never;
 		};
-		requestBody?: never;
+		requestBody: {
+			content: {
+				"multipart/form-data": {
+					/** Either the files of one picked folder, each named by its path inside that folder, or a single .zip, .tar, .tar.gz or .tgz archive */
+					files?: string[];
+				};
+			};
+		};
 		responses: {
-			/** The skill file, for the edit form */
+			/** The staged skills and what is wrong with each */
 			200: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["SkillInput"];
+					"application/json": components["schemas"]["SkillImportReport"];
 				};
 			};
-			/** The name is not a skill directory */
+			/** The upload was refused */
 			400: {
 				headers: {
 					[name: string]: unknown;
@@ -1512,7 +2670,81 @@ interface operations {
 					"application/json": components["schemas"]["Problem"];
 				};
 			};
-			/** No such skill under the agent home */
+		};
+	};
+	/** Fetch a pasted install command or repository address into staging and report its skills */
+	stageSkillSource: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["SkillImportSource"];
+			};
+		};
+		responses: {
+			/** The staged skills and what is wrong with each */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SkillImportReport"];
+				};
+			};
+			/** The source was refused or could not be fetched */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Install the chosen skills of a staged import, and reload live engines */
+	commitSkillImport: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path: {
+				stageId: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["SkillImportCommit"];
+			};
+		};
+		responses: {
+			/** The skills are installed and the stage is deleted */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The import was refused */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+			/** The staged import has expired */
 			404: {
 				headers: {
 					[name: string]: unknown;
@@ -1523,25 +2755,25 @@ interface operations {
 			};
 		};
 	};
-	deleteSkill: {
+	discardSkillImport: {
 		parameters: {
 			query?: never;
 			header?: never;
 			path: {
-				name: string;
+				stageId: string;
 			};
 			cookie?: never;
 		};
 		requestBody?: never;
 		responses: {
-			/** The skill directory is gone */
+			/** The staged import is deleted */
 			204: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content?: never;
 			};
-			/** The skill could not be removed */
+			/** The stage could not be deleted */
 			400: {
 				headers: {
 					[name: string]: unknown;
@@ -1552,12 +2784,63 @@ interface operations {
 			};
 		};
 	};
-	/** Create or replace a user skill under the agent home */
+	/** One skill file for the edit form: managed fields, the fields it keeps untouched, or the raw text when the frontmatter does not parse */
+	readSkill: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path: {
+				root: components["schemas"]["SkillRoot"];
+				name: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The skill file */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SkillFile"];
+				};
+			};
+			/** The root or project cannot be used */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+			/** No such skill in that root */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Create or update a skill in an editable root. Frontmatter keys the panel does not manage are kept; a file that does not parse is refused */
 	writeSkill: {
 		parameters: {
-			query?: never;
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
 			header?: never;
-			path?: never;
+			path: {
+				root: components["schemas"]["SkillRoot"];
+				name: string;
+			};
 			cookie?: never;
 		};
 		requestBody: {
@@ -1584,10 +2867,509 @@ interface operations {
 			};
 		};
 	};
-	/** Install a package and declare it in pi's settings */
+	deleteSkill: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path: {
+				root: components["schemas"]["SkillRoot"];
+				name: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The skill directory is gone */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The skill could not be removed */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** The parsed SKILL.md of any skill the inventory lists, looked up by its file path, for display only. A path the inventory does not list is refused */
+	readListedSkill: {
+		parameters: {
+			query: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+				/** The SKILL.md path of a skill the inventory lists */
+				filePath: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The skill file */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SkillDocument"];
+				};
+			};
+			/** The project cannot be used */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+			/** No listed skill has that path */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Every file in the folder of a skill the inventory lists, for display. A path the inventory does not list is refused */
+	listListedSkillFiles: {
+		parameters: {
+			query: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+				/** The SKILL.md path of a skill the inventory lists */
+				filePath: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The files, sorted by path */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SkillBundleList"];
+				};
+			};
+			/** The skill folder cannot be listed */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+			/** No listed skill has that path */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** The text of one file in the folder of a skill the inventory lists, SKILL.md included. Binary files, files over 1 MB and unsafe paths are refused */
+	readListedSkillFile: {
+		parameters: {
+			query: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+				/** The SKILL.md path of a skill the inventory lists */
+				filePath: string;
+				/** The file's path inside the skill folder, with / between folders */
+				path: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The file's text */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SkillBundleFile"];
+				};
+			};
+			/** The file cannot be read */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+			/** No listed skill has that path */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** The exact text of one editable skill's SKILL.md, frontmatter included */
+	readSkillRaw: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path: {
+				root: components["schemas"]["SkillRoot"];
+				name: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The file's text */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SkillBundleFile"];
+				};
+			};
+			/** The file cannot be read */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Replace SKILL.md with the given text, byte for byte. The frontmatter must parse, its name must equal the folder name, and its description must pass the description rules */
+	writeSkillRaw: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path: {
+				root: components["schemas"]["SkillRoot"];
+				name: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["SkillBundleFileInput"];
+			};
+		};
+		responses: {
+			/** SKILL.md is written, and live engines reloaded */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The text was refused */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Every file in one editable skill folder, SKILL.md included. Symlinks are not listed; skipped counts them */
+	listSkillFiles: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path: {
+				root: components["schemas"]["SkillRoot"];
+				name: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The files, sorted by path */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SkillBundleList"];
+				};
+			};
+			/** The skill folder cannot be listed */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** The text of one bundled file. SKILL.md, binary files and files over 1 MB are refused */
+	readSkillBundleFile: {
+		parameters: {
+			query: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+				/** The file's path inside the skill folder, with / between folders */
+				path: string;
+			};
+			header?: never;
+			path: {
+				root: components["schemas"]["SkillRoot"];
+				name: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The file's text */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SkillBundleFile"];
+				};
+			};
+			/** The file cannot be read */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Create or replace one bundled text file, creating its folders. SKILL.md, unsafe paths, symlinks and a skill folder over the size limit are refused */
+	writeSkillBundleFile: {
+		parameters: {
+			query: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+				/** The file's path inside the skill folder, with / between folders */
+				path: string;
+			};
+			header?: never;
+			path: {
+				root: components["schemas"]["SkillRoot"];
+				name: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["SkillBundleFileInput"];
+			};
+		};
+		responses: {
+			/** The file is written, and live engines reloaded */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The file was refused */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Delete one bundled file and the folders it leaves empty. SKILL.md is refused */
+	deleteSkillBundleFile: {
+		parameters: {
+			query: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+				/** The file's path inside the skill folder, with / between folders */
+				path: string;
+			};
+			header?: never;
+			path: {
+				root: components["schemas"]["SkillRoot"];
+				name: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The file is gone, and live engines reloaded */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The file could not be removed */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Turn one listed skill off or on with a -path entry in the skills setting. A package skill is refused: turn it off from Packages */
+	setSkillEnabled: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["SkillEnabledInput"];
+			};
+		};
+		responses: {
+			/** The setting is written, and live engines reloaded */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The skill could not be switched */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Add another agent's skill folder to the skills setting, so pi loads it where it is */
+	linkSkillFolder: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["SkillFolderInput"];
+			};
+		};
+		responses: {
+			/** The folder is in the skills setting, and live engines reloaded */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The folder could not be linked */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Remove another agent's skill folder from the skills setting */
+	unlinkSkillFolder: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["SkillFolderInput"];
+			};
+		};
+		responses: {
+			/** The folder is out of the skills setting, and live engines reloaded */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The folder could not be unlinked */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Install a package and declare it in pi's settings, for the home or a project */
 	installPackage: {
 		parameters: {
-			query?: never;
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
 			header?: never;
 			path?: never;
 			cookie?: never;
@@ -1596,6 +3378,7 @@ interface operations {
 			content: {
 				"application/json": {
 					source: string;
+					scope?: "user" | "project";
 				};
 			};
 		};
@@ -1622,6 +3405,9 @@ interface operations {
 		parameters: {
 			query: {
 				source: string;
+				scope?: "user" | "project";
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
 			};
 			header?: never;
 			path?: never;
@@ -1637,6 +3423,41 @@ interface operations {
 				content?: never;
 			};
 			/** No declared package matched */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** What a declared package provides: extensions, skills, prompts and themes */
+	getPackageResources: {
+		parameters: {
+			query: {
+				source: string;
+				scope?: "user" | "project";
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The package's resources */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["PackageResources"];
+				};
+			};
+			/** The read failed */
 			400: {
 				headers: {
 					[name: string]: unknown;
