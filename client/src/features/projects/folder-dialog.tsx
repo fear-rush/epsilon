@@ -73,7 +73,7 @@ function FolderPicker({
 
 	const folders = useQuery({
 		queryKey: projectKeys.folders(browsing, showHidden),
-		queryFn: () => fetchFolders(browsing, showHidden),
+		queryFn: ({ signal }) => fetchFolders(browsing, showHidden, signal),
 		enabled: open,
 	});
 	const chosen = folders.data?.path;

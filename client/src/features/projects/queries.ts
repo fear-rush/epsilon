@@ -15,7 +15,11 @@ export const useTrustProject = () => {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: trustProject,
-		onSuccess: (status) => {
+		onSuccess: (status, requestedPath) => {
+			// The server answers with the resolved folder, which differs from the path
+			// in the URL when a parent is a symlink (`/var` -> `/private/var`). Both keys
+			// read the same answer, so the gate that asked with the URL path sees it too.
+			queryClient.setQueryData(projectKeys.status(requestedPath), status);
 			queryClient.setQueryData(projectKeys.status(status.path), status);
 			void queryClient.invalidateQueries({ queryKey: sessionKeys.all });
 		},

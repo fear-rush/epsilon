@@ -405,9 +405,13 @@ function ProjectGroup({
 	const navigate = useNavigate();
 	const { project, sessions } = entry;
 	const holdsActive = sessions.some((session) => session.id === activeId);
+	// Controlled from the first render: an uncontrolled default that changes after
+	// mount makes Base UI warn, and the user's own toggle must keep working.
+	const [open, setOpen] = useState(holdsActive);
 	return (
 		<Collapsible
-			defaultOpen={holdsActive}
+			open={open}
+			onOpenChange={setOpen}
 			render={<SidebarMenuItem className="animate-enter-rise" />}
 		>
 			<div className="group/project flex items-center gap-1">

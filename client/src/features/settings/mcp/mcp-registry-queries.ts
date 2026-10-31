@@ -18,7 +18,7 @@ export const useRegistrySearch = (source: McpRegistrySource, q: string) =>
 		Cursor
 	>({
 		queryKey: settingsKeys.mcpRegistrySearch(source, q),
-		queryFn: ({ pageParam }) => searchMcpRegistry(source, q, pageParam),
+		queryFn: ({ pageParam, signal }) => searchMcpRegistry(source, q, pageParam, signal),
 		initialPageParam: undefined,
 		getNextPageParam: (page) => page.nextCursor,
 		staleTime: 60_000,
@@ -31,6 +31,8 @@ export const useRegistryServer = (
 	useQuery({
 		queryKey: settingsKeys.mcpRegistryServer(picked?.source ?? "official", picked?.name),
 		queryFn:
-			picked === undefined ? skipToken : () => fetchMcpRegistryServer(picked.source, picked.name),
+			picked === undefined
+				? skipToken
+				: ({ signal }) => fetchMcpRegistryServer(picked.source, picked.name, signal),
 		staleTime: 60_000,
 	});

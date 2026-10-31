@@ -30,10 +30,10 @@ export const useRawFiles = (source: RawSource) => {
 			source.kind === "editable"
 				? settingsKeys.skillFiles(project, source.root, source.name)
 				: settingsKeys.skillListedFiles(project, source.filePath),
-		queryFn: () =>
+		queryFn: ({ signal }) =>
 			source.kind === "editable"
-				? fetchSkillFiles(project, source.root, source.name)
-				: fetchListedSkillFiles(project, source.filePath),
+				? fetchSkillFiles(project, source.root, source.name, signal)
+				: fetchListedSkillFiles(project, source.filePath, signal),
 	});
 };
 
@@ -50,12 +50,12 @@ export const useRawFile = (source: RawSource, path: string | undefined) => {
 		queryFn:
 			path === undefined
 				? skipToken
-				: () => {
+				: ({ signal }) => {
 						if (source.kind === "listed")
-							return fetchListedSkillFile(project, source.filePath, path);
+							return fetchListedSkillFile(project, source.filePath, path, signal);
 						return path === "SKILL.md"
-							? fetchSkillRaw(project, source.root, source.name)
-							: fetchSkillBundleFile(project, source.root, source.name, path);
+							? fetchSkillRaw(project, source.root, source.name, signal)
+							: fetchSkillBundleFile(project, source.root, source.name, path, signal);
 					},
 		gcTime: 0,
 		refetchOnWindowFocus: false,
