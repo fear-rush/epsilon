@@ -1,11 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { PuzzleIcon } from "lucide-react";
 
-import { MasterDetailPlaceholder } from "@/features/settings/kit/master-detail-layout";
+import { DetailPlaceholder } from "@/components/patterns/pane/detail-placeholder";
 
 export const Route = createFileRoute("/settings/skills/")({
-	component: () => (
-		<MasterDetailPlaceholder>
-			Select a skill on the left, or add one below the list.
-		</MasterDetailPlaceholder>
-	),
+	component: () => <DetailPlaceholder icon={PuzzleIcon} title="Select a skill" />,
 });

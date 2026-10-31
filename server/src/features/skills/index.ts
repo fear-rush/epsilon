@@ -1,3 +1,6 @@
 /** What other features may use from skills. */
-export { listSkills } from "./store";
-export { skillViewSchema } from "./contract";
+export { listForeignSkills } from "./foreign";
+export { listSkills, untrustedSkills } from "./inventory";
+export { parseSkillFile } from "./frontmatter";
+export { foreignSkillViewSchema, skillViewSchema } from "./contract";
+export { skillRootDir } from "./root";
