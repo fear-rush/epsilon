@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Block } from "@tanstack/react-router";
 
@@ -86,6 +86,12 @@ function DiscardDialog({
 		setShown(false);
 		const action = pending.current ?? onStay;
 		pending.current = undefined;
+		// Staying changes no route, so nothing needs the close animation's time. Resolving
+		// now also keeps a second click from racing a blocker that is still pending.
+		if (action === onStay) {
+			onStay();
+			return;
+		}
 		window.setTimeout(action, CLOSE_MS);
 	};
 
@@ -183,8 +189,17 @@ export function UnsavedChangesBlock({
 	blocked: () => boolean;
 	subject: string;
 }) {
+	// The router re-registers its history blocker whenever the predicate changes,
+	// and every caller builds that predicate inline. Keep one stable predicate and
+	// read the latest dirty check through it, so a navigation cannot slip through
+	// while the blocker re-registers after a render.
+	const latest = useRef(blocked);
+	useEffect(() => {
+		latest.current = blocked;
+	}, [blocked]);
+	const shouldBlock = useCallback(() => latest.current(), []);
 	return (
-		<Block shouldBlockFn={blocked} enableBeforeUnload={blocked} withResolver>
+		<Block shouldBlockFn={shouldBlock} enableBeforeUnload={shouldBlock} withResolver>
 			{({ status, proceed, reset }) =>
 				status === "blocked" ? (
 					<DiscardDialog subject={subject} onStay={reset} onDiscard={proceed} />

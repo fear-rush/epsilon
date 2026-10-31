@@ -231,6 +231,7 @@ function ServerView({
 							variant="ghost"
 							size="icon-sm"
 							aria-label="Open repository"
+							nativeButton={false}
 							render={<a href={detail.data.repositoryUrl} target="_blank" rel="noreferrer" />}
 						>
 							<ExternalLinkIcon />

@@ -52,6 +52,8 @@ export function DetailPage({
 						<Link
 							to={back.to}
 							aria-label={back.label}
+							// A back link is not the current page, even when its list route matches.
+							activeOptions={{ exact: true }}
 							className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "md:hidden")}
 						>
 							<ChevronLeftIcon />

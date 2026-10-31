@@ -218,7 +218,11 @@ function SignInFlow({
 
 				{authUrl !== undefined && (
 					<div className="animate-enter-fade flex flex-col items-start gap-2">
-						<Button size="sm" render={<a href={authUrl.url} target="_blank" rel="noreferrer" />}>
+						<Button
+							size="sm"
+							nativeButton={false}
+							render={<a href={authUrl.url} target="_blank" rel="noreferrer" />}
+						>
 							<ExternalLinkIcon data-icon="inline-start" />
 							Open the sign-in page
 						</Button>
