@@ -1,12 +1,19 @@
 /**
  * Settings is its own surface: full page, its own navigation, no modal. The root
- * route hides the session sidebar for this path.
+ * route hides the session sidebar for this path. `project` names the trusted
+ * project whose `.pi` the resource sections show beside the home; it stays in
+ * the URL across every settings link, so a reload or a shared link keeps it.
  */
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, retainSearchParams } from "@tanstack/react-router";
+import { z } from "zod";
 
-import { SettingsShell } from "@/features/settings/settings-shell";
+import { SettingsShell } from "@/features/settings/shell/settings-shell";
+
+const searchSchema = z.object({ project: z.string().min(1).optional() });
 
 export const Route = createFileRoute("/settings")({
+	validateSearch: searchSchema,
+	search: { middlewares: [retainSearchParams(["project"])] },
 	component: function SettingsLayout() {
 		return (
 			<SettingsShell>

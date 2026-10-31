@@ -8,8 +8,9 @@ import { z } from "@hono/zod-openapi";
 import { defaultModelSchema } from "../general";
 import { mcpLiveSchema, mcpReachSchema, mcpServerViewSchema } from "../mcp";
 import { packageViewSchema } from "../packages";
+import { projectStatusSchema } from "../projects";
 import { builtinProviderSchema, catalogModelSchema, providerViewSchema } from "../providers";
-import { skillViewSchema } from "../skills";
+import { foreignSkillViewSchema, skillViewSchema } from "../skills";
 
 export const settingsSnapshotSchema = z
 	.object({
@@ -28,9 +29,12 @@ export const settingsSnapshotSchema = z
 		mcpLive: mcpLiveSchema,
 		/** `settings.json` lists `-builtin:mcp`, so no session connects a configured server. */
 		mcpDisabled: z.boolean(),
-		/** The folder Epsilon runs in, and therefore the project `mcp.json` it reads. */
-		projectDir: z.string(),
+		/** The project whose `.pi` this snapshot reads beside the home, or null for the home alone. */
+		project: projectStatusSchema.nullable(),
+		/** Every skill pi sees for the home and the picked project, with why it is or is not active. */
 		skills: z.array(skillViewSchema),
+		/** Skills in Claude Code's and Codex's folders, which pi loads only once a folder is linked. */
+		foreignSkills: z.array(foreignSkillViewSchema),
 		packages: z.array(packageViewSchema),
 		ready: z.boolean(),
 		/** What pi's model runtime could not compose, such as an invalid provider entry. */

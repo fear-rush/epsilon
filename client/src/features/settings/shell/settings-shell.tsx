@@ -2,12 +2,13 @@ import { Link, useMatchRoute } from "@tanstack/react-router";
 import { ArrowLeftIcon, SearchIcon } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 import { Input } from "@/components/ui/input";
-import { SIDEBAR_WIDTH } from "@/components/ui/sidebar";
-import { SETTINGS_GROUPS, SETTINGS_SECTIONS } from "@/features/settings/sections";
-import type { SettingsSection } from "@/features/settings/sections";
+import { PaneBand } from "@/components/patterns/pane/pane-band";
+import { PaneBar } from "@/components/patterns/pane/pane-bar";
+import { SETTINGS_GROUPS, SETTINGS_SECTIONS } from "@/features/settings/shell/sections";
+import type { SettingsSection } from "@/features/settings/shell/sections";
 
 /**
  * The settings surface: its own left navigation, a search field, and one section
@@ -27,7 +28,7 @@ function NavLink({ section, active }: { section: SettingsSection; active: boolea
 		<Link
 			to={section.to}
 			className={cn(
-				"flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
+				"flex items-center gap-2 rounded-md pad-item text-body transition-colors duration-fast",
 				active ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/60",
 			)}
 		>
@@ -37,6 +38,7 @@ function NavLink({ section, active }: { section: SettingsSection; active: boolea
 	);
 }
 
+/** Fills the surface under the root's health banner, which owns connection problems. */
 export function SettingsShell({ children }: { children: ReactNode }) {
 	const matchRoute = useMatchRoute();
 	const [query, setQuery] = useState("");
@@ -46,41 +48,48 @@ export function SettingsShell({ children }: { children: ReactNode }) {
 		matchRoute({ to: section.to, fuzzy: true }) !== false;
 
 	return (
-		<div className="flex h-svh min-h-0 flex-col bg-background">
-			<header className="flex items-center gap-2 border-b px-3 py-2 md:hidden">
-				<Link to="/" aria-label="Back to app" className="p-1 text-muted-foreground">
-					<ArrowLeftIcon className="size-4" />
-				</Link>
-				<span className="text-sm font-medium">Settings</span>
+		<div className="flex h-full min-h-0 animate-enter-fade flex-col bg-background">
+			<header className="md:hidden">
+				<PaneBar
+					leading={
+						<Link to="/" aria-label="Back to app" className="text-muted-foreground">
+							<ArrowLeftIcon className="size-4" />
+						</Link>
+					}
+					title="Settings"
+				/>
 			</header>
 
 			<div className="flex min-h-0 flex-1">
-				<aside
-					style={{ width: SIDEBAR_WIDTH }}
-					className="hidden shrink-0 flex-col gap-4 border-r p-3 md:flex"
-				>
-					<Link
-						to="/"
-						className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground"
-					>
-						<ArrowLeftIcon className="size-4" />
-						Back to app
-					</Link>
-					<div className="relative">
-						<SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-						<Input
-							value={query}
-							placeholder="Search"
-							aria-label="Search settings"
-							className="pl-8"
-							onChange={(event) => setQuery(event.target.value)}
-						/>
-					</div>
-					<nav className="grid gap-4 overflow-y-auto">
+				<aside className="hidden w-nav shrink-0 animate-enter-left flex-col border-r md:flex">
+					<PaneBar
+						leading={
+							<Link
+								to="/"
+								className="flex items-center gap-2 text-body text-muted-foreground transition-colors duration-fast hover:text-foreground"
+							>
+								<ArrowLeftIcon className="size-4" />
+								Back to app
+							</Link>
+						}
+					/>
+					<PaneBand>
+						<div className="relative w-full">
+							<SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
+							<Input
+								value={query}
+								placeholder="Search"
+								aria-label="Search settings"
+								className="pl-8"
+								onChange={(event) => setQuery(event.target.value)}
+							/>
+						</div>
+					</PaneBand>
+					<nav className="grid gap-section overflow-y-auto p-pane">
 						{filtering ? (
-							<div className="grid gap-0.5">
+							<div className="grid gap-row">
 								{results.length === 0 ? (
-									<p className="px-2 text-xs text-muted-foreground">No matching section.</p>
+									<p className="px-2 text-meta text-muted-foreground">No matching section.</p>
 								) : (
 									results.map((section) => (
 										<NavLink key={section.to} section={section} active={active(section)} />
@@ -88,9 +97,15 @@ export function SettingsShell({ children }: { children: ReactNode }) {
 								)}
 							</div>
 						) : (
-							SETTINGS_GROUPS.map((group) => (
-								<div key={group.label} className="grid gap-0.5">
-									<p className="px-2 pb-1 text-xs font-medium text-muted-foreground">
+							SETTINGS_GROUPS.map((group, index) => (
+								<div
+									key={group.label}
+									className={cn(
+										"grid animate-enter-rise gap-0.5",
+										index === 0 ? "enter-delay-1" : "enter-delay-2",
+									)}
+								>
+									<p className="px-2 pb-1 text-meta font-medium text-muted-foreground">
 										{group.label}
 									</p>
 									{group.items.map((section) => (
@@ -103,7 +118,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
 				</aside>
 
 				<div className="flex min-h-0 min-w-0 flex-1 flex-col">
-					<nav className="flex gap-1 overflow-x-auto border-b p-2 md:hidden">
+					<nav className="flex gap-1 overflow-x-auto p-2 md:hidden">
 						{SETTINGS_SECTIONS.map((section) => (
 							<NavLink key={section.to} section={section} active={active(section)} />
 						))}

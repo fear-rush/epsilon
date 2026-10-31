@@ -11,8 +11,9 @@ import type { SessionRegistry } from "../conversation";
 import { readDefaultModel } from "../general";
 import { isMcpTurnedOff, listMcpServers } from "../mcp";
 import { listPackages } from "../packages";
+import { projectStatus } from "../projects";
 import { listBuiltins, listProviders, modelsDocument } from "../providers";
-import { listSkills } from "../skills";
+import { listForeignSkills, listSkills, untrustedSkills } from "../skills";
 import type { SettingsSnapshot } from "./contract";
 
 /**
@@ -34,25 +35,31 @@ const problemText = async (
 	return text === "" ? undefined : text;
 };
 
+/**
+ * `folder` is the picked project, or the chats folder for the home alone (see
+ * `settingsFolder`). Project rows appear only when a project is picked.
+ */
 export const readSettings = async (
-	projectDir: string,
+	folder: string,
 	home: AgentHome,
+	userHome: string,
 	engines: SessionRegistry,
 ): Promise<SettingsSnapshot> => {
+	const project = folder === home.chatsDir ? null : projectStatus(home, folder);
 	const runtime = await modelRuntime(home);
 	const [providers, builtins, models, mcp, mcpDisabled, skills, packages] = await Promise.all([
 		listProviders(home, runtime),
 		listBuiltins(home, runtime),
 		readModelsFrom(runtime),
-		listMcpServers(home, projectDir),
-		isMcpTurnedOff(projectDir, home),
-		listSkills(home),
-		listPackages(projectDir, home),
+		listMcpServers(home, folder),
+		isMcpTurnedOff(folder, home),
+		listSkills(folder, home, project === null ? null : folder),
+		listPackages(folder, home),
 	]);
 	return {
 		home: home.dir,
-		defaultModel: readDefaultModel(projectDir, home),
-		projectDir,
+		defaultModel: readDefaultModel(home),
+		project,
 		providers,
 		builtins,
 		models,
@@ -60,7 +67,8 @@ export const readSettings = async (
 		mcpReach: mcp.reach,
 		mcpLive: engines.mcpLive(mcp.servers.map((server) => server.name)),
 		mcpDisabled,
-		skills,
+		skills: project !== null && !project.trusted ? await untrustedSkills(folder) : skills,
+		foreignSkills: listForeignSkills(folder, home, userHome, project === null ? null : folder),
 		packages,
 		ready: models.length > 0,
 		error: await problemText(home, runtime.getError(), mcp.error),
