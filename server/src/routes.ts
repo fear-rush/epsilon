@@ -9,11 +9,14 @@ import { z } from "zod";
 import type { Deps } from "./deps";
 import { generalRoutes } from "./features/general/routes";
 import { mcpRoutes } from "./features/mcp/routes";
+import { mcpRegistryRoutes } from "./features/mcp-registry/routes";
 import { packagesRoutes } from "./features/packages/routes";
+import { projectsRoutes } from "./features/projects/routes";
 import { providersRoutes } from "./features/providers/routes";
 import { readinessRoutes } from "./features/readiness/routes";
 import { sessionsRoutes } from "./features/sessions/routes";
 import { settingsRoutes } from "./features/settings/routes";
+import { skillImportRoutes } from "./features/skill-import/routes";
 import { skillsRoutes } from "./features/skills/routes";
 
 const healthRoute = createRoute({
@@ -66,10 +69,14 @@ export const mountRoutes = (deps: Deps, contractId: () => string) => {
 	app.openapi(healthRoute, (c) => c.json({ status: "ok" as const }, 200));
 	app.route("/", readinessRoutes(deps));
 	app.route("/", sessionsRoutes(deps));
+	app.route("/", projectsRoutes(deps));
 	app.route("/", settingsRoutes(deps));
 	app.route("/", generalRoutes(deps));
 	app.route("/", providersRoutes(deps));
+	// Before the MCP routes: `/mcp/registry/search` would read as a scope and a name.
+	app.route("/", mcpRegistryRoutes());
 	app.route("/", mcpRoutes(deps));
+	app.route("/", skillImportRoutes(deps));
 	app.route("/", skillsRoutes(deps));
 	app.route("/", packagesRoutes(deps));
 	return app;

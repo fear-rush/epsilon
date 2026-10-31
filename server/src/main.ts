@@ -1,6 +1,6 @@
 /**
  * The only listener, and the only module that reads `process.env`
- * (docs/ARCHITECTURE.md). It chooses the agent home and the project once, builds
+ * (docs/ARCHITECTURE.md). It chooses the agent home once, builds
  * the dependencies every feature receives, and serves. REST goes to the Hono app;
  * `/api/link` upgrades to the browser socket. Listens on loopback only.
  */
@@ -18,19 +18,24 @@ const HOST = "127.0.0.1";
 const SOCKET_PATH = "/api/link";
 
 /**
- * `server/src` in a source run and `server/dist` after a build, so the repo root
- * is two levels up either way. Not `process.cwd()`: `turbo dev` starts this task
- * inside `server/`, and pi reads that as the project, which hides every session
- * the terminal created at the root.
+ * Dev and host are separate on purpose. Under `bun run dev` the launcher names a
+ * sandbox `~`: pi, the folder picker and every child see it as `HOME`, and every
+ * project must live inside it. On a host none of that is set and the real `~` is
+ * used, exactly as a terminal would.
  */
-const repoRoot = resolve(import.meta.dirname, "../..");
+const sandboxHome = process.env.EPSILON_USER_HOME;
+const userHome = resolve(sandboxHome ?? homedir());
+if (sandboxHome !== undefined) process.env.HOME = userHome;
 
 /**
  * The agent home: pi's settings, credentials, extensions, packages and sessions.
  * Chosen here, from our own variable or pi's default, never from an inherited
  * `PI_CODING_AGENT_DIR` (AGENTS.md, Invariants).
  */
-const home = agentHome(resolve(process.env.EPSILON_AGENT_HOME ?? join(homedir(), ".pi", "agent")));
+const home = agentHome(
+	resolve(process.env.EPSILON_AGENT_HOME ?? join(homedir(), ".pi", "agent")),
+	sandboxHome === undefined ? { userHome } : { userHome, projectsRoot: userHome },
+);
 
 /**
  * pi resolves its own paths — including the session list this server reads — from
@@ -40,9 +45,10 @@ const home = agentHome(resolve(process.env.EPSILON_AGENT_HOME ?? join(homedir(),
  */
 process.env.PI_CODING_AGENT_DIR = home.dir;
 
-const projectDir = resolve(process.env.EPSILON_PROJECT ?? repoRoot);
-const engines = new SessionRegistry({ cwd: projectDir, home });
-const deps: Deps = { home, projectDir, engines };
+// No folder is chosen here: a chat runs in the home's chats folder, and a project
+// in whatever folder the operator opens and trusts (docs/DECISIONS.md, Chats and projects).
+const engines = new SessionRegistry(home);
+const deps: Deps = { home, userHome, engines };
 const app = createApp(deps);
 
 const server = Bun.serve<ChatState>({
@@ -73,9 +79,7 @@ const server = Bun.serve<ChatState>({
 	},
 });
 
-console.log(
-	`epsilon on http://${HOST}:${server.port} (socket ${SOCKET_PATH}, project ${projectDir})`,
-);
+console.log(`epsilon on http://${HOST}:${server.port} (socket ${SOCKET_PATH}, home ${home.dir})`);
 
 const shutdown = (): void => {
 	engines.disposeAll();

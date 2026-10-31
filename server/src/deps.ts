@@ -7,8 +7,12 @@ import type { AgentHome } from "./platform/agent-home";
 
 export type Deps = {
 	home: AgentHome;
-	/** Where the agent runs, and therefore which pi sessions belong to this page. */
-	projectDir: string;
+	/**
+	 * The folder that stands for the operator's `~`, for skill folders other agents
+	 * own and the `HOME` an installer child sees. The real home, except under
+	 * `bun run dev`, where it is the sandbox's.
+	 */
+	userHome: string;
 	/** The live engines. The socket and the REST routes must see the same ones. */
 	engines: SessionRegistry;
 };

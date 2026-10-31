@@ -23,8 +23,8 @@ export type OpenApiDocument = ReturnType<ReturnType<typeof mountRoutes>["getOpen
  */
 export const openApiDocument = (): OpenApiDocument => {
 	const home = agentHome("/epsilon-openapi");
-	const engines = new SessionRegistry({ cwd: home.dir, home });
-	return mountRoutes({ home, projectDir: home.dir, engines }, () => "").getOpenAPI31Document({
+	const engines = new SessionRegistry(home);
+	return mountRoutes({ home, userHome: home.dir, engines }, () => "").getOpenAPI31Document({
 		openapi: "3.1.0",
 		info,
 	});

@@ -9,8 +9,8 @@ import { agentHome } from "./platform/agent-home";
 
 const appOnScratchHome = async () => {
 	const home = agentHome(await mkdtemp(join(tmpdir(), "epsilon-app-")));
-	const engines = new SessionRegistry({ cwd: home.dir, home });
-	return createApp({ home, projectDir: home.dir, engines });
+	const engines = new SessionRegistry(home);
+	return createApp({ home, userHome: home.dir, engines });
 };
 
 test("health endpoint responds", async () => {

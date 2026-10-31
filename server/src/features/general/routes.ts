@@ -20,7 +20,7 @@ const defaultModelRoute = createRoute({
 	},
 });
 
-export const generalRoutes = ({ home, projectDir, engines }: Deps) =>
+export const generalRoutes = ({ home, engines }: Deps) =>
 	new OpenAPIHono().openapi(defaultModelRoute, (c) => {
 		const model = c.req.valid("json");
 		return configWrite(c, engines, async () => {
@@ -28,6 +28,6 @@ export const generalRoutes = ({ home, projectDir, engines }: Deps) =>
 			if (runtime.getModel(model.provider, model.modelId) === undefined) {
 				throw new Error(`Model not found: ${model.provider}/${model.modelId}`);
 			}
-			await writeDefaultModel(projectDir, home, model);
+			await writeDefaultModel(home, model);
 		});
 	});
