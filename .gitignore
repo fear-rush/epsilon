@@ -53,3 +53,6 @@ bun.lockb
 
 # The dev loop's own agent home and project.
 .sandbox
+
+# TanStack Router generation cache
+client/.tanstack/

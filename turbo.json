@@ -19,8 +19,8 @@
 				"NODE_ENV",
 				"PORT",
 				"VITE_*",
-				"EPSILON_PROJECT",
 				"EPSILON_AGENT_HOME",
+				"EPSILON_USER_HOME",
 				"PI_CODING_AGENT_DIR"
 			],
 			"dependsOn": ["^build"]

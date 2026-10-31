@@ -15,10 +15,10 @@ import { copyFileSync, existsSync, lstatSync, mkdirSync, unlinkSync } from "node
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
+import { linkSandbox, sandboxRoot as sandbox } from "./sandbox";
+
 const repoRoot = resolve(import.meta.dirname, "..");
-const sandbox = join(repoRoot, ".sandbox");
 const agentHome = join(sandbox, "agent");
-const projectDir = join(sandbox, "project");
 
 /** Both files are writable through Settings, so the sandbox owns copies. */
 const COPIED = ["auth.json", "models.json"];
@@ -48,20 +48,21 @@ const environment = { ...process.env };
 if (useHost) {
 	// The real home, on purpose: reading sessions the terminal created.
 	delete environment.EPSILON_AGENT_HOME;
-	delete environment.EPSILON_PROJECT;
 	console.log("dev: host home, the operator's own pi configuration");
 } else {
+	linkSandbox();
 	mkdirSync(agentHome, { recursive: true });
-	mkdirSync(projectDir, { recursive: true });
 	prepareSandboxConfig();
 	environment.EPSILON_AGENT_HOME = agentHome;
-	environment.EPSILON_PROJECT = projectDir;
+	// The sandbox's own `~`: a fresh host, so the server reads no `~/.agents`,
+	// `~/.claude` or `~/.codex` of the operator's, and installs write none.
+	mkdirSync(join(sandbox, "home"), { recursive: true });
+	environment.EPSILON_USER_HOME = join(sandbox, "home");
 	// An inherited value must not decide which config Epsilon runs on
 	// (AGENTS.md, Invariants). The sandbox clears what it cannot pass explicitly.
 	delete environment.PI_PACKAGE_DIR;
 	delete environment.PI_CODING_AGENT_SESSION_DIR;
-	console.log(`dev: sandbox home ${agentHome}`);
-	console.log(`dev: sandbox project ${projectDir}`);
+	console.log(`dev: sandbox home ${agentHome} (linked as .sandbox)`);
 }
 
 const turbo = join(repoRoot, "node_modules", ".bin", "turbo");

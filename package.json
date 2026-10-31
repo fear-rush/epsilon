@@ -28,7 +28,7 @@
 		"format:check": "oxfmt --check .",
 		"api:generate": "turbo run api:export --filter=server",
 		"routes:generate": "bun run --cwd client routes:generate",
-		"sandbox:clean": "rm -rf .sandbox",
+		"sandbox:clean": "bun run scripts/sandbox.ts clean",
 		"hooks:install": "prek install",
 		"hooks:run": "prek run --all-files",
 		"hooks:update": "prek update"
