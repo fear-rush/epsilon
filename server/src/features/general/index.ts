@@ -1,3 +1,3 @@
 /** What other features may use from general. */
-export { readDefaultModel } from "./store";
-export { defaultModelSchema } from "./contract";
+export { readDefaultModel, readAgentLimits } from "./store";
+export { agentLimitsSchema, defaultModelSchema } from "./contract";

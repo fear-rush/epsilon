@@ -5,7 +5,7 @@
  */
 import { z } from "@hono/zod-openapi";
 
-import { defaultModelSchema } from "../general";
+import { agentLimitsSchema, defaultModelSchema } from "../general";
 import { mcpLiveSchema, mcpReachSchema, mcpServerViewSchema } from "../mcp";
 import { packageViewSchema } from "../packages";
 import { projectStatusSchema } from "../projects";
@@ -16,6 +16,14 @@ export const settingsSnapshotSchema = z
 	.object({
 		home: z.string(),
 		defaultModel: defaultModelSchema.nullable(),
+		/** The agent-wide compaction and retry limits, and pi's model scope. */
+		agent: agentLimitsSchema,
+		/** What `enabledModels` matches right now, and pi's diagnostics for it. */
+		modelScope: z.object({
+			matched: z.number().int().nonnegative(),
+			available: z.number().int().nonnegative(),
+			diagnostics: z.array(z.string()),
+		}),
 		/** Providers with an entry or a credential. The full registry is in builtins. */
 		providers: z.array(providerViewSchema),
 		/** Every provider pi ships, for the add picker. */

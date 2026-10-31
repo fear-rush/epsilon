@@ -25,6 +25,7 @@ import type {
 } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
+import { globalSettings } from "../../platform/pi";
 import type { McpLive } from "../mcp";
 import { mcpLiveOf } from "../mcp";
 import { Dialogs } from "./dialogs";
@@ -82,6 +83,10 @@ export class SessionFrames {
  */
 const IDLE_DISPOSE_MS = 10_000;
 
+/** pi's model scope for this home; null means every model is offered. */
+const patternsOf = (home: AgentHome): string[] | null =>
+	globalSettings(home).getEnabledModels() ?? null;
+
 /** The two files pi writes a transcript as, and the type a browser saves each under. */
 export type ExportFormat = "html" | "jsonl";
 
@@ -119,6 +124,7 @@ export class LiveSession {
 	readonly sessionId: string;
 	readonly place: Place;
 	private readonly onEmpty: () => void;
+	private readonly home: AgentHome;
 	private readonly frames: SessionFrames;
 	private readonly dialogs: Dialogs;
 	private readonly bridge: UiBridge;
@@ -128,10 +134,11 @@ export class LiveSession {
 	private models: SnapshotModel[] = [];
 	private idleTimer: ReturnType<typeof setTimeout> | undefined;
 
-	private constructor(sessionId: string, place: Place, onEmpty: () => void) {
+	private constructor(sessionId: string, place: Place, home: AgentHome, onEmpty: () => void) {
 		this.sessionId = sessionId;
 		this.place = place;
 		this.onEmpty = onEmpty;
+		this.home = home;
 		this.frames = new SessionFrames(() => this.onFrameCount());
 		this.dialogs = new Dialogs(
 			sessionId,
@@ -146,7 +153,12 @@ export class LiveSession {
 	}
 
 	static async open(options: LiveSessionOptions): Promise<LiveSession> {
-		const session = new LiveSession(options.sessionId, options.place, options.onEmpty);
+		const session = new LiveSession(
+			options.sessionId,
+			options.place,
+			options.home,
+			options.onEmpty,
+		);
 		const agent = await createEngine({
 			sessionId: options.sessionId,
 			cwd: options.cwd,
@@ -157,7 +169,7 @@ export class LiveSession {
 		});
 		session.agent = agent;
 		session.unsubscribe = agent.subscribe((event) => session.receive(event));
-		session.models = await readModelsFrom(agent.modelRuntime);
+		session.models = (await readModelsFrom(agent.modelRuntime, patternsOf(session.home))).scoped;
 		return session;
 	}
 
@@ -393,7 +405,7 @@ export class LiveSession {
 	async reload(): Promise<void> {
 		const agent = this.engine;
 		await agent.reload();
-		this.models = await readModelsFrom(agent.modelRuntime);
+		this.models = (await readModelsFrom(agent.modelRuntime, patternsOf(this.home))).scoped;
 		this.resync();
 	}
 

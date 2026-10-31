@@ -20,6 +20,7 @@ import type {
 	SessionMessageEntry,
 	SessionStats as PiSessionStats,
 } from "@earendil-works/pi-coding-agent";
+import { resolveModelScopeWithDiagnostics } from "@earendil-works/pi-coding-agent";
 import { isVisibleMessage } from "shared";
 import type {
 	ContextUsage,
@@ -40,16 +41,73 @@ type NamedModel = { provider: string; id: string; name: string };
 const toSnapshot = (models: readonly NamedModel[]): SnapshotModel[] =>
 	models.map((model) => ({ provider: model.provider, id: model.id, name: model.name }));
 
-export const readModelsFrom = async (runtime: ModelRuntime): Promise<SnapshotModel[]> => {
+/** What `enabledModels` narrowed the catalog to, and why a pattern matched nothing. */
+type ModelScope = {
+	matched: number;
+	available: number;
+	diagnostics: string[];
+};
+
+/** Every model the engine accepts, the ones the picker may offer, and the scope. */
+export type ModelOffers = {
+	models: SnapshotModel[];
+	scoped: SnapshotModel[];
+	scope: ModelScope | undefined;
+};
+
+/**
+ * pi resolves `enabledModels` itself (`resolveModelScopeFromModels`, the same
+ * matcher `--models` uses), so Epsilon only renders the answer. A scope that hides
+ * the model a session is already using is not applied to that session's current
+ * model; `buildSnapshot` keeps it in the list rather than lying about it.
+ */
+export const readModelsFrom = async (
+	runtime: ModelRuntime,
+	patterns: string[] | null = null,
+): Promise<ModelOffers> => {
+	const available = await availableModels(runtime);
+	if (patterns === null || patterns.length === 0) {
+		return { models: toSnapshot(available), scoped: toSnapshot(available), scope: undefined };
+	}
 	try {
-		const available = await runtime.getAllAvailable(undefined, {
+		const result = await resolveModelScopeWithDiagnostics(patterns, runtime, {
 			signal: AbortSignal.timeout(AUTH_CHECK_TIMEOUT_MS),
 		});
-		return toSnapshot(available);
+		return {
+			models: toSnapshot(available),
+			scoped: toSnapshot(result.scopedModels.map((entry) => entry.model)),
+			scope: {
+				matched: result.scopedModels.length,
+				available: available.length,
+				diagnostics: result.diagnostics.map(
+					(diagnostic) => `${diagnostic.pattern}: ${diagnostic.message}`,
+				),
+			},
+		};
+	} catch {
+		// A scope that cannot be resolved must not hide the catalog: offer every
+		// model and say so, instead of an empty picker with no reason.
+		return {
+			models: toSnapshot(available),
+			scoped: toSnapshot(available),
+			scope: {
+				matched: available.length,
+				available: available.length,
+				diagnostics: ["The model scope could not be resolved, so every model is offered."],
+			},
+		};
+	}
+};
+
+const availableModels = async (runtime: ModelRuntime) => {
+	try {
+		return await runtime.getAllAvailable(undefined, {
+			signal: AbortSignal.timeout(AUTH_CHECK_TIMEOUT_MS),
+		});
 	} catch {
 		// Slow or failing auth resolution falls back to pi's cache: fewer models is
 		// better than an empty picker.
-		return toSnapshot(runtime.getAvailableSnapshot());
+		return runtime.getAvailableSnapshot();
 	}
 };
 
@@ -129,6 +187,17 @@ const branchesOf = (agent: AgentSession): SnapshotBranch[] => {
 	return branches;
 };
 
+/** The model in use stays offered even when `enabledModels` does not match it. */
+const withCurrent = (models: SnapshotModel[], model: AgentSession["model"]): SnapshotModel[] => {
+	if (model === undefined) return models;
+	const current = { provider: model.provider, id: model.id, name: model.name };
+	return models.some(
+		(candidate) => candidate.provider === current.provider && candidate.id === current.id,
+	)
+		? models
+		: [...models, current];
+};
+
 export const buildSnapshot = (
 	agent: AgentSession,
 	models: SnapshotModel[],
@@ -162,8 +231,9 @@ export const buildSnapshot = (
 		},
 		messages: agent.messages.filter(isVisibleMessage),
 		// The list the session carries, so the picker and `set_model` agree
-		// (`readModelsFrom`). Reading pi's cache here is how they drifted apart.
-		models,
+		// (`readModelsFrom`). A scope that excludes the model in use keeps it in
+		// the list: hiding the truth would make the picker contradict the header.
+		models: withCurrent(models, model),
 		commands: commandsOf(agent),
 	};
 };

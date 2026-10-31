@@ -501,6 +501,33 @@
 					"defaultModel": {
 						"$ref": "#/components/schemas/DefaultModel"
 					},
+					"agent": {
+						"$ref": "#/components/schemas/AgentLimits"
+					},
+					"modelScope": {
+						"type": "object",
+						"properties": {
+							"matched": {
+								"type": "integer",
+								"minimum": 0
+							},
+							"available": {
+								"type": "integer",
+								"minimum": 0
+							},
+							"diagnostics": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							}
+						},
+						"required": [
+							"matched",
+							"available",
+							"diagnostics"
+						]
+					},
 					"providers": {
 						"type": "array",
 						"items": {
@@ -575,6 +602,8 @@
 				"required": [
 					"home",
 					"defaultModel",
+					"agent",
+					"modelScope",
 					"providers",
 					"builtins",
 					"models",
@@ -605,6 +634,47 @@
 				"required": [
 					"provider",
 					"modelId"
+				]
+			},
+			"AgentLimits": {
+				"type": "object",
+				"properties": {
+					"compactionEnabled": {
+						"type": "boolean"
+					},
+					"compactionReserveTokens": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"compactionKeepRecentTokens": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"retryEnabled": {
+						"type": "boolean"
+					},
+					"retryMaxRetries": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"enabledModels": {
+						"type": [
+							"array",
+							"null"
+						],
+						"items": {
+							"type": "string",
+							"minLength": 1
+						}
+					}
+				},
+				"required": [
+					"compactionEnabled",
+					"compactionReserveTokens",
+					"compactionKeepRecentTokens",
+					"retryEnabled",
+					"retryMaxRetries",
+					"enabledModels"
 				]
 			},
 			"ProviderView": {
@@ -4137,6 +4207,40 @@
 					},
 					"400": {
 						"description": "The project is not a trusted folder",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/agent-limits": {
+			"put": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "setAgentLimits",
+				"description": "Write the agent-wide compaction and retry limits and the model scope; a project can still override them",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AgentLimits"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "pi's settings.json now holds these limits"
+					},
+					"400": {
+						"description": "settings.json could not be parsed, so nothing was written",
 						"content": {
 							"application/json": {
 								"schema": {

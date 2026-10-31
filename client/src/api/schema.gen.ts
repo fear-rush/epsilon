@@ -321,6 +321,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/settings/agent-limits": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Write the agent-wide compaction and retry limits and the model scope; a project can still override them */
+		put: operations["setAgentLimits"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/settings/default-model": {
 		parameters: {
 			query?: never;
@@ -1007,6 +1024,12 @@ export interface components {
 		SettingsSnapshot: {
 			home: string;
 			defaultModel: components["schemas"]["DefaultModel"];
+			agent: components["schemas"]["AgentLimits"];
+			modelScope: {
+				matched: number;
+				available: number;
+				diagnostics: string[];
+			};
 			providers: components["schemas"]["ProviderView"][];
 			builtins: components["schemas"]["BuiltinProvider"][];
 			models: components["schemas"]["SnapshotModel"][];
@@ -1027,6 +1050,14 @@ export interface components {
 			provider: string;
 			modelId: string;
 		}) | null;
+		AgentLimits: {
+			compactionEnabled: boolean;
+			compactionReserveTokens: number;
+			compactionKeepRecentTokens: number;
+			retryEnabled: boolean;
+			retryMaxRetries: number;
+			enabledModels: (string[]) | null;
+		};
 		ProviderView: {
 			id: string;
 			name: string;
@@ -2307,6 +2338,38 @@ interface operations {
 				};
 			};
 			/** The project is not a trusted folder */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Write the agent-wide compaction and retry limits and the model scope; a project can still override them */
+	setAgentLimits: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["AgentLimits"];
+			};
+		};
+		responses: {
+			/** pi's settings.json now holds these limits */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** settings.json could not be parsed, so nothing was written */
 			400: {
 				headers: {
 					[name: string]: unknown;
