@@ -47,7 +47,7 @@ async function failTurn(page: import("@playwright/test").Page, text: string): Pr
 		.getByRole("button", { name: /DeepSeek V4.1 Flash|Dead Model/u })
 		.first()
 		.click();
-	await page.getByRole("menuitemradio", { name: "Dead Model" }).click();
+	await page.getByRole("option", { name: "Dead Model" }).click();
 	await send(page, text);
 	await expect(page.getByText(/e2e-dead\/dead-model:/u)).toBeVisible({ timeout: 90_000 });
 	await waitIdle(page);

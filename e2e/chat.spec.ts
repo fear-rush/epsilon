@@ -103,7 +103,7 @@ test.describe("conversation", () => {
 		await waitIdle(page);
 
 		await page.getByRole("button", { name: /DeepSeek V4.1 Flash/u }).click();
-		await page.getByRole("menuitemradio", { name: "Qwen 3.7 Flash" }).click();
+		await page.getByRole("option", { name: "Qwen 3.7 Flash" }).click();
 		await expect(page.getByRole("button", { name: /Qwen 3.7 Flash/u })).toBeVisible();
 
 		await send(page, "Reply with exactly: SECOND-MODEL");
@@ -257,7 +257,7 @@ test.describe("conversation", () => {
 			timeout: 60_000,
 		});
 		// The composer is in steer mode, so Enter interrupts instead of queueing a new turn.
-		await expect(composer(page)).toHaveAttribute("placeholder", /Steer the run/u);
+		await expect(composer(page)).toHaveAttribute("placeholder", /Steer this run/u);
 		await send(page, "STEER-MARK-9911");
 		await expect(composer(page)).toHaveValue("");
 
@@ -290,7 +290,7 @@ test.describe("conversation", () => {
 		await page.goto("/");
 		await startChat(page, "Reply with exactly: DEAD-SETUP");
 		await page.getByRole("button", { name: /DeepSeek V4.1 Flash/u }).click();
-		await page.getByRole("menuitemradio", { name: "Dead Model" }).click();
+		await page.getByRole("option", { name: "Dead Model" }).click();
 		await expect(page.getByRole("button", { name: /Dead Model/u })).toBeVisible();
 
 		await send(page, "Say something through the dead provider.");
@@ -298,7 +298,7 @@ test.describe("conversation", () => {
 		await waitIdle(page);
 
 		await page.getByRole("button", { name: /Dead Model/u }).click();
-		await page.getByRole("menuitemradio", { name: "DeepSeek V4.1 Flash" }).click();
+		await page.getByRole("option", { name: "DeepSeek V4.1 Flash" }).click();
 		await send(page, "Reply with exactly: RECOVERED-OK");
 		await expect(assistantBubbles(page).last()).toContainText("RECOVERED-OK", {
 			timeout: REPLY_TIMEOUT,
