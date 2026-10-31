@@ -9,6 +9,7 @@ import type {
 	Command,
 	DialogAnswer,
 	Place,
+	PromptBehavior,
 	ProtocolErrorCode,
 	ServerFrame,
 	SnapshotModel,
@@ -94,8 +95,6 @@ export class LiveSession {
 	private unsubscribe: (() => void) | undefined;
 	/** The models the picker offers, refreshed when the engine's providers change. */
 	private models: SnapshotModel[] = [];
-	private streaming = false;
-	private bashUnsettled = false;
 	private idleTimer: ReturnType<typeof setTimeout> | undefined;
 
 	private constructor(sessionId: string, place: Place, onEmpty: () => void) {
@@ -243,7 +242,7 @@ export class LiveSession {
 		const agent = this.engine;
 		switch (command.type) {
 			case "prompt":
-				await this.prompt(command.text);
+				await this.prompt(command.text, command.behavior);
 				return;
 			case "steer":
 				await agent.steer(command.text, undefined, { source: "interactive" });
@@ -256,11 +255,40 @@ export class LiveSession {
 				await agent.executeBash(command.command, undefined, {
 					excludeFromContext: command.excludeFromContext,
 				});
-				if (this.streaming) this.bashUnsettled = true;
+				this.resync();
+				return;
+			case "abort_bash":
+				agent.abortBash();
 				this.resync();
 				return;
 			case "reload":
 				await this.reload();
+				return;
+			case "compact":
+				// pi aborts the running turn before it compacts, so a busy session takes
+				// this. A refusal (`Nothing to compact`) is pi's message to the tab.
+				await agent.compact(command.instructions);
+				this.resync();
+				return;
+			case "abort_compaction":
+				agent.abortCompaction();
+				this.resync();
+				return;
+			case "set_auto_compaction":
+				agent.setAutoCompactionEnabled(command.enabled);
+				this.resync();
+				return;
+			case "cancel_retry":
+				agent.abortRetry();
+				this.resync();
+				return;
+			case "set_auto_retry":
+				agent.setAutoRetryEnabled(command.enabled);
+				this.resync();
+				return;
+			case "clear_queue":
+				agent.clearQueue();
+				this.resync();
 				return;
 			case "set_model": {
 				// Resolve against the list the browser was offered, so a pick can never
@@ -305,13 +333,17 @@ export class LiveSession {
 	/**
 	 * `prompt` resolves when the run finishes, but the browser only needs to know
 	 * that pi accepted it. The preflight hook gives that answer before streaming.
+	 * `behavior` is what lets a message join a run that is already going: pi refuses
+	 * a prompt with no queue behavior while streaming, and `steer` cannot carry an
+	 * extension command at all.
 	 */
-	private prompt(text: string): Promise<void> {
+	private prompt(text: string, behavior: PromptBehavior | undefined): Promise<void> {
 		return new Promise((resolve, reject) => {
 			let accepted = false;
 			void this.engine
 				.prompt(text, {
 					source: "interactive",
+					streamingBehavior: behavior,
 					preflightResult: () => {
 						accepted = true;
 						resolve();
@@ -343,13 +375,11 @@ export class LiveSession {
 	}
 
 	private receive(event: AgentSessionEvent): void {
-		if (event.type === "agent_start") this.streaming = true;
 		if (event.type === "agent_settled") {
-			this.streaming = false;
-			if (this.bashUnsettled) {
-				this.bashUnsettled = false;
-				this.resync();
-			}
+			// Token totals, context usage and the queue all move with a run, so a
+			// settled engine re-reads the snapshot once instead of leaving the tab on
+			// numbers from its attach.
+			this.resync();
 			this.scheduleIdle();
 		}
 		try {
@@ -377,11 +407,14 @@ export class LiveSession {
 		this.frames.emit(this.snapshotFrame());
 	}
 
-	/** Keep an unwatched session while it runs, waits for an answer or compacts. */
+	/** Keep an unwatched session while it runs, waits for an answer, retries or compacts. */
 	private get busy(): boolean {
 		return (
 			this.agent !== undefined &&
-			(this.agent.isStreaming || this.agent.isCompacting || this.dialogs.needsInput)
+			(this.agent.isStreaming ||
+				this.agent.isCompacting ||
+				this.agent.isRetrying ||
+				this.dialogs.needsInput)
 		);
 	}
 

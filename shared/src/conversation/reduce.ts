@@ -71,6 +71,13 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				availableThinkingLevels: frame.snapshot.state.availableThinkingLevels,
 				place: frame.snapshot.state.place,
 				codingTools: frame.snapshot.state.codingTools,
+				contextUsage: frame.snapshot.state.contextUsage,
+				stats: frame.snapshot.state.stats,
+				isRetrying: frame.snapshot.state.isRetrying,
+				isBashRunning: frame.snapshot.state.isBashRunning,
+				autoCompaction: frame.snapshot.state.autoCompaction,
+				autoRetry: frame.snapshot.state.autoRetry,
+				queue: frame.snapshot.state.queue,
 				model:
 					current === undefined
 						? undefined

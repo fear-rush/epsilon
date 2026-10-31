@@ -27,9 +27,13 @@ extension's config resolution, exposure, OAuth or permission hooks.
 ## Socket vocabulary
 
 The browser socket carries Epsilon's own commands and zod shapes, defined in `shared/`.
-Commands are the ones the page can send (`prompt`, `steer`, `abort`, `bash`,
-`set_model`, `reload`); each is answered by `command-result` naming the command. A
-frame change bumps `PROTOCOL_VERSION`, and a tab built for another version reloads.
+Commands are the ones the page can send: a prompt and the queue behavior it joins a
+running turn with, the aborts (turn, retry, compaction, bash), bash itself, the model,
+thinking-level and coding-tool switches, manual compaction, the auto-compaction and
+auto-retry toggles, the queue clear, and reload. `commandNameSchema` in
+`shared/src/protocol/frames.ts` is the list. Each is answered by `command-result`
+naming the command. A frame change bumps `PROTOCOL_VERSION`, and a tab built for
+another version reloads.
 
 Why: with no RPC envelope under it, pi's RPC types would be a translation layer, and a
 change to pi's private types would become a change to Epsilon's public contract.

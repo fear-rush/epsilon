@@ -62,6 +62,16 @@ Other facts worth having before embedding:
   `mode === "tui"`.
 - `InputSource` is `"interactive" | "rpc" | "extension"`. A prompt typed by a person
   in the browser is `"interactive"`.
+- Adding to a run that is already going goes through `prompt`, never `steer`: while
+  streaming, `prompt` needs `streamingBehavior` (`"steer"` interrupts after the
+  current turn's tools, `"followUp"` waits for the run to settle), and it dispatches a
+  registered extension command immediately. `steer()` and `followUp()` throw
+  `Extension command "/x" cannot be queued`.
+- `getContextUsage()` is `undefined` until a model is chosen, and answers `null`
+  tokens and percent after a compaction until an assistant has responded again.
+  `getSessionStats()` sums every entry in the session file, including the history a
+  compaction removed. `compact()` aborts the running turn before it compacts, and
+  answers `Nothing to compact (session too small)` when it cannot.
 - A `uiContext` is required for dialogs; without one a `confirm` has nowhere to go.
   `ExtensionUIContext` has 25 methods, in three groups:
   - **answer** a person: `select`, `confirm`, `input`, `editor`
@@ -82,10 +92,14 @@ Other facts worth having before embedding:
   `importFromJsonl`, and replaces the active session. Subscriptions belong to the old
   session and must be rebound. Epsilon uses the `SessionManager` half and opens one
   session per engine.
-- `AgentSession` also has `setSessionName`, `navigateTree`, `exportToHtml`,
-  `getSessionStats`, `getContextUsage`, `compact`, `abortCompaction`,
-  `abortRetry`, `executeBash`, `abortBash`, `getAllTools` and the model and thinking
-  setters. A socket feature uses one of these instead of inventing an RPC command.
+- `AgentSession` also carries the controls around a turn: `prompt` (with
+  `streamingBehavior`), `steer`, `followUp`, `abort`, `clearQueue`,
+  `getSteeringMessages`, `getFollowUpMessages`, `getSessionStats`, `getContextUsage`,
+  `compact`, `abortCompaction`, `setAutoCompactionEnabled`, `abortRetry`,
+  `setAutoRetryEnabled`, `isRetrying`, `executeBash`, `abortBash`, `isBashRunning`,
+  `cacheWarmingStatus`, `setSessionName`, `navigateTree`, `exportToHtml`,
+  `getAllTools` and the model and thinking setters. A socket feature uses one of these
+  instead of inventing an RPC command.
 - `toJsonEvent` is the transformation between a live event and the JSON the reducer
   consumes: `message_update` loses its `partial` payload and `toolcall_start` gains
   `id` and `toolName`. It is **not exported**. A host carries the transform itself

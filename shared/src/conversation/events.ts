@@ -104,6 +104,13 @@ export const reduceEvent = (
 			return { ...state, busy: false, streaming: null };
 		case "thinking_level_changed":
 			return { ...state, thinkingLevel: event.level };
+		case "queue_update":
+			// pi says which prompts it still holds after every queue change, so the
+			// composer shows what a run accepted instead of guessing.
+			return {
+				...state,
+				queue: { steering: [...event.steering], followUp: [...event.followUp] },
+			};
 		case "message_start":
 			if (event.message.role !== "assistant") return state;
 			return { ...state, streaming: { text: "", thinking: "" } };

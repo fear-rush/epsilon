@@ -47,7 +47,34 @@
 				"kind": "project",
 				"path": "/fixture/project"
 			},
-			"codingTools": true
+			"codingTools": true,
+			"contextUsage": {
+				"tokens": 24118,
+				"contextWindow": 1000000,
+				"percent": 2.4118
+			},
+			"stats": {
+				"tokens": {
+					"input": 188,
+					"output": 129,
+					"cacheRead": 36224,
+					"cacheWrite": 0,
+					"total": 36541
+				},
+				"cost": 0.00016448,
+				"userMessages": 2,
+				"assistantMessages": 4,
+				"toolCalls": 2,
+				"totalMessages": 10
+			},
+			"isRetrying": false,
+			"isBashRunning": false,
+			"autoCompaction": true,
+			"autoRetry": true,
+			"queue": {
+				"steering": [],
+				"followUp": []
+			}
 		},
 		"models": [],
 		"messages": [

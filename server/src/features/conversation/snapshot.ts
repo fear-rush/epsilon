@@ -13,9 +13,21 @@
  * The auth-checked call resolves credentials per provider, so it is bounded: a
  * provider whose check hangs must not hold a snapshot hostage.
  */
-import type { AgentSession, ModelRuntime } from "@earendil-works/pi-coding-agent";
+import type {
+	AgentSession,
+	ContextUsage as PiContextUsage,
+	ModelRuntime,
+	SessionStats as PiSessionStats,
+} from "@earendil-works/pi-coding-agent";
 import { isVisibleMessage } from "shared";
-import type { Place, Snapshot, SnapshotCommand, SnapshotModel } from "shared";
+import type {
+	ContextUsage,
+	Place,
+	Snapshot,
+	SnapshotCommand,
+	SnapshotModel,
+	SessionStats,
+} from "shared";
 
 import { hasCodingTools } from "./engine";
 
@@ -61,6 +73,33 @@ const commandsOf = (agent: AgentSession): SnapshotCommand[] => {
 	return commands;
 };
 
+/**
+ * pi answers `null` for both the token count and the percentage while the context is
+ * unknown: the state right after a compaction, until a model responds again. Before
+ * a model is chosen there is no reading at all. Neither is a number, so an unknown
+ * context is absent rather than zero.
+ */
+const contextUsageOf = (usage: PiContextUsage | undefined): ContextUsage | undefined => {
+	if (usage === undefined || usage.tokens === null || usage.percent === null) return undefined;
+	return { tokens: usage.tokens, contextWindow: usage.contextWindow, percent: usage.percent };
+};
+
+/** pi's totals, narrowed to what the page shows; `cost` is in the provider's currency. */
+const statsOf = (stats: PiSessionStats): SessionStats => ({
+	tokens: {
+		input: stats.tokens.input,
+		output: stats.tokens.output,
+		cacheRead: stats.tokens.cacheRead,
+		cacheWrite: stats.tokens.cacheWrite,
+		total: stats.tokens.total,
+	},
+	cost: stats.cost,
+	userMessages: stats.userMessages,
+	assistantMessages: stats.assistantMessages,
+	toolCalls: stats.toolCalls,
+	totalMessages: stats.totalMessages,
+});
+
 export const buildSnapshot = (
 	agent: AgentSession,
 	models: SnapshotModel[],
@@ -80,6 +119,16 @@ export const buildSnapshot = (
 			availableThinkingLevels: agent.getAvailableThinkingLevels(),
 			place,
 			codingTools: hasCodingTools(agent),
+			contextUsage: contextUsageOf(agent.getContextUsage()),
+			stats: statsOf(agent.getSessionStats()),
+			isRetrying: agent.isRetrying,
+			isBashRunning: agent.isBashRunning,
+			autoCompaction: agent.autoCompactionEnabled,
+			autoRetry: agent.autoRetryEnabled,
+			queue: {
+				steering: [...agent.getSteeringMessages()],
+				followUp: [...agent.getFollowUpMessages()],
+			},
 		},
 		messages: agent.messages.filter(isVisibleMessage),
 		// The list the session carries, so the picker and `set_model` agree
