@@ -90,6 +90,8 @@ export type ConversationState = {
 	busy: boolean;
 	/** pi is replacing the transcript with a summary. */
 	isCompacting: boolean;
+	/** A change made to this chat's file by another process, until a reload or a new snapshot. */
+	drift?: string;
 	/** What the model picker may offer, from the last snapshot. */
 	models: SnapshotModel[];
 	/** What `/` may expand to, from the last snapshot's `get_commands`. */

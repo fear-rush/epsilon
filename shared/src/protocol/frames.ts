@@ -15,7 +15,7 @@ import type { JsonAgentSessionEvent } from "../pi";
  * Bumped whenever a frame's shape changes. The client sends it in `hello` and
  * reloads on a mismatch instead of guessing.
  */
-export const PROTOCOL_VERSION = 11;
+export const PROTOCOL_VERSION = 12;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([
@@ -52,6 +52,7 @@ export const commandNameSchema = z.enum([
 	"set_thinking_level",
 	"set_coding_tools",
 	"reload",
+	"reload_session",
 	"compact",
 	"abort_compaction",
 	"set_auto_compaction",
@@ -136,6 +137,8 @@ export const commandSchema = z.discriminatedUnion("type", [
 	/** Turn the tools that run commands and change files on or off for this session. */
 	z.object({ type: z.literal("set_coding_tools"), enabled: z.boolean() }),
 	z.object({ type: z.literal("reload") }),
+	/** Drop the engine and read the session file again, for a change made outside Epsilon. */
+	z.object({ type: z.literal("reload_session") }),
 	/** Compact now, with optional instructions for the summary. */
 	z.object({ type: z.literal("compact"), instructions: z.string().optional() }),
 	z.object({ type: z.literal("abort_compaction") }),
@@ -150,7 +153,12 @@ export const commandSchema = z.discriminatedUnion("type", [
 	 * prompt starts a sibling branch; a user message hands its text back for the
 	 * composer, which already has it, so only the move matters here.
 	 */
-	z.object({ type: z.literal("navigate_tree"), entryId: z.string().min(1) }),
+	/** Go back to an earlier user message, optionally summarising the branch left behind. */
+	z.object({
+		type: z.literal("navigate_tree"),
+		entryId: z.string().min(1),
+		summarize: z.boolean().optional(),
+	}),
 ]);
 
 export type Command = z.infer<typeof commandSchema>;
@@ -328,6 +336,16 @@ export const serverFrameSchema = z.discriminatedUnion("t", [
 	}),
 	z.object({ t: z.literal("dialog-closed"), sessionId: z.string(), id: z.string() }),
 	z.object({ t: z.literal("ui"), sessionId: z.string(), request: extensionDisplaySchema }),
+	/**
+	 * A change the tab could not have made: another process wrote this chat's file.
+	 * `kind` names what the row should offer, so a new kind is a protocol change.
+	 */
+	z.object({
+		t: z.literal("notice"),
+		sessionId: z.string(),
+		kind: z.literal("external-change"),
+		text: z.string(),
+	}),
 	z.object({
 		t: z.literal("command-result"),
 		sessionId: z.string(),

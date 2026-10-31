@@ -212,9 +212,30 @@ Why: moving the leaf is a command on the live engine, and the text coming back t
 composer is what makes the new branch start from the message the operator picked
 rather than a retyped copy of it.
 
-Not: branch summarisation (`navigateTree`'s `summarize`), which is a model call in the
-middle of a navigation, and a tree of the other branches. A fork at a message or a clone
-is a second session file rather than a command on this one (Session copies).
+The picker can also ask pi to summarise the branch being left (`navigateTree`'s
+`summarize`). That is a model call in the middle of the navigation, so it is a checkbox
+that defaults to off, and the result is a summary message in the transcript.
+
+Not: a tree of the other branches, so an abandoned branch stays reachable only through
+its session file. A fork at a message or a clone is a second session file rather than a
+command on this one (Session copies).
+
+## Outside changes
+
+pi reads a session file once and then holds the transcript it built, so another
+process writing that file (a terminal `pi` resuming or renaming the chat, an editor,
+a restored backup) is invisible to a live engine. Merging those bytes into the loaded
+transcript would invent an ordering that is not in the file.
+
+A live engine therefore watches its own file. A change while nothing runs is reported
+once, with a reload action; the reload disposes the engine and rebuilds it from disk.
+Changes during a run are that engine's own writes and are ignored.
+
+Why: a silently stale transcript is worse than a visible reload, and pi exposes no way
+to merge an external write into a loaded session.
+
+Not: polling the session list for it (that reports a file moved, not what it says).
+Writing the reload as a second session (the file is the one the operator is looking at).
 
 ## Session copies
 

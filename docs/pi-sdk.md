@@ -446,6 +446,12 @@ errors ([DECISIONS.md](DECISIONS.md), Configure in the dashboard).
 Behaviour that cost time and that no type or test shows. Each is a fact about pi,
 Turborepo or the runtime.
 
+- **A session file is read once.** An engine loads its transcript at creation and does
+  not re-read the file. Another process writing it is invisible until the engine is
+  replaced; `reload()` re-reads resources, not the session. A host that wants to show
+  the file as it is must watch it and rebuild the engine (`navigateTree`'s `summarize`
+  is a model call during a navigation, so it is slower than plain navigation and can
+  fail when no model is available).
 - **A bash result is a message, not an event.** `executeBash` appends a
   `bashExecution` message without emitting `message_start`/`message_end`, and holds
   it until the run settles when streaming. Re-read the snapshot after a `bash`
