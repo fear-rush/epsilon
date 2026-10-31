@@ -1,25 +1,18 @@
-import { PlusIcon, PencilIcon, Trash2Icon, Undo2Icon } from "lucide-react";
+import { InfoIcon, PlusIcon, PencilIcon, Trash2Icon, Undo2Icon } from "lucide-react";
 import { useState } from "react";
 import { PROVIDER_APIS, parseProviderApi } from "shared";
 import type { ThinkingLevel } from "shared";
 import type { ReactNode } from "react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Tip } from "@/components/patterns/tip";
 import { testProvider } from "@/api/endpoints";
-import { AnimatedRow } from "@/features/settings/kit/animated-row";
-import { SettingsBlock, SettingsGroup } from "@/features/settings/kit/settings-section";
-import { useAnimatedRows } from "@/features/settings/kit/use-animated-rows";
+import { AnimatedRow } from "@/components/patterns/section/animated-row";
+import { DeleteDialog } from "@/components/patterns/dialog/confirm-dialogs";
+import { InlineStatus } from "@/components/patterns/status/inline-status";
+import { Notice } from "@/components/patterns/status/notice";
+import { Section } from "@/components/patterns/section/section";
+import { useAnimatedRows } from "@/components/patterns/section/use-animated-rows";
 import { testInputOf } from "./provider-draft";
 import type { ProviderDraft } from "./provider-draft";
 import { ProviderImportDialog } from "./provider-import-dialog";
@@ -99,18 +92,9 @@ export function ProviderModels({
 	};
 
 	return (
-		<SettingsGroup
-			title={`Models (${count})`}
-			description={
-				// Only a signed-in account needs the explanation: pi owns the list, the account
-				// decides what of it is usable.
-				!catalogEditable && detail?.auth.credential === "oauth"
-					? "pi ships these models; the account you signed in with decides which of them you can use."
-					: undefined
-			}
-		>
-			<SettingsBlock>
-				<div className="grid gap-3">
+		<Section title={`Models (${count})`}>
+			<div className="pad-row">
+				<div className="grid gap-field">
 					{catalogEditable && (
 						<div className="flex flex-wrap items-center gap-2">
 							<Button type="button" variant="outline" size="sm" onClick={startAdd}>
@@ -127,20 +111,15 @@ export function ProviderModels({
 								Fetch models from provider
 							</Button>
 							{!importable && (
-								<span className="text-xs text-muted-foreground">
-									This API family has no shared model list; add models by hand.
-								</span>
+								<InlineStatus icon={InfoIcon}>No shared model list for this API.</InlineStatus>
 							)}
 						</div>
 					)}
 
 					{builtin && custom && (
-						<Alert>
-							<AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-								<span>
-									Saving replaces the {detail?.catalog.length ?? 0}-model catalog pi ships for this
-									provider with this list.
-								</span>
+						<Notice
+							tone="warning"
+							action={
 								<Button
 									type="button"
 									variant="outline"
@@ -149,14 +128,16 @@ export function ProviderModels({
 								>
 									Use pi's catalog
 								</Button>
-							</AlertDescription>
-						</Alert>
+							}
+						>
+							Saving replaces the {detail?.catalog.length ?? 0} models pi ships.
+						</Notice>
 					)}
 
 					<div className="max-h-80 divide-y overflow-y-auto rounded-xl border">
 						{custom ? (
 							draft.models.length === 0 ? (
-								<p className="p-3 text-sm text-muted-foreground">No models yet.</p>
+								<p className="pad-row text-body text-muted-foreground">No models yet.</p>
 							) : (
 								<CustomModelRows
 									models={draft.models}
@@ -165,9 +146,7 @@ export function ProviderModels({
 								/>
 							)
 						) : catalog.length === 0 ? (
-							<p className="p-3 text-sm text-muted-foreground">
-								pi exposes no model for this provider.
-							</p>
+							<p className="pad-row text-body text-muted-foreground">No models.</p>
 						) : (
 							<CatalogModelRows
 								catalog={catalog}
@@ -184,14 +163,13 @@ export function ProviderModels({
 						)}
 					</div>
 				</div>
-			</SettingsBlock>
+			</div>
 
 			{editing !== undefined && (
 				<ProviderModelDialog
 					key={`${editing.index ?? "new"}-${editing.model?.id ?? ""}`}
 					onClose={() => setEditing(undefined)}
 					title={editing.index === undefined ? "Add a model" : "Edit model"}
-					description="Only the id is required. The rest uses pi's defaults when empty."
 					model={editing.model}
 					providerApi={api}
 					lockId={editing.index !== undefined}
@@ -217,7 +195,6 @@ export function ProviderModels({
 					key={`override-${overriding.id}`}
 					onClose={() => setOverriding(undefined)}
 					title={`Override ${overriding.name ?? overriding.id}`}
-					description="Changes apply to this model without replacing the catalog pi ships."
 					model={overriding}
 					providerApi={api}
 					lockId
@@ -246,31 +223,18 @@ export function ProviderModels({
 				/>
 			)}
 
-			<AlertDialog
+			<DeleteDialog
 				open={replacing !== undefined}
+				title="Replace pi's catalog?"
+				description={`${replacing === "import" ? "Fetching models" : "Adding a model"} replaces the ${detail?.catalog.length ?? 0} models pi ships. Overrides are cleared.`}
+				error={null}
+				confirmLabel="Replace catalog"
 				onOpenChange={(open) => {
 					if (!open) setReplacing(undefined);
 				}}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Replace pi's catalog for this provider?</AlertDialogTitle>
-						<AlertDialogDescription>
-							{replacing === "import" ? "Fetching models" : "Adding a model"} switches this provider
-							to a custom catalog. Saving then replaces the {detail?.catalog.length ?? 0} models pi
-							ships for it. Existing overrides are cleared. Use an override instead if you only want
-							to change one model.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction variant="destructive" onClick={confirmReplace}>
-							Replace catalog
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
-		</SettingsGroup>
+				onConfirm={confirmReplace}
+			/>
+		</Section>
 	);
 }
 
@@ -282,10 +246,10 @@ export function ProviderModels({
 
 function ModelRow({ name, id, children }: { name: string; id: string; children: ReactNode }) {
 	return (
-		<div className="flex items-center gap-2 px-3 py-2">
+		<div className="flex items-center gap-2 pad-item">
 			<span className="min-w-0 flex-1">
-				<span className="block truncate text-sm font-medium">{name}</span>
-				<span className="block truncate text-xs text-muted-foreground">{id}</span>
+				<span className="block truncate text-body font-medium">{name}</span>
+				<span className="block truncate text-meta text-muted-foreground">{id}</span>
 			</span>
 			{children}
 		</div>
@@ -306,24 +270,28 @@ function CustomModelRows({
 	return models.map((model, index) => (
 		<AnimatedRow key={`${model.id}-${index}`} closing={closing === index}>
 			<ModelRow name={model.name ?? model.id} id={model.id}>
-				<Button
-					type="button"
-					variant="ghost"
-					size="icon-sm"
-					aria-label={`Edit ${model.name ?? model.id}`}
-					onClick={() => onEdit(index, model)}
-				>
-					<PencilIcon />
-				</Button>
-				<Button
-					type="button"
-					variant="destructive"
-					size="icon-sm"
-					aria-label={`Remove ${model.name ?? model.id}`}
-					onClick={() => remove(index)}
-				>
-					<Trash2Icon />
-				</Button>
+				<Tip label={`Edit ${model.name ?? model.id}`}>
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon-sm"
+						aria-label={`Edit ${model.name ?? model.id}`}
+						onClick={() => onEdit(index, model)}
+					>
+						<PencilIcon />
+					</Button>
+				</Tip>
+				<Tip label={`Remove ${model.name ?? model.id}`}>
+					<Button
+						type="button"
+						variant="destructive"
+						size="icon-sm"
+						aria-label={`Remove ${model.name ?? model.id}`}
+						onClick={() => remove(index)}
+					>
+						<Trash2Icon />
+					</Button>
+				</Tip>
 			</ModelRow>
 		</AnimatedRow>
 	));
@@ -346,25 +314,29 @@ function CatalogModelRows({
 		return (
 			<ModelRow key={model.id} name={name} id={model.id}>
 				{override !== undefined && <Badge variant="secondary">Override</Badge>}
-				<Button
-					type="button"
-					variant="ghost"
-					size="icon-sm"
-					aria-label={override === undefined ? `Override ${name}` : `Edit override for ${name}`}
-					onClick={() => onEdit(model, override)}
-				>
-					<PencilIcon />
-				</Button>
-				{override !== undefined && (
+				<Tip label={override === undefined ? `Override ${name}` : `Edit override for ${name}`}>
 					<Button
 						type="button"
 						variant="ghost"
 						size="icon-sm"
-						aria-label={`Clear override for ${name}`}
-						onClick={() => onClear(model)}
+						aria-label={override === undefined ? `Override ${name}` : `Edit override for ${name}`}
+						onClick={() => onEdit(model, override)}
 					>
-						<Undo2Icon />
+						<PencilIcon />
 					</Button>
+				</Tip>
+				{override !== undefined && (
+					<Tip label={`Clear override for ${name}`}>
+						<Button
+							type="button"
+							variant="destructive"
+							size="icon-sm"
+							aria-label={`Clear override for ${name}`}
+							onClick={() => onClear(model)}
+						>
+							<Undo2Icon />
+						</Button>
+					</Tip>
 				)}
 			</ModelRow>
 		);

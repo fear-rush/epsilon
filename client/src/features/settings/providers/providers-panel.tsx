@@ -1,7 +1,7 @@
-import { Link, useMatchRoute } from "@tanstack/react-router";
+import { useMatchRoute } from "@tanstack/react-router";
 import { ChevronDownIcon, LogInIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -10,11 +10,13 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MasterListPanel } from "@/features/settings/kit/master-list-panel";
+import { ListItem } from "@/components/patterns/list/list-item";
+import { ListPane } from "@/components/patterns/list/list-pane";
+import { MasterDetail } from "@/components/patterns/pane/master-detail";
+import { Notice } from "@/components/patterns/status/notice";
 import { useSettings } from "@/features/settings/queries";
 import { AddProviderDialog } from "./add-provider-dialog";
 import type { AddMode } from "./add-provider-dialog";
-import { MasterDetailLayout } from "@/features/settings/kit/master-detail-layout";
 
 /**
  * The left side of the provider editor: configured providers, the models of the
@@ -22,13 +24,7 @@ import { MasterDetailLayout } from "@/features/settings/kit/master-detail-layout
  * entry or when it has a credential, never just because pi ships it.
  */
 
-function ProvidersPanel({
-	selectedId,
-	editing,
-}: {
-	selectedId: string | undefined;
-	editing: boolean;
-}) {
+function ProvidersPanel({ selectedId }: { selectedId: string | undefined }) {
 	const settings = useSettings();
 	const [query, setQuery] = useState("");
 	const [addMode, setAddMode] = useState<AddMode>("key");
@@ -42,11 +38,15 @@ function ProvidersPanel({
 	);
 
 	return (
-		<MasterListPanel
+		<ListPane
 			title="Providers"
 			count={providers.length}
-			editing={editing}
-			error={settings.data?.error}
+			error={settings.error}
+			notices={
+				settings.data?.error === undefined ? undefined : (
+					<Notice tone="error">{settings.data.error}</Notice>
+				)
+			}
 			query={query}
 			onQueryChange={setQuery}
 			searchLabel="Search providers"
@@ -99,28 +99,18 @@ function ProvidersPanel({
 				</>
 			}
 		>
-			{visible.map((provider) => (
-				<Link
-					key={provider.id}
-					to="/settings/providers/$providerId"
-					params={{ providerId: provider.id }}
-					className={cn(
-						"flex items-center gap-2 rounded-md px-2 py-2 transition-colors",
-						selectedId === provider.id ? "bg-muted" : "hover:bg-muted/60",
-					)}
-				>
-					<span className="min-w-0 flex-1">
-						<span className="block truncate text-sm font-medium">{provider.name}</span>
-						{!provider.custom && (
-							<span className="block truncate text-xs text-muted-foreground">pi default</span>
-						)}
-					</span>
-					<span className="shrink-0 text-xs text-muted-foreground">
-						{provider.modelCount} {provider.modelCount === 1 ? "model" : "models"}
-					</span>
-				</Link>
-			))}
-		</MasterListPanel>
+			<div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-row animate-enter-left">
+				{visible.map((provider) => (
+					<ListItem
+						key={provider.id}
+						link={{ to: "/settings/providers/$providerId", params: { providerId: provider.id } }}
+						name={provider.name}
+						description={provider.custom ? undefined : "pi default"}
+						selected={selectedId === provider.id}
+					/>
+				))}
+			</div>
+		</ListPane>
 	);
 }
 
@@ -131,10 +121,5 @@ export function ProvidersLayout() {
 	const selectedId = matched === false ? undefined : matched.providerId;
 	const adding = matchRoute({ to: "/settings/providers/new" }) !== false;
 	const editing = selectedId !== undefined || adding;
-	return (
-		<MasterDetailLayout
-			editing={editing}
-			list={<ProvidersPanel selectedId={selectedId} editing={editing} />}
-		/>
-	);
+	return <MasterDetail editing={editing} list={<ProvidersPanel selectedId={selectedId} />} />;
 }

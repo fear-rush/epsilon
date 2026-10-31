@@ -3,24 +3,19 @@
  * stored credential; the browser never sees the key. Only the OpenAI families and
  * Anthropic expose a list in this shape, so Google asks for models by hand.
  */
+import { InboxIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { providerModelsEndpoint } from "shared";
 import type { ProviderApi } from "shared";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DialogFrame } from "@/components/patterns/dialog/dialog-frame";
+import { LoadingState } from "@/components/patterns/status/loading-state";
+import { Notice } from "@/components/patterns/status/notice";
+import { StatusView } from "@/components/patterns/status/status-view";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Spinner } from "@/components/ui/spinner";
 import { useDialogMotion } from "@/hooks/use-dialog-motion";
 import { probeKeys } from "@/api/keys";
 import { importProviderModels } from "@/api/endpoints";
@@ -67,84 +62,75 @@ export function ProviderImportDialog({
 		});
 
 	return (
-		<Dialog
+		<DialogFrame
 			open={dialog.open}
 			onOpenChange={(next) => {
 				if (!next) close();
 			}}
-		>
-			<DialogContent className="sm:max-w-lg">
-				<DialogHeader>
-					<DialogTitle>Fetch models from provider</DialogTitle>
-					<DialogDescription>
-						Models read from {endpoint ?? baseUrl}. Nothing is written until you save.
-					</DialogDescription>
-				</DialogHeader>
-				{models.isPending ? (
-					<div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
-						<Spinner />
-						Reading the model list…
-					</div>
-				) : models.error !== null ? (
-					<Alert variant="destructive">
-						<AlertDescription>{models.error.message}</AlertDescription>
-					</Alert>
-				) : models.data === undefined ? null : (
-					<form
-						onSubmit={(event) => {
-							event.preventDefault();
-							if (!dialog.open) return;
-							onAdd(models.data.filter((model) => selected.has(model.id)));
-							close();
-						}}
+			size="md"
+			title="Fetch models from provider"
+			description={endpoint ?? baseUrl}
+			footer={
+				<>
+					<Button type="button" variant="destructive" onClick={close}>
+						Cancel
+					</Button>
+					<Button
+						type="submit"
+						form="import-form"
+						disabled={models.data === undefined || models.data.length === 0}
 					>
-						<div className="max-h-72 overflow-y-auto rounded-xl border p-2">
-							{models.data.length === 0 ? (
-								<p className="p-2 text-sm text-muted-foreground">
-									The endpoint returned no models.
-								</p>
-							) : (
-								<FieldGroup className="gap-1">
-									{models.data.map((model) => (
-										<Field
-											key={model.id}
-											orientation="horizontal"
-											className="rounded-md px-2 py-1.5 hover:bg-muted/60"
-										>
-											<Checkbox
-												id={`import-${model.id}`}
-												checked={selected.has(model.id)}
-												onCheckedChange={() =>
-													setPicked(() => {
-														const next = new Set(selected);
-														if (next.has(model.id)) next.delete(model.id);
-														else next.add(model.id);
-														return next;
-													})
-												}
-											/>
-											<FieldLabel
-												htmlFor={`import-${model.id}`}
-												className="min-w-0 flex-1 truncate font-normal"
-											>
-												{model.id}
-											</FieldLabel>
-										</Field>
-									))}
-								</FieldGroup>
-							)}
-						</div>
-						<DialogFooter className="mt-3">
-							<Button type="button" variant="ghost" onClick={close}>
-								Cancel
-							</Button>
-							<Button type="submit" disabled={models.data.length === 0}>
-								Add selected
-							</Button>
-						</DialogFooter>
-					</form>
-				)}
-			</DialogContent>
-		</Dialog>
+						Add selected
+					</Button>
+				</>
+			}
+		>
+			{models.isPending ? (
+				<LoadingState label="Reading the model list…" />
+			) : models.error !== null ? (
+				<Notice tone="error">{models.error.message}</Notice>
+			) : models.data === undefined ? null : models.data.length === 0 ? (
+				<StatusView icon={InboxIcon} title="No models returned" />
+			) : (
+				<form
+					id="import-form"
+					onSubmit={(event) => {
+						event.preventDefault();
+						if (!dialog.open) return;
+						onAdd(models.data.filter((model) => selected.has(model.id)));
+						close();
+					}}
+				>
+					<FieldGroup className="gap-row">
+						{models.data.map((model) => (
+							<Field
+								key={model.id}
+								orientation="horizontal"
+								className="rounded-md pad-item hover:bg-muted/60"
+							>
+								<Checkbox
+									id={`import-${model.id}`}
+									checked={selected.has(model.id)}
+									onCheckedChange={() =>
+										setPicked(() => {
+											const next = new Set(selected);
+											if (next.has(model.id)) next.delete(model.id);
+											else next.add(model.id);
+											return next;
+										})
+									}
+								/>
+								<FieldLabel
+									htmlFor={`import-${model.id}`}
+									className="min-w-0 flex-1 truncate font-normal"
+								>
+									{model.id}
+								</FieldLabel>
+							</Field>
+						))}
+					</FieldGroup>
+				</form>
+			)}
+		</DialogFrame>
 	);
 }

@@ -14,12 +14,11 @@ import {
 	KeyRoundIcon,
 	LogInIcon,
 	LogOutIcon,
-	TriangleAlertIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Notice } from "@/components/patterns/status/notice";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -50,7 +49,7 @@ import {
 	startProviderLogin,
 } from "@/api/endpoints";
 import { useProviderLogin, useSettingsRefresh } from "@/features/settings/queries";
-import { SettingsBlock, SettingsGroup } from "@/features/settings/kit/settings-section";
+import { Section } from "@/components/patterns/section/section";
 import type { ProviderDetail, ProviderLoginQuestion, ProviderLoginSnapshot } from "@/api/types";
 
 /** The account a run belongs to, from the provider detail. */
@@ -109,8 +108,8 @@ function SignInQuestion({
 
 	if (question.kind === "select") {
 		return (
-			<div className="settle-in flex flex-col gap-2">
-				<p className="text-sm font-medium">{question.message}</p>
+			<div className="animate-enter-fade flex flex-col gap-2">
+				<p className="text-body font-medium">{question.message}</p>
 				<ItemGroup>
 					{(question.options ?? []).map((option) => (
 						<Item
@@ -145,7 +144,7 @@ function SignInQuestion({
 	const inputId = `login-answer-${question.id}`;
 	return (
 		<form
-			className="settle-in"
+			className="animate-enter-fade"
 			onSubmit={(event) => {
 				event.preventDefault();
 				if (value !== "" && !answering) onAnswer(question.id, value);
@@ -218,19 +217,19 @@ function SignInFlow({
 				</Item>
 
 				{authUrl !== undefined && (
-					<div className="settle-in flex flex-col items-start gap-2">
+					<div className="animate-enter-fade flex flex-col items-start gap-2">
 						<Button size="sm" render={<a href={authUrl.url} target="_blank" rel="noreferrer" />}>
 							<ExternalLinkIcon data-icon="inline-start" />
 							Open the sign-in page
 						</Button>
 						{authUrl.instructions !== undefined && (
-							<p className="text-xs text-muted-foreground">{authUrl.instructions}</p>
+							<p className="text-meta text-muted-foreground">{authUrl.instructions}</p>
 						)}
 					</div>
 				)}
 
 				{deviceCode !== undefined && (
-					<div className="settle-in">
+					<div className="animate-enter-fade">
 						<Item variant="outline" size="sm">
 							<ItemMedia variant="icon">
 								<KeyRoundIcon />
@@ -258,7 +257,7 @@ function SignInFlow({
 				)}
 
 				{flow.notices.length > 0 && (
-					<ul className="settle-in flex flex-col gap-1 text-xs text-muted-foreground">
+					<ul className="animate-enter-fade flex flex-col gap-1 text-meta text-muted-foreground">
 						{flow.notices.slice(-3).map((notice, index) => (
 							<li key={`${index}-${notice.message}`}>
 								{notice.message}
@@ -360,8 +359,8 @@ function SignInBlock({ detail }: { detail: ProviderDetail }) {
 
 	return (
 		<>
-			<SettingsGroup title="Account">
-				<SettingsBlock>
+			<Section title="Account">
+				<div className="pad-row">
 					<div className="flex flex-col gap-3">
 						{running && account !== undefined ? (
 							<SignInFlow
@@ -375,20 +374,17 @@ function SignInBlock({ detail }: { detail: ProviderDetail }) {
 						) : (
 							// Arriving back after a flow: the card fades in instead of popping. A
 							// first view of the page is not animated, so it matches its neighbours.
-							<div className={cn("flex flex-col gap-3", returned && "settle-in")}>
+							<div className={cn("flex flex-col gap-3", returned && "animate-enter-fade")}>
 								<div className="flex flex-col gap-1">
-									<p className="text-sm font-medium">{inUse.title}</p>
-									<p className="text-xs text-muted-foreground">{inUse.note}</p>
+									<p className="text-body font-medium">{inUse.title}</p>
+									<p className="text-meta text-muted-foreground">{inUse.note}</p>
 								</div>
 
 								{flow?.status === "failed" && (
-									<Alert variant="destructive">
-										<TriangleAlertIcon />
-										<AlertDescription>{flow.error ?? "The sign-in failed."}</AlertDescription>
-									</Alert>
+									<Notice tone="error">{flow.error ?? "The sign-in failed."}</Notice>
 								)}
 								{flow?.status === "cancelled" && (
-									<p className="text-xs text-muted-foreground">{flow.error}</p>
+									<p className="text-meta text-muted-foreground">{flow.error}</p>
 								)}
 
 								<div className="flex flex-wrap items-center gap-2">
@@ -404,7 +400,7 @@ function SignInBlock({ detail }: { detail: ProviderDetail }) {
 									)}
 									{detail.auth.credential !== undefined && (
 										<Button
-											variant="outline"
+											variant="destructive"
 											disabled={signOut.isPending}
 											onClick={() => signOut.mutate()}
 										>
@@ -420,15 +416,10 @@ function SignInBlock({ detail }: { detail: ProviderDetail }) {
 							</div>
 						)}
 
-						{error !== undefined && (
-							<Alert variant="destructive">
-								<TriangleAlertIcon />
-								<AlertDescription className="break-words">{error}</AlertDescription>
-							</Alert>
-						)}
+						{error !== undefined && <Notice tone="error">{error}</Notice>}
 					</div>
-				</SettingsBlock>
-			</SettingsGroup>
+				</div>
+			</Section>
 
 			<AlertDialog open={confirming} onOpenChange={setConfirming}>
 				<AlertDialogContent>

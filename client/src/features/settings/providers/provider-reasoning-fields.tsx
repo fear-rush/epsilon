@@ -1,5 +1,4 @@
 import type { ProviderApi, ThinkingLevel } from "shared";
-import { ChevronDownIcon } from "lucide-react";
 
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import {
@@ -12,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import type { ReasoningCompat } from "@/api/types";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { CollapsibleSection } from "@/components/patterns/section/collapsible-section";
 import { Input } from "@/components/ui/input";
 import { THINKING_LEVELS, THINKING_LEVEL_LABELS } from "./reasoning";
 import type { LevelRow, ReasoningForm } from "./reasoning";
@@ -122,18 +121,10 @@ export function ReasoningCompatFields({
 	onChange: (compat: ReasoningCompat) => void;
 }) {
 	if (api === undefined) {
-		return (
-			<p className="text-sm text-muted-foreground">
-				Choose an API family to set how it carries a reasoning level.
-			</p>
-		);
+		return <p className="text-body text-muted-foreground">Choose an API family first.</p>;
 	}
 	if (api === "google-generative-ai") {
-		return (
-			<p className="text-sm text-muted-foreground">
-				Google chooses its thinking control from the model id. It needs no compatibility field here.
-			</p>
-		);
+		return <p className="text-body text-muted-foreground">Google needs no compatibility field.</p>;
 	}
 
 	if (api === "anthropic-messages") {
@@ -246,50 +237,40 @@ export function ModelReasoningFields({
 	};
 
 	return (
-		<Collapsible className="rounded-xl border" defaultOpen={hasConfig}>
-			<CollapsibleTrigger className="group/reasoning flex w-full cursor-pointer items-center justify-between gap-2 rounded-[inherit] px-3 py-2.5 text-sm font-medium text-muted-foreground select-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
-				Reasoning effort
-				<ChevronDownIcon className="size-4 transition-transform group-aria-expanded/reasoning:rotate-180" />
-			</CollapsibleTrigger>
-			<CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 data-starting-style:h-0 data-ending-style:h-0">
-				<div className="grid gap-3 px-3 pt-1 pb-3">
-					<p className="text-sm text-muted-foreground">
-						The level's provider value. A blank value uses pi's default; uncheck a level the model
-						does not offer.
-					</p>
-					<div className="grid gap-2">
-						{THINKING_LEVELS.map((level) => (
-							<div key={level} className="grid items-center gap-2 sm:grid-cols-[10rem_1fr]">
-								<Field orientation="horizontal" className="w-auto">
-									<Checkbox
-										id={`model-level-${level}`}
-										checked={form.levels[level].offered}
-										onCheckedChange={(checked) => setLevel(level, { offered: checked === true })}
-									/>
-									<FieldLabel htmlFor={`model-level-${level}`} className="font-normal">
-										{THINKING_LEVEL_LABELS[level]}
-									</FieldLabel>
-								</Field>
-								<Input
-									value={form.levels[level].value}
-									disabled={!form.levels[level].offered}
-									placeholder={defaultsFor(level) ? "pi default" : level}
-									aria-label={`${THINKING_LEVEL_LABELS[level]} provider value`}
-									onChange={(event) => setLevel(level, { value: event.target.value })}
+		<CollapsibleSection title="Reasoning effort" defaultOpen={hasConfig}>
+			<div className="grid gap-field">
+				<div className="grid gap-2">
+					{THINKING_LEVELS.map((level) => (
+						<div key={level} className="grid items-center gap-2 sm:grid-cols-2">
+							<Field orientation="horizontal" className="w-auto">
+								<Checkbox
+									id={`model-level-${level}`}
+									checked={form.levels[level].offered}
+									onCheckedChange={(checked) => setLevel(level, { offered: checked === true })}
 								/>
-							</div>
-						))}
-					</div>
-					<div className="grid gap-3 border-t pt-3">
-						<ReasoningCompatFields
-							compat={form.compat}
-							api={api}
-							idPrefix="model"
-							onChange={(compat) => update({ compat })}
-						/>
-					</div>
+								<FieldLabel htmlFor={`model-level-${level}`} className="font-normal">
+									{THINKING_LEVEL_LABELS[level]}
+								</FieldLabel>
+							</Field>
+							<Input
+								value={form.levels[level].value}
+								disabled={!form.levels[level].offered}
+								placeholder={defaultsFor(level) ? "pi default" : level}
+								aria-label={`${THINKING_LEVEL_LABELS[level]} provider value`}
+								onChange={(event) => setLevel(level, { value: event.target.value })}
+							/>
+						</div>
+					))}
 				</div>
-			</CollapsibleContent>
-		</Collapsible>
+				<div className="grid gap-field border-t pt-4">
+					<ReasoningCompatFields
+						compat={form.compat}
+						api={api}
+						idPrefix="model"
+						onChange={(compat) => update({ compat })}
+					/>
+				</div>
+			</div>
+		</CollapsibleSection>
 	);
 }

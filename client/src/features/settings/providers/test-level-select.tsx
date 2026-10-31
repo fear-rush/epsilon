@@ -1,5 +1,5 @@
 /** The level a provider test should send, plus the connection-only default. */
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 import {
 	Select,

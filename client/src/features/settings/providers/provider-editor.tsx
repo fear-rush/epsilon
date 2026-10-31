@@ -4,47 +4,53 @@
  */
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
-import { ChevronDownIcon } from "lucide-react";
 import { useState } from "react";
 import type { ThinkingLevel } from "shared";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { DetailPage } from "@/components/patterns/pane/detail-page";
+import { errorView } from "@/components/patterns/status/error-view";
+import { LoadingState } from "@/components/patterns/status/loading-state";
+import { Notice } from "@/components/patterns/status/notice";
+import { StatusView } from "@/components/patterns/status/status-view";
+import { CollapsibleSection } from "@/components/patterns/section/collapsible-section";
 import { useProviderDetail } from "@/features/settings/queries";
 import { useSettings } from "@/features/settings/queries";
 import { deleteProvider, saveProvider, testProvider } from "@/api/endpoints";
 import { useSettingsRefresh } from "@/features/settings/queries";
-import { DeleteDialog } from "@/features/settings/kit/dialogs";
-import { DetailLoader } from "@/features/settings/kit/detail-loader";
-import { FormFooter, FormPage } from "@/features/settings/kit/form-page";
-import { UnsavedChangesBlock } from "@/features/settings/kit/dialogs";
-import { useDraftForm } from "@/features/settings/kit/use-draft-form";
-import { PairRows } from "@/features/settings/kit/pair-rows";
+import { DeleteDialog } from "@/components/patterns/dialog/confirm-dialogs";
+import { ProviderActions } from "./provider-footer";
+import { UnsavedChangesBlock } from "@/components/patterns/dialog/confirm-dialogs";
+import { useDraftForm } from "@/components/patterns/form/use-draft-form";
+import { PairRows } from "@/components/patterns/section/pair-rows";
 import { draftOf, inputOf, testInputOf } from "./provider-draft";
 import { providerIdFromName, providerNamesInUse, uniqueProviderId } from "./provider-draft";
 import { providerFieldErrors, providerFields } from "./provider-validation";
 import type { ProviderField } from "./provider-validation";
 import type { ProviderDraft } from "./provider-draft";
 import { ProviderConnection } from "./provider-connection";
-import { CancelDialog } from "@/features/settings/kit/dialogs";
+import { CancelDialog } from "@/components/patterns/dialog/confirm-dialogs";
 import { ProviderModels } from "./provider-models";
 import { ProviderSignIn } from "./provider-sign-in";
 import { ProviderTestMenu } from "./provider-test-menu";
 import type { ProviderDetail, ProviderModelInput } from "@/api/types";
 
+const BACK = { to: "/settings/providers", label: "Providers" } as const;
+
 export function ProviderEditor({ providerId }: { providerId?: string }) {
 	const query = useProviderDetail(providerId);
-	return (
-		<DetailLoader
-			query={query}
-			reading={providerId !== undefined}
-			noun="provider"
-			backTo="/settings/providers"
-			backLabel="providers"
-		>
-			{(detail) => <ProviderForm key={detail?.id} detail={detail} />}
-		</DetailLoader>
-	);
+	if (providerId === undefined) return <ProviderForm detail={undefined} />;
+	if (query.isPending || query.error !== null || query.data === undefined) {
+		return (
+			<DetailPage title="Provider" back={BACK}>
+				{query.error !== null ? (
+					<StatusView {...errorView(query.error)} />
+				) : (
+					<LoadingState label="Reading the provider…" />
+				)}
+			</DetailPage>
+		);
+	}
+	return <ProviderForm key={query.data.id} detail={query.data} />;
 }
 
 function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
@@ -180,57 +186,40 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 	);
 
 	return (
-		<FormPage
-			backTo="/settings/providers"
-			backLabel="Providers"
+		<DetailPage
 			title={detail?.name ?? "New provider"}
+			back={BACK}
+			footerStatus={
+				form.dirty ? "Unsaved changes" : detail === undefined ? "Not saved yet" : undefined
+			}
 			footer={
-				<>
-					{testResult !== undefined && (
-						<div className="shrink-0 border-t">
-							<div className="mx-auto w-full max-w-5xl px-5 py-3 sm:px-8">
-								<Alert variant={testResult.ok ? "success" : "destructive"} className="settle-in">
-									<AlertDescription className="break-words">{testResult.message}</AlertDescription>
-								</Alert>
-							</div>
-						</div>
-					)}
-					<FormFooter
-						dirty={form.dirty}
-						isNew={detail === undefined}
-						saving={save.isPending}
-						onSave={submit}
-						onCancel={() => form.setCancelOpen(true)}
-						onDelete={() => {
-							remove.reset();
-							form.setDeleteOpen(true);
-						}}
-						extra={
-							<ProviderTestMenu models={testModels} pending={test.isPending} onPick={runTest} />
-						}
-					/>
-				</>
+				<ProviderActions
+					isNew={detail === undefined}
+					saving={save.isPending}
+					onSave={submit}
+					onCancel={() => form.setCancelOpen(true)}
+					onDelete={() => {
+						remove.reset();
+						form.setDeleteOpen(true);
+					}}
+					test={<ProviderTestMenu models={testModels} pending={test.isPending} onPick={runTest} />}
+				/>
 			}
 		>
+			{testResult !== undefined && (
+				<Notice tone={testResult.ok ? "success" : "error"}>{testResult.message}</Notice>
+			)}
 			{detail !== undefined && <ProviderSignIn detail={detail} />}
 			{/* An account provider already has pi's endpoint and catalog, so those fields are
 			    an override rather than part of adding it. */}
 			{collapsible ? (
-				<Collapsible open={overrideOpen} onOpenChange={setOverrideOpen}>
-					<CollapsibleTrigger className="group/override flex w-full cursor-pointer items-start justify-between gap-3 rounded-xl border bg-card px-4 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
-						<span className="grid gap-0.5">
-							<span className="text-sm font-medium">Endpoint, key and headers</span>
-							<span className="text-xs text-muted-foreground">
-								pi ships these for {detail?.name}. Change them only to use a gateway, your own key,
-								or extra headers.
-							</span>
-						</span>
-						<ChevronDownIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-aria-expanded/override:rotate-180" />
-					</CollapsibleTrigger>
-					<CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 data-starting-style:h-0 data-ending-style:h-0">
-						<div className="grid gap-6 pt-4">{connection}</div>
-					</CollapsibleContent>
-				</Collapsible>
+				<CollapsibleSection
+					title="Endpoint, key and headers"
+					open={overrideOpen}
+					onOpenChange={setOverrideOpen}
+				>
+					{connection}
+				</CollapsibleSection>
 			) : (
 				connection
 			)}
@@ -244,17 +233,13 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 				update={update}
 			/>
 
-			{save.error !== null && (
-				<Alert variant="destructive" className="settle-in">
-					<AlertDescription>{save.error.message}</AlertDescription>
-				</Alert>
-			)}
+			{save.error !== null && <Notice tone="error">{save.error.message}</Notice>}
 
 			{detail === undefined && (
 				<CancelDialog
 					open={form.cancelOpen}
 					title="Cancel this provider?"
-					description="Nothing is saved until you press Save. The name, endpoint, key and models you entered will be lost."
+					description="The entered name, endpoint, key and models are lost."
 					onOpenChange={form.setCancelOpen}
 					onDiscard={() => {
 						form.allowLeave();
@@ -268,7 +253,7 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 			<DeleteDialog
 				open={form.deleteOpen}
 				title={`Remove ${detail?.name ?? draft.name}?`}
-				description="The entry leaves models.json, and a credential stored in auth.json on the agent host is removed with it. A key that comes from the environment stays there."
+				description="Removes it from models.json and its stored credential from auth.json."
 				error={remove.error}
 				pending={remove.isPending}
 				onOpenChange={form.setDeleteOpen}
@@ -276,6 +261,6 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 					if (detail !== undefined) remove.mutate(detail.id);
 				}}
 			/>
-		</FormPage>
+		</DetailPage>
 	);
 }

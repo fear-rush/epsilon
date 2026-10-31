@@ -27,7 +27,7 @@ import { testProviderForHome } from "./probe";
 import { logoutProvider, readProviderDetail, removeProvider, writeProvider } from "./service";
 
 // Registration order is the order of the generated OpenAPI document.
-export const providersRoutes = ({ home, projectDir, engines }: Deps) =>
+export const providersRoutes = ({ home, engines }: Deps) =>
 	new OpenAPIHono()
 		.openapi(readProviderRoute, async (c) => {
 			try {
@@ -58,7 +58,6 @@ export const providersRoutes = ({ home, projectDir, engines }: Deps) =>
 			try {
 				const login = await startProviderLogin(
 					home,
-					projectDir,
 					c.req.valid("param").id,
 					c.req.valid("json").type,
 					// A new credential changes what a model request can reach, so the live

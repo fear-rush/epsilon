@@ -47,7 +47,7 @@ describe("provider sign-in", () => {
 	test("answers pi's question and stores the credential it writes", async () => {
 		const root = await home();
 		let signedIn = 0;
-		await startProviderLogin(root, root.dir, "anthropic", "api_key", () => signedIn++);
+		await startProviderLogin(root, "anthropic", "api_key", () => signedIn++);
 
 		const asking = await poll(() => readProviderLogin(root, "anthropic"), asked);
 		expect(asking.status).toBe("running");
@@ -74,7 +74,7 @@ describe("provider sign-in", () => {
 			oauth: { name: "Anthropic (Claude Pro/Max)", subscription: true },
 		});
 
-		await startProviderLogin(root, root.dir, "anthropic", "api_key", () => {});
+		await startProviderLogin(root, "anthropic", "api_key", () => {});
 		const asking = await poll(() => readProviderLogin(root, "anthropic"), asked);
 		if (asking.question === undefined) throw new Error("pi asked nothing");
 		answerProviderLogin(root, "anthropic", asking.question.id, "sk-test-not-a-key");
@@ -106,7 +106,7 @@ describe("provider sign-in", () => {
 		// A provider with no account sign-in is left out of that list entirely.
 		expect(before.get("azure")?.auth.oauth).toBeUndefined();
 
-		await startProviderLogin(root, root.dir, "anthropic", "api_key", () => {});
+		await startProviderLogin(root, "anthropic", "api_key", () => {});
 		const asking = await poll(() => readProviderLogin(root, "anthropic"), asked);
 		if (asking.question === undefined) throw new Error("pi asked nothing");
 		answerProviderLogin(root, "anthropic", asking.question.id, "sk-test-not-a-key");
@@ -124,7 +124,7 @@ describe("provider sign-in", () => {
 				providers: { anthropic: { name: "Anthropic", apiKey: "from-models-json" } },
 			}),
 		);
-		await startProviderLogin(root, root.dir, "anthropic", "api_key", () => {});
+		await startProviderLogin(root, "anthropic", "api_key", () => {});
 		const asking = await poll(() => readProviderLogin(root, "anthropic"), asked);
 		if (asking.question === undefined) throw new Error("pi asked nothing");
 		answerProviderLogin(root, "anthropic", asking.question.id, "sk-test-not-a-key");
@@ -141,7 +141,7 @@ describe("provider sign-in", () => {
 
 	test("a cancelled flow writes no credential", async () => {
 		const root = await home();
-		await startProviderLogin(root, root.dir, "anthropic", "api_key", () => {});
+		await startProviderLogin(root, "anthropic", "api_key", () => {});
 		await poll(() => readProviderLogin(root, "anthropic"), asked);
 
 		// The answer comes back after the flow settled, so the page can swap in one step
@@ -153,9 +153,9 @@ describe("provider sign-in", () => {
 
 	test("a second start replaces the flow the provider was running", async () => {
 		const root = await home();
-		const first = await startProviderLogin(root, root.dir, "anthropic", "api_key", () => {});
+		const first = await startProviderLogin(root, "anthropic", "api_key", () => {});
 		await poll(() => readProviderLogin(root, "anthropic"), asked);
-		await startProviderLogin(root, root.dir, "anthropic", "api_key", () => {});
+		await startProviderLogin(root, "anthropic", "api_key", () => {});
 
 		// The replaced flow is gone, and the provider has one live record: the new one.
 		const live = await poll(() => readProviderLogin(root, "anthropic"), asked);
@@ -165,11 +165,11 @@ describe("provider sign-in", () => {
 
 	test("refuses a sign-in the provider does not declare", async () => {
 		const root = await home();
-		await expect(
-			startProviderLogin(root, root.dir, "openai-codex", "api_key", () => {}),
-		).rejects.toThrow("offers no API key sign-in");
-		await expect(
-			startProviderLogin(root, root.dir, "no-such-provider", "oauth", () => {}),
-		).rejects.toThrow("pi does not know a provider");
+		await expect(startProviderLogin(root, "openai-codex", "api_key", () => {})).rejects.toThrow(
+			"offers no API key sign-in",
+		);
+		await expect(startProviderLogin(root, "no-such-provider", "oauth", () => {})).rejects.toThrow(
+			"pi does not know a provider",
+		);
 	});
 });

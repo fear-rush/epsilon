@@ -1,6 +1,6 @@
 import { parseProviderApi } from "shared";
 
-import type { PairRow } from "@/features/settings/kit/pair-rows";
+import type { PairRow } from "@/components/patterns/section/pair-rows";
 import { compatForApi } from "./reasoning";
 import type {
 	ModelOverride,

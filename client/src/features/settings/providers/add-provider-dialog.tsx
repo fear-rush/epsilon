@@ -8,15 +8,12 @@ import { useNavigate } from "@tanstack/react-router";
 import { LogInIcon, PlusIcon, SearchIcon } from "lucide-react";
 import { useState } from "react";
 
+import { ListItem } from "@/components/patterns/list/list-item";
+import { StatusView } from "@/components/patterns/status/status-view";
 import { Badge } from "@/components/ui/badge";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogFrame } from "@/components/patterns/dialog/dialog-frame";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import type { BuiltinProvider } from "@/api/types";
 
 /** How the operator wants to connect: a key they hold, or an account pi signs in to. */
@@ -32,11 +29,6 @@ const badgeOf = (provider: BuiltinProvider): string | undefined => {
 const TITLE: Record<AddMode, string> = {
 	key: "Add a provider with a key",
 	account: "Sign in to a provider",
-};
-
-const DESCRIPTION: Record<AddMode, string> = {
-	key: "Give a provider pi ships an endpoint and a key, or define your own.",
-	account: "pi signs in to these providers and stores the credential in auth.json.",
 };
 
 export function AddProviderDialog({
@@ -76,81 +68,68 @@ export function AddProviderDialog({
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-2xl">
-				<DialogHeader>
-					<DialogTitle>{TITLE[mode]}</DialogTitle>
-					<DialogDescription>{DESCRIPTION[mode]}</DialogDescription>
-				</DialogHeader>
+		<DialogFrame
+			open={open}
+			onOpenChange={onOpenChange}
+			size="md"
+			title={TITLE[mode]}
+			footer={
+				<Button type="button" variant="destructive" onClick={() => onOpenChange(false)}>
+					Cancel
+				</Button>
+			}
+		>
+			<div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-field">
 				<div className="relative">
-					<SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+					<SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
 					<Input
 						autoFocus
 						value={query}
 						placeholder="Search providers"
+						aria-label="Search providers"
 						className="pl-8"
 						onChange={(event) => setQuery(event.target.value)}
 					/>
 				</div>
-				<div className="max-h-96 overflow-y-auto rounded-xl border">
+				<div className="grid gap-row">
 					{mode === "key" && (
-						<button
-							type="button"
-							className="flex w-full cursor-pointer items-center gap-3 border-b px-3 py-3 text-left hover:bg-muted/60"
+						<ListItem
+							name="Custom provider"
+							description="Base URL, API and models you define"
+							trailing={<PlusIcon className="size-4 text-muted-foreground" />}
 							onClick={() => go("new")}
-						>
-							<span className="grid size-8 place-items-center rounded-lg bg-muted">
-								<PlusIcon className="size-4" />
-							</span>
-							<span className="min-w-0">
-								<span className="block text-sm font-medium">Custom provider</span>
-								<span className="block text-xs text-muted-foreground">
-									Base URL, API and models you define
-								</span>
-							</span>
-						</button>
+						/>
 					)}
 					{matches.length === 0 ? (
-						<p className="px-3 py-4 text-sm text-muted-foreground">
-							{mode === "account"
-								? "No provider pi ships signs in to an account."
-								: "No provider matches."}
-						</p>
+						<StatusView
+							icon={SearchIcon}
+							title={
+								mode === "account" ? "No provider signs in to an account" : "No provider matches"
+							}
+						/>
 					) : (
 						matches.map((provider) => {
 							const badge = badgeOf(provider);
 							return (
-								<button
+								<ListItem
 									key={provider.id}
-									type="button"
-									className="flex w-full cursor-pointer items-center justify-between gap-3 border-b px-3 py-3 text-left last:border-b-0 hover:bg-muted/60"
+									name={provider.name}
+									description={
+										mode === "account" ? (provider.auth.oauth?.label ?? provider.id) : provider.id
+									}
+									trailing={
+										<>
+											{mode === "account" && <LogInIcon className="size-4 text-muted-foreground" />}
+											{badge !== undefined && <Badge variant="secondary">{badge}</Badge>}
+										</>
+									}
 									onClick={() => go(provider.id)}
-								>
-									<span className="min-w-0">
-										<span className="flex items-center gap-2">
-											{mode === "account" && (
-												<LogInIcon className="size-3.5 text-muted-foreground" />
-											)}
-											<span className="block truncate text-sm font-medium">{provider.name}</span>
-										</span>
-										<span className="block truncate text-xs text-muted-foreground">
-											{mode === "account"
-												? (provider.auth.oauth?.label ?? provider.id)
-												: provider.id}
-										</span>
-									</span>
-									{badge !== undefined && <Badge variant="secondary">{badge}</Badge>}
-								</button>
+								/>
 							);
 						})
 					)}
 				</div>
-				<p className="text-xs text-muted-foreground">
-					{mode === "account"
-						? "Choosing a provider opens its settings; the sign-in starts when you press Sign in there."
-						: "Choosing a provider opens its settings. Nothing is written until you save."}
-				</p>
-			</DialogContent>
-		</Dialog>
+			</div>
+		</DialogFrame>
 	);
 }

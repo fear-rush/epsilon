@@ -8,15 +8,8 @@ import { parseProviderApi } from "shared";
 import { thinkingLevelSchema } from "shared";
 import type { ProviderApi, ThinkingLevel } from "shared";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogFrame } from "@/components/patterns/dialog/dialog-frame";
+import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -28,7 +21,7 @@ import { reasoningFormOf, reasoningOf } from "./reasoning";
 import { TestLevelSelect } from "./test-level-select";
 import type { ReasoningForm } from "./reasoning";
 import { useDialogMotion } from "@/hooks/use-dialog-motion";
-import { keepUntouched } from "@/features/settings/kit/use-draft-form";
+import { keepUntouched } from "@/components/patterns/form/use-draft-form";
 import { modelFieldErrors, modelFields } from "./provider-validation";
 import type { ModelFieldErrors } from "./provider-validation";
 import type { ProviderModelInput } from "@/api/types";
@@ -77,7 +70,6 @@ const formOf = (model: ProviderModelInput | undefined): ModelForm => ({
 export function ProviderModelDialog({
 	onClose,
 	title,
-	description,
 	model,
 	providerApi,
 	lockId,
@@ -87,7 +79,6 @@ export function ProviderModelDialog({
 	/** Runs once the dialog finished closing, which is when its mount can drop it. */
 	onClose: () => void;
 	title: string;
-	description: string;
 	model: ProviderModelInput | undefined;
 	providerApi: ProviderApi | undefined;
 	lockId: boolean;
@@ -160,128 +151,127 @@ export function ProviderModelDialog({
 	const close = () => dialog.close(onClose);
 
 	return (
-		<Dialog
+		<DialogFrame
 			open={dialog.open}
 			onOpenChange={(next) => {
 				if (!next) close();
 			}}
-		>
-			<DialogContent className="sm:max-w-2xl">
-				<DialogHeader>
-					<DialogTitle>{title}</DialogTitle>
-					<DialogDescription>{description}</DialogDescription>
-				</DialogHeader>
-				<form
-					noValidate
-					className="grid gap-4"
-					onSubmit={(event) => {
-						event.preventDefault();
-						if (!dialog.open) return;
-						const found = modelFieldErrors(form);
-						setErrors(found);
-						if (Object.keys(found).length > 0) return;
-						onSave(valueOf());
-						close();
-					}}
-				>
-					<FieldGroup className="grid gap-4 sm:grid-cols-2">
-						<Field data-invalid={errors.id !== undefined}>
-							<FieldLabel htmlFor="model-id">Model id</FieldLabel>
-							<Input
-								id="model-id"
-								required
-								value={form.id}
-								disabled={lockId}
-								aria-invalid={errors.id !== undefined}
-								onChange={(event) => update({ id: event.target.value })}
-							/>
-							<FieldError>{errors.id}</FieldError>
-						</Field>
-						<Field>
-							<FieldLabel htmlFor="model-name">Display name</FieldLabel>
-							<Input
-								id="model-name"
-								value={form.name}
-								onChange={(event) => update({ name: event.target.value })}
-							/>
-						</Field>
-						<Field data-invalid={errors.contextWindow !== undefined}>
-							<FieldLabel htmlFor="model-context-window">Context window</FieldLabel>
-							<Input
-								id="model-context-window"
-								inputMode="numeric"
-								value={form.contextWindow}
-								aria-invalid={errors.contextWindow !== undefined}
-								onChange={(event) => update({ contextWindow: event.target.value })}
-							/>
-							<FieldDescription>Tokens</FieldDescription>
-							<FieldError>{errors.contextWindow}</FieldError>
-						</Field>
-						<Field data-invalid={errors.maxTokens !== undefined}>
-							<FieldLabel htmlFor="model-max-tokens">Max output tokens</FieldLabel>
-							<Input
-								id="model-max-tokens"
-								inputMode="numeric"
-								value={form.maxTokens}
-								aria-invalid={errors.maxTokens !== undefined}
-								onChange={(event) => update({ maxTokens: event.target.value })}
-							/>
-							<FieldError>{errors.maxTokens}</FieldError>
-						</Field>
-					</FieldGroup>
-					<FieldGroup className="flex flex-wrap gap-x-6 gap-y-3">
-						<Field orientation="horizontal" className="w-auto">
-							<Checkbox
-								id="model-reasoning"
-								checked={form.reasoning}
-								onCheckedChange={(checked) => update({ reasoning: checked })}
-							/>
-							<FieldLabel htmlFor="model-reasoning">Reasoning model</FieldLabel>
-						</Field>
-						<Field orientation="horizontal" className="w-auto">
-							<Checkbox
-								id="model-images"
-								checked={form.images}
-								onCheckedChange={(checked) => update({ images: checked })}
-							/>
-							<FieldLabel htmlFor="model-images">Accepts images</FieldLabel>
-						</Field>
-					</FieldGroup>
-					{form.reasoning && (
-						<ModelReasoningFields form={form} api={api ?? providerApi} update={update} />
-					)}
-					<ModelCostFields form={form} errors={errors} update={update} />
-
-					{testResult !== undefined && (
-						<Alert variant={testResult.ok ? "default" : "destructive"} className="settle-in">
-							<AlertDescription className="break-words">{testResult.message}</AlertDescription>
-						</Alert>
-					)}
-					<DialogFooter>
-						<div className="flex items-center gap-2 sm:mr-auto">
-							<TestLevelSelect
-								value={testLevel}
-								onChange={setTestLevel}
-								disabled={!form.reasoning}
-								className="w-36"
-							/>
-							<Button
-								type="button"
-								variant="outline"
-								disabled={testing}
-								onClick={() => void runTest()}
-							>
-								{testing && <Spinner data-icon="inline-start" />}
-								Test model
-							</Button>
-						</div>
-						<Button type="button" variant="ghost" onClick={close}>
-							Cancel
+			size="lg"
+			title={title}
+			footer={
+				<>
+					<div className="flex items-center gap-2 sm:mr-auto">
+						<TestLevelSelect
+							value={testLevel}
+							onChange={setTestLevel}
+							disabled={!form.reasoning}
+							className="w-36"
+						/>
+						<Button
+							type="button"
+							variant="outline"
+							disabled={testing}
+							onClick={() => void runTest()}
+						>
+							{testing && <Spinner data-icon="inline-start" />}
+							Test model
 						</Button>
-						<Button type="submit">Save model</Button>
-					</DialogFooter>
-				</form>
-			</DialogContent>
-		</Dialog>
+					</div>
+					<Button type="button" variant="destructive" onClick={close}>
+						Cancel
+					</Button>
+					<Button type="submit" form="model-form">
+						Save model
+					</Button>
+				</>
+			}
+		>
+			<form
+				id="model-form"
+				noValidate
+				className="grid gap-field"
+				onSubmit={(event) => {
+					event.preventDefault();
+					if (!dialog.open) return;
+					const found = modelFieldErrors(form);
+					setErrors(found);
+					if (Object.keys(found).length > 0) return;
+					onSave(valueOf());
+					close();
+				}}
+			>
+				<FieldGroup className="grid gap-field sm:grid-cols-2">
+					<Field data-invalid={errors.id !== undefined}>
+						<FieldLabel htmlFor="model-id">Model id</FieldLabel>
+						<Input
+							id="model-id"
+							required
+							value={form.id}
+							disabled={lockId}
+							aria-invalid={errors.id !== undefined}
+							onChange={(event) => update({ id: event.target.value })}
+						/>
+						<FieldError>{errors.id}</FieldError>
+					</Field>
+					<Field>
+						<FieldLabel htmlFor="model-name">Display name</FieldLabel>
+						<Input
+							id="model-name"
+							value={form.name}
+							onChange={(event) => update({ name: event.target.value })}
+						/>
+					</Field>
+					<Field data-invalid={errors.contextWindow !== undefined}>
+						<FieldLabel htmlFor="model-context-window">Context window</FieldLabel>
+						<Input
+							id="model-context-window"
+							inputMode="numeric"
+							value={form.contextWindow}
+							aria-invalid={errors.contextWindow !== undefined}
+							onChange={(event) => update({ contextWindow: event.target.value })}
+						/>
+						<FieldDescription>Tokens</FieldDescription>
+						<FieldError>{errors.contextWindow}</FieldError>
+					</Field>
+					<Field data-invalid={errors.maxTokens !== undefined}>
+						<FieldLabel htmlFor="model-max-tokens">Max output tokens</FieldLabel>
+						<Input
+							id="model-max-tokens"
+							inputMode="numeric"
+							value={form.maxTokens}
+							aria-invalid={errors.maxTokens !== undefined}
+							onChange={(event) => update({ maxTokens: event.target.value })}
+						/>
+						<FieldError>{errors.maxTokens}</FieldError>
+					</Field>
+				</FieldGroup>
+				<FieldGroup className="flex flex-wrap gap-x-6 gap-y-3">
+					<Field orientation="horizontal" className="w-auto">
+						<Checkbox
+							id="model-reasoning"
+							checked={form.reasoning}
+							onCheckedChange={(checked) => update({ reasoning: checked })}
+						/>
+						<FieldLabel htmlFor="model-reasoning">Reasoning model</FieldLabel>
+					</Field>
+					<Field orientation="horizontal" className="w-auto">
+						<Checkbox
+							id="model-images"
+							checked={form.images}
+							onCheckedChange={(checked) => update({ images: checked })}
+						/>
+						<FieldLabel htmlFor="model-images">Accepts images</FieldLabel>
+					</Field>
+				</FieldGroup>
+				{form.reasoning && (
+					<ModelReasoningFields form={form} api={api ?? providerApi} update={update} />
+				)}
+				<ModelCostFields form={form} errors={errors} update={update} />
+
+				{testResult !== undefined && (
+					<Notice tone={testResult.ok ? "success" : "error"}>{testResult.message}</Notice>
+				)}
+			</form>
+		</DialogFrame>
 	);
 }

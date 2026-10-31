@@ -9,7 +9,7 @@ import { randomUUID } from "node:crypto";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { toError } from "../../platform/http";
-import { modelRuntime, settingsManager } from "../../platform/pi";
+import { modelRuntime, globalSettings } from "../../platform/pi";
 import type { AuthEvent, AuthPrompt, ModelRuntime } from "../../platform/pi";
 import type { ProviderLoginQuestion, ProviderLoginSnapshot, ProviderLoginType } from "./contract";
 
@@ -161,7 +161,7 @@ const prune = (): void => {
 const run = async (
 	record: LoginRecord,
 	runtime: ModelRuntime,
-	settings: ReturnType<typeof settingsManager>,
+	settings: ReturnType<typeof globalSettings>,
 	onSignedIn: () => void,
 ): Promise<void> => {
 	try {
@@ -196,7 +196,6 @@ const run = async (
  */
 export const startProviderLogin = async (
 	home: AgentHome,
-	projectDir: string,
 	providerId: string,
 	type: ProviderLoginType,
 	onSignedIn: () => void,
@@ -234,7 +233,7 @@ export const startProviderLogin = async (
 		timer,
 	};
 	logins.set(key, record);
-	record.done = run(record, runtime, settingsManager(projectDir, home), onSignedIn);
+	record.done = run(record, runtime, globalSettings(home), onSignedIn);
 	return snapshotOf(record);
 };
 
