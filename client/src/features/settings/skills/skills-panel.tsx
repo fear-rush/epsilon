@@ -61,6 +61,7 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 			title="Skills"
 			count={shown}
 			scope="/settings/skills"
+			error={settings.error}
 			notices={
 				settings.data?.error === undefined ? undefined : (
 					<Notice tone="error">{settings.data.error}</Notice>

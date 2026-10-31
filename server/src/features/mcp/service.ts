@@ -23,6 +23,7 @@ import { mergeSecrets, setDefined, setOrDelete } from "../../platform/patch";
 import { packageManager, settingsManager } from "../../platform/pi";
 import {
 	entriesOf,
+	projectEntryProblem,
 	indirectExposuresOf,
 	isRawOverride,
 	isRecord,
@@ -419,6 +420,10 @@ export const writeMcpServer = (
 		}
 		if (read.kind !== "server") {
 			throw new Error(`pi would read "${input.name}" as an override, not a server.`);
+		}
+		if (input.scope === "project") {
+			const problem = projectEntryProblem(read.entry);
+			if (problem !== undefined) throw new Error(problem);
 		}
 
 		servers[input.name] = next;

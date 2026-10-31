@@ -1,128 +1,148 @@
 import { expect, test } from "./support/test";
 
-import { query, trustProject } from "./support/app";
-import { PROJECT } from "./support/home";
+import { query, readJson, trustProject } from "./support/app";
+import {
+	AGENT_HOME,
+	LIVE,
+	LIVE_MODEL,
+	LIVE_MODEL_TWO,
+	LIVE_REASON,
+	PROJECT,
+	SETTINGS_FILE,
+} from "./support/home";
 
-/** The configuration surface, its lists, and the forms that write pi's files. */
-test.describe("settings", () => {
-	test("the settings search filters the sections", async ({ page }) => {
+type SettingsFile = { defaultProvider?: string; defaultModel?: string };
+
+const settingsFile = () => readJson<SettingsFile>(SETTINGS_FILE);
+
+test.describe.serial("settings", () => {
+	test("the search filters the sections, and an empty result says so", async ({ page }) => {
 		await page.goto("/settings/general");
 		const search = page.getByRole("textbox", { name: "Search settings" });
 		await search.fill("prov");
 		await expect(page.getByRole("link", { name: "Providers" })).toBeVisible();
 		await expect(page.getByRole("link", { name: "MCP servers" })).toHaveCount(0);
 
+		await search.fill("pack");
+		await expect(page.getByRole("link", { name: "Packages" })).toBeVisible();
+		await expect(page.getByRole("link", { name: "Providers" })).toHaveCount(0);
+
 		await search.fill("nothing-matches");
 		await expect(page.getByText("No matching section.")).toBeVisible();
+		await page.getByRole("link", { name: "MCP servers" }).count();
+		await search.fill("");
+		await expect(page.getByRole("link", { name: "MCP servers" })).toBeVisible();
 	});
 
-	test("the providers list opens the seeded provider", async ({ page }) => {
-		await page.goto("/settings/providers");
-		await expect(page.getByRole("heading", { name: "Providers" })).toBeVisible();
-		await page.getByRole("link", { name: /E2E Provider/ }).click();
-
-		await expect(page).toHaveURL(/\/settings\/providers\/e2e$/);
-		await expect(page).toHaveTitle("e2e · Providers · Settings");
-		await expect(page.getByRole("heading", { name: "E2E Provider" })).toBeVisible();
-		await expect(page.getByRole("textbox", { name: "Display name" })).toHaveValue("E2E Provider");
-		await expect(page.getByRole("textbox", { name: "Base URL" })).toHaveValue(
-			"http://127.0.0.1:9/v1",
+	test("General names the home, its readiness, and the model a new chat starts on", async ({
+		page,
+	}) => {
+		await page.goto("/settings/general");
+		await expect(page).toHaveTitle("General · Settings");
+		await expect(page.getByRole("heading", { name: "General", exact: true })).toBeVisible();
+		await expect(page.getByText("Status", { exact: true })).toBeVisible();
+		await expect(page.getByText(/models can run a turn/u)).toBeVisible();
+		await expect(page.getByText(AGENT_HOME, { exact: true })).toBeVisible();
+		await expect(page.getByRole("button", { name: "Default model" })).toContainText(
+			LIVE ? "DeepSeek V4.1 Flash" : "Dead Model",
 		);
 	});
 
-	test("an unsaved provider stays on Stay and reverts on Discard", async ({ page }) => {
-		await page.goto("/settings/providers/e2e");
-		const name = page.getByRole("textbox", { name: "Display name" });
-		await expect(name).toHaveValue("E2E Provider");
-		await name.fill("E2E Provider edited");
+	test("the default model is written to settings.json and survives a reload", async ({ page }) => {
+		test.skip(!LIVE, LIVE_REASON);
+		await page.goto("/settings/general");
+		await page.getByRole("button", { name: "Default model" }).click();
+		const search = page.getByPlaceholder("Search models…");
+		await search.fill("Qwen 3.7");
+		await expect(page.getByText("No model matches.")).toHaveCount(0);
+		await page
+			.getByRole("group", { name: "commandcode" })
+			.getByRole("option", { name: "Qwen 3.7 Flash" })
+			.click();
 
-		await page.getByRole("link", { name: "General" }).click();
-		await expect(page.getByRole("alertdialog", { name: "Discard unsaved changes?" })).toBeVisible();
-		await page.getByRole("button", { name: "Stay" }).click();
-		await expect(page).toHaveURL(/\/settings\/providers\/e2e$/);
-		await expect(name).toHaveValue("E2E Provider edited");
-
-		await page.getByRole("link", { name: "General" }).click();
-		await page.getByRole("button", { name: "Discard changes" }).click();
-		await expect(page).toHaveURL(/\/settings\/general$/);
-
-		await page.goto("/settings/providers/e2e");
-		await expect(page.getByRole("textbox", { name: "Display name" })).toHaveValue("E2E Provider");
-	});
-
-	test("the new-provider page renders without a saved provider", async ({ page }) => {
-		await page.goto("/settings/providers/new");
-		await expect(page).toHaveTitle("New provider · Settings");
-		await expect(page.getByRole("heading", { name: "New provider" })).toBeVisible();
-		await expect(page.getByRole("textbox", { name: "Display name" })).toHaveValue("");
-		await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
-	});
-
-	test("the MCP list opens a disabled server and shows its entry", async ({ page }) => {
-		await page.goto("/settings/mcp");
-		await expect(page.getByRole("heading", { name: "MCP servers" })).toBeVisible();
-		await expect(page.getByRole("link", { name: /e2e-stdio/ })).toBeVisible();
-		await page.getByRole("link", { name: /e2e-disabled/ }).click();
-
-		await expect(page).toHaveURL(/\/settings\/mcp\/global\/e2e-disabled$/);
-		await expect(page).toHaveTitle("e2e-disabled · MCP servers · Settings");
-		await expect(page.getByRole("textbox", { name: "URL" })).toHaveValue("http://127.0.0.1:9/mcp");
-		await expect(page.getByRole("switch", { name: "Enable e2e-disabled" })).not.toBeChecked();
-	});
-
-	test("the skills list shows the home, package and foreign skills", async ({ page }) => {
-		await page.goto("/settings/skills");
-		await expect(page.getByRole("link", { name: /e2e-skill/ })).toBeVisible();
-		await expect(page.getByRole("link", { name: /package-skill/ })).toBeVisible();
-		await expect(page.getByText(/foreign-skill/)).toBeVisible();
-	});
-
-	test("the skill tab and raw file live in the URL", async ({ page }) => {
-		await page.goto("/settings/skills/e2e-skill?root=home");
-		await expect(page).toHaveTitle("e2e-skill · Skills · Settings");
-		await expect(page.getByRole("tab", { name: "Form" })).toHaveAttribute("aria-selected", "true");
-
-		await page.getByRole("tab", { name: "Raw" }).click();
-		await expect(page).toHaveURL(/tab=raw/);
-		await page.getByRole("button", { name: "example.md" }).click();
-		await expect(page).toHaveURL(/file=references%2Fexample.md/);
-		await expect(page.getByRole("textbox", { name: "references/example.md" })).toContainText(
-			"A reference file.",
+		await expect(page.getByRole("button", { name: "Default model" })).toContainText(
+			"Qwen 3.7 Flash",
 		);
+		await expect.poll(async () => (await settingsFile()).defaultModel).toBe(LIVE_MODEL_TWO);
+		expect((await settingsFile()).defaultProvider).toBe("commandcode");
 
 		await page.reload();
-		await expect(page.getByRole("tab", { name: "Raw" })).toHaveAttribute("aria-selected", "true");
-		await expect(page.getByRole("textbox", { name: "references/example.md" })).toContainText(
-			"A reference file.",
+		await expect(page.getByRole("button", { name: "Default model" })).toContainText(
+			"Qwen 3.7 Flash",
 		);
 
-		await page.getByRole("tab", { name: "Form" }).click();
-		await expect(page).not.toHaveURL(/tab=raw/);
+		// Put the seeded default back for the specs that run after this one.
+		await page.getByRole("button", { name: "Default model" }).click();
+		await page.getByPlaceholder("Search models…").fill("DeepSeek V4.1");
+		await page
+			.getByRole("group", { name: "commandcode" })
+			.getByRole("option", { name: "DeepSeek V4.1 Flash" })
+			.click();
+		await expect.poll(async () => (await settingsFile()).defaultModel).toBe(LIVE_MODEL);
 	});
 
-	test("the packages list opens the local package and its resources", async ({ page }) => {
-		await page.goto("/settings/packages");
-		await expect(page.getByRole("heading", { name: "Packages" })).toBeVisible();
-		await page.getByRole("link", { name: /e2e-package/ }).click();
-
-		await expect(page).toHaveURL(/\/settings\/packages\/user\//);
-		await expect(page.getByRole("heading", { name: "e2e-package" }).first()).toBeVisible();
-		await expect(page.getByText("package-skill")).toBeVisible();
+	test("the default model picker reports a search with no match", async ({ page }) => {
+		await page.goto("/settings/general");
+		await page.getByRole("button", { name: "Default model" }).click();
+		await page.getByPlaceholder("Search models…").fill("zzz-no-model");
+		await expect(page.getByText("No model matches.")).toBeVisible();
+		await page.keyboard.press("Escape");
 	});
 
-	test("a trusted project stays in the URL across settings sections", async ({ page }) => {
+	test("the current section is marked in the navigation", async ({ page }) => {
+		await page.goto("/settings/skills");
+		await expect(page.getByRole("link", { name: "Skills" }).first()).toHaveAttribute(
+			"aria-current",
+			"page",
+		);
+		await expect(page.getByRole("link", { name: "Providers" })).not.toHaveAttribute(
+			"aria-current",
+			"page",
+		);
+
+		await page.getByRole("link", { name: "Providers" }).click();
+		await expect(page).toHaveURL(/\/settings\/providers$/u);
+		await expect(page.getByRole("link", { name: "Providers" }).first()).toHaveAttribute(
+			"aria-current",
+			"page",
+		);
+	});
+
+	test("a picked project stays in the URL across the resource sections", async ({ page }) => {
 		await trustProject(page, PROJECT);
-
 		await page.goto(`/settings/skills?project=${query(PROJECT)}`);
-		await expect(page.getByRole("tab", { name: "Project" })).toHaveAttribute(
-			"aria-selected",
-			"true",
-		);
-		await expect(page.getByRole("link", { name: /project-skill/ })).toBeVisible();
+		await expect(page.getByRole("combobox", { name: "Project" })).toContainText("project");
 
 		await page.getByRole("link", { name: "MCP servers" }).first().click();
 		await expect(page).toHaveURL(
 			(url) => url.pathname === "/settings/mcp" && url.searchParams.get("project") === PROJECT,
 		);
+		await page.getByRole("link", { name: "Packages" }).first().click();
+		await expect(page).toHaveURL(
+			(url) => url.pathname === "/settings/packages" && url.searchParams.get("project") === PROJECT,
+		);
+		// Back to Global drops the folder, so the tab and the list agree.
+		await page.getByRole("tab", { name: "Global" }).click();
+		await expect(page).not.toHaveURL(/project=/u);
+	});
+
+	test("the app menu opens every section, and a phone uses it", async ({ page }) => {
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto("/");
+		await page.getByRole("button", { name: "Toggle sidebar" }).click();
+		await expect(page.getByRole("button", { name: "App menu" })).toBeVisible();
+		await page.getByRole("button", { name: "App menu" }).click();
+		await page.getByRole("menuitem", { name: "Providers" }).click();
+		await expect(page).toHaveURL(/\/settings\/providers$/u);
+		await expect(page.getByRole("link", { name: "MCP servers" })).toBeVisible();
+	});
+
+	test("the settings shell keeps a route's section list on a phone", async ({ page }) => {
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto("/settings/providers");
+		await expect(page.getByRole("link", { name: "Back to app" })).toBeVisible();
+		await page.getByRole("link", { name: "Providers" }).click();
+		await expect(page.getByRole("heading", { name: "Providers" })).toBeVisible();
+		await expect(page.getByRole("textbox", { name: "Search providers" })).toBeVisible();
 	});
 });

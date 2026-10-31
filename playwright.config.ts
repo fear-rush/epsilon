@@ -3,9 +3,11 @@ import { defineConfig } from "@playwright/test";
 import { AGENT_HOME, USER_HOME } from "./e2e/support/home";
 
 /**
- * Browser tests against a seeded scratch home. The server never reads `~/.pi`:
- * `EPSILON_AGENT_HOME` and `EPSILON_USER_HOME` point at the fixture tree, and the
- * global setup rebuilds it before the servers start.
+ * Browser tests against a seeded scratch home under `.sandbox/e2e`. The server
+ * never reads `~/.pi`: `EPSILON_AGENT_HOME` and `EPSILON_USER_HOME` point at the
+ * fixture tree, and the global setup rebuilds it before the servers start. The
+ * model provider is the real one from `server/.env`, so a turn takes as long as
+ * the provider does.
  */
 export default defineConfig({
 	testDir: "./e2e",
@@ -14,8 +16,8 @@ export default defineConfig({
 	workers: 1,
 	forbidOnly: Boolean(process.env["CI"]),
 	retries: 0,
-	timeout: 45_000,
-	expect: { timeout: 10_000 },
+	timeout: 120_000,
+	expect: { timeout: 20_000 },
 	reporter: [["list"]],
 	globalSetup: "./e2e/support/global-setup.ts",
 	globalTeardown: "./e2e/support/global-teardown.ts",

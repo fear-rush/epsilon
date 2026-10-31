@@ -7,7 +7,7 @@
 import type { McpScope } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
-import { isRecord, readMcpEntry } from "./domain";
+import { isRecord, projectEntryProblem, readMcpEntry } from "./domain";
 import type { McpRawEntry } from "./domain";
 import { mcpDocument } from "./store";
 
@@ -114,6 +114,10 @@ export const writeMcpRaw = async (
 		const next = restoreStored(parsed, servers[name]);
 		const read = readMcpEntry(name, next);
 		if (read.kind === "invalid") throw new Error(read.problem);
+		if (scope === "project" && read.kind !== "override") {
+			const problem = projectEntryProblem(read.entry);
+			if (problem !== undefined) throw new Error(problem);
+		}
 		servers[name] = next;
 		return { ...document, mcpServers: servers };
 	});

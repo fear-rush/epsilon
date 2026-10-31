@@ -421,7 +421,7 @@ function ProjectGroup({
 					<span className="truncate">{project.name}</span>
 					{!project.trusted && (
 						<Tip label="Not trusted yet">
-							<span className="inline-flex shrink-0" aria-label="Not trusted">
+							<span className="inline-flex shrink-0" role="img" aria-label="Not trusted">
 								<ShieldAlertIcon className="size-4 text-warning" />
 							</span>
 						</Tip>

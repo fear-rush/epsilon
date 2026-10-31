@@ -8,7 +8,7 @@
 import type { AgentHome } from "../../platform/agent-home";
 import { packageManager, resolveAllResources } from "../../platform/pi";
 import type { ResolvedResource } from "../../platform/pi";
-import { basename, dirname, extname } from "node:path";
+import { basename, dirname, extname, isAbsolute, resolve } from "node:path";
 import type { PackageResources, PackageScope, PackageView } from "./contract";
 
 export const listPackages = (folder: string, home: AgentHome): PackageView[] =>
@@ -29,13 +29,40 @@ export const installPackage = async (
 	await packageManager(folder, home).installAndPersist(source, { local: scope === "project" });
 };
 
+/** The prefixes pi reads as something other than a plain path. */
+const NON_LOCAL = ["npm:", "git:", "github:", "http:", "https:", "ssh:", "builtin:"];
+
+/**
+ * A local source is declared relative to the settings file that holds it, while
+ * pi matches an input source from the process's folder. Only a plain relative
+ * path needs rebasing; an absolute path, a URL, a `~` path and a `file:` URL are
+ * left for pi to resolve, as they were before.
+ */
+const sourceForRemoval = (
+	folder: string,
+	home: AgentHome,
+	source: string,
+	scope: PackageScope,
+): string => {
+	const plainRelative =
+		!isAbsolute(source) &&
+		!source.startsWith("~") &&
+		!source.startsWith("file:") &&
+		!NON_LOCAL.some((prefix) => source.startsWith(prefix));
+	if (!plainRelative) return source;
+	const base = scope === "project" ? resolve(folder, ".pi") : home.dir;
+	return resolve(base, source);
+};
+
 export const removePackage = async (
 	folder: string,
 	home: AgentHome,
 	source: string,
 	scope: PackageScope,
 ): Promise<boolean> =>
-	packageManager(folder, home).removeAndPersist(source, { local: scope === "project" });
+	packageManager(folder, home).removeAndPersist(sourceForRemoval(folder, home, source, scope), {
+		local: scope === "project",
+	});
 
 const nameOf = (path: string): string =>
 	basename(path) === "SKILL.md" ? basename(dirname(path)) : basename(path, extname(path));

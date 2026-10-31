@@ -31,9 +31,12 @@ prose; fix a doc that disagrees in the same commit, and never copy code or file 
 | `bun run test:e2e`                               | Playwright against a scratch agent home         |
 | `bun run e2e:install`                            | Install Chromium for the e2e suite, once        |
 
-The e2e suite seeds its own agent home under the OS temp directory and starts both
-servers against it; it never reads or writes `~/.pi`. Fixtures live in
-`e2e/support/home.ts`.
+The e2e suite seeds its own agent home under `.sandbox/e2e` and starts both servers
+against it; it never reads or writes `~/.pi`. A chat test calls the real CommandCode
+provider, whose key comes from `COMMANDCODE_API_KEY` in the environment or
+`server/.env`; without it those turns skip and say why. Fixtures live in
+`e2e/support/home.ts`, and a real stdio MCP server lives in
+`e2e/support/mcp-server.ts`.
 
 ## Invariants
 

@@ -192,6 +192,16 @@ function entryProblem(name: string, entry: McpEntry): string | undefined {
 	return 'needs either "command" (stdio) or "url" (streamable HTTP).';
 }
 
+/**
+ * The one rule that depends on the file an entry sits in: `auth` sends a
+ * `/login` provider's token, and pi refuses it in a project's `mcp.json`. Both
+ * writers run it, so a raw save cannot store an entry pi would skip.
+ */
+export const projectEntryProblem = (entry: McpEntry): string | undefined =>
+	entry.url !== undefined && entry.auth !== undefined
+		? "auth is only allowed in the global mcp.json."
+		: undefined;
+
 /** Parse one `mcpServers` value the way pi reads it, and say what it is. */
 export function readMcpEntry(name: string, value: McpRawEntry): McpEntryRead {
 	const object = rawEntrySchema.safeParse(value);
