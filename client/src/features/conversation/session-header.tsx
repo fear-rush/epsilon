@@ -6,7 +6,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { FolderIcon, MoreHorizontalIcon } from "lucide-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { cn } from "@/lib/cn";
 import type { Place } from "shared";
 
@@ -67,7 +67,7 @@ function PlaceBadge({ place }: { place: Place }) {
 	);
 }
 
-export function SessionHeader({
+function SessionHeaderImpl({
 	sessionId,
 	title,
 	place,
@@ -81,9 +81,6 @@ export function SessionHeader({
 	/** A chat with no messages has no file yet, so there is nothing to move. */
 	empty: boolean;
 }) {
-	const navigate = useNavigate();
-	const queryClient = useQueryClient();
-	const recent = useRecentProjects();
 	const [moving, setMoving] = useState(false);
 
 	const hasTitle = title !== undefined && title !== "";
@@ -123,24 +120,39 @@ export function SessionHeader({
 					</>
 				}
 			/>
-			{place.kind === "chat" && (
-				<FolderDialog
-					open={moving}
-					onOpenChange={setMoving}
-					title="Move this chat to a project"
-					action="Move"
-					recent={recent}
-					onPick={async (path) => {
-						const id = await moveSession(sessionId, path);
-						await queryClient.invalidateQueries({ queryKey: sessionKeys.all });
-						await navigate({
-							to: "/sessions/$sessionId",
-							params: { sessionId: id },
-							search: { project: path },
-						});
-					}}
-				/>
+			{place.kind === "chat" && moving && (
+				<MoveChatDialog sessionId={sessionId} onClose={() => setMoving(false)} />
 			)}
 		</>
 	);
 }
+
+/** Mounted only while the picker is open, so the recent list costs nothing on a page view. */
+function MoveChatDialog({ sessionId, onClose }: { sessionId: string; onClose: () => void }) {
+	const navigate = useNavigate();
+	const queryClient = useQueryClient();
+	const recent = useRecentProjects();
+	return (
+		<FolderDialog
+			open
+			onOpenChange={(open) => {
+				if (!open) onClose();
+			}}
+			title="Move this chat to a project"
+			action="Move"
+			recent={recent}
+			onPick={async (path) => {
+				const id = await moveSession(sessionId, path);
+				await queryClient.invalidateQueries({ queryKey: sessionKeys.all });
+				await navigate({
+					to: "/sessions/$sessionId",
+					params: { sessionId: id },
+					search: { project: path },
+				});
+			}}
+		/>
+	);
+}
+
+/** Its props are stable during a stream, so a token does not redraw the header. */
+export const SessionHeader = memo(SessionHeaderImpl);

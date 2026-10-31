@@ -13,12 +13,14 @@ import {
 } from "@/components/ui/code-block";
 
 const components = { pre: MarkdownPre };
+/** Built once: a new array would make React Markdown reprocess every render. */
+const REMARK_PLUGINS = [remarkGfm];
 
 /** Assistant prose. Code fences go through MarkdownPre, which highlights them. */
 export function Markdown({ children }: { children: string }) {
 	return (
 		<div className="typeset typeset-chat min-w-0 max-w-full wrap-break-word">
-			<ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+			<ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={components}>
 				{children}
 			</ReactMarkdown>
 		</div>

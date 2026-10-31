@@ -4,6 +4,7 @@
  * same transcript and the same live engine. A project session passes through the
  * trust gate first, so nothing attaches to a folder that is not trusted.
  */
+import { useMemo } from "react";
 import { transcript } from "shared";
 import type { DialogQuestion, Place } from "shared";
 
@@ -45,20 +46,36 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 	/** pi fills the place in once the engine is up; until then the page's own answer holds. */
 	const where = snapshot.state.place ?? place;
 	const empty = rows.length === 0;
-	const composer = (
-		<Composer
-			store={store}
-			busy={busy}
-			models={models}
-			model={model}
-			thinkingLevel={thinkingLevel}
-			availableThinkingLevels={availableThinkingLevels}
-			statuses={statuses}
-			commands={commands}
-			codingTools={codingTools}
-			inline={empty}
-			footer={<ComposerPlace place={where} />}
-		/>
+	// Every prop here survives a streaming token, so the element does too.
+	const composer = useMemo(
+		() => (
+			<Composer
+				store={store}
+				busy={busy}
+				models={models}
+				model={model}
+				thinkingLevel={thinkingLevel}
+				availableThinkingLevels={availableThinkingLevels}
+				statuses={statuses}
+				commands={commands}
+				codingTools={codingTools}
+				inline={empty}
+				footer={<ComposerPlace place={where} />}
+			/>
+		),
+		[
+			store,
+			busy,
+			models,
+			model,
+			thinkingLevel,
+			availableThinkingLevels,
+			statuses,
+			commands,
+			codingTools,
+			empty,
+			where,
+		],
 	);
 
 	// A session that has no snapshot yet shows a loader, not an empty transcript.

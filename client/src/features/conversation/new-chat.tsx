@@ -6,7 +6,7 @@
  * session id on the first message.
  */
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Place } from "shared";
 
 import { Composer } from "@/features/conversation/composer/composer";
@@ -21,6 +21,7 @@ export function NewChat({ project }: { project?: string }) {
 	const navigate = useNavigate();
 	const [sessionId] = useState(() => crypto.randomUUID());
 	const [choosing, setChoosing] = useState(false);
+	const openChooser = useCallback(() => setChoosing(true), []);
 	const recent = useRecentProjects();
 
 	return (
@@ -33,7 +34,7 @@ export function NewChat({ project }: { project?: string }) {
 					<DraftConversation
 						sessionId={sessionId}
 						place={{ kind: "project", path: project }}
-						onChangeProject={() => setChoosing(true)}
+						onChangeProject={openChooser}
 					/>
 				</TrustGate>
 			)}
@@ -72,41 +73,58 @@ function DraftConversation({
 	} = snapshot.state;
 	const where = snapshot.state.place ?? place;
 
-	const start = () =>
-		void navigate({
-			to: "/sessions/$sessionId",
-			params: { sessionId },
-			search: { project: where.kind === "project" ? where.path : undefined },
-		});
+	const start = useCallback(
+		() =>
+			void navigate({
+				to: "/sessions/$sessionId",
+				params: { sessionId },
+				search: { project: where.kind === "project" ? where.path : undefined },
+			}),
+		[navigate, sessionId, where],
+	);
+
+	// A streaming token leaves these props alone, so the box is not rebuilt.
+	const composer = useMemo(
+		() => (
+			<Composer
+				store={store}
+				busy={busy}
+				models={models}
+				model={model}
+				thinkingLevel={thinkingLevel}
+				availableThinkingLevels={availableThinkingLevels}
+				statuses={statuses}
+				commands={commands}
+				codingTools={codingTools}
+				inline
+				onSent={start}
+				footer={
+					<ComposerPlace
+						place={where}
+						onChange={where.kind === "project" ? onChangeProject : undefined}
+					/>
+				}
+			/>
+		),
+		[
+			store,
+			busy,
+			models,
+			model,
+			thinkingLevel,
+			availableThinkingLevels,
+			statuses,
+			commands,
+			codingTools,
+			onChangeProject,
+			where,
+			start,
+		],
+	);
 
 	if (!snapshot.loaded) {
 		return <SessionLoader snapshot={snapshot} />;
 	}
 
-	return (
-		<ConversationWelcome
-			place={where}
-			composer={
-				<Composer
-					store={store}
-					busy={busy}
-					models={models}
-					model={model}
-					thinkingLevel={thinkingLevel}
-					availableThinkingLevels={availableThinkingLevels}
-					statuses={statuses}
-					commands={commands}
-					codingTools={codingTools}
-					inline
-					onSent={start}
-					footer={
-						<ComposerPlace
-							place={where}
-							onChange={where.kind === "project" ? onChangeProject : undefined}
-						/>
-					}
-				/>
-			}
-		/>
-	);
+	return <ConversationWelcome place={where} composer={composer} />;
 }

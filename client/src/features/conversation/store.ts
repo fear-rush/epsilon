@@ -33,6 +33,8 @@ export class ConversationStore {
 	private readonly detach: () => void;
 	private readonly stopStatus: () => void;
 	private readonly stopProblem: () => void;
+	/** One notification per display refresh, however many frames arrive in between. */
+	private frame: number | undefined;
 	readonly sessionId: string;
 
 	constructor(sessionId: string, place: Place) {
@@ -65,6 +67,8 @@ export class ConversationStore {
 	 * return reattaches to the same engine instead of rebuilding it from the file.
 	 */
 	dispose(): void {
+		if (this.frame !== undefined) cancelAnimationFrame(this.frame);
+		this.frame = undefined;
 		this.detach();
 		this.stopStatus();
 		this.stopProblem();
@@ -141,6 +145,10 @@ export class ConversationStore {
 
 	private update(change: Partial<ConversationSnapshot>): void {
 		this.snapshot = { ...this.snapshot, ...change };
-		for (const listener of this.listeners) listener();
+		// Reduce every frame so the state is true, but let React render once per refresh.
+		this.frame ??= requestAnimationFrame(() => {
+			this.frame = undefined;
+			for (const listener of this.listeners) listener();
+		});
 	}
 }

@@ -1,5 +1,5 @@
 import { ArrowUpIcon, SquareIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 import type { SnapshotCommand, SnapshotModel, ThinkingLevel, UiStatus } from "shared";
 
@@ -52,7 +52,7 @@ type ComposerProps = {
 	onSent?: () => void;
 };
 
-export function Composer({
+function ComposerImpl({
 	store,
 	busy,
 	models,
@@ -241,3 +241,6 @@ export function Composer({
 		</div>
 	);
 }
+
+/** The composer's props are stable during a stream, so a token does not redraw its menus. */
+export const Composer = memo(ComposerImpl);

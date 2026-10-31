@@ -1,5 +1,7 @@
-import { Fragment } from "react";
+import { Fragment, memo } from "react";
 import type { TranscriptRow } from "shared";
+import { CatchBoundary } from "@tanstack/react-router";
+import type { ErrorComponentProps } from "@tanstack/react-router";
 
 import { Notice } from "@/components/patterns/status/notice";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
@@ -29,19 +31,36 @@ export function Transcript({ rows }: { rows: TranscriptRow[] }) {
 				<MessageScrollerViewport>
 					<MessageScrollerContent className="mx-auto w-full max-w-3xl gap-6 px-3 py-8 sm:px-6">
 						{rows.map((row) => (
-							<MessageScrollerItem
-								key={row.key}
-								scrollAnchor={row.kind === "user"}
-								className="animate-enter-rise"
-							>
-								<Row row={row} />
-							</MessageScrollerItem>
+							<RowItem key={row.key} row={row} />
 						))}
 					</MessageScrollerContent>
 				</MessageScrollerViewport>
 				<MessageScrollerButton />
 			</MessageScroller>
 		</MessageScrollerProvider>
+	);
+}
+
+/**
+ * A row that did not change keeps its element: the selectors return the same row
+ * object for an unchanged message, so a streaming reply re-renders only itself.
+ * One unrenderable message stays one notice instead of taking the page down.
+ */
+const RowItem = memo(function RowItem({ row }: { row: TranscriptRow }) {
+	return (
+		<MessageScrollerItem scrollAnchor={row.kind === "user"} className="animate-enter-rise">
+			<CatchBoundary getResetKey={() => row.key} errorComponent={RowError}>
+				<Row row={row} />
+			</CatchBoundary>
+		</MessageScrollerItem>
+	);
+});
+
+function RowError({ error }: ErrorComponentProps) {
+	return (
+		<Notice tone="error">
+			This message could not be shown. {error instanceof Error ? error.message : String(error)}
+		</Notice>
 	);
 }
 
