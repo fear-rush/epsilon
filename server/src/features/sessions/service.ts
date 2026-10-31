@@ -5,14 +5,17 @@
  * operation (pi has no delete): it resolves the id through pi's own listing,
  * closes an idle engine first, and refuses only while a turn is still working.
  * A deleted chat goes to Epsilon's trash, so the file comes back on a restore.
- * The browser never sends a session path.
+ * The browser sends no session path: an id is enough, pi's listing finds the file.
+ * The one path it may name is an import, which is a file to copy in rather than a
+ * session this home already holds.
  */
-import { rm, rmdir } from "node:fs/promises";
+import { mkdir, rm, rmdir, stat } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { forkSession, listAllSessions, locateSession, setSessionName } from "../../platform/pi";
 import type { StoredSession } from "../../platform/pi";
+import type { CopyOutcome } from "../conversation";
 import { ProjectNotTrustedError, placeOf, projectStatus, trustedProjectFolder } from "../projects";
 import type {
 	ExportedSession,
@@ -193,6 +196,73 @@ export const renameSession = async (
 	if (located === undefined) return notFound;
 	setSessionName(located.file, located.cwd, name);
 	return { ok: true, value: { id, name } };
+};
+
+/**
+ * A copy the registry makes: pi's fork at a message, or a clone of the position the
+ * chat is at. The callback owns the engine, because pi only copies by replacing the
+ * session a runtime holds, and the copy answers a new id the page navigates to
+ * (docs/DECISIONS.md, Session copies).
+ */
+export const copySession = async (
+	copy: () => Promise<CopyOutcome>,
+): Promise<SessionOutcome<{ id: string }>> => {
+	const outcome = await copy();
+	if (outcome.ok) return { ok: true, value: { id: outcome.id } };
+	if (outcome.reason === "session-not-found") return notFound;
+	if (outcome.reason === "session-running") return running;
+	return { ok: false, code: "SESSION_COPY_FAILED", message: outcome.message };
+};
+
+/**
+ * Bring a JSONL session file in as a new chat, in the chats folder or a trusted
+ * project. pi's `forkFrom` copies the whole file under a fresh id and writes the
+ * header's folder as the one chosen here, which is what makes the imported chat
+ * belong there; `importFromJsonl` keeps the source id and folder instead
+ * (docs/pi-sdk.md, Embedding).
+ */
+export const importSession = async (
+	home: AgentHome,
+	path: string,
+	project: string | undefined,
+): Promise<SessionOutcome<{ id: string }>> => {
+	if (!path.endsWith(".jsonl")) {
+		return {
+			ok: false,
+			code: "SESSION_COPY_FAILED",
+			message: "A session imports from a .jsonl file.",
+		};
+	}
+	const file = await stat(path).catch(() => undefined);
+	if (file === undefined || !file.isFile()) {
+		return {
+			ok: false,
+			code: "SESSION_COPY_FAILED",
+			message: `There is no file at ${path}.`,
+		};
+	}
+	let folder: string;
+	try {
+		folder = project === undefined ? home.chatsDir : await trustedProjectFolder(home, project);
+	} catch (error) {
+		return {
+			ok: false,
+			code: error instanceof ProjectNotTrustedError ? "PROJECT_NOT_TRUSTED" : "PROJECT_INVALID",
+			message: error instanceof Error ? error.message : String(error),
+		};
+	}
+	try {
+		// A fresh home has no chats folder yet, and pi's fork writes into the folder it
+		// is given.
+		await mkdir(folder, { recursive: true });
+		return { ok: true, value: { id: forkSession(path, folder) } };
+	} catch (error) {
+		return {
+			ok: false,
+			code: "SESSION_COPY_FAILED",
+			message: error instanceof Error ? error.message : String(error),
+		};
+	}
 };
 
 /**

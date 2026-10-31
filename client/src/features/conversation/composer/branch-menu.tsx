@@ -10,9 +10,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { InputGroupButton } from "@/components/ui/input-group";
-
-/** The first line of a message, so every row in the list stays one line tall. */
-const firstLine = (text: string): string => text.trimStart().split("\n")[0] ?? "";
+import { BranchRow } from "../branch-row";
 
 type BranchMenuProps = {
 	/** The active branch's user messages, root to leaf, with their whole text. */
@@ -61,10 +59,7 @@ export function BranchMenu({ branches, blocked, onGoBack }: BranchMenuProps) {
 				</div>
 				{branches.map((branch, index) => (
 					<DropdownMenuItem key={branch.entryId} onClick={() => onGoBack(branch)}>
-						<span className="w-6 shrink-0 text-right text-meta text-muted-foreground tabular-nums">
-							{index + 1}
-						</span>
-						<span className="min-w-0 flex-1 truncate">{firstLine(branch.text)}</span>
+						<BranchRow branch={branch} index={index} />
 					</DropdownMenuItem>
 				))}
 			</DropdownMenuContent>

@@ -212,9 +212,37 @@ Why: moving the leaf is a command on the live engine, and the text coming back t
 composer is what makes the new branch start from the message the operator picked
 rather than a retyped copy of it.
 
-Not: branch summarisation (`navigateTree`'s `summarize`), a tree of the other
-branches, and fork or clone. The missing parts are a model call in the middle of a
-navigation and a second session file, so they are not commands a tab asks for yet.
+Not: branch summarisation (`navigateTree`'s `summarize`), which is a model call in the
+middle of a navigation, and a tree of the other branches. A fork at a message or a clone
+is a second session file rather than a command on this one (Session copies).
+
+## Session copies
+
+Forking a chat at a message, cloning it at the position it is at, and importing a JSONL
+file each produce a **new session under a new id**, and the REST route answers that id so
+the page navigates to it. A fork or a clone runs on an `AgentSessionRuntime` built for that
+request alone and disposed in `finally`: pi's `fork` replaces the session a runtime holds,
+so a copy cannot borrow the live engine. The transient runtime is wired like the engine
+(same settings manager, same resource loader with the CLI's built-ins and Epsilon's
+defaults, same UI bridge, with no tab behind it), the source session's engine is closed
+first so one writer reads the file, and a chat that is still working refuses the copy
+instead of being stopped. Importing goes through `SessionManager.forkFrom`, the call that
+moves a chat into a project: it writes a fresh id and the header's folder. `importFromJsonl`
+keeps the source file's id and its recorded folder ([pi-sdk.md](pi-sdk.md), Embedding), so
+in a home of many sessions it produces duplicate ids and chats filed under a folder this
+machine may not have.
+
+Why: a copy exists so two chats continue separately, and the original file is left exactly
+as it was. A new id is the one thing the route, the socket attach and a sidebar row can all
+agree on, and the page opens the same chat the engine will.
+
+Not: replacing the live engine under the open tab and rebinding every subscription. It
+keeps one page and one id, but the subscriptions, dialogs and display state all belong to
+the session that was replaced, so the tab would rebind mid-request and a second tab
+watching the same session would keep the old one. Not: `navigateTree` for a fork (it moves
+the leaf inside one file, Branching). Not: `SessionManager.forkFrom` for a fork at a message
+(it copies the whole file, branches included). Not: rewriting an imported file's header by
+hand.
 
 ## Export
 

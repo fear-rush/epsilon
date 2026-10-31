@@ -138,6 +138,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				autoCompaction={autoCompaction}
 				autoRetry={autoRetry}
 				isCompacting={isCompacting}
+				branches={branches}
 			/>
 
 			{questions.map((question) => (

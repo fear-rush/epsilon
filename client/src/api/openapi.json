@@ -180,7 +180,8 @@
 									"PROJECT_INVALID",
 									"TRASH_NOT_FOUND",
 									"TRASH_PATH_TAKEN",
-									"EXPORT_FAILED"
+									"EXPORT_FAILED",
+									"SESSION_COPY_FAILED"
 								]
 							}
 						},
@@ -234,6 +235,45 @@
 				},
 				"required": [
 					"project"
+				]
+			},
+			"CopiedSession": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id"
+				]
+			},
+			"ForkSessionInput": {
+				"type": "object",
+				"properties": {
+					"entryId": {
+						"type": "string",
+						"minLength": 1
+					}
+				},
+				"required": [
+					"entryId"
+				]
+			},
+			"ImportSessionInput": {
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"minLength": 1
+					},
+					"project": {
+						"type": "string",
+						"minLength": 1
+					}
+				},
+				"required": [
+					"path"
 				]
 			},
 			"RenamedSession": {
@@ -3437,6 +3477,181 @@
 					},
 					"409": {
 						"description": "A live agent still holds this session",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/sessions/{id}/fork": {
+			"post": {
+				"tags": [
+					"sessions"
+				],
+				"operationId": "forkSession",
+				"description": "pi's fork: a new session holding the chat up to the message picked, and the original file unchanged",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						},
+						"required": true,
+						"name": "id",
+						"in": "path"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ForkSessionInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "The new session's id, which is where the chat continues",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CopiedSession"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "pi refused the fork",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No such session in the home",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "A live agent still holds this session",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/sessions/{id}/clone": {
+			"post": {
+				"tags": [
+					"sessions"
+				],
+				"operationId": "cloneSession",
+				"description": "Clone a chat: a new session holding the branch up to where this one is now, and the original unchanged",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						},
+						"required": true,
+						"name": "id",
+						"in": "path"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The new session's id, which is where the chat continues",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CopiedSession"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "pi refused the clone",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "No such session in the home",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "A live agent still holds this session",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/sessions/import": {
+			"post": {
+				"tags": [
+					"sessions"
+				],
+				"operationId": "importSession",
+				"description": "Copy a JSONL session file in as a new chat, in the chats folder or the project named",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ImportSessionInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "The imported session's id, which is where the page opens it",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CopiedSession"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The file is not a session pi can read, or the folder cannot hold it",
 						"content": {
 							"application/json": {
 								"schema": {

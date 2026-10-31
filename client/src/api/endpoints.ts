@@ -128,6 +128,31 @@ export const moveSession = async (id: string, project: string): Promise<string> 
 		).data,
 	).id;
 
+/**
+ * pi forks the chat up to the message picked and answers the new session's id. The
+ * original keeps its own id and file.
+ */
+export const forkSession = async (id: string, entryId: string): Promise<string> =>
+	body(
+		(
+			await api.POST("/api/sessions/{id}/fork", {
+				params: { path: { id } },
+				body: { entryId },
+			})
+		).data,
+	).id;
+
+/** The same, at the position the chat is at now; answers the new session's id. */
+export const cloneSession = async (id: string): Promise<string> =>
+	body((await api.POST("/api/sessions/{id}/clone", { params: { path: { id } } })).data).id;
+
+/**
+ * Copy a JSONL session file in as a new chat, in the chats folder or the project
+ * named, and answer the id it landed under.
+ */
+export const importSession = async (path: string, project?: string): Promise<string> =>
+	body((await api.POST("/api/sessions/import", { body: { path, project } })).data).id;
+
 export const fetchProjectStatus = async (
 	path: string,
 	signal?: AbortSignal,

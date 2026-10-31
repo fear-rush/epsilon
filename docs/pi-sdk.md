@@ -89,9 +89,27 @@ Other facts worth having before embedding:
 - `NewSessionOptions.id` creates a session with an exact id. `SessionManager` lists,
   opens, finds, creates and owns `getEntries()`, `getTree()` and `getSessionName()`;
   `AgentSessionRuntime` owns `newSession`, `switchSession`, `fork` and
-  `importFromJsonl`, and replaces the active session. Subscriptions belong to the old
-  session and must be rebound. Epsilon uses the `SessionManager` half and opens one
-  session per engine.
+  `importFromJsonl`, and replaces the active session. It is built by
+  `createAgentSessionRuntime(createRuntime, { cwd, agentDir, sessionManager })`, and
+  `createRuntime({ cwd, agentDir, sessionManager, sessionStartEvent, projectTrustContext })`
+  answers `{ ...createAgentSessionFromServices({ services, sessionManager, sessionStartEvent }), services, diagnostics }`,
+  where `services` come from `createAgentSessionServices({ cwd, agentDir, settingsManager,
+  resourceLoaderOptions })`. The factory runs again for every replacement, with the
+  effective cwd. Subscriptions belong to the session that was replaced, so a host passes
+  `setRebindSession()` to bind extensions and re-subscribe on the new one; `dispose()`
+  emits `session_shutdown` and disposes the session it holds. `fork(entryId)` copies the
+  branch up to a user message, `fork(leafId, { position: "at" })` is the CLI's `/clone`,
+  and both write a new session file under a fresh id — a fork before the first message
+  makes an empty session that has no file yet. `importFromJsonl(path, cwdOverride)` copies
+  the file verbatim into the current session manager's session directory, so the copy keeps
+  the source's id **and** its recorded cwd (`cwdOverride` only changes the in-memory
+  manager): importing an export of a chat already in the home duplicates its id, and
+  importing one from another machine files it under a folder that may not exist here. A
+  host that keeps a home of many sessions therefore imports with
+  `SessionManager.forkFrom(sourceFile, targetCwd)`, which writes a fresh id and the header's
+  cwd, and uses the runtime for fork and clone only
+  ([DECISIONS.md](DECISIONS.md), Session copies). Epsilon otherwise uses the
+  `SessionManager` half and opens one session per engine.
 - `AgentSession` also carries the controls around a turn: `prompt` (with
   `streamingBehavior`), `steer`, `followUp`, `abort`, `clearQueue`,
   `getSteeringMessages`, `getFollowUpMessages`, `getSessionStats`, `getContextUsage`,

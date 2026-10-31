@@ -4,9 +4,11 @@ import { z } from "zod";
 import { listAllSessions } from "../../platform/pi";
 import type { Deps } from "../../deps";
 import {
+	copySession,
 	deleteSession,
 	exportSession,
 	groupSessions,
+	importSession,
 	moveSessionToProject,
 	pinSession,
 	purgeTrashedSession,
@@ -15,8 +17,11 @@ import {
 	restoreTrashedSession,
 } from "./service";
 import {
+	copiedSessionSchema,
 	exportSessionInputSchema,
 	exportedSessionSchema,
+	forkSessionInputSchema,
+	importSessionInputSchema,
 	moveSessionInputSchema,
 	movedSessionSchema,
 	pinSessionInputSchema,
@@ -95,6 +100,75 @@ const moveSessionRoute = createRoute({
 		400: { description: "The folder cannot hold the session", content: sessionErrorContent },
 		404: { description: "No such session in the home", content: sessionErrorContent },
 		409: { description: "A live agent still holds this session", content: sessionErrorContent },
+	},
+});
+
+const forkSessionRoute = createRoute({
+	method: "post",
+	path: "/api/sessions/{id}/fork",
+	tags: ["sessions"],
+	operationId: "forkSession",
+	description:
+		"pi's fork: a new session holding the chat up to the message picked, and the original file unchanged",
+	request: {
+		params: z.object({ id: z.string().min(1) }),
+		body: {
+			required: true,
+			content: { "application/json": { schema: forkSessionInputSchema } },
+		},
+	},
+	responses: {
+		200: {
+			description: "The new session's id, which is where the chat continues",
+			content: { "application/json": { schema: copiedSessionSchema } },
+		},
+		400: { description: "pi refused the fork", content: sessionErrorContent },
+		404: { description: "No such session in the home", content: sessionErrorContent },
+		409: { description: "A live agent still holds this session", content: sessionErrorContent },
+	},
+});
+
+const cloneSessionRoute = createRoute({
+	method: "post",
+	path: "/api/sessions/{id}/clone",
+	tags: ["sessions"],
+	operationId: "cloneSession",
+	description:
+		"Clone a chat: a new session holding the branch up to where this one is now, and the original unchanged",
+	request: { params: z.object({ id: z.string().min(1) }) },
+	responses: {
+		200: {
+			description: "The new session's id, which is where the chat continues",
+			content: { "application/json": { schema: copiedSessionSchema } },
+		},
+		400: { description: "pi refused the clone", content: sessionErrorContent },
+		404: { description: "No such session in the home", content: sessionErrorContent },
+		409: { description: "A live agent still holds this session", content: sessionErrorContent },
+	},
+});
+
+const importSessionRoute = createRoute({
+	method: "post",
+	path: "/api/sessions/import",
+	tags: ["sessions"],
+	operationId: "importSession",
+	description:
+		"Copy a JSONL session file in as a new chat, in the chats folder or the project named",
+	request: {
+		body: {
+			required: true,
+			content: { "application/json": { schema: importSessionInputSchema } },
+		},
+	},
+	responses: {
+		200: {
+			description: "The imported session's id, which is where the page opens it",
+			content: { "application/json": { schema: copiedSessionSchema } },
+		},
+		400: {
+			description: "The file is not a session pi can read, or the folder cannot hold it",
+			content: sessionErrorContent,
+		},
 	},
 });
 
@@ -238,6 +312,34 @@ export const sessionsRoutes = ({ home, engines }: Deps) =>
 			if (outcome.code === "SESSION_RUNNING") return c.json(problem, 409);
 			if (outcome.code === "SESSION_NOT_FOUND") return c.json(problem, 404);
 			return c.json(problem, 400);
+		})
+		.openapi(forkSessionRoute, async (c) => {
+			const { id } = c.req.valid("param");
+			const { entryId } = c.req.valid("json");
+			// pi copies by replacing the session a runtime holds, so the registry owns this
+			// one: it closes an idle engine, forks on a runtime of its own and answers the
+			// new id (docs/DECISIONS.md, Session copies).
+			const outcome = await copySession(() => engines.fork(id, entryId));
+			if (outcome.ok) return c.json(outcome.value, 200);
+			const problem = { code: outcome.code, message: outcome.message };
+			if (outcome.code === "SESSION_NOT_FOUND") return c.json(problem, 404);
+			if (outcome.code === "SESSION_RUNNING") return c.json(problem, 409);
+			return c.json(problem, 400);
+		})
+		.openapi(cloneSessionRoute, async (c) => {
+			const { id } = c.req.valid("param");
+			const outcome = await copySession(() => engines.clone(id));
+			if (outcome.ok) return c.json(outcome.value, 200);
+			const problem = { code: outcome.code, message: outcome.message };
+			if (outcome.code === "SESSION_NOT_FOUND") return c.json(problem, 404);
+			if (outcome.code === "SESSION_RUNNING") return c.json(problem, 409);
+			return c.json(problem, 400);
+		})
+		.openapi(importSessionRoute, async (c) => {
+			const { path, project } = c.req.valid("json");
+			const outcome = await importSession(home, path, project);
+			if (outcome.ok) return c.json(outcome.value, 200);
+			return c.json({ code: outcome.code, message: outcome.message }, 400);
 		})
 		.openapi(renameSessionRoute, async (c) => {
 			const { id } = c.req.valid("param");
