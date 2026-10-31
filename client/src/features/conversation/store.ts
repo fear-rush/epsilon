@@ -104,6 +104,16 @@ export class ConversationStore {
 	readonly getSnapshot = (): ConversationSnapshot => this.snapshot;
 
 	/**
+	 * Show a failure this tab caused itself where a refused command appears. An
+	 * export is a REST call, so no `command-result` frame carries its refusal.
+	 */
+	reportProblem(message: string): void {
+		this.update({
+			state: reduce(this.snapshot.state, { t: "error", code: "AGENT_FAILED", message }),
+		});
+	}
+
+	/**
 	 * Send a message, with the images it carries. While a run is active, `behavior`
 	 * is how it joins that run: `steer` interrupts it after the current turn's tools,
 	 * `followUp` waits for it to settle. pi also dispatches an extension command from

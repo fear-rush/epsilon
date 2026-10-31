@@ -179,7 +179,8 @@
 									"PROJECT_NOT_TRUSTED",
 									"PROJECT_INVALID",
 									"TRASH_NOT_FOUND",
-									"TRASH_PATH_TAKEN"
+									"TRASH_PATH_TAKEN",
+									"EXPORT_FAILED"
 								]
 							}
 						},
@@ -272,6 +273,43 @@
 				},
 				"required": [
 					"pinned"
+				]
+			},
+			"ExportedSession": {
+				"type": "object",
+				"properties": {
+					"filename": {
+						"type": "string"
+					},
+					"mimeType": {
+						"type": "string"
+					},
+					"text": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"filename",
+					"mimeType",
+					"text"
+				]
+			},
+			"ExportSessionInput": {
+				"type": "object",
+				"properties": {
+					"format": {
+						"$ref": "#/components/schemas/ExportFormat"
+					}
+				},
+				"required": [
+					"format"
+				]
+			},
+			"ExportFormat": {
+				"type": "string",
+				"enum": [
+					"html",
+					"jsonl"
 				]
 			},
 			"TrashList": {
@@ -3493,6 +3531,68 @@
 				"responses": {
 					"204": {
 						"description": "The pin file now holds this decision"
+					},
+					"404": {
+						"description": "No such session in the home",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/sessions/{id}/export": {
+			"post": {
+				"tags": [
+					"sessions"
+				],
+				"operationId": "exportSession",
+				"description": "Write one chat's transcript as an HTML page or a JSONL file, through the live engine",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						},
+						"required": true,
+						"name": "id",
+						"in": "path"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ExportSessionInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "The exported file's bytes, and the name and type to save them under",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ExportedSession"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "pi could not write the export",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SessionError"
+								}
+							}
+						}
 					},
 					"404": {
 						"description": "No such session in the home",

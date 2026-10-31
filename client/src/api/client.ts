@@ -46,6 +46,7 @@ const FAILURES = new Map([
 	["DELETE /api/sessions/trash/{id}", "The chat was not deleted"],
 	["DELETE /api/projects/sessions", "The project was not removed"],
 	["POST /api/sessions/{id}/move", "The chat was not moved"],
+	["POST /api/sessions/{id}/export", "The chat was not exported"],
 	["GET /api/projects/status", "The folder did not load"],
 	["POST /api/projects/trust", "The folder was not trusted"],
 	["GET /api/projects/folders", "The folder list did not load"],

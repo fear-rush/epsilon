@@ -1,9 +1,10 @@
 /**
  * The session's own controls. Compaction belongs to this chat; pi's two automatic
  * settings are global, so the menu says they apply to every chat instead of
- * pretending they are per-session switches.
+ * pretending they are per-session switches. Export reads the transcript and writes
+ * a copy, so a run in progress does not block it.
  */
-import { Minimize2Icon, SlidersHorizontalIcon } from "lucide-react";
+import { FileDownIcon, FileJsonIcon, Minimize2Icon, SlidersHorizontalIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Tip } from "@/components/patterns/tip";
@@ -18,21 +19,52 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { exportSession } from "@/api/endpoints";
+import type { ExportedSession, ExportFormat } from "@/api/types";
 import { CompactContextDialog } from "./compact-context-dialog";
 import type { ConversationStore } from "./store";
 
+/** Hand the answer's text to the browser's own download, under the name the server chose. */
+const saveAs = ({ filename, mimeType, text }: ExportedSession): void => {
+	const url = URL.createObjectURL(new Blob([text], { type: mimeType }));
+	const link = document.createElement("a");
+	link.href = url;
+	link.download = filename;
+	document.body.append(link);
+	link.click();
+	link.remove();
+	// The download reads the blob after this task, so the URL has to outlive it.
+	setTimeout(() => URL.revokeObjectURL(url), 0);
+};
+
 export function SessionControls({
 	store,
+	empty,
 	autoCompaction,
 	autoRetry,
 	isCompacting,
 }: {
 	store: ConversationStore;
+	/** A chat with no messages has no session file yet, so pi has nothing to export. */
+	empty: boolean;
 	autoCompaction: boolean;
 	autoRetry: boolean;
 	isCompacting: boolean;
 }) {
 	const [compacting, setCompacting] = useState(false);
+	const [exporting, setExporting] = useState(false);
+
+	/** A refusal goes where a refused command goes, because there is no dialog to hold it. */
+	const exportAs = async (format: ExportFormat): Promise<void> => {
+		setExporting(true);
+		try {
+			saveAs(await exportSession(store.sessionId, format));
+		} catch (cause) {
+			store.reportProblem(cause instanceof Error ? cause.message : String(cause));
+		} finally {
+			setExporting(false);
+		}
+	};
 
 	return (
 		<>
@@ -57,6 +89,14 @@ export function SessionControls({
 						<DropdownMenuItem disabled={isCompacting} onClick={() => setCompacting(true)}>
 							<Minimize2Icon />
 							Compact context…
+						</DropdownMenuItem>
+						<DropdownMenuItem disabled={empty || exporting} onClick={() => void exportAs("html")}>
+							<FileDownIcon />
+							Export as HTML
+						</DropdownMenuItem>
+						<DropdownMenuItem disabled={empty || exporting} onClick={() => void exportAs("jsonl")}>
+							<FileJsonIcon />
+							Export as JSONL
 						</DropdownMenuItem>
 					</DropdownMenuGroup>
 					<DropdownMenuSeparator />

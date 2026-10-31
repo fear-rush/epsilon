@@ -8,6 +8,8 @@ type Schemas = components["schemas"];
 
 export type BuiltinProvider = Schemas["BuiltinProvider"];
 export type DefaultModel = Schemas["DefaultModel"];
+export type ExportedSession = Schemas["ExportedSession"];
+export type ExportFormat = Schemas["ExportFormat"];
 export type McpAutoEnableInput = Schemas["McpAutoEnableInput"];
 export type McpEnabledInput = Schemas["McpEnabledInput"];
 export type McpInProjectInput = Schemas["McpInProjectInput"];

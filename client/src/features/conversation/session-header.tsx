@@ -103,6 +103,7 @@ function SessionHeaderImpl({
 						<PlaceBadge place={place} />
 						<SessionControls
 							store={store}
+							empty={empty}
 							autoCompaction={autoCompaction}
 							autoRetry={autoRetry}
 							isCompacting={isCompacting}

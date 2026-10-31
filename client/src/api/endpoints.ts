@@ -5,6 +5,8 @@
 import { api, RefusalError } from "./client";
 import type {
 	DefaultModel,
+	ExportedSession,
+	ExportFormat,
 	FolderListing,
 	McpAutoEnableInput,
 	McpEnabledInput,
@@ -90,6 +92,20 @@ export const purgeTrashedSession = async (id: string): Promise<void> => {
  */
 export const removeProject = async (path: string): Promise<number> =>
 	body((await api.DELETE("/api/projects/sessions", { params: { query: { path } } })).data).removed;
+
+/**
+ * pi writes the export to a file on the server, which reads it back and removes it: the
+ * answer is the bytes, with the name and type the browser saves them under.
+ */
+export const exportSession = async (id: string, format: ExportFormat): Promise<ExportedSession> =>
+	body(
+		(
+			await api.POST("/api/sessions/{id}/export", {
+				params: { path: { id } },
+				body: { format },
+			})
+		).data,
+	);
 
 /** Set the display name pi records in the session file. */
 export const renameSession = async (id: string, name: string): Promise<void> => {

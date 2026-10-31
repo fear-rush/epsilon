@@ -135,6 +135,23 @@ export interface paths {
 		patch: operations["pinSession"];
 		trace?: never;
 	};
+	"/api/sessions/{id}/export": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Write one chat's transcript as an HTML page or a JSONL file, through the live engine */
+		post: operations["exportSession"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/sessions/trash": {
 		parameters: {
 			query?: never;
@@ -859,7 +876,7 @@ export interface components {
 			hasProjectResources: boolean;
 		};
 		SessionError: components["schemas"]["Problem"] & ({
-			code: "SESSION_NOT_FOUND" | "SESSION_RUNNING" | "PROJECT_NOT_TRUSTED" | "PROJECT_INVALID" | "TRASH_NOT_FOUND" | "TRASH_PATH_TAKEN";
+			code: "SESSION_NOT_FOUND" | "SESSION_RUNNING" | "PROJECT_NOT_TRUSTED" | "PROJECT_INVALID" | "TRASH_NOT_FOUND" | "TRASH_PATH_TAKEN" | "EXPORT_FAILED";
 		});
 		Problem: {
 			message: string;
@@ -883,6 +900,15 @@ export interface components {
 		PinSessionInput: {
 			pinned: boolean;
 		};
+		ExportedSession: {
+			filename: string;
+			mimeType: string;
+			text: string;
+		};
+		ExportSessionInput: {
+			format: components["schemas"]["ExportFormat"];
+		};
+		ExportFormat: "html" | "jsonl";
 		TrashList: {
 			entries: components["schemas"]["TrashedSession"][];
 			problem?: string;
@@ -1779,6 +1805,51 @@ interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+			/** No such session in the home */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionError"];
+				};
+			};
+		};
+	};
+	/** Write one chat's transcript as an HTML page or a JSONL file, through the live engine */
+	exportSession: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ExportSessionInput"];
+			};
+		};
+		responses: {
+			/** The exported file's bytes, and the name and type to save them under */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ExportedSession"];
+				};
+			};
+			/** pi could not write the export */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionError"];
+				};
 			};
 			/** No such session in the home */
 			404: {

@@ -98,8 +98,18 @@ Other facts worth having before embedding:
   `compact`, `abortCompaction`, `setAutoCompactionEnabled`, `abortRetry`,
   `setAutoRetryEnabled`, `isRetrying`, `executeBash`, `abortBash`, `isBashRunning`,
   `cacheWarmingStatus`, `setSessionName`, `navigateTree`, `exportToHtml`,
-  `getAllTools` and the model and thinking setters. A socket feature uses one of these
-  instead of inventing an RPC command.
+  `exportToJsonl`, `getAllTools` and the model and thinking setters. A socket feature
+  uses one of these instead of inventing an RPC command.
+- `exportToHtml(outputPath?, options?)` and `exportToJsonl(outputPath?)` write a file
+  and answer its path; neither hands back the bytes. `exportToHtml` refuses a session
+  with nothing written yet (`Nothing to export yet - start a conversation first`, and
+  `Cannot export in-memory session to HTML` when it has no file at all), fills pi's
+  bundled template (read from pi's own package directory, which `PI_PACKAGE_DIR` can
+  move) into one self-contained page, and pre-renders custom tool output through the
+  live extension runners, so it needs the engine, not just the file. `exportToJsonl`
+  serialises the current branch, header first, and needs no file. The package's
+  `exports` map exposes only `.` and `./rpc-entry`, so `dist/core/session-export.*`
+  is private: a host exports through a live session rather than a standalone call.
 - `prompt()` takes images as `ImageContent` (`{ type: "image", data, mimeType }`, the
   base64 without a `data:` prefix) in its `images` option, and pi normalises them
   itself: it runs `processImage` with the `images.autoResize` setting and the model's

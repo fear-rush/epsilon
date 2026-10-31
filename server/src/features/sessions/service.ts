@@ -14,7 +14,13 @@ import type { AgentHome } from "../../platform/agent-home";
 import { forkSession, listAllSessions, locateSession, setSessionName } from "../../platform/pi";
 import type { StoredSession } from "../../platform/pi";
 import { ProjectNotTrustedError, placeOf, projectStatus, trustedProjectFolder } from "../projects";
-import type { SessionErrorCode, SessionList, SessionSummary } from "./contract";
+import type {
+	ExportedSession,
+	ExportFormat,
+	SessionErrorCode,
+	SessionList,
+	SessionSummary,
+} from "./contract";
 import { purgeTrash, restoreTrash, trashSession, writePinned } from "./store";
 
 type Live = { id: string; needsInput: boolean };
@@ -187,6 +193,30 @@ export const renameSession = async (
 	if (located === undefined) return notFound;
 	setSessionName(located.file, located.cwd, name);
 	return { ok: true, value: { id, name } };
+};
+
+/**
+ * Write one chat's transcript through pi's exporter. The callback owns the engine,
+ * because pi's export is a method on the live session and this feature builds none;
+ * it answers undefined for an id pi has no session for, and throws pi's own sentence
+ * for a transcript it refused to write.
+ */
+export const exportSession = async (
+	id: string,
+	format: ExportFormat,
+	exportLive: (id: string, format: ExportFormat) => Promise<ExportedSession | undefined>,
+): Promise<SessionOutcome<ExportedSession>> => {
+	try {
+		const exported = await exportLive(id, format);
+		if (exported === undefined) return notFound;
+		return { ok: true, value: exported };
+	} catch (error) {
+		return {
+			ok: false,
+			code: "EXPORT_FAILED",
+			message: error instanceof Error ? error.message : "pi could not write this chat's export.",
+		};
+	}
 };
 
 /** Pin is Epsilon's own preference, so only an existing session may be pinned. */

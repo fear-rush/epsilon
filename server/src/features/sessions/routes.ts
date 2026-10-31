@@ -5,6 +5,7 @@ import { listAllSessions } from "../../platform/pi";
 import type { Deps } from "../../deps";
 import {
 	deleteSession,
+	exportSession,
 	groupSessions,
 	moveSessionToProject,
 	pinSession,
@@ -14,6 +15,8 @@ import {
 	restoreTrashedSession,
 } from "./service";
 import {
+	exportSessionInputSchema,
+	exportedSessionSchema,
 	moveSessionInputSchema,
 	movedSessionSchema,
 	pinSessionInputSchema,
@@ -130,6 +133,30 @@ const pinSessionRoute = createRoute({
 	},
 });
 
+const exportSessionRoute = createRoute({
+	method: "post",
+	path: "/api/sessions/{id}/export",
+	tags: ["sessions"],
+	operationId: "exportSession",
+	description:
+		"Write one chat's transcript as an HTML page or a JSONL file, through the live engine",
+	request: {
+		params: z.object({ id: z.string().min(1) }),
+		body: {
+			required: true,
+			content: { "application/json": { schema: exportSessionInputSchema } },
+		},
+	},
+	responses: {
+		200: {
+			description: "The exported file's bytes, and the name and type to save them under",
+			content: { "application/json": { schema: exportedSessionSchema } },
+		},
+		400: { description: "pi could not write the export", content: sessionErrorContent },
+		404: { description: "No such session in the home", content: sessionErrorContent },
+	},
+});
+
 const listTrashRoute = createRoute({
 	method: "get",
 	path: "/api/sessions/trash",
@@ -225,6 +252,18 @@ export const sessionsRoutes = ({ home, engines }: Deps) =>
 			const outcome = await pinSession(home, id, c.req.valid("json").pinned);
 			if (outcome.ok) return c.body(null, 204);
 			return c.json({ code: outcome.code, message: outcome.message }, 404);
+		})
+		.openapi(exportSessionRoute, async (c) => {
+			const { id } = c.req.valid("param");
+			const { format } = c.req.valid("json");
+			// pi's exporter is a method on the live session, so the engine is the registry's
+			// to open, use and release; this feature only names the chat and the format.
+			const outcome = await exportSession(id, format, (target, kind) =>
+				engines.export(target, kind),
+			);
+			if (outcome.ok) return c.json(outcome.value, 200);
+			const problem = { code: outcome.code, message: outcome.message };
+			return outcome.code === "SESSION_NOT_FOUND" ? c.json(problem, 404) : c.json(problem, 400);
 		})
 		.openapi(listTrashRoute, async (c) => c.json(await listTrash(home), 200))
 		.openapi(restoreTrashedSessionRoute, async (c) => {

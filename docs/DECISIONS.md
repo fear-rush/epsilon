@@ -216,6 +216,27 @@ Not: branch summarisation (`navigateTree`'s `summarize`), a tree of the other
 branches, and fork or clone. The missing parts are a model call in the middle of a
 navigation and a second session file, so they are not commands a tab asks for yet.
 
+## Export
+
+A chat's transcript leaves as an HTML page or a JSONL file, written by pi's own
+exporter and handed to the browser's download. Both are methods on `AgentSession`, so
+the server builds the session's engine for the export when nothing holds it, reads the
+file back into the response and releases the engine to its idle grace. Nothing is kept
+on the server: pi writes into a temporary folder that is removed after the read. The
+name the file is saved under is the chat's own name, else its id.
+
+Why: pi ships no exporter that takes a session file — its `exports` map exposes only
+the package root and the RPC entry — so a path around the engine would be a second
+implementation of pi's output, drifting from the page a terminal's `/export` writes.
+The HTML export also reads pi's bundled template and pre-renders extension tool output
+through the live extension runners, which only an open engine has. Export reads the
+transcript and changes nothing, so a run in progress does not refuse it.
+
+Not: serialising the socket's snapshot in the browser (it holds the rendered subset of
+the transcript, not the file). Not: a streaming download with `Content-Disposition`
+(the contract carries the bytes as a JSON field, and a second response shape for one
+control buys nothing at a few hundred kilobytes).
+
 ## Attachments
 
 A prompt carries images beside its text: at most four, each at most 2 MB of raw bytes

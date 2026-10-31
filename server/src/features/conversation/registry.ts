@@ -20,6 +20,7 @@ import type { McpLive } from "../mcp";
 import { aggregateMcpLive } from "../mcp";
 import { placeOf, trustedProjectFolder } from "../projects";
 import { LiveSession } from "./session";
+import type { ExportedSession, ExportFormat } from "./session";
 
 /** Where a session will run, resolved before its engine is built. */
 type Location = { cwd: string; file: string | undefined; place: Place };
@@ -88,6 +89,24 @@ export class SessionRegistry {
 	 */
 	closeIfIdle(sessionId: string): boolean {
 		return this.sessions.get(sessionId)?.closeIfIdle() ?? true;
+	}
+
+	/**
+	 * Write one chat's transcript through pi's exporter, which is a method on the
+	 * live engine: a chat the registry does not hold is opened for the export and
+	 * released back to its idle grace afterwards. Undefined means neither an engine
+	 * nor pi's list has this session.
+	 */
+	async export(sessionId: string, format: ExportFormat): Promise<ExportedSession | undefined> {
+		if (this.find(sessionId) === undefined && (await locateSession(sessionId)) === undefined) {
+			return undefined;
+		}
+		const session = await this.ensure(sessionId);
+		try {
+			return await session.export(format);
+		} finally {
+			session.release();
+		}
 	}
 
 	/** Re-read config in every live engine, after the settings panel wrote it. */

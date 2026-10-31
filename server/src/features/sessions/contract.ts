@@ -55,6 +55,25 @@ export const moveSessionInputSchema = z
 
 export const movedSessionSchema = z.object({ id: z.string() }).openapi("MovedSession");
 
+/** The two files pi writes a transcript as. */
+const exportFormatSchema = z.enum(["html", "jsonl"]).openapi("ExportFormat");
+
+export type ExportFormat = z.infer<typeof exportFormatSchema>;
+
+export const exportSessionInputSchema = z
+	.object({ format: exportFormatSchema })
+	.openapi("ExportSessionInput");
+
+/**
+ * One finished export: the bytes pi wrote to a scratch file, with the name and type
+ * the browser saves them under. Nothing stays on the server.
+ */
+export const exportedSessionSchema = z
+	.object({ filename: z.string(), mimeType: z.string(), text: z.string() })
+	.openapi("ExportedSession");
+
+export type ExportedSession = z.infer<typeof exportedSessionSchema>;
+
 export const renameSessionInputSchema = z
 	.object({ name: z.string().trim().min(1).max(200) })
 	.openapi("RenameSessionInput");
@@ -109,6 +128,8 @@ const sessionErrorCodeSchema = z.enum([
 	"PROJECT_INVALID",
 	"TRASH_NOT_FOUND",
 	"TRASH_PATH_TAKEN",
+	/** pi refused to write the export; its own sentence says why. */
+	"EXPORT_FAILED",
 ]);
 
 export type SessionErrorCode = z.infer<typeof sessionErrorCodeSchema>;
