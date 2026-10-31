@@ -41,15 +41,19 @@ prose; fix a doc that disagrees in the same commit, and never copy code or file 
    field of `models.json` and never goes back to the browser. Other files: use an
    exported writer, else merge the documented shape, keep unknown keys, refuse to
    write what you cannot parse. Account sign-in runs through `ModelRuntime.login()` from
-   the panel; MCP sign-in and trust stay in the terminal.
+   the panel; project trust through pi's `ProjectTrustStore`; MCP sign-in stays in
+   the terminal.
 5. The agent home is chosen once, in `server/src/main.ts`, and passed down. An
-   inherited `PI_*` variable never decides it. `bun run dev` uses `.sandbox/agent`;
+   inherited `PI_*` variable never decides it. `bun run dev` uses `.sandbox/agent` (a link to a folder outside the repository and `~`) and opens projects only inside `.sandbox/home`;
    a check that starts a server sets `EPSILON_AGENT_HOME` to a scratch directory.
    Only `dev:host` touches the real `~/.pi`.
 6. Never edit generated files: `client/src/routeTree.gen.ts`, `client/src/api/*.gen.ts`.
 7. One schema language (zod), one styling system (Tailwind with shadcn). Add shadcn
    components with `bunx --bun shadcn@latest add <name>`, never `npx`. Forms are
-   `FieldGroup` -> `Field` -> `FieldLabel` + control + `FieldDescription`.
+   `FieldGroup` -> `Field` -> `FieldLabel` + control + `FieldDescription`. Features
+   compose `components/patterns`, use the tokens in `client/src/styles/tokens.css`
+   and import `cn` from `@/lib/cn`; the `design-tokens` lint rule refuses raw sizes,
+   colours and bracketed values outside `components/ui`.
 8. No state that lives only in server memory or only in the browser. An unsupported
    or unknown state shows a visible notice; silence is never acceptable.
 
@@ -60,8 +64,9 @@ prose; fix a doc that disagrees in the same commit, and never copy code or file 
    `routes.ts`, plus `domain.ts` if there is pure logic. Add one `app.route` line in
    `server/src/routes.ts`.
 3. `bun run api:generate`.
-4. Client `features/settings/<name>/`, an entry in `sections.ts`, and thin route
-   files in `client/src/routes`.
+4. Client `features/settings/<name>/` built from `MasterDetail`, `ListPane` and
+   `DetailPage`, an entry in `shell/sections.ts`, and thin route files in
+   `client/src/routes`.
 
 There is no line limit; split files by meaning, as
 [ARCHITECTURE.md, Files and folders](docs/ARCHITECTURE.md#files-and-folders) says.

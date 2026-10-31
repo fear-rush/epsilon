@@ -135,7 +135,7 @@ only through the session's messages
 | Project trust              | `ProjectTrustStore.set`                                                                                                                                                                                |
 | Providers (`models.json`)  | **none.** `registerProvider()` is runtime-only; `ModelConfig` is read-only                                                                                                                             |
 | MCP servers (`mcp.json`)   | **none reachable.** `addMcpServerConfig`, `removeMcpServerConfig` and `loadMcpConfig` exist, but the package's `exports` map exposes only `.` and `./rpc-entry`, so they cannot be imported through it |
-| Skills                     | **none.** A skill is a directory with `SKILL.md`                                                                                                                                                       |
+| Skills                     | **files, plus the `skills` setting.** A skill is a directory with `SKILL.md`; `SettingsManager.setSkillPaths` and `setProjectSkillPaths` write the array of paths and `-path` overrides                |
 | Credentials (`auth.json`)  | `ModelRuntime.login()` and `logout()` for a provider that declares a login method                                                                                                                      |
 
 `ModelRuntime.login(providerId, type, interaction)` drives a whole sign-in and
@@ -180,6 +180,32 @@ needs only `id`; `input` defaults to `["text"]`, `contextWindow` to 128000 and
 `maxTokens` to 16384. `cost` is optional, and when present its four fields are
 required. A `modelOverrides` object merges field by field for object fields such as
 `cost`; every other field replaces the model's value.
+
+## Skills
+
+What the dashboard relies on, read from `dist/core/skills.js`, `package-manager.js`
+and `resource-loader.js` (1.4.0):
+
+- **Fields pi honors:** `name`, `description` and `disable-model-invocation`. A skill
+  without a description is not loaded, and pi reports why. A bad name only warns.
+  `disable-model-invocation: true` keeps the skill out of the system prompt;
+  `/skill:name` still runs it. Every other key is parsed and ignored.
+- **Where skills come from, in order:** packages, entries of the `skills` setting
+  (project, then user), `<project>/.pi/skills`, `.agents/skills` in the project and
+  each parent up to the git root (trusted projects only), `<agent home>/skills`, then
+  `~/.agents/skills`. The last one reads `process.env.HOME`, not a value Epsilon
+  passes. The first skill with a name wins; each loser gets a `collision`
+  diagnostic with the winner's and loser's paths.
+- **The inventory is pi's.** `DefaultPackageManager.resolve()` lists every skill file
+  with `enabled` and where it came from; `loadSkills` and `loadSkillsFromDir` parse
+  them. `resolve()` installs a missing package unless the `onMissing` callback
+  answers `"skip"`, so a read always passes one.
+- **Turning one skill off** is a `-<path>` entry in the `skills` array of the file
+  that owns the skill's scope. `isEnabledByOverrides` matches the skill's absolute
+  directory, its `SKILL.md` path, or either relative to the scope's base folder. A
+  package skill is filtered through that package's entry instead.
+- **Folders of other agents** (`~/.claude/skills`, `~/.codex/skills`) are not
+  scanned. A plain path in the `skills` array adds the folder.
 
 ## API family paths
 
@@ -240,24 +266,25 @@ characters the provider returned.
 
 ## Files in the agent home
 
-| Path            | Owner | What it holds                                                              |
-| --------------- | ----- | -------------------------------------------------------------------------- |
-| `settings.json` | pi    | Defaults, tools, compaction, packages, skill locations                     |
-| `models.json`   | pi    | Provider endpoints, headers, model catalogs, `apiKey` overrides            |
-| `auth.json`     | pi    | Stored credentials, one per provider, written through login/logout         |
-| `mcp.json`      | pi    | `mcpServers` and `autoEnableCodemode`, shared shape with other MCP clients |
-| `mcp.log`       | pi    | Messages MCP servers send with `notifications/message`, rotated at 5 MB    |
-| `trust.json`    | pi    | Project trust decisions                                                    |
-| `mcp-auth.json` | pi    | MCP OAuth tokens                                                           |
-| `skills/`       | pi    | User skills; each directory holds a `SKILL.md`                             |
-| `sessions/`     | pi    | One JSONL per session                                                      |
+| Path            | Owner   | What it holds                                                              |
+| --------------- | ------- | -------------------------------------------------------------------------- |
+| `settings.json` | pi      | Defaults, tools, compaction, packages, skill locations                     |
+| `models.json`   | pi      | Provider endpoints, headers, model catalogs, `apiKey` overrides            |
+| `auth.json`     | pi      | Stored credentials, one per provider, written through login/logout         |
+| `mcp.json`      | pi      | `mcpServers` and `autoEnableCodemode`, shared shape with other MCP clients |
+| `mcp.log`       | pi      | Messages MCP servers send with `notifications/message`, rotated at 5 MB    |
+| `trust.json`    | pi      | Project trust decisions                                                    |
+| `mcp-auth.json` | pi      | MCP OAuth tokens                                                           |
+| `skills/`       | pi      | User skills; each directory holds a `SKILL.md`                             |
+| `sessions/`     | pi      | One JSONL per session, under `--<encoded cwd>--/`                          |
+| `chats/`        | Epsilon | The empty folder every chat runs in; it never holds a `.pi`                |
 
 Skills also load from `<cwd>/.pi/skills`, `<cwd>/.agents/skills`, `~/.agents/skills`
 and installed packages.
 Packages are declared in `settings.json` and installed with
 `pi install npm:@scope/pkg`, `pi install git:host/repo` or `pi install ./path`.
 MCP servers come from `mcp.json` and a project's `.pi/mcp.json`. The project file
-is read because the embedded engine starts trusted (see below); a project entry
+is read only in a trusted project (see Project trust); a project entry
 there replaces a global entry of the same name, and one without `command`, `url`
 or `type` only overrides its `enabled`, `exposure` and `toolExposure`. A project
 entry cannot set `auth`. `pi mcp add` writes user-level servers unless `-l` is
@@ -310,22 +337,30 @@ The CLI resolves trust before it loads project settings: `resolveProjectTrusted(
 in `dist/core/project-trust.js` reads `trust.json`, then `defaultProjectTrust`
 ("ask" by default), then asks. Extensions see the result through
 `ctx.isProjectTrusted()`, which returns `settingsManager.isProjectTrusted()`.
+`resolveProjectTrusted` is not exported.
 
 An embedded engine does not run that resolution. `SettingsManager.create(cwd,
 agentDir)` starts at `projectTrusted = true` (`dist/core/settings-manager.js`), and
-nothing in `createAgentSession()` changes it. Epsilon therefore loads
-`.pi/settings.json`, `.pi/mcp.json` and the other project resources for whoever
-owns Epsilon's project folder, whatever `trust.json` says;
-`defaultProjectTrust` is inert there. That follows from one Epsilon owning one
-project: the folder is chosen at startup. The panel states it instead of
-pretending a decision exists.
+nothing in `createAgentSession()` changes it. A host that builds an engine in a
+folder therefore loads that folder's `.pi` whatever `trust.json` says, unless it
+decides first.
 
-The SDK does expose `ProjectTrustStore` and `SettingsManager.setProjectTrusted`,
-so a host that wants pi's CLI behavior can implement it. This repository does not;
-trust decisions stay in a terminal using the same agent home
-([DECISIONS.md](DECISIONS.md), Configure in the dashboard).
+What the SDK exports for that decision:
 
-See Traps: the embedded engine always trusts.
+- `ProjectTrustStore(agentDir)`: `get(cwd)` answers the closest saved decision
+  (`true`, `false` or `null`), so a trusted parent covers its subfolders; `set(cwd,
+  decision)` writes `trust.json` under pi's own lock. It is the same file `/trust`
+  writes, so a terminal and the dashboard share decisions.
+- `hasTrustRequiringProjectResources(cwd)`: whether the folder holds anything pi
+  gates (`.pi/settings.json`, `.pi/mcp.json`, `.pi/extensions|skills|prompts|themes`,
+  `.pi/SYSTEM.md`, `.agents/skills` in the folder or a parent). Context files
+  (`AGENTS.md`, `CLAUDE.md`) are never gated.
+- `SettingsManager.setProjectTrusted(trusted)`.
+
+Epsilon asks before anything runs: a project folder is refused until
+`ProjectTrustStore.get()` is `true`, and the dashboard's Trust button calls
+`set(cwd, true)` ([DECISIONS.md](DECISIONS.md), Chats and projects).
+`defaultProjectTrust` is not consulted.
 
 ## The CLI, for what an embedding host does not do
 
@@ -363,13 +398,24 @@ Turborepo or the runtime.
   `session.getAllTools()` with `namespace.name === "mcp__<server>"`, and
   `session.getActiveToolNames()` says whether `codemode`/`tool_search` are active.
   That is all a host can read: failed, needs-sign-in and still-connecting are
-  indistinguishable, so the panel reports tool counts and says which question it
+  indistinguishable, so the panel reports tool counts and names (recovered from the registered `mcp__<server>__<tool>`, which pi sanitizes) and says which question it
   cannot answer. Servers an extension registers with `pi.registerMcpServer()` are
   only visible from inside an extension (`pi.getMcpServers()`), not from the files.
-- **The embedded engine always trusts the project folder.** `SettingsManager.create`
+- **The embedded engine trusts whatever folder it is given.** `SettingsManager.create`
   starts with `projectTrusted = true` and the SDK never runs the CLI's
   `resolveProjectTrusted()`, so `.pi/settings.json` and `.pi/mcp.json` load with an
-  empty `trust.json`. A real trust decision needs `ProjectTrustStore` wired in.
+  empty `trust.json`. The host must check `ProjectTrustStore` before it builds one.
+- **A skill needs a reading tool.** The system prompt lists skills only when a
+  `read`-type tool is declared (`dist/core/system-prompt.js`), because the model
+  loads a skill by reading its `SKILL.md`. Turning off every built-in tool turns
+  skills off with them.
+- **pi records the tool set, not the host.** `setActiveToolsByName()` changes the
+  live tools; the next run writes the loadout to the transcript and reopening the
+  session restores it. A change before the first message lives only in memory,
+  like a `model_change` (below).
+- **`SessionManager.findById(cwd)` creates a directory.** It goes through
+  `getDefaultSessionDir`, which `mkdir`s `sessions/--<cwd>--`. Look an id up through
+  `SessionManager.listAll()` when the folder is not known yet.
 - **A permission `confirm` blocks the turn.** `ctx.ui.confirm` waits for the host's
   `ExtensionUIContext` with no timeout and no error. A host that never answers
   leaves the tool call hanging after `tool_execution_start`.
@@ -388,11 +434,11 @@ Turborepo or the runtime.
   resolved at install time. Install on the machine that runs them; config
   files are portable, dependency trees are not.
 - **Turborepo strict env mode drops undeclared variables.** A variable a task needs
-  (`EPSILON_AGENT_HOME`, `EPSILON_PROJECT`) must be named in `turbo.json`, or
-  `bun run dev` runs without it while the shell looks correct.
+  (`EPSILON_AGENT_HOME`) must be named in `turbo.json`, or `bun run dev` runs
+  without it while the shell looks correct.
 - **`turbo dev` runs tasks in their workspace directory.** `process.cwd()` is
-  `server/`, which pi would take as the project. Derive the project from the module
-  path or `EPSILON_PROJECT`.
+  `server/`, which pi would take as the project. No pi call may default its `cwd`;
+  every one is given a chat's or a project's folder.
 - **A partial commit can fail on a stale build.** `dist` is gitignored and survives
   the pre-commit stash, so a type-check can read a `shared/dist` from another
   commit. Run `bun run build --force` before committing partially staged work.

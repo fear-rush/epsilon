@@ -59,7 +59,7 @@ internals and produces terminal-shaped dialogs). A per-extension UI adapter.
 Epsilon owns one agent home, at pi's default path (`$HOME/.pi/agent`),
 resolved once in `server/src/main.ts` and passed to every engine explicitly. An inherited `PI_*`
 variable never decides it. Nothing records the choice. Sessions are grouped
-by project, not by home. Development uses a sandbox home; `dev:host` is the only path to
+by folder, as pi groups them. Development uses a sandbox home; `dev:host` is the only path to
 the operator's real one.
 
 Why: pi's home holds credentials, policy, extensions and sessions that a dev run
@@ -92,14 +92,32 @@ for that: pi supplies the endpoint, the API family and the catalog, and the cred
 supplies the auth, so those fields are an override there rather than part of adding
 it. A provider the operator defines has none of them and needs all of them.
 
-Stays in the terminal, because pi exposes no host API for it:
-MCP sign-in, project trust, and TUI-only toggles. The dashboard names that boundary
-without printing a command for it. It never writes `trust.json`.
+Stays in the terminal, because pi exposes no host API for it: MCP sign-in and
+TUI-only toggles. The dashboard names that boundary and the documented terminal step
+(`pi mcp login <name>`) and offers no sign-in button. Project trust is not one of them: it goes through pi's exported
+`ProjectTrustStore` (Chats and projects), and the dashboard never writes
+`trust.json` by hand.
 
 An MCP server also reports what the next session can reach and what a live engine
 registered, because a configured server that no tool can call is a state the operator
-must see. Those are reads: the panel says sign-in stays in the terminal and how a
+must see. A server's page lists the tool names a live engine registered, with a switch
+that writes an exact-name `toolExposure` rule; with no live engine it says to open a
+chat instead of guessing. Those are reads: the panel says sign-in stays in the terminal and how a
 stored credential is detected, and it never shows the credential.
+
+An MCP server and a skill can also be edited raw. For an MCP server that is its own
+entry under `mcpServers` and nothing else; stored env values, header values and the
+OAuth client secret are shown as `"<stored>"`, and a `"<stored>"` left in place keeps the
+stored value on save. A save that does not parse writes nothing. A skill's raw view is
+its folder: `SKILL.md` with its frontmatter, written as typed once the name and
+description pass pi's rules, and every bundled file.
+
+Adding an MCP server can start from a registry: the official MCP registry, and GitHub's
+(`api.mcp.github.com`), which is looked up in the official one first. A registry entry has
+no command, so the panel derives it from the package type (`npx -y` for npm, `uvx` for
+PyPI, `docker run -i --rm` for OCI) or takes the remote's URL and headers, and asks only
+for the required and secret values. Legacy SSE and package types pi cannot run are listed
+as unsupported with the reason.
 
 Why: the dashboard must be usable without a terminal, and most of the work is editing two
 documented files and calling two exported classes.
@@ -107,7 +125,119 @@ documented files and calling two exported classes.
 Not: writing `auth.json` (pi exports neither its store nor its locking). Epsilon-side
 copies of pi config registered at engine start (lost on restart, duplicates resolution).
 Showing a terminal command in the UI. A screen for every pi setting. A second key store:
-the panel's field writes `models.json`, and only pi's own flows write `auth.json`.
+the panel's field writes `models.json`, and only pi's own flows write `auth.json`. Raw
+editing of the whole `mcp.json` (one entry is enough, and the rest stays out of reach).
+Glama and mcp.so as registries: Glama needs an API key, gives no install command and
+requires its credit on every page; mcp.so has no public API.
+
+## Chats and projects
+
+A conversation is a pi session, and the interface calls every one a chat. Where it
+runs decides what it sees:
+
+- A **chat** runs in `<agent home>/chats`, one empty folder Epsilon creates. It has
+  no `.pi`, so it sees the home's settings, skills, MCP servers and packages and
+  nothing else. It starts with the coding tools (`bash`, `edit`, `write`) off.
+- A **project** is any folder the operator opens and trusts. Its chats run there and
+  add that folder's `.pi` and context files. They start with pi's default tools.
+
+Both carry a per-session tool switch; pi records the loadout in the transcript, so
+the choice survives a reopen. `read` stays on either way, because skills need it.
+
+Nothing runs in a project folder until pi's `ProjectTrustStore` says it is trusted.
+The page asks before it attaches, and the server refuses to build an engine or write
+project settings in an untrusted folder. The Trust button writes that store, which
+is the file `/trust` writes, so a terminal and the dashboard share decisions.
+
+The list of projects is derived from the folders pi's session files record; nothing
+stores it. A folder opened but never used exists only in the page URL until its first
+message. A chat moves into a project through `SessionManager.forkFrom`, which writes
+the history under the new folder, and the original file is then removed.
+
+A chat's display name is pi's own session-name entry, written through the engine (or
+`SessionManager` when no engine holds the file), so a terminal sees the same name. A
+pin is Epsilon's own list preference: `pinned-sessions.json` in the agent home holds
+the ids, and the list route joins them to pi's sessions. Pinned rows lead their place;
+a project's chats stay inside that project.
+
+Deleting a chat removes its session file and its pin; an idle engine on it is closed
+first, and only a turn in progress refuses. Removing a project deletes the session files
+recorded in that folder, which is all that puts it on the list; the folder and pi's trust
+record are left alone.
+
+Why: pi has no pin concept, and a browser-only pin would vanish on another tab or a
+reload. A pi session file with an unknown pin entry would be a second truth for pi's
+own data. Not: writing pins into a session transcript or keeping them in server
+memory.
+
+MCP servers, skills and packages each open on a Global | Project tab, the split pi
+makes between the home and a project's `.pi`. The tab decides what Add writes and
+names the file; a project tab also lists the global entries it inherits, and
+switching an inherited MCP server there writes an override in the project file. The
+project is in the Settings URL, so a project's menu in the sidebar links straight to
+it.
+
+Why: skills, MCP servers and packages exist at two scopes in pi, and an Epsilon tied
+to one startup folder could only ever show one project's scope. Opening any folder
+from a browser makes a trust decision necessary: a cloned repository's
+`.pi/extensions` is code.
+
+Not: a chat with no folder (pi has no such mode). A chat in `$HOME` (its ancestors
+would become project resources). Always trusting an opened folder, which was only
+defensible when the folder was chosen at startup. Gating chats on trust (their folder
+is Epsilon's own). A stored project list (a second truth beside pi's session files).
+
+## Skills
+
+The skills list is pi's own answer: its resolver says which `SKILL.md` files exist and
+whether a setting turns one off, its loader says which name won a collision and why a
+file was refused. Each skill shows one status (automatic, manual only, off, shadowed,
+invalid, untrusted) and where it came from. A save rewrites only the fields the panel
+edits and keeps every other frontmatter key and comment; a file whose frontmatter does
+not parse is shown, not rewritten. Fields from other agents (Claude Code's `context`,
+`user-invocable` and the rest) are shown read-only with a notice that pi ignores them.
+Turning one skill off is a `-<path>` entry in pi's `skills` setting; a skill folder of
+another agent (`~/.claude/skills`, `~/.codex/skills`) is used only when the operator
+links it, which adds the folder to the same setting.
+
+Why: pi honors `name`, `description` and `disable-model-invocation` and nothing else,
+so an editor for other agents' fields would promise behavior the agent does not have.
+A scan of our own would disagree with the agent the first time pi changes its order.
+
+Not: rebuilding pi's discovery. Editing fields pi ignores. Copying or symlinking other
+agents' skills into the home.
+
+Installing skills is one path for every source: a picked folder, an archive, or a
+pasted `skills add` command is staged under the agent home, every skill in it is
+validated strictly, the operator reviews the report, and only then are the chosen
+skills moved into `<agent home>/skills` or a project's `.agents/skills`. A pasted
+command runs the `skills` CLI at a pinned version as a short-lived child process, with
+telemetry off and the operator's `~` replaced by the sandbox's under `bun run dev`; it
+only fetches into the stage and never places anything itself. A repository pi can read
+as a package (a root `skills/` or a `pi` manifest) can instead be installed as a pi
+package filtered to the chosen skills, which keeps it updating; the default stays a
+copy, because a package update is not validated again.
+
+Why: the CLI already resolves every source people paste from skills.sh (GitHub,
+GitLab, private git, archives), and staging keeps one validation for all of them.
+Project skills go to `.agents/skills` because other agents read the same folder.
+
+Cost accepted: the installer is a child process and needs the network; the engine
+stays in-process.
+
+Not: letting the CLI write the final location (no validation, and `-g` would write the
+real `~/.agents`). Re-implementing the CLI's fetchers. A lock file of our own.
+
+Dev and host follow separate rules and never mix. Under `bun run dev` the sandbox's `~`
+is `HOME` for the server, pi and every child, and a project must be a folder inside it;
+the folder picker cannot leave it and the server refuses anything else. On a host the
+real `~` is used, as a terminal would. In both, `~/.agents/skills` of the `~` in effect is
+an editable global skills folder.
+
+Why: pi loads every `AGENTS.md` up to `/` and every `.agents/skills` up to the git root
+above a project, so one project on the operator's disk carried their configuration into
+the sandbox, filed as project skills. Not: letting the sandbox open any folder and warning
+about it.
 
 ## Default extensions
 
@@ -126,6 +256,23 @@ and lets copies drift from the repository.
 
 Not: seeding extension files into the home. Telling operators to copy files. Claiming
 parity with the terminal.
+
+## Design system
+
+The client has one set of tokens (`client/src/styles/tokens.css`) and one layer of
+patterns (`client/src/components/patterns`) that every feature composes. Tokens name
+roles, not values: `h-bar`, `gap-field`, `text-title`, `max-w-dialog-md`,
+`animate-enter-rise`. `cn` is configured with them (`client/src/lib/cn.ts`), because
+the stock merger reads `text-title` as a colour and drops it. The `design-tokens` lint
+rule is an error in `features/` and `components/patterns/`: no bracketed values, no
+raw palette colours, type and spacing only from the scale.
+
+Why: the same idea was drawn many ways (38 paddings, six dialog sizes, seven error
+layouts, twelve one-off entrances), so columns did not line up, dialogs resized
+between tabs and an offline server showed three different messages at once.
+
+Not: a design per section. Bracketed values in features. A second component for an
+idea a pattern already draws.
 
 ## Feature modules
 
