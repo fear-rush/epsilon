@@ -5,14 +5,21 @@
  * call on the embedded `AgentSession` (docs/DECISIONS.md, Embedded engine); no process speaks to this one.
  */
 import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
-import type { Command, DialogAnswer, ProtocolErrorCode, ServerFrame, SnapshotModel } from "shared";
+import type {
+	Command,
+	DialogAnswer,
+	Place,
+	ProtocolErrorCode,
+	ServerFrame,
+	SnapshotModel,
+} from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
 import type { McpLive } from "../mcp";
 import { mcpLiveOf } from "../mcp";
 import { Dialogs } from "./dialogs";
 import type { AnswerOutcome, FrameSink } from "./dialogs";
-import { createEngine, toJsonEvent } from "./engine";
+import { createEngine, setCodingTools, toJsonEvent } from "./engine";
 import { buildSnapshot, readModelsFrom } from "./snapshot";
 import { UiBridge } from "./ui-context";
 
@@ -68,6 +75,9 @@ const IDLE_DISPOSE_MS = 10_000;
 export type LiveSessionOptions = {
 	sessionId: string;
 	cwd: string;
+	/** The session file, or undefined for a session pi has not written yet. */
+	file: string | undefined;
+	place: Place;
 	home: AgentHome;
 	/** Called once this session has disposed itself, so the registry drops it. */
 	onEmpty: () => void;
@@ -75,6 +85,7 @@ export type LiveSessionOptions = {
 
 export class LiveSession {
 	readonly sessionId: string;
+	readonly place: Place;
 	private readonly onEmpty: () => void;
 	private readonly frames: SessionFrames;
 	private readonly dialogs: Dialogs;
@@ -87,8 +98,9 @@ export class LiveSession {
 	private bashUnsettled = false;
 	private idleTimer: ReturnType<typeof setTimeout> | undefined;
 
-	private constructor(sessionId: string, onEmpty: () => void) {
+	private constructor(sessionId: string, place: Place, onEmpty: () => void) {
 		this.sessionId = sessionId;
+		this.place = place;
 		this.onEmpty = onEmpty;
 		this.frames = new SessionFrames(() => this.onFrameCount());
 		this.dialogs = new Dialogs(
@@ -104,10 +116,12 @@ export class LiveSession {
 	}
 
 	static async open(options: LiveSessionOptions): Promise<LiveSession> {
-		const session = new LiveSession(options.sessionId, options.onEmpty);
+		const session = new LiveSession(options.sessionId, options.place, options.onEmpty);
 		const agent = await createEngine({
 			sessionId: options.sessionId,
 			cwd: options.cwd,
+			file: options.file,
+			chat: options.place.kind === "chat",
 			home: options.home,
 			ui: session.bridge.host,
 		});
@@ -126,6 +140,17 @@ export class LiveSession {
 	}
 
 	/**
+	 * Drop the engine now if nothing would be lost: no run, no compaction, no
+	 * question waiting. Answers whether it is gone, so a move or a delete can
+	 * refuse a session that is still working.
+	 */
+	closeIfIdle(): boolean {
+		if (this.busy) return false;
+		this.dispose();
+		return true;
+	}
+
+	/**
 	 * What this engine's MCP servers report through their tools. pi exposes no
 	 * connection state, so a server appears here once it registered a tool and
 	 * `sessions` is the only answer for "is anything connected yet".
@@ -134,12 +159,14 @@ export class LiveSession {
 		const agent = this.agent;
 		if (agent === undefined)
 			return { sessions: 0, servers: [], codemode: false, toolSearch: false };
-		const namespaces: string[] = [];
+		const tools: { namespace: string; name: string }[] = [];
 		for (const tool of agent.getAllTools()) {
 			const namespace = tool.namespace?.name;
-			if (namespace !== undefined && namespace.startsWith("mcp__")) namespaces.push(namespace);
+			if (namespace !== undefined && namespace.startsWith("mcp__")) {
+				tools.push({ namespace, name: tool.name });
+			}
 		}
-		return mcpLiveOf({ names, namespaces, active: agent.getActiveToolNames() });
+		return mcpLiveOf({ names, tools, active: agent.getActiveToolNames() });
 	}
 
 	/**
@@ -157,6 +184,14 @@ export class LiveSession {
 
 	answerDialog(answer: DialogAnswer): AnswerOutcome {
 		return this.dialogs.answer(answer);
+	}
+
+	/** Rename through the live engine, so every tab watching gets the new snapshot. */
+	rename(name: string): boolean {
+		const agent = this.agent;
+		if (agent === undefined) return false;
+		agent.setSessionName(name);
+		return true;
 	}
 
 	/** Run one command and report it to every tab watching this session. */
@@ -247,6 +282,11 @@ export class LiveSession {
 				this.resync();
 				return;
 			}
+			case "set_coding_tools": {
+				setCodingTools(agent, command.enabled);
+				this.resync();
+				return;
+			}
 		}
 	}
 
@@ -327,7 +367,7 @@ export class LiveSession {
 		return {
 			t: "snapshot",
 			sessionId: this.sessionId,
-			snapshot: buildSnapshot(this.engine, this.models),
+			snapshot: buildSnapshot(this.engine, this.models, this.place),
 		};
 	}
 

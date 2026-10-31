@@ -7,9 +7,10 @@
  * `sessionId`, so there is no ambient "current session".
  */
 import { PROTOCOL_VERSION, clientFrameSchema, serverFrameSchema } from "shared";
-import type { ClientFrame, ProtocolErrorCode, ServerFrame } from "shared";
+import type { ClientFrame, Place, ProtocolErrorCode, ServerFrame } from "shared";
 import type { ServerWebSocket } from "bun";
 
+import { ProjectNotTrustedError } from "../projects";
 import type { LiveSession } from "./session";
 
 /** What the socket uses of a live session; a test stands in with a small fake. */
@@ -20,7 +21,7 @@ export type Watchable = Pick<
 
 /** What the socket uses of the registry. `SessionRegistry` satisfies it. */
 export type Engines = {
-	ensure: (sessionId: string) => Promise<Watchable>;
+	ensure: (sessionId: string, place?: Place) => Promise<Watchable>;
 	find: (sessionId: string) => Watchable | undefined;
 };
 
@@ -121,7 +122,7 @@ const route = async (engines: Engines, socket: ChatSocket, frame: ClientFrame): 
 			welcome(socket, frame);
 			return;
 		case "attach":
-			await watch(engines, socket, frame.sessionId);
+			await watch(engines, socket, frame.sessionId, frame.place);
 			return;
 		case "detach":
 			unwatch(socket, frame.sessionId);
@@ -164,12 +165,13 @@ const watch = (
 	engines: Engines,
 	socket: ChatSocket,
 	sessionId: string,
+	place?: Place,
 ): Promise<Watchable | undefined> => {
 	socket.data.wanted.add(sessionId);
 	const attaching = socket.data.attaching.get(sessionId);
 	if (attaching !== undefined) return attaching;
 	if (socket.data.unsubscribes.has(sessionId)) return Promise.resolve(engines.find(sessionId));
-	const task = open(engines, socket, sessionId).finally(() => {
+	const task = open(engines, socket, sessionId, place).finally(() => {
 		socket.data.attaching.delete(sessionId);
 	});
 	socket.data.attaching.set(sessionId, task);
@@ -180,17 +182,18 @@ const open = async (
 	engines: Engines,
 	socket: ChatSocket,
 	sessionId: string,
+	place: Place | undefined,
 ): Promise<Watchable | undefined> => {
 	let session: Watchable;
 	try {
-		session = await engines.ensure(sessionId);
+		session = await engines.ensure(sessionId, place);
 		// Another tab may have detached, and disposed this engine, while it was
 		// being built. Rebuild from the session file instead of subscribing to it.
-		if (!session.isOpen) session = await engines.ensure(sessionId);
+		if (!session.isOpen) session = await engines.ensure(sessionId, place);
 	} catch (error) {
 		sendError(
 			socket,
-			"AGENT_START_FAILED",
+			error instanceof ProjectNotTrustedError ? "PROJECT_NOT_TRUSTED" : "AGENT_START_FAILED",
 			error instanceof Error ? error.message : String(error),
 			sessionId,
 		);

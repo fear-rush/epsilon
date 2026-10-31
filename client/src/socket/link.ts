@@ -4,7 +4,7 @@
  * sessionId, so a late store joins a socket that is already open.
  */
 import { PROTOCOL_VERSION, clientFrameSchema, serverFrameSchema } from "shared";
-import type { ClientFrame, ServerFrame } from "shared";
+import type { ClientFrame, Place, ServerFrame } from "shared";
 
 export type LinkStatus = "connecting" | "open" | "closed" | "blocked";
 
@@ -19,6 +19,8 @@ const RECONNECT_STEPS_MS = [500, 1_000, 2_000, 4_000, 8_000];
 class Link {
 	private readonly tabId = crypto.randomUUID();
 	private readonly frames = new Map<string, Set<FrameHandler>>();
+	/** Where each watched session starts, resent on reconnect for one not written yet. */
+	private readonly places = new Map<string, Place>();
 	private readonly statusListeners = new Set<StatusHandler>();
 	private readonly problemListeners = new Set<ProblemHandler>();
 	private socket: WebSocket | undefined;
@@ -48,12 +50,16 @@ class Link {
 		return () => this.problemListeners.delete(listener);
 	}
 
-	/** Watch one session. Returns the detach for that session alone. */
-	attach(sessionId: string, onFrame: FrameHandler): () => void {
+	/**
+	 * Watch one session. `place` is where it starts if pi has no file for it yet.
+	 * Returns the detach for that session alone.
+	 */
+	attach(sessionId: string, place: Place, onFrame: FrameHandler): () => void {
 		const handlers = this.frames.get(sessionId) ?? new Set<FrameHandler>();
 		handlers.add(onFrame);
 		this.frames.set(sessionId, handlers);
-		this.send({ t: "attach", sessionId });
+		this.places.set(sessionId, place);
+		this.send({ t: "attach", sessionId, place });
 		return () => this.detach(sessionId, onFrame);
 	}
 
@@ -68,6 +74,7 @@ class Link {
 		handlers.delete(onFrame);
 		if (handlers.size > 0) return;
 		this.frames.delete(sessionId);
+		this.places.delete(sessionId);
 		this.send({ t: "detach", sessionId });
 	}
 
@@ -130,7 +137,9 @@ class Link {
 		this.attempt = 0;
 		if (frame.data.t === "welcome") {
 			this.setStatus("open");
-			for (const sessionId of this.frames.keys()) this.send({ t: "attach", sessionId });
+			for (const sessionId of this.frames.keys()) {
+				this.send({ t: "attach", sessionId, place: this.places.get(sessionId) });
+			}
 			return;
 		}
 		if (frame.data.t === "error") {

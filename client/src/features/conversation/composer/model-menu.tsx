@@ -12,6 +12,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { InputGroupButton } from "@/components/ui/input-group";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 type ModelMenuProps = {
 	models: SnapshotModel[];
@@ -50,17 +51,24 @@ export function ModelMenu({ models, model, onSelect }: ModelMenuProps) {
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger
-				render={
-					<InputGroupButton
-						size="sm"
-						className="ml-auto w-auto max-w-40 cursor-pointer gap-1 truncate rounded-md text-xs sm:max-w-64"
-					/>
-				}
-			>
-				<span className="truncate">{model?.name ?? "Model"}</span>
-				<ChevronDownIcon data-icon="inline-end" />
-			</DropdownMenuTrigger>
+			<Tooltip>
+				<TooltipTrigger
+					render={
+						<DropdownMenuTrigger
+							render={
+								<InputGroupButton
+									size="sm"
+									className="ml-auto w-auto max-w-40 cursor-pointer gap-1 truncate rounded-md text-meta sm:max-w-64"
+								/>
+							}
+						/>
+					}
+				>
+					<span className="truncate">{model?.name ?? "Model"}</span>
+					<ChevronDownIcon data-icon="inline-end" />
+				</TooltipTrigger>
+				<TooltipContent side="top">Choose the model this chat uses.</TooltipContent>
+			</Tooltip>
 			<DropdownMenuContent align="start" className="max-h-80 w-80">
 				<DropdownMenuRadioGroup
 					value={current}

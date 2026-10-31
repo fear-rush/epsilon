@@ -3,7 +3,7 @@
  * so this store holds only what frames reduced to: a remount reuses it instead of
  * rebuilding the transcript from a snapshot, and leaving the route releases it.
  */
-import type { Command, DialogAnswer, ThinkingLevel } from "shared";
+import type { Command, DialogAnswer, Place, ServerFrame, ThinkingLevel } from "shared";
 import { emptyConversation, reduce } from "shared";
 import type { ConversationState } from "shared";
 
@@ -15,8 +15,17 @@ export type ConversationSnapshot = {
 	status: LinkStatus;
 	/** True once a snapshot arrived, so the page can show a loader until then. */
 	loaded: boolean;
+	/** Why the engine did not start, so the loader can say so instead of spinning. */
+	startError: string | undefined;
 	state: ConversationState;
 };
+
+/** An engine that could not start sends one error frame and no snapshot. */
+const startErrorOf = (frame: ServerFrame): string | undefined =>
+	frame.t === "error" &&
+	(frame.code === "AGENT_START_FAILED" || frame.code === "PROJECT_NOT_TRUSTED")
+		? frame.message
+		: undefined;
 
 export class ConversationStore {
 	private snapshot: ConversationSnapshot;
@@ -26,19 +35,27 @@ export class ConversationStore {
 	private readonly stopProblem: () => void;
 	readonly sessionId: string;
 
-	constructor(sessionId: string) {
+	constructor(sessionId: string, place: Place) {
 		this.sessionId = sessionId;
-		this.snapshot = { sessionId, status: link.current, loaded: false, state: emptyConversation };
+		this.snapshot = {
+			sessionId,
+			status: link.current,
+			loaded: false,
+			startError: undefined,
+			state: emptyConversation,
+		};
 		this.stopStatus = link.onStatus((status) => this.update({ status }));
 		this.stopProblem = link.onProblem((message) =>
 			this.update({
 				state: reduce(this.snapshot.state, { t: "error", code: "UNSUPPORTED_FRAME", message }),
 			}),
 		);
-		this.detach = link.attach(sessionId, (frame) =>
+		this.detach = link.attach(sessionId, place, (frame) =>
 			this.update({
 				state: reduce(this.snapshot.state, frame),
 				loaded: this.snapshot.loaded || frame.t === "snapshot",
+				startError:
+					startErrorOf(frame) ?? (frame.t === "snapshot" ? undefined : this.snapshot.startError),
 			}),
 		);
 	}
@@ -90,6 +107,14 @@ export class ConversationStore {
 	/** pi answers with a fresh snapshot, so the menu shows the model it chose. */
 	setModel(provider: string, modelId: string): void {
 		this.sendCommand({ type: "set_model", provider, modelId });
+	}
+
+	/**
+	 * Turn the tools that run commands and change files on or off. pi records the
+	 * tool set in the transcript on the next turn and restores it on reopen.
+	 */
+	setCodingTools(enabled: boolean): void {
+		this.sendCommand({ type: "set_coding_tools", enabled });
 	}
 
 	/** Session-only, like pi's /thinking. pi records the change in the transcript. */

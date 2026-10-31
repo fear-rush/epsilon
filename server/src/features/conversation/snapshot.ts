@@ -15,7 +15,9 @@
  */
 import type { AgentSession, ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { isVisibleMessage } from "shared";
-import type { Snapshot, SnapshotCommand, SnapshotModel } from "shared";
+import type { Place, Snapshot, SnapshotCommand, SnapshotModel } from "shared";
+
+import { hasCodingTools } from "./engine";
 
 const AUTH_CHECK_TIMEOUT_MS = 3_000;
 
@@ -59,7 +61,11 @@ const commandsOf = (agent: AgentSession): SnapshotCommand[] => {
 	return commands;
 };
 
-export const buildSnapshot = (agent: AgentSession, models: SnapshotModel[]): Snapshot => {
+export const buildSnapshot = (
+	agent: AgentSession,
+	models: SnapshotModel[],
+	place: Place,
+): Snapshot => {
 	const model = agent.model;
 	return {
 		state: {
@@ -72,6 +78,8 @@ export const buildSnapshot = (agent: AgentSession, models: SnapshotModel[]): Sna
 			sessionName: agent.sessionName,
 			thinkingLevel: agent.thinkingLevel,
 			availableThinkingLevels: agent.getAvailableThinkingLevels(),
+			place,
+			codingTools: hasCodingTools(agent),
 		},
 		messages: agent.messages.filter(isVisibleMessage),
 		// The list the session carries, so the picker and `set_model` agree

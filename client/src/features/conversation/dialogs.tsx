@@ -2,27 +2,10 @@ import type { DialogAnswer, DialogQuestion } from "shared";
 import { useDialogMotion } from "@/hooks/use-dialog-motion";
 import { useState } from "react";
 
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { DialogFrame } from "@/components/patterns/dialog/dialog-frame";
 
 /** A blocking `confirm`: the agent cannot continue until this is answered. */
 
@@ -42,31 +25,30 @@ export function ConfirmDialog({
 		dialog.close(() => onAnswer({ id: question.id, method: "confirm", confirmed }));
 
 	return (
-		<AlertDialog
+		<DialogFrame
 			open={dialog.open}
 			onOpenChange={(next) => {
 				if (!next) answer(false);
 			}}
+			size="sm"
+			title={question.title}
+			footer={
+				<>
+					<Button variant="outline" onClick={() => answer(false)}>
+						No
+					</Button>
+					<Button onClick={() => answer(true)}>Yes</Button>
+				</>
+			}
 		>
-			<AlertDialogContent>
-				<AlertDialogHeader>
-					<AlertDialogTitle>{question.title}</AlertDialogTitle>
-					<AlertDialogDescription className="whitespace-pre-wrap break-words">
-						{question.message}
-					</AlertDialogDescription>
-				</AlertDialogHeader>
-				<AlertDialogFooter>
-					<AlertDialogCancel onClick={() => answer(false)}>No</AlertDialogCancel>
-					<AlertDialogAction onClick={() => answer(true)}>Yes</AlertDialogAction>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
+			<p className="text-body break-words whitespace-pre-wrap">{question.message}</p>
+		</DialogFrame>
 	);
 }
 
 /**
- * The three extension requests that ask for a choice or text. `confirm` is an
- * AlertDialog instead (docs/ARCHITECTURE.md, UI rules).
+ * The three extension requests that ask for a choice or text. `confirm` is its own
+ * small dialog above.
  */
 
 type Question = Exclude<DialogQuestion, { method: "confirm" }>;
@@ -99,58 +81,50 @@ export function QuestionDialog({
 	const cancel = () => dialog.close(() => onAnswer({ id: question.id, method: "cancel" }));
 
 	return (
-		<Dialog
+		<DialogFrame
 			open={dialog.open}
 			onOpenChange={(next) => {
 				if (!next) cancel();
 			}}
-		>
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>{question.title}</DialogTitle>
-					<DialogDescription>
-						{question.method === "select"
-							? "Choose one option to continue."
-							: "The agent is waiting for this answer."}
-					</DialogDescription>
-				</DialogHeader>
-
-				{question.method === "select" && (
-					<div className="flex min-w-0 flex-col gap-1.5">
-						{question.options.map((option) => (
-							<Button
-								key={option}
-								variant="outline"
-								className="h-auto min-w-0 justify-start py-2 text-left break-words whitespace-normal"
-								onClick={() => answer(option)}
-							>
-								{plainOption(option)}
-							</Button>
-						))}
-					</div>
-				)}
-				{question.method === "input" && (
-					<Input
-						value={text}
-						placeholder={question.placeholder}
-						onChange={(event) => setText(event.target.value)}
-					/>
-				)}
-				{question.method === "editor" && (
-					<Textarea
-						value={text}
-						className="min-h-40 font-mono text-sm"
-						onChange={(event) => setText(event.target.value)}
-					/>
-				)}
-
-				<DialogFooter>
-					<Button variant="ghost" onClick={cancel}>
+			size={question.method === "editor" ? "md" : "sm"}
+			title={question.title}
+			footer={
+				<>
+					<Button variant="destructive" onClick={cancel}>
 						Cancel
 					</Button>
 					{question.method !== "select" && <Button onClick={() => answer(text)}>Submit</Button>}
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+				</>
+			}
+		>
+			{question.method === "select" && (
+				<div className="flex min-w-0 flex-col gap-row">
+					{question.options.map((option) => (
+						<Button
+							key={option}
+							variant="outline"
+							className="h-auto min-w-0 justify-start py-2 text-left break-words whitespace-normal"
+							onClick={() => answer(option)}
+						>
+							{plainOption(option)}
+						</Button>
+					))}
+				</div>
+			)}
+			{question.method === "input" && (
+				<Input
+					value={text}
+					placeholder={question.placeholder}
+					onChange={(event) => setText(event.target.value)}
+				/>
+			)}
+			{question.method === "editor" && (
+				<Textarea
+					value={text}
+					className="h-full resize-none font-mono text-code"
+					onChange={(event) => setText(event.target.value)}
+				/>
+			)}
+		</DialogFrame>
 	);
 }

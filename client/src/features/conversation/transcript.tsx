@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import type { TranscriptRow } from "shared";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Notice } from "@/components/patterns/status/notice";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Marker } from "@/components/ui/marker";
 import { Message, MessageContent } from "@/components/ui/message";
@@ -13,7 +13,7 @@ import {
 	MessageScrollerProvider,
 	MessageScrollerViewport,
 } from "@/components/ui/message-scroller";
-import { Markdown } from "./markdown";
+import { Markdown } from "@/components/editor/markdown";
 import { ToolTrace } from "./tool-trace";
 
 /**
@@ -25,11 +25,15 @@ import { ToolTrace } from "./tool-trace";
 export function Transcript({ rows }: { rows: TranscriptRow[] }) {
 	return (
 		<MessageScrollerProvider autoScroll>
-			<MessageScroller>
+			<MessageScroller className="conversation-enter">
 				<MessageScrollerViewport>
 					<MessageScrollerContent className="mx-auto w-full max-w-3xl gap-6 px-3 py-8 sm:px-6">
 						{rows.map((row) => (
-							<MessageScrollerItem key={row.key} scrollAnchor={row.kind === "user"}>
+							<MessageScrollerItem
+								key={row.key}
+								scrollAnchor={row.kind === "user"}
+								className="animate-enter-rise"
+							>
 								<Row row={row} />
 							</MessageScrollerItem>
 						))}
@@ -70,7 +74,7 @@ function Row({ row }: { row: TranscriptRow }) {
 				<Message align="start">
 					<MessageContent>
 						{row.thinking !== "" && (
-							<p className="mb-2 text-xs whitespace-pre-wrap text-muted-foreground">
+							<p className="mb-2 text-meta whitespace-pre-wrap text-muted-foreground">
 								{row.thinking}
 							</p>
 						)}
@@ -89,7 +93,7 @@ function Row({ row }: { row: TranscriptRow }) {
 			return (
 				<Fragment>
 					<Marker variant="separator">{row.label}</Marker>
-					<p className="max-h-64 overflow-auto px-1 text-xs whitespace-pre-wrap text-muted-foreground">
+					<p className="max-h-64 overflow-auto px-1 text-meta whitespace-pre-wrap text-muted-foreground">
 						{row.text}
 					</p>
 				</Fragment>
@@ -97,11 +101,11 @@ function Row({ row }: { row: TranscriptRow }) {
 		case "notice":
 			if (row.notice.kind === "error") {
 				return (
-					<Alert variant="destructive">
-						<AlertDescription className="max-h-48 overflow-auto whitespace-pre-wrap">
+					<Notice tone="error">
+						<span className="block max-h-48 overflow-auto whitespace-pre-wrap">
 							{row.notice.text}
-						</AlertDescription>
-					</Alert>
+						</span>
+					</Notice>
 				);
 			}
 			return (

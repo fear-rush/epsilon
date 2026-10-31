@@ -15,7 +15,7 @@ import type { JsonAgentSessionEvent } from "../pi";
  * Bumped whenever a frame's shape changes. The client sends it in `hello` and
  * reloads on a mismatch instead of guessing.
  */
-export const PROTOCOL_VERSION = 6;
+export const PROTOCOL_VERSION = 7;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([
@@ -30,7 +30,20 @@ export const thinkingLevelSchema = z.enum([
 
 export type ThinkingLevel = z.infer<typeof thinkingLevelSchema>;
 
-/** The seven commands a tab may send. */
+/**
+ * Where a session runs. A chat runs in Epsilon's one empty chats folder and sees
+ * only the agent home's resources; a project runs in a folder the operator opened
+ * and trusted, and adds that folder's `.pi`. pi records the folder in the session
+ * file, so the place of an existing session is read from there, never sent.
+ */
+export const placeSchema = z.discriminatedUnion("kind", [
+	z.object({ kind: z.literal("chat") }),
+	z.object({ kind: z.literal("project"), path: z.string().min(1) }),
+]);
+
+export type Place = z.infer<typeof placeSchema>;
+
+/** The eight commands a tab may send. */
 export const commandNameSchema = z.enum([
 	"prompt",
 	"steer",
@@ -38,6 +51,7 @@ export const commandNameSchema = z.enum([
 	"bash",
 	"set_model",
 	"set_thinking_level",
+	"set_coding_tools",
 	"reload",
 ]);
 
@@ -50,6 +64,8 @@ export const commandSchema = z.discriminatedUnion("type", [
 	z.object({ type: z.literal("bash"), command: z.string(), excludeFromContext: z.boolean() }),
 	z.object({ type: z.literal("set_model"), provider: z.string(), modelId: z.string() }),
 	z.object({ type: z.literal("set_thinking_level"), level: thinkingLevelSchema }),
+	/** Turn the tools that run commands and change files on or off for this session. */
+	z.object({ type: z.literal("set_coding_tools"), enabled: z.boolean() }),
 	z.object({ type: z.literal("reload") }),
 ]);
 
@@ -92,11 +108,16 @@ export const protocolErrorCodeSchema = z.enum([
 	"AGENT_FAILED",
 	"EXTENSION_ERROR",
 	"UNSUPPORTED_FRAME",
+	"PROJECT_NOT_TRUSTED",
 ]);
 
 export const clientFrameSchema = z.discriminatedUnion("t", [
 	z.object({ t: z.literal("hello"), protocol: z.number().int(), tabId: z.string() }),
-	z.object({ t: z.literal("attach"), sessionId: z.string() }),
+	/**
+	 * `place` says where a new session starts. It is ignored for a session that
+	 * already has a file, whose folder pi recorded.
+	 */
+	z.object({ t: z.literal("attach"), sessionId: z.string(), place: placeSchema.optional() }),
 	z.object({ t: z.literal("detach"), sessionId: z.string() }),
 	z.object({ t: z.literal("command"), sessionId: z.string(), command: commandSchema }),
 	z.object({ t: z.literal("dialog"), sessionId: z.string(), answer: dialogAnswerSchema }),
@@ -132,6 +153,9 @@ export const snapshotStateSchema = z.object({
 	sessionName: z.string().optional(),
 	thinkingLevel: thinkingLevelSchema,
 	availableThinkingLevels: z.array(thinkingLevelSchema),
+	place: placeSchema,
+	/** Whether the tools that run commands and change files are active. */
+	codingTools: z.boolean(),
 });
 
 export type SnapshotState = z.infer<typeof snapshotStateSchema>;

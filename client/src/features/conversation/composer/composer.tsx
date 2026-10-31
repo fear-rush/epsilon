@@ -1,8 +1,9 @@
 import { ArrowUpIcon, SquareIcon } from "lucide-react";
 import { useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import type { SnapshotCommand, SnapshotModel, ThinkingLevel, UiStatus } from "shared";
 
+import { Tip } from "@/components/patterns/tip";
 import type { ConversationStore } from "@/features/conversation/store";
 import {
 	InputGroup,
@@ -14,6 +15,7 @@ import { ModelMenu } from "./model-menu";
 import { Palette } from "./palette";
 import { PermissionMenu } from "./permission-menu";
 import { ThinkingMenu } from "./thinking-menu";
+import { ToolsMenu } from "./tools-menu";
 
 /**
  * The composer: the draft, the `/` palette, `!cmd`, and the footer controls. It
@@ -41,6 +43,13 @@ type ComposerProps = {
 	availableThinkingLevels: ThinkingLevel[];
 	statuses: UiStatus[];
 	commands: SnapshotCommand[];
+	codingTools: boolean;
+	/** An empty session draws the box in the page, not docked under a transcript. */
+	inline?: boolean;
+	/** Drawn under the box, inside its column: where this conversation runs. */
+	footer?: ReactNode;
+	/** A draft was sent, so the page can make this session its URL. */
+	onSent?: () => void;
 };
 
 export function Composer({
@@ -52,6 +61,10 @@ export function Composer({
 	availableThinkingLevels,
 	statuses,
 	commands,
+	codingTools,
+	inline = false,
+	footer,
+	onSent,
 }: ComposerProps) {
 	const [draft, setDraft] = useState("");
 	/** The highlighted command, and the draft it was dismissed at. */
@@ -96,14 +109,19 @@ export function Composer({
 			const command = message.slice(excludeFromContext ? 2 : 1).trim();
 			if (command === "") return;
 			store.runBash(command, excludeFromContext);
+			onSent?.();
 			setDraft("");
 			return;
 		}
 		// A reload is a socket command, not a prompt: pi would hand `/reload` to the
 		// model. It works while a run streams because it does not touch the run.
-		if (message === "/reload") store.reload();
-		else if (busy) store.steer(message);
-		else store.sendPrompt(message);
+		if (message === "/reload") {
+			store.reload();
+		} else {
+			if (busy) store.steer(message);
+			else store.sendPrompt(message);
+			onSent?.();
+		}
 		setDraft("");
 	};
 
@@ -141,7 +159,7 @@ export function Composer({
 	};
 
 	return (
-		<div className="border-t p-3">
+		<div className={inline ? undefined : "border-t p-3"}>
 			<div ref={surfaceRef} className="mx-auto w-full max-w-3xl">
 				<form
 					ref={formRef}
@@ -153,6 +171,8 @@ export function Composer({
 					<InputGroup className="border-foreground/25">
 						<InputGroupTextarea
 							ref={textareaRef}
+							// An empty chat is opened to be typed in, so the caret starts here.
+							autoFocus={inline}
 							value={draft}
 							onChange={(event) => setDraft(event.target.value)}
 							onKeyDown={onKeyDown}
@@ -174,31 +194,40 @@ export function Composer({
 								levels={availableThinkingLevels}
 								onSelect={(level) => store.setThinkingLevel(level)}
 							/>
+							<ToolsMenu
+								codingTools={codingTools}
+								onSelect={(enabled) => store.setCodingTools(enabled)}
+							/>
 							<PermissionMenu statuses={statuses} onSelect={(mode) => store.setPermission(mode)} />
 							{busy && (
-								<InputGroupButton
-									size="icon-sm"
-									variant="outline"
-									className="rounded-full"
-									aria-label="Stop the run"
-									onClick={() => store.abort()}
-								>
-									<SquareIcon />
-								</InputGroupButton>
+								<Tip label="Stop the run">
+									<InputGroupButton
+										size="icon-sm"
+										variant="destructive"
+										className="rounded-full"
+										aria-label="Stop the run"
+										onClick={() => store.abort()}
+									>
+										<SquareIcon />
+									</InputGroupButton>
+								</Tip>
 							)}
-							<InputGroupButton
-								type="submit"
-								size="icon-sm"
-								variant="default"
-								className="rounded-full"
-								disabled={draft.trim() === ""}
-								aria-label={busy ? "Steer" : "Send"}
-							>
-								<ArrowUpIcon />
-							</InputGroupButton>
+							<Tip label={busy ? "Steer" : "Send"}>
+								<InputGroupButton
+									type="submit"
+									size="icon-sm"
+									variant="default"
+									className="rounded-full"
+									disabled={draft.trim() === ""}
+									aria-label={busy ? "Steer" : "Send"}
+								>
+									<ArrowUpIcon />
+								</InputGroupButton>
+							</Tip>
 						</InputGroupAddon>
 					</InputGroup>
 				</form>
+				{footer}
 				<Palette
 					open={paletteOpen}
 					anchor={surfaceRef}

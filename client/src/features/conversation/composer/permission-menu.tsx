@@ -12,6 +12,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { InputGroupButton } from "@/components/ui/input-group";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
  * The extension reports the mode through a keyed status, with its own glyph and
@@ -36,11 +37,22 @@ export function PermissionMenu({
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger render={<InputGroupButton size="sm" className="rounded-md text-xs" />}>
-				<ShieldIcon data-icon="inline-start" />
-				{active?.label ?? "Permission"}
-				<ChevronDownIcon data-icon="inline-end" />
-			</DropdownMenuTrigger>
+			<Tooltip>
+				<TooltipTrigger
+					render={
+						<DropdownMenuTrigger
+							render={<InputGroupButton size="sm" className="rounded-md text-meta" />}
+						/>
+					}
+				>
+					<ShieldIcon data-icon="inline-start" />
+					{active?.label ?? "Permission"}
+					<ChevronDownIcon data-icon="inline-end" />
+				</TooltipTrigger>
+				<TooltipContent side="top">
+					Choose when epsilon asks before running commands and edits.
+				</TooltipContent>
+			</Tooltip>
 			<DropdownMenuContent align="start" className="w-64">
 				<DropdownMenuRadioGroup
 					value={mode}
@@ -57,7 +69,7 @@ export function PermissionMenu({
 							>
 								<span className="flex flex-col gap-0.5">
 									<span>{candidate.label}</span>
-									<span className="text-xs text-muted-foreground">{candidate.description}</span>
+									<span className="text-meta text-muted-foreground">{candidate.description}</span>
 								</span>
 							</DropdownMenuRadioItem>
 						))}

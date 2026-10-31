@@ -52,23 +52,50 @@ const EPSILON_DEFAULTS: InlineExtension[] = [
 ];
 
 /**
- * An existing session opens from its file. A fresh id, which the browser mints
- * for "New session", creates pi's session with that exact id; pi writes the file
- * on the first message.
+ * An existing session opens from the file the registry located. A fresh id, which
+ * the browser mints for "New chat", creates pi's session with that exact id; pi
+ * writes the file on the first message.
  */
-const openSessionManager = (cwd: string, sessionId: string): SessionManager => {
-	const file = SessionManager.findById(cwd, sessionId);
-	if (file !== undefined) return SessionManager.open(file, undefined, cwd);
-	return SessionManager.create(cwd, undefined, { id: sessionId });
+const openSessionManager = (
+	cwd: string,
+	sessionId: string,
+	file: string | undefined,
+): SessionManager =>
+	file === undefined
+		? SessionManager.create(cwd, undefined, { id: sessionId })
+		: SessionManager.open(file, undefined, cwd);
+
+/**
+ * The built-in tools that run commands or change files: what the composer's tool
+ * switch turns on and off. Turning them on adds pi's own defaults; `read` and the
+ * search tools stay either way, because a skill is loaded by reading its file.
+ */
+const CODING_TOOLS = new Set(["bash", "powershell", "edit", "write"]);
+const CODING_DEFAULTS = ["bash", "edit", "write"];
+
+export const hasCodingTools = (agent: AgentSession): boolean =>
+	agent.getActiveToolNames().some((name) => CODING_TOOLS.has(name));
+
+/**
+ * pi records the active tool set in the transcript on the next run and restores
+ * it when the session opens again, so the switch needs no file of its own.
+ */
+export const setCodingTools = (agent: AgentSession, enabled: boolean): void => {
+	const kept = agent.getActiveToolNames().filter((name) => !CODING_TOOLS.has(name));
+	agent.setActiveToolsByName(enabled ? [...kept, ...CODING_DEFAULTS] : kept);
 };
 
 /**
- * Start one engine. The caller has already decided which session id and home;
- * nothing here reads an inherited `PI_*` variable.
+ * Start one engine. The caller has already decided which session, folder and
+ * home; nothing here reads an inherited `PI_*` variable. A new chat starts with
+ * the coding tools off; every other session keeps what pi restored.
  */
 export const createEngine = async (options: {
 	sessionId: string;
 	cwd: string;
+	/** The session file, or undefined for a session that has none yet. */
+	file: string | undefined;
+	chat: boolean;
 	home: AgentHome;
 	ui: UiHost;
 }): Promise<AgentSession> => {
@@ -85,8 +112,11 @@ export const createEngine = async (options: {
 		agentDir: options.home.dir,
 		settingsManager,
 		resourceLoader,
-		sessionManager: openSessionManager(options.cwd, options.sessionId),
+		sessionManager: openSessionManager(options.cwd, options.sessionId, options.file),
 	});
+	// Only the project's folder is trusted, and only because the registry checked
+	// pi's trust store before building this engine. A chat's folder holds no `.pi`.
+	settingsManager.setProjectTrusted(!options.chat);
 	await session.bindExtensions({
 		uiContext: createUiContext(options.ui),
 		// "json" is pi's name for a headless host that reads events, which is what
@@ -99,6 +129,7 @@ export const createEngine = async (options: {
 			);
 		},
 	});
+	if (options.chat && options.file === undefined) setCodingTools(session, false);
 	return session;
 };
 

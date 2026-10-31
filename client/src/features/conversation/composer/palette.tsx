@@ -52,7 +52,7 @@ export function Palette({
 				anchor={anchor}
 				initialFocus={false}
 				finalFocus={false}
-				className="w-(--anchor-width) max-w-[calc(100vw-2rem)] p-0"
+				className="w-(--anchor-width) p-0"
 			>
 				<Command shouldFilter={false} value={selected} onValueChange={onSelect}>
 					<CommandList>
@@ -64,10 +64,10 @@ export function Palette({
 									onSelect={() => onPick(command.name)}
 								>
 									<span className="shrink-0 font-mono whitespace-nowrap">/{command.name}</span>
-									<span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+									<span className="min-w-0 flex-1 truncate text-meta text-muted-foreground">
 										{command.description}
 									</span>
-									<span className="shrink-0 text-xs text-muted-foreground">{command.source}</span>
+									<span className="shrink-0 text-meta text-muted-foreground">{command.source}</span>
 								</CommandItem>
 							))}
 						</CommandGroup>

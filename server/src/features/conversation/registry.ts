@@ -4,22 +4,33 @@
  *
  * Creation is async, so a concurrent attach awaits the same promise instead of
  * opening a second writer on one session file.
+ *
+ * The folder a session runs in is pi's record in its file. Only a session with
+ * no file yet takes its place from the tab, and a project folder must be trusted
+ * in pi's store before an engine is built there (docs/DECISIONS.md, Chats and
+ * projects).
  */
+import { mkdir } from "node:fs/promises";
+
+import type { Place } from "shared";
+
 import type { AgentHome } from "../../platform/agent-home";
+import { locateSession } from "../../platform/pi";
 import type { McpLive } from "../mcp";
 import { aggregateMcpLive } from "../mcp";
+import { placeOf, trustedProjectFolder } from "../projects";
 import { LiveSession } from "./session";
 
-/** Where a session runs and which pi config it reads, from `main.ts` once. */
-export type AgentLocation = { cwd: string; home: AgentHome };
+/** Where a session will run, resolved before its engine is built. */
+type Location = { cwd: string; file: string | undefined; place: Place };
 
 export class SessionRegistry {
-	private readonly location: AgentLocation;
+	private readonly home: AgentHome;
 	private readonly sessions = new Map<string, LiveSession>();
 	private readonly loading = new Map<string, Promise<LiveSession>>();
 
-	constructor(location: AgentLocation) {
-		this.location = location;
+	constructor(home: AgentHome) {
+		this.home = home;
 	}
 
 	find(sessionId: string): LiveSession | undefined {
@@ -53,19 +64,30 @@ export class SessionRegistry {
 			.map((session) => ({ id: session.sessionId, needsInput: session.needsInput }));
 	}
 
-	/** The engine for this session, or a new one built from the session file. */
-	async ensure(sessionId: string): Promise<LiveSession> {
+	/**
+	 * The engine for this session, or a new one built from the session file. `place`
+	 * is read only for a session that has no file yet.
+	 */
+	async ensure(sessionId: string, place?: Place): Promise<LiveSession> {
 		const existing = this.find(sessionId);
 		if (existing !== undefined) return existing;
 		const loading = this.loading.get(sessionId);
 		if (loading !== undefined) return loading;
-		const created = this.create(sessionId);
+		const created = this.create(sessionId, place);
 		this.loading.set(sessionId, created);
 		try {
 			return await created;
 		} finally {
 			this.loading.delete(sessionId);
 		}
+	}
+
+	/**
+	 * Drop an idle engine so its file can change underneath. Answers false while
+	 * the session is still working; a session with no engine is already closed.
+	 */
+	closeIfIdle(sessionId: string): boolean {
+		return this.sessions.get(sessionId)?.closeIfIdle() ?? true;
 	}
 
 	/** Re-read config in every live engine, after the settings panel wrote it. */
@@ -80,10 +102,33 @@ export class SessionRegistry {
 		this.sessions.clear();
 	}
 
-	private async create(sessionId: string): Promise<LiveSession> {
+	private async locate(sessionId: string, place: Place | undefined): Promise<Location> {
+		const located = await locateSession(sessionId);
+		if (located !== undefined && located.cwd === "") {
+			throw new Error("This session predates pi recording its folder, so it has nowhere to run.");
+		}
+		if (located === undefined && place === undefined) {
+			throw new Error("The agent home has no such session.");
+		}
+		const cwd = located?.cwd ?? (place?.kind === "project" ? place.path : this.home.chatsDir);
+		const resolved = placeOf(cwd, this.home.chatsDir);
+		if (resolved.kind === "chat") {
+			await mkdir(this.home.chatsDir, { recursive: true });
+			return { cwd, file: located?.file, place: resolved };
+		}
+		// A new project session runs in the real folder; an existing one in the
+		// folder its file names. Either way the trust check sees the real path.
+		const folder = await trustedProjectFolder(this.home, cwd);
+		const where = located === undefined ? folder : cwd;
+		return { cwd: where, file: located?.file, place: { kind: "project", path: where } };
+	}
+
+	private async create(sessionId: string, place: Place | undefined): Promise<LiveSession> {
+		const location = await this.locate(sessionId, place);
 		const session = await LiveSession.open({
 			sessionId,
-			...this.location,
+			...location,
+			home: this.home,
 			// The session disposed itself after the idle grace; drop the reference.
 			onEmpty: () => this.sessions.delete(sessionId),
 		});

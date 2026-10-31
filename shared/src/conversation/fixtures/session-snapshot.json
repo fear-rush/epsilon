@@ -5,7 +5,7 @@
 		"state": {
 			"model": {
 				"id": "deepseek/deepseek-v4.1-flash",
-				"name": "DeepSeek V4.1 Flash \u00b7 vision",
+				"name": "DeepSeek V4.1 Flash · vision",
 				"api": "openai-completions",
 				"provider": "commandcode",
 				"baseUrl": "https://api.commandcode.ai/provider/v1",
@@ -42,7 +42,12 @@
 			"sessionId": "bbd82128-136e-4f5a-9f98-e277762c4ace",
 			"autoCompactionEnabled": true,
 			"messageCount": 10,
-			"pendingMessageCount": 0
+			"pendingMessageCount": 0,
+			"place": {
+				"kind": "project",
+				"path": "/fixture/project"
+			},
+			"codingTools": true
 		},
 		"models": [],
 		"messages": [
