@@ -3,15 +3,16 @@
  * actions every row has.
  */
 import { Link } from "@tanstack/react-router";
-import { MoreHorizontalIcon } from "lucide-react";
+import { MoreHorizontalIcon, PencilIcon, PinIcon, PinOffIcon } from "lucide-react";
 
+import { Tip } from "@/components/patterns/tip";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
 	ContextMenu,
 	ContextMenuContent,
 	ContextMenuGroup,
 	ContextMenuItem,
+	ContextMenuSeparator,
 	ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
@@ -19,19 +20,39 @@ import {
 	DropdownMenuContent,
 	DropdownMenuGroup,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+import {
+	SidebarMenuAction,
+	SidebarMenuButton,
+	SidebarMenuItem,
+	useSidebar,
+} from "@/components/ui/sidebar";
 import { formatWhen, sessionLabel } from "@/features/sessions/format";
 import type { SessionSummary } from "@/api/types";
 
 type SessionItemProps = {
 	session: SessionSummary;
+	/** The project folder, for a session that runs in one; it goes through the trust gate. */
+	project?: string;
 	active: boolean;
+	/** A chat that just arrived in the list gets the slide-in entrance. */
+	animate?: boolean;
+	onRename: (session: SessionSummary) => void;
+	onPin: (session: SessionSummary) => void;
 	onDelete: (session: SessionSummary) => void;
 };
 
-export function SessionItem({ session, active, onDelete }: SessionItemProps) {
+export function SessionItem({
+	session,
+	project,
+	active,
+	animate = false,
+	onRename,
+	onPin,
+	onDelete,
+}: SessionItemProps) {
 	const { isMobile, setOpenMobile } = useSidebar();
 
 	const closeOnNavigate = () => {
@@ -40,43 +61,63 @@ export function SessionItem({ session, active, onDelete }: SessionItemProps) {
 
 	return (
 		<ContextMenu>
-			<ContextMenuTrigger render={<SidebarMenuItem />}>
+			<ContextMenuTrigger
+				render={
+					<SidebarMenuItem
+						className={animate ? "chat-row-enter" : undefined}
+						style={{ viewTransitionName: `chat-${session.id}` }}
+					/>
+				}
+			>
 				<SidebarMenuButton
 					isActive={active}
 					render={
 						<Link
 							to="/sessions/$sessionId"
 							params={{ sessionId: session.id }}
+							search={{ project }}
 							onClick={closeOnNavigate}
 						/>
 					}
-					className="h-auto flex-col items-start gap-0.5 py-1.5 pr-9"
+					className="h-auto flex-col items-start gap-row py-1.5"
 				>
-					<span className="w-full truncate">{sessionLabel(session)}</span>
-					<span className="flex w-full items-center gap-1.5 text-xs font-normal text-muted-foreground">
+					<span className="flex w-full items-center gap-1.5">
+						{session.pinned && (
+							<PinIcon className="shrink-0 text-muted-foreground" aria-label="Pinned" />
+						)}
+						<span className="truncate">{sessionLabel(session)}</span>
+					</span>
+					<span className="flex w-full items-center gap-1.5 text-meta font-normal text-muted-foreground">
 						<span className="truncate">{formatWhen(session.modified)}</span>
-						<span className="shrink-0">{session.messageCount} messages</span>
 						{session.needsInput && <Badge variant="warning">needs input</Badge>}
 					</span>
 				</SidebarMenuButton>
 
 				<DropdownMenu>
-					<DropdownMenuTrigger
-						render={
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								aria-label="Session actions"
-								className="absolute top-2 right-1.5 text-muted-foreground"
-							/>
-						}
-					>
-						<MoreHorizontalIcon />
-					</DropdownMenuTrigger>
+					<Tip label="Chat actions">
+						<DropdownMenuTrigger
+							render={
+								<SidebarMenuAction aria-label="Chat actions" className="text-muted-foreground" />
+							}
+						>
+							<MoreHorizontalIcon />
+						</DropdownMenuTrigger>
+					</Tip>
 					<DropdownMenuContent align="end">
 						<DropdownMenuGroup>
+							<DropdownMenuItem onClick={() => onRename(session)}>
+								<PencilIcon />
+								Rename chat
+							</DropdownMenuItem>
+							<DropdownMenuItem onClick={() => onPin(session)}>
+								{session.pinned ? <PinOffIcon /> : <PinIcon />}
+								{session.pinned ? "Unpin chat" : "Pin chat"}
+							</DropdownMenuItem>
+						</DropdownMenuGroup>
+						<DropdownMenuSeparator />
+						<DropdownMenuGroup>
 							<DropdownMenuItem variant="destructive" onClick={() => onDelete(session)}>
-								Delete session
+								Delete chat
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
 					</DropdownMenuContent>
@@ -84,8 +125,19 @@ export function SessionItem({ session, active, onDelete }: SessionItemProps) {
 			</ContextMenuTrigger>
 			<ContextMenuContent>
 				<ContextMenuGroup>
+					<ContextMenuItem onClick={() => onRename(session)}>
+						<PencilIcon />
+						Rename chat
+					</ContextMenuItem>
+					<ContextMenuItem onClick={() => onPin(session)}>
+						{session.pinned ? <PinOffIcon /> : <PinIcon />}
+						{session.pinned ? "Unpin chat" : "Pin chat"}
+					</ContextMenuItem>
+				</ContextMenuGroup>
+				<ContextMenuSeparator />
+				<ContextMenuGroup>
 					<ContextMenuItem variant="destructive" onClick={() => onDelete(session)}>
-						Delete session
+						Delete chat
 					</ContextMenuItem>
 				</ContextMenuGroup>
 			</ContextMenuContent>

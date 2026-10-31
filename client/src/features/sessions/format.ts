@@ -22,5 +22,5 @@ export function formatWhen(iso: string): string {
 export const sessionLabel = (session: SessionSummary): string => {
 	if (session.name !== undefined) return session.name;
 	const firstLine = session.firstMessage.split("\n")[0]?.trim() ?? "";
-	return firstLine === "" ? "Untitled session" : firstLine;
+	return firstLine === "" ? "Untitled chat" : firstLine;
 };
