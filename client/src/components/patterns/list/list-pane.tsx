@@ -73,7 +73,8 @@ export function ListPane({
 	const contentEnter = project === undefined ? "animate-enter-left" : "animate-enter-right";
 	return (
 		<Pane border className="h-full w-full">
-			<PaneBar title={title} meta={count} />
+			{/* The count arrives with the rows, so it drops in once instead of flashing 0. */}
+			<PaneBar title={title} meta={pending ? undefined : count} />
 			<PaneBand className="animate-enter-drop enter-delay-1">
 				{scope === undefined ? search : <ScopeTabs section={scope} />}
 			</PaneBand>
