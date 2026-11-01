@@ -1,17 +1,16 @@
 /**
  * The sidebar: chats, then projects with their chats. pi owns the files; this
  * polls the REST route for the live badges and deletes through the same route,
- * confirming first. A project appears here once it has a chat on disk. The
- * section actions start a new chat and open a project, and the search field
- * filters both lists by name and first message. Connection problems are the app
- * banner's, not this column's.
+ * confirming first. A project appears here once it has a chat on disk. The top
+ * actions start a new chat and open a project, and the search field filters both
+ * lists by name and first message. Connection problems are the app banner's, not
+ * this column's.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { flushSync } from "react-dom";
 import {
 	ChevronRightIcon,
-	FileUpIcon,
 	FolderIcon,
 	FolderMinusIcon,
 	FolderPlusIcon,
@@ -22,16 +21,12 @@ import {
 	Settings2Icon,
 	ShieldAlertIcon,
 	SquarePenIcon,
-	Trash2Icon,
 } from "lucide-react";
 import { useState } from "react";
 
 import { useLastDefined } from "@/hooks/use-last-defined";
 import { SessionItem } from "@/features/sessions/session-item";
-import { ImportSessionDialog } from "@/features/sessions/import-dialog";
 import { RenameDialog } from "@/features/sessions/rename-dialog";
-import { TrashDialog } from "@/features/sessions/trash-dialog";
-import { useCurrentProject } from "@/features/sessions/use-current-project";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -48,7 +43,6 @@ import {
 	SidebarContent,
 	SidebarFooter,
 	SidebarGroup,
-	SidebarGroupAction,
 	SidebarGroupContent,
 	SidebarGroupLabel,
 	SidebarMenu,
@@ -57,7 +51,6 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { PaneBar } from "@/components/patterns/pane/pane-bar";
-import { PaneBand } from "@/components/patterns/pane/pane-band";
 import { SearchField } from "@/components/patterns/list/search-field";
 import { errorView } from "@/components/patterns/status/error-view";
 import { InlineStatus } from "@/components/patterns/status/inline-status";
@@ -141,11 +134,8 @@ export function SessionSidebar() {
 	const shownProject = useLastDefined(pendingProject);
 	const [renaming, setRenaming] = useState<SessionSummary | undefined>(undefined);
 	const [renameOpen, setRenameOpen] = useState(false);
-	const [trashOpen, setTrashOpen] = useState(false);
 	const [query, setQuery] = useState("");
 	const [opening, setOpening] = useState(false);
-	const [importing, setImporting] = useState(false);
-	const project = useCurrentProject();
 	const sessions = useQuery({
 		queryKey: sessionKeys.all,
 		queryFn: ({ signal }) => fetchSessions(signal),
@@ -245,47 +235,29 @@ export function SessionSidebar() {
 				title="epsilon"
 				className="animate-enter-fade"
 				actions={
-					<>
-						<Tip label="Import a session">
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								aria-label="Import a session"
-								className="text-muted-foreground"
-								onClick={() => setImporting(true)}
-							>
-								<FileUpIcon />
-							</Button>
+					!isMobile && (
+						<Tip label="Hide sidebar">
+							<SidebarTrigger />
 						</Tip>
-						<Tip label="Recently deleted">
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								aria-label="Recently deleted"
-								className="text-muted-foreground"
-								onClick={() => setTrashOpen(true)}
-							>
-								<Trash2Icon />
-							</Button>
-						</Tip>
-						{!isMobile && (
-							<Tip label="Hide sidebar">
-								<SidebarTrigger />
-							</Tip>
-						)}
-					</>
+					)
 				}
 			/>
 
-			{sessions.data !== undefined && (
-				<PaneBand className="animate-enter-drop enter-delay-1">
-					<SearchField value={query} onChange={setQuery} label="Search chats" />
-				</PaneBand>
-			)}
+			<div className="grid shrink-0 animate-enter-drop gap-pane px-pane pt-pane enter-delay-1">
+				<SearchField value={query} onChange={setQuery} label="Search chats" />
+				<Button variant="ghost" className="w-full justify-start" onClick={newChat}>
+					<SquarePenIcon data-icon="inline-start" />
+					New chat
+				</Button>
+				<Button variant="ghost" className="w-full justify-start" onClick={() => setOpening(true)}>
+					<FolderPlusIcon data-icon="inline-start" />
+					New project
+				</Button>
+			</div>
 
 			<SidebarContent>
 				{sessions.isPending ? (
-					<div className="animate-enter-rise pad-item">
+					<div className="flex min-h-0 flex-1 animate-enter-rise items-center justify-center">
 						<LoadingState label="Loading chats…" />
 					</div>
 				) : sessions.isError ? (
@@ -301,15 +273,6 @@ export function SessionSidebar() {
 								{showProjects && (
 									<SidebarGroup className="animate-enter-rise">
 										<SidebarGroupLabel>Projects</SidebarGroupLabel>
-										<Tip label="Open project">
-											<SidebarGroupAction
-												aria-label="Open project"
-												className="text-muted-foreground"
-												onClick={() => setOpening(true)}
-											>
-												<FolderPlusIcon />
-											</SidebarGroupAction>
-										</Tip>
 										<SidebarGroupContent>
 											<SidebarMenu>
 												{visibleProjects.map((entry) => (
@@ -337,15 +300,6 @@ export function SessionSidebar() {
 								{showChats && (
 									<SidebarGroup className="animate-enter-rise">
 										<SidebarGroupLabel>Chats</SidebarGroupLabel>
-										<Tip label="New chat">
-											<SidebarGroupAction
-												aria-label="New chat"
-												className="text-muted-foreground"
-												onClick={newChat}
-											>
-												<SquarePenIcon />
-											</SidebarGroupAction>
-										</Tip>
 										<SidebarGroupContent>
 											{visibleChats.length === 0 ? (
 												<div className="px-2">
@@ -421,7 +375,7 @@ export function SessionSidebar() {
 				description={
 					shownDelete === undefined
 						? ""
-						: `${sessionLabel(shownDelete)} leaves the list, and its file moves to Epsilon's trash, where Recently deleted can restore it.`
+						: `${sessionLabel(shownDelete)} is removed from pi's list and its file is deleted.`
 				}
 				error={remove.error}
 				pending={remove.isPending}
@@ -443,7 +397,7 @@ export function SessionSidebar() {
 				description={
 					shownProject === undefined
 						? ""
-						: `Its ${shownProject.sessions.length === 1 ? "chat moves" : `${shownProject.sessions.length} chats move`} to Epsilon's trash, where Recently deleted can restore ${shownProject.sessions.length === 1 ? "it" : "them"}. The folder ${shownProject.project.path} and its files stay where they are, and opening it again starts fresh.`
+						: `Its ${shownProject.sessions.length === 1 ? "chat is" : `${shownProject.sessions.length} chats are`} deleted from pi's history. The folder ${shownProject.project.path} and its files stay where they are, and opening it again starts fresh.`
 				}
 				error={forgetProject.error}
 				pending={forgetProject.isPending}
@@ -458,10 +412,6 @@ export function SessionSidebar() {
 					if (pendingProject !== undefined) forgetProject.mutate(pendingProject);
 				}}
 			/>
-
-			<TrashDialog open={trashOpen} onOpenChange={setTrashOpen} />
-
-			<ImportSessionDialog open={importing} onOpenChange={setImporting} project={project} />
 		</Sidebar>
 	);
 }

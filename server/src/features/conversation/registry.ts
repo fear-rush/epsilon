@@ -17,7 +17,6 @@ import type { Place } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { locateSession } from "../../platform/pi";
-import type { LocatedSession } from "../../platform/pi";
 import type { McpLive } from "../mcp";
 import { aggregateMcpLive } from "../mcp";
 import { placeOf, trustedProjectFolder } from "../projects";
@@ -181,7 +180,7 @@ export class SessionRegistry {
 	 * Where an existing session runs: the folder pi recorded in its file, which a
 	 * project has to be trusted in. A copy reads the file from here too.
 	 */
-	private async locationOf(located: LocatedSession): Promise<Location> {
+	private async locationOf(located: { file: string; cwd: string }): Promise<Location> {
 		if (located.cwd === "") {
 			throw new Error("This session predates pi recording its folder, so it has nowhere to run.");
 		}

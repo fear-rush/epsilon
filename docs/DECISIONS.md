@@ -165,22 +165,15 @@ pin is Epsilon's own list preference: `pinned-sessions.json` in the agent home h
 the ids, and the list route joins them to pi's sessions. Pinned rows lead their place;
 a project's chats stay inside that project.
 
-Deleting a chat moves its session file to Epsilon's trash and drops its pin; an idle engine
-on it is closed first, and only a turn in progress refuses. Removing a project moves the
-session files recorded in that folder to the trash, which is all that puts it on the list;
-the folder and pi's trust record are left alone. The trash is `<agent home>/trash`, beside
-`sessions/` because pi lists every folder under `sessions/` as a live session: one file per
-chat, plus a sidecar naming the path it came from and the day it moved. A restore puts the
-file back, and refuses when something already sits at that path; only deleting it from the
-trash destroys it. A chat moved into a project is removed rather than trashed: its history
-lives on in the fork, so a second copy would only be confusing.
+Deleting a chat deletes its session file and drops its pin; an idle engine on it is
+closed first, and only a turn in progress refuses. Removing a project deletes the
+session files recorded in that folder, which is all that puts it on the list; the folder
+and pi's trust record are left alone. A chat moved into a project is deleted after the
+fork too: its history lives on, so a second copy would only be confusing.
 
 Why: pi has no pin concept, and a browser-only pin would vanish on another tab or a
 reload. A pi session file with an unknown pin entry would be a second truth for pi's
-own data. A delete nobody can undo throws a conversation away for good. Not:
-writing pins into a session transcript or keeping them in server memory. Not: the `trash`
-CLI pi's own picker calls, which stock macOS does not have and which would only add a child
-process around two file moves.
+own data. Not: writing pins into a session transcript or keeping them in server memory.
 
 MCP servers, skills and packages each open on a Global | Project tab, the split pi
 makes between the home and a project's `.pi`. The tab decides what Add writes and
@@ -239,20 +232,16 @@ Writing the reload as a second session (the file is the one the operator is look
 
 ## Session copies
 
-Forking a chat at a message, cloning it at the position it is at, and importing a JSONL
-file each produce a **new session under a new id**, and the REST route answers that id so
-the page navigates to it. A fork or a clone runs on an `AgentSessionRuntime` built for that
-request alone and disposed in `finally`: pi's `fork` replaces the session a runtime holds,
-so a copy cannot borrow the live engine. The transient runtime is wired like the engine
-(same settings manager, same resource loader with the CLI's built-ins and Epsilon's
-defaults, same UI bridge, with no tab behind it), so an extension sees the same start and
-shutdown pair it would in a live engine and a copy pays one MCP connect and disconnect for
-it. The source session's engine is closed first, so one writer reads the file, and a chat
-that is still working refuses the copy instead of being stopped. Importing goes through
-`SessionManager.forkFrom`, the call that moves a chat into a project: it writes a fresh id
-and the header's folder. `importFromJsonl` keeps the source file's id and its recorded
-folder ([pi-sdk.md](pi-sdk.md), Embedding), so in a home of many sessions it produces
-duplicate ids and chats filed under a folder this machine may not have.
+Forking a chat at a message and cloning it at the position it is at each produce a **new
+session under a new id**, and the REST route answers that id so the page navigates to it. A
+copy runs on an `AgentSessionRuntime` built for that request alone and disposed in `finally`:
+pi's `fork` replaces the session a runtime holds, so a copy cannot borrow the live engine. The
+transient runtime is wired like the engine (same settings manager, same resource loader with
+the CLI's built-ins and Epsilon's defaults, same UI bridge, with no tab behind it), so an
+extension sees the same start and shutdown pair it would in a live engine and a copy pays
+one MCP connect and disconnect for it. The source session's engine is closed first, so one
+writer reads the file, and a chat that is still working refuses the copy instead of being
+stopped.
 
 Why: a copy exists so two chats continue separately, and the original file is left exactly
 as it was. A new id is the one thing the route, the socket attach and a sidebar row can all
@@ -263,8 +252,7 @@ keeps one page and one id, but the subscriptions, dialogs and display state all 
 the session that was replaced, so the tab would rebind mid-request and a second tab
 watching the same session would keep the old one. Not: `navigateTree` for a fork (it moves
 the leaf inside one file, Branching). Not: `SessionManager.forkFrom` for a fork at a message
-(it copies the whole file, branches included). Not: rewriting an imported file's header by
-hand.
+(it copies the whole file, branches included).
 
 ## Export
 

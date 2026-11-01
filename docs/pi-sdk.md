@@ -100,16 +100,8 @@ Other facts worth having before embedding:
   emits `session_shutdown` and disposes the session it holds. `fork(entryId)` copies the
   branch up to a user message, `fork(leafId, { position: "at" })` is the CLI's `/clone`,
   and both write a new session file under a fresh id — a fork before the first message
-  makes an empty session that has no file yet. `importFromJsonl(path, cwdOverride)` copies
-  the file verbatim into the current session manager's session directory, so the copy keeps
-  the source's id **and** its recorded cwd (`cwdOverride` only changes the in-memory
-  manager): importing an export of a chat already in the home duplicates its id, and
-  importing one from another machine files it under a folder that may not exist here. A
-  host that keeps a home of many sessions therefore imports with
-  `SessionManager.forkFrom(sourceFile, targetCwd)`, which writes a fresh id and the header's
-  cwd, and uses the runtime for fork and clone only
-  ([DECISIONS.md](DECISIONS.md), Session copies). Epsilon otherwise uses the
-  `SessionManager` half and opens one session per engine.
+  makes an empty session that has no file yet. Epsilon uses the runtime for fork and
+  clone, and the `SessionManager` half otherwise, opening one session per engine.
 - `AgentSession` also carries the controls around a turn: `prompt` (with
   `streamingBehavior`), `steer`, `followUp`, `abort`, `clearQueue`,
   `getSteeringMessages`, `getFollowUpMessages`, `getSessionStats`, `getContextUsage`,
@@ -336,7 +328,6 @@ characters the provider returned.
 | `skills/`       | pi      | User skills; each directory holds a `SKILL.md`                             |
 | `sessions/`     | pi      | One JSONL per session, under `--<encoded cwd>--/`                          |
 | `chats/`        | Epsilon | The empty folder every chat runs in; it never holds a `.pi`                |
-| `trash/`        | Epsilon | Deleted chats: a JSONL and the record of where it came from                |
 
 Skills also load from `<cwd>/.pi/skills`, `<cwd>/.agents/skills`, `~/.agents/skills`
 and installed packages.

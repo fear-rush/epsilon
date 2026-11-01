@@ -78,8 +78,7 @@ sides run. REST shapes live in server `contract.ts`.
   `<project>/.pi`. The session files name their folder, which is how chats and
   projects are told apart and how the project list is derived.
 - Epsilon's own files in the agent home: `pinned-sessions.json`, the pinned chat
-  ids, and `trash/`, the chats a delete moved aside with the path each came from. A
-  chat's display name is pi's own session-name entry, not a second file.
+  ids. A chat's display name is pi's own session-name entry, not a second file.
 - Live engines in the server's registry. An engine is disposed ten seconds after its
   last detach unless it is running, compacting or waiting on a dialog, so a closed
   tab does not stop a run and a reload sees a pending dialog again.
@@ -111,8 +110,9 @@ session down with the server; session files survive
   the file tree and markdown.
 - Every column starts with a `PaneBar` (`h-bar`, the only rule across the columns),
   so the settings nav, a list and a detail page share one line. A `PaneBand`
-  (`h-band`, no rule) below it holds tabs or search, and only when there are some. A
-  detail page's title is in its bar.
+  (`h-band`, no rule) below it holds tabs or search, and only when there are some; a
+  column can instead start with a `pane`-gapped stack of actions and search. A detail
+  page's title is in its bar.
 - One inset per column: bar title, band, picker, search, group heading and a row's
   text all start on the column's gutter (`px-pane` for the nav and a list, `px-page`
   for a detail page). A hovered or selected row pads its text by half the `pane`

@@ -61,15 +61,10 @@ export const forkSessionInputSchema = z
 	.openapi("ForkSessionInput");
 
 /**
- * A copy of a chat, as a new session: a fork at a message, a clone of where the chat
- * is, or an imported file. The page opens the new id, so every copy route answers it.
+ * A copy of a chat, as a new session: a fork at a message or a clone of where the
+ * chat is. The page opens the new id, so every copy route answers it.
  */
 export const copiedSessionSchema = z.object({ id: z.string() }).openapi("CopiedSession");
-
-/** A JSONL file to bring in, and the project to land it in; without one it is a chat. */
-export const importSessionInputSchema = z
-	.object({ path: z.string().min(1), project: z.string().min(1).optional() })
-	.openapi("ImportSessionInput");
 
 /** The two files pi writes a transcript as. */
 const exportFormatSchema = z.enum(["html", "jsonl"]).openapi("ExportFormat");
@@ -102,38 +97,6 @@ export const removedProjectSchema = z
 	.object({ removed: z.number().int().nonnegative() })
 	.openapi("RemovedProject");
 
-/**
- * One chat in Epsilon's trash: where its file came from, when it moved, and the
- * label pi had derived for it. The label is recorded at the move because pi
- * derives a session's name and first message while listing, not by opening a file.
- */
-const trashedSessionSchema = z
-	.object({
-		id: z.string(),
-		/** The absolute path its file had in pi's `sessions/` folder, and where a restore puts it back. */
-		path: z.string(),
-		deletedAt: z.string(),
-		name: z.string().optional(),
-		firstMessage: z.string(),
-	})
-	.openapi("TrashedSession");
-
-export type TrashedSession = z.infer<typeof trashedSessionSchema>;
-
-export const trashListSchema = z
-	.object({
-		entries: z.array(trashedSessionSchema),
-		/** Why some deleted chats cannot be listed, when their record is missing or unusable. */
-		problem: z.string().optional(),
-	})
-	.openapi("TrashList");
-
-export type TrashList = z.infer<typeof trashListSchema>;
-
-export const restoredSessionSchema = z
-	.object({ id: z.string(), path: z.string() })
-	.openapi("RestoredSession");
-
 export const pinSessionInputSchema = z.object({ pinned: z.boolean() }).openapi("PinSessionInput");
 
 /** The refusals a session route can send. Each leaves the file alone. */
@@ -142,14 +105,11 @@ const sessionErrorCodeSchema = z.enum([
 	"SESSION_RUNNING",
 	"PROJECT_NOT_TRUSTED",
 	"PROJECT_INVALID",
-	"TRASH_NOT_FOUND",
-	"TRASH_PATH_TAKEN",
 	/** pi refused to write the export; its own sentence says why. */
 	"EXPORT_FAILED",
 	/**
-	 * pi, or the file, refused the copy: an entry a fork cannot start from, a chat with
-	 * no file yet, an import of something that is not a session, or a JSONL that does
-	 * not parse. pi's own sentence says which.
+	 * pi, or the file, refused the copy: an entry a fork cannot start from, or a chat
+	 * with no file yet. pi's own sentence says which.
 	 */
 	"SESSION_COPY_FAILED",
 ]);

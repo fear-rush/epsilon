@@ -178,8 +178,6 @@
 									"SESSION_RUNNING",
 									"PROJECT_NOT_TRUSTED",
 									"PROJECT_INVALID",
-									"TRASH_NOT_FOUND",
-									"TRASH_PATH_TAKEN",
 									"EXPORT_FAILED",
 									"SESSION_COPY_FAILED"
 								]
@@ -260,22 +258,6 @@
 					"entryId"
 				]
 			},
-			"ImportSessionInput": {
-				"type": "object",
-				"properties": {
-					"path": {
-						"type": "string",
-						"minLength": 1
-					},
-					"project": {
-						"type": "string",
-						"minLength": 1
-					}
-				},
-				"required": [
-					"path"
-				]
-			},
 			"RenamedSession": {
 				"type": "object",
 				"properties": {
@@ -350,64 +332,6 @@
 				"enum": [
 					"html",
 					"jsonl"
-				]
-			},
-			"TrashList": {
-				"type": "object",
-				"properties": {
-					"entries": {
-						"type": "array",
-						"items": {
-							"$ref": "#/components/schemas/TrashedSession"
-						}
-					},
-					"problem": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"entries"
-				]
-			},
-			"TrashedSession": {
-				"type": "object",
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"path": {
-						"type": "string"
-					},
-					"deletedAt": {
-						"type": "string"
-					},
-					"name": {
-						"type": "string"
-					},
-					"firstMessage": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"id",
-					"path",
-					"deletedAt",
-					"firstMessage"
-				]
-			},
-			"RestoredSession": {
-				"type": "object",
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"path": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"id",
-					"path"
 				]
 			},
 			"ProjectPathInput": {
@@ -3413,7 +3337,7 @@
 					"sessions"
 				],
 				"operationId": "deleteSession",
-				"description": "Move a chat's session file to Epsilon's trash, where it can be restored",
+				"description": "Delete a chat's session file",
 				"parameters": [
 					{
 						"schema": {
@@ -3427,7 +3351,7 @@
 				],
 				"responses": {
 					"204": {
-						"description": "Session file moved to Epsilon's trash"
+						"description": "Session file deleted"
 					},
 					"404": {
 						"description": "No such session in the home",
@@ -3458,7 +3382,7 @@
 					"sessions"
 				],
 				"operationId": "removeProject",
-				"description": "Take a project off the list by moving every chat recorded in it to Epsilon's trash; the folder and its trust stay",
+				"description": "Take a project off the list by deleting every chat recorded in it; the folder and its trust stay",
 				"parameters": [
 					{
 						"schema": {
@@ -3472,7 +3396,7 @@
 				],
 				"responses": {
 					"200": {
-						"description": "How many chats were moved to the trash",
+						"description": "How many chats were deleted",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -3710,47 +3634,6 @@
 				}
 			}
 		},
-		"/api/sessions/import": {
-			"post": {
-				"tags": [
-					"sessions"
-				],
-				"operationId": "importSession",
-				"description": "Copy a JSONL session file in as a new chat, in the chats folder or the project named",
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/ImportSessionInput"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "The imported session's id, which is where the page opens it",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/CopiedSession"
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "The file is not a session pi can read, or the folder cannot hold it",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/SessionError"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
 		"/api/sessions/{id}/name": {
 			"patch": {
 				"tags": [
@@ -3899,114 +3782,6 @@
 					},
 					"404": {
 						"description": "No such session in the home",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/SessionError"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/sessions/trash": {
-			"get": {
-				"tags": [
-					"sessions"
-				],
-				"operationId": "listTrashedSessions",
-				"description": "Every chat in Epsilon's own trash, newest deletion first",
-				"responses": {
-					"200": {
-						"description": "Deleted chats that can be restored",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/TrashList"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/sessions/trash/{id}/restore": {
-			"post": {
-				"tags": [
-					"sessions"
-				],
-				"operationId": "restoreTrashedSession",
-				"description": "Put a deleted chat's file back where pi's list finds it again",
-				"parameters": [
-					{
-						"schema": {
-							"type": "string",
-							"minLength": 1
-						},
-						"required": true,
-						"name": "id",
-						"in": "path"
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "The chat is back at its old path",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/RestoredSession"
-								}
-							}
-						}
-					},
-					"404": {
-						"description": "The trash holds no such chat",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/SessionError"
-								}
-							}
-						}
-					},
-					"409": {
-						"description": "A session file already sits at that path",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/SessionError"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/sessions/trash/{id}": {
-			"delete": {
-				"tags": [
-					"sessions"
-				],
-				"operationId": "purgeTrashedSession",
-				"description": "Destroy a trashed chat for good; a restore is impossible afterwards",
-				"parameters": [
-					{
-						"schema": {
-							"type": "string",
-							"minLength": 1
-						},
-						"required": true,
-						"name": "id",
-						"in": "path"
-					}
-				],
-				"responses": {
-					"204": {
-						"description": "The file and its record are gone"
-					},
-					"404": {
-						"description": "The trash holds no such chat",
 						"content": {
 							"application/json": {
 								"schema": {

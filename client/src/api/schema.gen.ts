@@ -60,7 +60,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		post?: never;
-		/** Move a chat's session file to Epsilon's trash, where it can be restored */
+		/** Delete a chat's session file */
 		delete: operations["deleteSession"];
 		options?: never;
 		head?: never;
@@ -77,7 +77,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		post?: never;
-		/** Take a project off the list by moving every chat recorded in it to Epsilon's trash; the folder and its trust stay */
+		/** Take a project off the list by deleting every chat recorded in it; the folder and its trust stay */
 		delete: operations["removeProject"];
 		options?: never;
 		head?: never;
@@ -135,23 +135,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/sessions/import": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Copy a JSONL session file in as a new chat, in the chats folder or the project named */
-		post: operations["importSession"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/sessions/{id}/name": {
 		parameters: {
 			query?: never;
@@ -198,57 +181,6 @@ export interface paths {
 		/** Write one chat's transcript as an HTML page or a JSONL file, through the live engine */
 		post: operations["exportSession"];
 		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/sessions/trash": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Every chat in Epsilon's own trash, newest deletion first */
-		get: operations["listTrashedSessions"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/sessions/trash/{id}/restore": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Put a deleted chat's file back where pi's list finds it again */
-		post: operations["restoreTrashedSession"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/sessions/trash/{id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		post?: never;
-		/** Destroy a trashed chat for good; a restore is impossible afterwards */
-		delete: operations["purgeTrashedSession"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -962,7 +894,7 @@ export interface components {
 			hasProjectResources: boolean;
 		};
 		SessionError: components["schemas"]["Problem"] & ({
-			code: "SESSION_NOT_FOUND" | "SESSION_RUNNING" | "PROJECT_NOT_TRUSTED" | "PROJECT_INVALID" | "TRASH_NOT_FOUND" | "TRASH_PATH_TAKEN" | "EXPORT_FAILED" | "SESSION_COPY_FAILED";
+			code: "SESSION_NOT_FOUND" | "SESSION_RUNNING" | "PROJECT_NOT_TRUSTED" | "PROJECT_INVALID" | "EXPORT_FAILED" | "SESSION_COPY_FAILED";
 		});
 		Problem: {
 			message: string;
@@ -981,10 +913,6 @@ export interface components {
 		};
 		ForkSessionInput: {
 			entryId: string;
-		};
-		ImportSessionInput: {
-			path: string;
-			project?: string;
 		};
 		RenamedSession: {
 			id: string;
@@ -1005,21 +933,6 @@ export interface components {
 			format: components["schemas"]["ExportFormat"];
 		};
 		ExportFormat: "html" | "jsonl";
-		TrashList: {
-			entries: components["schemas"]["TrashedSession"][];
-			problem?: string;
-		};
-		TrashedSession: {
-			id: string;
-			path: string;
-			deletedAt: string;
-			name?: string;
-			firstMessage: string;
-		};
-		RestoredSession: {
-			id: string;
-			path: string;
-		};
 		ProjectPathInput: {
 			path: string;
 		};
@@ -1727,7 +1640,7 @@ interface operations {
 			};
 		};
 	};
-	/** Move a chat's session file to Epsilon's trash, where it can be restored */
+	/** Delete a chat's session file */
 	deleteSession: {
 		parameters: {
 			query?: never;
@@ -1739,7 +1652,7 @@ interface operations {
 		};
 		requestBody?: never;
 		responses: {
-			/** Session file moved to Epsilon's trash */
+			/** Session file deleted */
 			204: {
 				headers: {
 					[name: string]: unknown;
@@ -1766,7 +1679,7 @@ interface operations {
 			};
 		};
 	};
-	/** Take a project off the list by moving every chat recorded in it to Epsilon's trash; the folder and its trust stay */
+	/** Take a project off the list by deleting every chat recorded in it; the folder and its trust stay */
 	removeProject: {
 		parameters: {
 			query: {
@@ -1778,7 +1691,7 @@ interface operations {
 		};
 		requestBody?: never;
 		responses: {
-			/** How many chats were moved to the trash */
+			/** How many chats were deleted */
 			200: {
 				headers: {
 					[name: string]: unknown;
@@ -1965,40 +1878,6 @@ interface operations {
 			};
 		};
 	};
-	/** Copy a JSONL session file in as a new chat, in the chats folder or the project named */
-	importSession: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["ImportSessionInput"];
-			};
-		};
-		responses: {
-			/** The imported session's id, which is where the page opens it */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["CopiedSession"];
-				};
-			};
-			/** The file is not a session pi can read, or the folder cannot hold it */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["SessionError"];
-				};
-			};
-		};
-	};
 	/** Set the display name of a chat */
 	renameSession: {
 		parameters: {
@@ -2104,98 +1983,6 @@ interface operations {
 				};
 			};
 			/** No such session in the home */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["SessionError"];
-				};
-			};
-		};
-	};
-	/** Every chat in Epsilon's own trash, newest deletion first */
-	listTrashedSessions: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** Deleted chats that can be restored */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["TrashList"];
-				};
-			};
-		};
-	};
-	/** Put a deleted chat's file back where pi's list finds it again */
-	restoreTrashedSession: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** The chat is back at its old path */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["RestoredSession"];
-				};
-			};
-			/** The trash holds no such chat */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["SessionError"];
-				};
-			};
-			/** A session file already sits at that path */
-			409: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["SessionError"];
-				};
-			};
-		};
-	};
-	/** Destroy a trashed chat for good; a restore is impossible afterwards */
-	purgeTrashedSession: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** The file and its record are gone */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** The trash holds no such chat */
 			404: {
 				headers: {
 					[name: string]: unknown;

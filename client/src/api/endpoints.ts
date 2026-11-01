@@ -37,7 +37,6 @@ import type {
 	SkillImportReport,
 	SkillInput,
 	SkillRoot,
-	TrashList,
 } from "./types";
 import type { McpScope } from "shared";
 
@@ -72,23 +71,9 @@ export const deleteSession = async (id: string): Promise<void> => {
 	await api.DELETE("/api/sessions/{id}", { params: { path: { id } } });
 };
 
-/** Chats a delete moved to Epsilon's trash, newest first, with the record of where each came from. */
-export const fetchTrash = async (signal?: AbortSignal): Promise<TrashList> =>
-	body((await api.GET("/api/sessions/trash", { signal })).data);
-
-/** Puts a deleted chat's file back where pi's list finds it again. Answers that path. */
-export const restoreTrashedSession = async (id: string): Promise<string> =>
-	body((await api.POST("/api/sessions/trash/{id}/restore", { params: { path: { id } } })).data)
-		.path;
-
-/** The one way a chat's file leaves the disk for good. */
-export const purgeTrashedSession = async (id: string): Promise<void> => {
-	await api.DELETE("/api/sessions/trash/{id}", { params: { path: { id } } });
-};
-
 /**
- * Takes a project off the list by moving its chats to the trash. The folder itself
- * and its trust are left alone. Answers how many chats moved.
+ * Takes a project off the list by deleting its chats. The folder itself
+ * and its trust are left alone. Answers how many chats were deleted.
  */
 export const removeProject = async (path: string): Promise<number> =>
 	body((await api.DELETE("/api/projects/sessions", { params: { query: { path } } })).data).removed;
@@ -145,13 +130,6 @@ export const forkSession = async (id: string, entryId: string): Promise<string> 
 /** The same, at the position the chat is at now; answers the new session's id. */
 export const cloneSession = async (id: string): Promise<string> =>
 	body((await api.POST("/api/sessions/{id}/clone", { params: { path: { id } } })).data).id;
-
-/**
- * Copy a JSONL session file in as a new chat, in the chats folder or the project
- * named, and answer the id it landed under.
- */
-export const importSession = async (path: string, project?: string): Promise<string> =>
-	body((await api.POST("/api/sessions/import", { body: { path, project } })).data).id;
 
 export const fetchProjectStatus = async (
 	path: string,

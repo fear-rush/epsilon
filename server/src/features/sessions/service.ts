@@ -4,12 +4,9 @@
  * holds it and whether it waits for an answer. Removing a file is our own disk
  * operation (pi has no delete): it resolves the id through pi's own listing,
  * closes an idle engine first, and refuses only while a turn is still working.
- * A deleted chat goes to Epsilon's trash, so the file comes back on a restore.
  * The browser sends no session path: an id is enough, pi's listing finds the file.
- * The one path it may name is an import, which is a file to copy in rather than a
- * session this home already holds.
  */
-import { mkdir, rm, rmdir, stat } from "node:fs/promises";
+import { rm, rmdir } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import type { AgentHome } from "../../platform/agent-home";
@@ -24,7 +21,7 @@ import type {
 	SessionList,
 	SessionSummary,
 } from "./contract";
-import { purgeTrash, restoreTrash, trashSession, writePinned } from "./store";
+import { writePinned } from "./store";
 
 type Live = { id: string; needsInput: boolean };
 
@@ -103,15 +100,15 @@ export const deleteSession = async (
 	const located = await locateSession(id);
 	if (located === undefined) return notFound;
 	if (!closeIfIdle(id)) return running;
-	await trashSession(home, located);
+	await rm(located.file, { force: true });
 	await forgetPin(home, id);
 	return { ok: true, value: null };
 };
 
 /**
- * Takes a project off Epsilon's list by moving every session pi recorded in that
- * folder to the trash. The list has no other source (docs/DECISIONS.md, Chats and
- * projects), so nothing else is written; the folder and pi's trust record stay.
+ * Takes a project off Epsilon's list by deleting every session pi recorded in that
+ * folder. The list has no other source (docs/DECISIONS.md, Chats and projects), so
+ * nothing else is written; the folder and pi's trust record stay.
  */
 export const removeProject = async (
 	home: AgentHome,
@@ -141,7 +138,7 @@ export const removeProject = async (
 	for (const session of sessions) {
 		const located = await locateSession(session.id);
 		if (located === undefined) continue;
-		await trashSession(home, located);
+		await rm(located.file, { force: true });
 		folders.add(dirname(located.file));
 		await forgetPin(home, session.id);
 	}
@@ -153,9 +150,9 @@ export const removeProject = async (
 /**
  * Move a chat into a trusted project: pi forks the whole history into a new
  * session in that folder, then the chat's own file is removed. The new session
- * runs with the project's resources from its next turn on. The old file is
- * removed rather than trashed: the history lives on in the fork, so nothing is
- * lost and a second copy in the trash would only be confusing.
+ * runs with the project's resources from its next turn on. The old file is deleted
+ * too: the history lives on in the fork, so nothing is lost and a second copy would
+ * only be confusing.
  */
 export const moveSessionToProject = async (
 	home: AgentHome,
@@ -215,57 +212,6 @@ export const copySession = async (
 };
 
 /**
- * Bring a JSONL session file in as a new chat, in the chats folder or a trusted
- * project. pi's `forkFrom` copies the whole file under a fresh id and writes the
- * header's folder as the one chosen here, which is what makes the imported chat
- * belong there; `importFromJsonl` keeps the source id and folder instead
- * (docs/pi-sdk.md, Embedding).
- */
-export const importSession = async (
-	home: AgentHome,
-	path: string,
-	project: string | undefined,
-): Promise<SessionOutcome<{ id: string }>> => {
-	if (!path.endsWith(".jsonl")) {
-		return {
-			ok: false,
-			code: "SESSION_COPY_FAILED",
-			message: "A session imports from a .jsonl file.",
-		};
-	}
-	const file = await stat(path).catch(() => undefined);
-	if (file === undefined || !file.isFile()) {
-		return {
-			ok: false,
-			code: "SESSION_COPY_FAILED",
-			message: `There is no file at ${path}.`,
-		};
-	}
-	let folder: string;
-	try {
-		folder = project === undefined ? home.chatsDir : await trustedProjectFolder(home, project);
-	} catch (error) {
-		return {
-			ok: false,
-			code: error instanceof ProjectNotTrustedError ? "PROJECT_NOT_TRUSTED" : "PROJECT_INVALID",
-			message: error instanceof Error ? error.message : String(error),
-		};
-	}
-	try {
-		// A fresh home has no chats folder yet, and pi's fork writes into the folder it
-		// is given.
-		await mkdir(folder, { recursive: true });
-		return { ok: true, value: { id: forkSession(path, folder) } };
-	} catch (error) {
-		return {
-			ok: false,
-			code: "SESSION_COPY_FAILED",
-			message: error instanceof Error ? error.message : String(error),
-		};
-	}
-};
-
-/**
  * Write one chat's transcript through pi's exporter. The callback owns the engine,
  * because pi's export is a method on the live session and this feature builds none;
  * it answers undefined for an id pi has no session for, and throws pi's own sentence
@@ -300,37 +246,3 @@ export const pinSession = async (
 	await writePinned(home, id, pinned);
 	return { ok: true, value: null };
 };
-
-const trashMissing: SessionOutcome<never> = {
-	ok: false,
-	code: "TRASH_NOT_FOUND",
-	message: "Epsilon's trash holds no such chat.",
-};
-
-/**
- * Restore a deleted chat by putting its file back where pi listed it. A restore
- * whose old path is occupied is refused: that file is a chat the operator still
- * has, and overwriting it would be the loss this trash exists to prevent.
- */
-export const restoreTrashedSession = async (
-	home: AgentHome,
-	id: string,
-): Promise<SessionOutcome<{ id: string; path: string }>> => {
-	const outcome = await restoreTrash(home, id);
-	if (outcome.ok) return { ok: true, value: { id, path: outcome.path } };
-	if (outcome.reason === "taken") {
-		return {
-			ok: false,
-			code: "TRASH_PATH_TAKEN",
-			message: "A chat file already exists where this one came from. Epsilon left both alone.",
-		};
-	}
-	return trashMissing;
-};
-
-/** Destroy a trashed chat for good, its file and its record alike. */
-export const purgeTrashedSession = async (
-	home: AgentHome,
-	id: string,
-): Promise<SessionOutcome<null>> =>
-	(await purgeTrash(home, id)) ? { ok: true, value: null } : trashMissing;
