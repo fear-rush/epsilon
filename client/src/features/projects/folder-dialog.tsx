@@ -40,18 +40,7 @@ type FolderDialogProps = {
 	onPick: (path: string) => Promise<void> | void;
 };
 
-export function FolderDialog(props: FolderDialogProps) {
-	// Each opening starts with a clean draft: the picker is remounted when it opens.
-	const [opening, setOpening] = useState(0);
-	const [wasOpen, setWasOpen] = useState(false);
-	if (props.open !== wasOpen) {
-		setWasOpen(props.open);
-		if (props.open) setOpening((count) => count + 1);
-	}
-	return <FolderPicker key={opening} {...props} />;
-}
-
-function FolderPicker({
+export function FolderDialog({
 	open,
 	title,
 	description,
@@ -71,6 +60,21 @@ function FolderPicker({
 	const trust = useTrustProject();
 	const queryClient = useQueryClient();
 
+	/** Each opening starts from a clean draft. Remounting for it would skip the entry transition. */
+	const [wasOpen, setWasOpen] = useState(false);
+	if (open !== wasOpen) {
+		setWasOpen(open);
+		if (open) {
+			setBrowsing(undefined);
+			setTyped("");
+			setShowHidden(false);
+			setShowNew(false);
+			setNewName("");
+			setPending(undefined);
+			setError(undefined);
+		}
+	}
+
 	const folders = useQuery({
 		queryKey: projectKeys.folders(browsing, showHidden),
 		queryFn: ({ signal }) => fetchFolders(browsing, showHidden, signal),
@@ -88,10 +92,19 @@ function FolderPicker({
 		},
 	});
 
+	/** Closing drops the last refusal, so the next opening starts clean. */
+	const close = (next: boolean) => {
+		if (!next) {
+			create.reset();
+			trust.reset();
+		}
+		onOpenChange(next);
+	};
+
 	const finish = async (path: string) => {
 		try {
 			await onPick(path);
-			onOpenChange(false);
+			close(false);
 		} catch (cause) {
 			setError(cause instanceof Error ? cause.message : String(cause));
 		}
@@ -133,7 +146,7 @@ function FolderPicker({
 		return (
 			<DialogFrame
 				open={open}
-				onOpenChange={onOpenChange}
+				onOpenChange={close}
 				size="lg"
 				title={`Trust ${pending.name}?`}
 				footer={
@@ -175,13 +188,13 @@ function FolderPicker({
 	return (
 		<DialogFrame
 			open={open}
-			onOpenChange={onOpenChange}
+			onOpenChange={close}
 			size="lg"
 			title={title}
 			description={description}
 			footer={
 				<>
-					<Button variant="destructive" onClick={() => onOpenChange(false)}>
+					<Button variant="destructive" onClick={() => close(false)}>
 						Cancel
 					</Button>
 					<Button
