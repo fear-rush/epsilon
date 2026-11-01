@@ -262,70 +262,67 @@ export function SessionSidebar() {
 					</div>
 				) : sessions.isError ? (
 					<StatusView {...errorView(sessions.error)} />
+				) : noMatches ? (
+					<div className="flex min-h-0 flex-1 flex-col animate-enter-fade">
+						<StatusView icon={SearchXIcon} title="No chats match" />
+					</div>
 				) : (
-					<>
-						{noMatches ? (
-							<div className="flex min-h-0 flex-1 flex-col animate-enter-fade">
-								<StatusView icon={SearchXIcon} title="No chats match" />
-							</div>
-						) : (
-							<>
-								{showProjects && (
-									<SidebarGroup className="animate-enter-rise">
-										<SidebarGroupLabel>Projects</SidebarGroupLabel>
-										<SidebarGroupContent>
-											<SidebarMenu>
-												{visibleProjects.map((entry) => (
-													<ProjectGroup
-														key={entry.project.path}
-														entry={entry}
-														activeId={activeId}
-														expanded={searching}
-														isFresh={isFresh}
-														onNewChat={() => startProjectChat(entry.project.path)}
-														onRemove={() => {
-															forgetProject.reset();
-															setPendingProject(entry);
-														}}
-														onRename={onRename}
-														onPin={onPin}
-														onDelete={onDelete}
-													/>
-												))}
-											</SidebarMenu>
-										</SidebarGroupContent>
-									</SidebarGroup>
-								)}
-
-								{showChats && (
-									<SidebarGroup className="animate-enter-rise">
-										<SidebarGroupLabel>Chats</SidebarGroupLabel>
-										<SidebarGroupContent>
-											{visibleChats.length === 0 ? (
-												<div className="px-2">
-													<InlineStatus icon={MessageSquareIcon}>No chats yet</InlineStatus>
-												</div>
-											) : (
-												<SidebarMenu>
-													{visibleChats.map((session) => (
-														<SessionItem
-															key={session.id}
-															session={session}
-															active={session.id === activeId}
-															animate={isFresh(session)}
-															onRename={onRename}
-															onPin={onPin}
-															onDelete={onDelete}
-														/>
-													))}
-												</SidebarMenu>
-											)}
-										</SidebarGroupContent>
-									</SidebarGroup>
-								)}
-							</>
+					<div className="flex min-h-0 animate-enter-rise flex-col gap-2 enter-delay-2">
+						{/* The list mounts when the load settles, one step after the column's chrome. */}
+						{showProjects && (
+							<SidebarGroup>
+								<SidebarGroupLabel>Projects</SidebarGroupLabel>
+								<SidebarGroupContent>
+									<SidebarMenu>
+										{visibleProjects.map((entry) => (
+											<ProjectGroup
+												key={entry.project.path}
+												entry={entry}
+												activeId={activeId}
+												expanded={searching}
+												isFresh={isFresh}
+												onNewChat={() => startProjectChat(entry.project.path)}
+												onRemove={() => {
+													forgetProject.reset();
+													setPendingProject(entry);
+												}}
+												onRename={onRename}
+												onPin={onPin}
+												onDelete={onDelete}
+											/>
+										))}
+									</SidebarMenu>
+								</SidebarGroupContent>
+							</SidebarGroup>
 						)}
-					</>
+
+						{showChats && (
+							<SidebarGroup>
+								<SidebarGroupLabel>Chats</SidebarGroupLabel>
+								<SidebarGroupContent>
+									{visibleChats.length === 0 ? (
+										<div className="px-2">
+											<InlineStatus icon={MessageSquareIcon}>No chats yet</InlineStatus>
+										</div>
+									) : (
+										<SidebarMenu>
+											{visibleChats.map((session) => (
+												<SessionItem
+													key={session.id}
+													session={session}
+													active={session.id === activeId}
+													animate={isFresh(session)}
+													onRename={onRename}
+													onPin={onPin}
+													onDelete={onDelete}
+												/>
+											))}
+										</SidebarMenu>
+									)}
+								</SidebarGroupContent>
+							</SidebarGroup>
+						)}
+					</div>
 				)}
 				{sessions.data?.pinsProblem !== undefined && (
 					<div className="px-pane">
