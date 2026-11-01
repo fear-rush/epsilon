@@ -108,8 +108,8 @@ type ComposerProps = {
 	cost: number;
 	/** An empty session draws the box in the page, not docked under a transcript. */
 	inline?: boolean;
-	/** Drawn under the box, inside its column: where this conversation runs. */
-	footer?: ReactNode;
+	/** Drawn above the box, inside its column: where this conversation runs. */
+	header?: ReactNode;
 	/** A draft was sent, so the page can make this session its URL. */
 	onSent?: () => void;
 };
@@ -129,7 +129,7 @@ function ComposerImpl({
 	contextUsage,
 	cost,
 	inline = false,
-	footer,
+	header,
 	onSent,
 }: ComposerProps) {
 	const [draft, setDraft] = useState("");
@@ -321,7 +321,13 @@ function ComposerImpl({
 
 	return (
 		<div className={inline ? undefined : "border-t p-3"}>
-			<div ref={surfaceRef} className="mx-auto w-full max-w-3xl">
+			<div ref={surfaceRef} className="mx-auto w-full max-w-4xl">
+				{(header !== undefined || branches.length > 0) && (
+					<div className="flex min-w-0 items-center justify-between gap-2 pb-2">
+						<div className="min-w-0 flex-1">{header}</div>
+						<BranchMenu branches={branches} blocked={goBackBlocked} onGoBack={goBack} />
+					</div>
+				)}
 				<form
 					ref={formRef}
 					onSubmit={(event) => {
@@ -374,9 +380,7 @@ function ComposerImpl({
 							className="max-h-40 min-h-11 p-3"
 						/>
 						<InputGroupAddon align="block-end">
-							<Tip
-								label={`Attach an image from a file, a paste or a drop. Up to ${PROMPT_IMAGE_MAX}, ${IMAGE_MEGABYTES} MB each.`}
-							>
+							<Tip label="Attach images">
 								<InputGroupButton
 									size="icon-sm"
 									aria-label="Attach images"
@@ -390,7 +394,6 @@ function ComposerImpl({
 								model={model}
 								onSelect={(next) => store.setModel(next.provider, next.id)}
 							/>
-							<ContextMeter usage={contextUsage} cost={cost} />
 							<ThinkingMenu
 								level={thinkingLevel}
 								levels={availableThinkingLevels}
@@ -401,7 +404,6 @@ function ComposerImpl({
 								onSelect={(enabled) => store.setCodingTools(enabled)}
 							/>
 							<PermissionMenu statuses={statuses} onSelect={(mode) => store.setPermission(mode)} />
-							<BranchMenu branches={branches} blocked={goBackBlocked} onGoBack={goBack} />
 							{busy && (
 								<Tip label="Stop the run">
 									<InputGroupButton
@@ -415,7 +417,7 @@ function ComposerImpl({
 									</InputGroupButton>
 								</Tip>
 							)}
-							<Tip label={busy ? `Steer the run. ${shortcut("Enter")} sends a follow-up.` : "Send"}>
+							<Tip label={busy ? "Steer the run" : "Send"}>
 								<InputGroupButton
 									type="submit"
 									size="icon-sm"
@@ -430,12 +432,18 @@ function ComposerImpl({
 						</InputGroupAddon>
 					</InputGroup>
 				</form>
-				{notice !== undefined && (
-					<p role="status" className="px-1 pt-1 text-meta text-muted-foreground">
-						{notice}
-					</p>
+				{(notice !== undefined || contextUsage !== undefined) && (
+					<div className="flex items-start gap-2 px-1 pt-1">
+						{notice !== undefined && (
+							<p role="status" className="min-w-0 flex-1 text-meta text-muted-foreground">
+								{notice}
+							</p>
+						)}
+						<div className="ml-auto shrink-0">
+							<ContextMeter usage={contextUsage} cost={cost} />
+						</div>
+					</div>
 				)}
-				{footer}
 				<Palette
 					open={paletteOpen}
 					anchor={surfaceRef}

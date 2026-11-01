@@ -49,9 +49,7 @@ export function PermissionMenu({
 					{active?.label ?? "Permission"}
 					<ChevronDownIcon data-icon="inline-end" />
 				</TooltipTrigger>
-				<TooltipContent side="top">
-					Choose when epsilon asks before running commands and edits.
-				</TooltipContent>
+				<TooltipContent side="top">Permission</TooltipContent>
 			</Tooltip>
 			<DropdownMenuContent align="start" className="w-64">
 				<DropdownMenuRadioGroup

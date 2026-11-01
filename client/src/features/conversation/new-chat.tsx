@@ -106,11 +106,10 @@ function DraftConversation({
 				cost={stats.cost}
 				inline
 				onSent={start}
-				footer={
-					<ComposerPlace
-						place={where}
-						onChange={where.kind === "project" ? onChangeProject : undefined}
-					/>
+				header={
+					where.kind === "project" ? (
+						<ComposerPlace place={where} onChange={onChangeProject} />
+					) : undefined
 				}
 			/>
 		),

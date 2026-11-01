@@ -9,13 +9,28 @@ import type { SnapshotBranch } from "shared";
 /** The first line of a message, so every row in a list stays one line tall. */
 const firstLine = (text: string): string => text.trimStart().split("\n")[0] ?? "";
 
-export function BranchRow({ branch, index }: { branch: SnapshotBranch; index: number }) {
+export function BranchRow({
+	branch,
+	index,
+	multiline = false,
+}: {
+	branch: SnapshotBranch;
+	index: number;
+	/** Let a long message use a second line; the dialog list stays one line per row. */
+	multiline?: boolean;
+}) {
 	return (
 		<>
 			<span className="w-6 shrink-0 text-right text-meta text-muted-foreground tabular-nums">
 				{index + 1}
 			</span>
-			<span className="min-w-0 flex-1 truncate">{firstLine(branch.text)}</span>
+			<span
+				className={
+					multiline ? "line-clamp-2 min-w-0 flex-1 break-words" : "min-w-0 flex-1 truncate"
+				}
+			>
+				{firstLine(branch.text)}
+			</span>
 		</>
 	);
 }

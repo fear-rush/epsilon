@@ -77,7 +77,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				contextUsage={contextUsage}
 				cost={stats.cost}
 				inline={empty}
-				footer={<ComposerPlace place={where} />}
+				header={where.kind === "project" ? <ComposerPlace place={where} /> : undefined}
 			/>
 		),
 		[

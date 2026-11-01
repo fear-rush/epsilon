@@ -30,9 +30,9 @@ import { FolderDialog, useRecentProjects } from "@/features/projects";
 const folderName = (path: string): string => path.split("/").filter(Boolean).at(-1) ?? path;
 
 /**
- * Where the conversation runs, under the composer. A chat needs no line: its folder is
- * Epsilon's own and says nothing. A project names the folder it works in, and can open
- * the picker again when the page has a project to change.
+ * Where the conversation runs, above the composer. A chat needs no line: its folder
+ * is Epsilon's own and says nothing. A project names the folder it works in, and can
+ * open the picker again when the page has a project to change.
  */
 export function ComposerPlace({ place, onChange }: { place: Place; onChange?: () => void }) {
 	if (place.kind === "chat") return null;
@@ -43,14 +43,14 @@ export function ComposerPlace({ place, onChange }: { place: Place; onChange?: ()
 			<span className="truncate">{place.path}</span>
 		</>
 	);
-	const className = "flex min-w-0 items-center gap-2 border-t px-2 text-meta text-muted-foreground";
+	const className = "flex min-w-0 items-center gap-2 px-2 text-meta text-muted-foreground";
 	if (onChange === undefined) {
-		return <div className={cn(className, "pt-2")}>{content}</div>;
+		return <div className={className}>{content}</div>;
 	}
 	return (
 		<button
 			type="button"
-			className={cn(className, "w-full rounded-md py-2 text-left hover:bg-muted")}
+			className={cn(className, "w-full rounded-md py-1 text-left hover:bg-muted")}
 			onClick={onChange}
 		>
 			{content}

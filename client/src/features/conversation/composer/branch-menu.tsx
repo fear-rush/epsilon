@@ -3,15 +3,17 @@ import { useState } from "react";
 import type { SnapshotBranch } from "shared";
 
 import { Tip } from "@/components/patterns/tip";
+import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { InputGroupButton } from "@/components/ui/input-group";
 import { BranchRow } from "../branch-row";
 
 type BranchMenuProps = {
@@ -36,17 +38,12 @@ export function BranchMenu({ branches, blocked, onGoBack }: BranchMenuProps) {
 
 	return (
 		<DropdownMenu>
-			<Tip
-				label={
-					blocked ??
-					"Go back to a message: its text returns to the box, and sending it starts a new branch"
-				}
-			>
+			<Tip label={blocked ?? "Go back"}>
 				<DropdownMenuTrigger
 					render={
-						<InputGroupButton
-							size="sm"
-							className="rounded-md text-meta"
+						<Button
+							variant="ghost"
+							className="shrink-0 text-meta"
 							disabled={blocked !== undefined}
 						/>
 					}
@@ -56,21 +53,29 @@ export function BranchMenu({ branches, blocked, onGoBack }: BranchMenuProps) {
 					<ChevronDownIcon data-icon="inline-end" />
 				</DropdownMenuTrigger>
 			</Tip>
-			<DropdownMenuContent align="start" className="max-h-64 w-72">
-				<DropdownMenuLabel>Go back to a message</DropdownMenuLabel>
+			<DropdownMenuContent side="top" align="end" className="max-h-96 w-96">
+				<DropdownMenuGroup>
+					<DropdownMenuLabel>Go back to a message</DropdownMenuLabel>
+				</DropdownMenuGroup>
 				<div className="px-2 pb-1.5 text-meta text-muted-foreground">
 					Picking one puts its text back in the box. Sending it starts a new branch from there.
 				</div>
 				{branches.map((branch, index) => (
-					<DropdownMenuItem key={branch.entryId} onClick={() => onGoBack(branch, summarize)}>
-						<BranchRow branch={branch} index={index} />
+					<DropdownMenuItem
+						key={branch.entryId}
+						className="items-baseline"
+						onClick={() => onGoBack(branch, summarize)}
+					>
+						<BranchRow branch={branch} index={index} multiline />
 					</DropdownMenuItem>
 				))}
+				<DropdownMenuSeparator />
 				<DropdownMenuCheckboxItem
 					checked={summarize}
 					onCheckedChange={(checked) => setSummarize(checked === true)}
 				>
-					Summarise the branch I leave
+					<span aria-hidden className="w-6 shrink-0" />
+					<span className="min-w-0 flex-1">Summarise the branch I leave</span>
 				</DropdownMenuCheckboxItem>
 			</DropdownMenuContent>
 		</DropdownMenu>

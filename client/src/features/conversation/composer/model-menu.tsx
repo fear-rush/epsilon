@@ -84,7 +84,7 @@ export function ModelMenu({ models, model, onSelect }: ModelMenuProps) {
 					<span className="truncate">{model?.name ?? "Model"}</span>
 					<ChevronDownIcon data-icon="inline-end" />
 				</TooltipTrigger>
-				<TooltipContent side="top">Choose the model this chat uses.</TooltipContent>
+				<TooltipContent side="top">Model</TooltipContent>
 			</Tooltip>
 			<PopoverContent side="top" align="start" className="w-80 p-0">
 				<Command

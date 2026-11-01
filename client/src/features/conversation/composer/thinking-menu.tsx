@@ -11,6 +11,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { InputGroupButton } from "@/components/ui/input-group";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
  * The thinking-level picker. pi decides which levels a model supports, so the
@@ -41,18 +42,25 @@ export function ThinkingMenu({
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger
-				render={
-					<InputGroupButton
-						size="sm"
-						className="w-auto cursor-pointer gap-1 rounded-md text-meta"
-						aria-label={`Thinking level: ${labels[level]}`}
-					/>
-				}
-			>
-				<span>{labels[level]}</span>
-				<ChevronDownIcon data-icon="inline-end" />
-			</DropdownMenuTrigger>
+			<Tooltip>
+				<TooltipTrigger
+					render={
+						<DropdownMenuTrigger
+							render={
+								<InputGroupButton
+									size="sm"
+									className="w-auto cursor-pointer gap-1 rounded-md text-meta"
+									aria-label={`Thinking level: ${labels[level]}`}
+								/>
+							}
+						/>
+					}
+				>
+					<span>{labels[level]}</span>
+					<ChevronDownIcon data-icon="inline-end" />
+				</TooltipTrigger>
+				<TooltipContent side="top">Thinking</TooltipContent>
+			</Tooltip>
 			<DropdownMenuContent align="start" className="w-40">
 				<DropdownMenuRadioGroup
 					value={level}

@@ -56,9 +56,7 @@ export function ToolsMenu({
 					{active?.label}
 					<ChevronDownIcon data-icon="inline-end" />
 				</TooltipTrigger>
-				<TooltipContent side="top">
-					Choose whether this chat can run commands and edit files.
-				</TooltipContent>
+				<TooltipContent side="top">Tools</TooltipContent>
 			</Tooltip>
 			<DropdownMenuContent align="start" className="w-64">
 				<DropdownMenuRadioGroup
