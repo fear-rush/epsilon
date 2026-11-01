@@ -113,10 +113,28 @@ session down with the server; session files survive
   so the settings nav, a list and a detail page share one line. A `PaneBand`
   (`h-band`, no rule) below it holds tabs or search, and only when there are some. A
   detail page's title is in its bar.
+- One inset per column: bar title, band, picker, search, group heading and a row's
+  text all start on the column's gutter (`px-pane` for the nav and a list, `px-page`
+  for a detail page). A hovered or selected row pads its text by half the `pane`
+  gutter and bleeds the same amount outwards, so the colour has room and the text
+  keeps the line; the nav item and the list row are the same chip.
+- Under the bar, every piece sits one `pane` gap below the one before it, whichever
+  of them are shown: a section's tabs, the project picker, its notices, the search,
+  then the rows.
+- A selection reveals with one `enter-rise`: a detail page's tabs, body and footer
+  start together, and a chat's rows and composer rise with the same token, so every
+  list in every sidebar opens its pane the same way. A pane bar's title and count
+  drop in from above instead, and drop again when their text changes.
+- A `CollapsibleSection` grows its height over `duration-slow` with `ease-in-out`
+  (a settle curve makes a tall card jump) and, when the height settles, scrolls its
+  scroll parent to the new end. Content that opened out of view must be brought back.
 - Connection and version problems belong to the root `AppBanner` and nowhere else.
   A pane shows its own loading, empty and error states with `StatusView`.
 - A dialog is `DialogFrame size="sm|md|lg"`: a fixed body height, so switching tabs
-  or steps never resizes it.
+  or steps never resizes it; `body="content"` lets a one-step dialog hug its field.
+  Its content stays mounted while closed, so the opening and closing transitions play.
+  A dialog whose words come from the payload that opens it keeps the last payload
+  through the exit (`useLastDefined`), so closing never flashes a fallback.
 
 - Compose the installed shadcn components; chat primitives (`MessageScroller`,
   `Message`, `Trace`, `CodeBlock`, `Marker`) mean something, so do not fake them
