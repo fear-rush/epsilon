@@ -153,12 +153,12 @@ export function Sidebar({ className, children, ...props }: React.ComponentProps<
 		>
 			<div
 				data-slot="sidebar-gap"
-				className="relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear group-data-[collapsible=offcanvas]:w-0"
+				className="relative w-(--sidebar-width) bg-transparent transition-[width] duration-base ease-in-out group-data-[collapsible=offcanvas]:w-0"
 			/>
 			<div
 				data-slot="sidebar-container"
 				className={cn(
-					"fixed inset-y-0 left-0 z-10 hidden h-svh w-(--sidebar-width) border-r transition-[left,width] duration-200 ease-linear group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] md:flex",
+					"fixed inset-y-0 left-0 z-10 hidden h-svh w-(--sidebar-width) border-r transition-[left,width] duration-base ease-in-out group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] md:flex",
 					className,
 				)}
 				{...props}

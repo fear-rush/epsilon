@@ -79,7 +79,7 @@ export function SessionItem({
 							onClick={closeOnNavigate}
 						/>
 					}
-					className="h-auto flex-col items-start gap-row py-1.5"
+					className="h-auto flex-col items-start gap-row py-1.5 pr-8"
 				>
 					<span className="flex w-full items-center gap-1.5">
 						{session.pinned && (
