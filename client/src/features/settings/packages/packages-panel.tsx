@@ -7,7 +7,6 @@ import { ListItem } from "@/components/patterns/list/list-item";
 import { ListPane } from "@/components/patterns/list/list-pane";
 import { MasterDetail } from "@/components/patterns/pane/master-detail";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/cn";
 import { useSettings, useSettingsProject } from "@/features/settings/queries";
 import { packageLine, scopeOf } from "./package-kind";
 import { PackageInstallDialog } from "./package-install-dialog";
@@ -57,26 +56,21 @@ function PackagesList({ selected }: { selected: string | undefined }) {
 					</Button>
 				}
 			>
-				<div
-					key={project ?? "global"}
-					className={cn(project === undefined ? "animate-enter-left" : "animate-enter-right")}
-				>
-					<ListGroup>
-						{visible.map((entry) => (
-							<ListItem
-								key={entry.source}
-								name={entry.source}
-								description={packageLine(entry)}
-								selected={selected === entry.source}
-								link={{
-									to: "/settings/packages/$scope/$source",
-									params: { scope: entry.scope, source: entry.source },
-									search: true,
-								}}
-							/>
-						))}
-					</ListGroup>
-				</div>
+				<ListGroup>
+					{visible.map((entry) => (
+						<ListItem
+							key={entry.source}
+							name={entry.source}
+							description={packageLine(entry)}
+							selected={selected === entry.source}
+							link={{
+								to: "/settings/packages/$scope/$source",
+								params: { scope: entry.scope, source: entry.source },
+								search: true,
+							}}
+						/>
+					))}
+				</ListGroup>
 			</ListPane>
 			<PackageInstallDialog open={installing} scope={scope} onOpenChange={setInstalling} />
 		</>

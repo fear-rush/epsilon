@@ -91,12 +91,12 @@ export function ScopeTabs({ section }: { section: ScopedSection }) {
 	);
 }
 
-/** Which project a Project tab shows, as its own row under the band. Nothing on Global. */
+/** Which project a Project tab shows: a row of the list's stack under the band. Nothing on Global. */
 export function ProjectPicker({ section }: { section: ScopedSection }) {
 	const scope = useScopeSwitch(section);
 	if (scope.project === undefined) return null;
 	return (
-		<div className="shrink-0 animate-enter-drop px-pane pt-pane">
+		<div className="min-w-0">
 			<Select
 				items={[...scope.choices, { value: OPEN_FOLDER, label: "Open another folder…" }]}
 				value={scope.project}

@@ -12,14 +12,16 @@ import { errorView } from "@/components/patterns/status/error-view";
 import { ProjectPicker, ScopeTabs } from "@/components/patterns/tabs/scope-tabs";
 import type { ScopedSection } from "@/components/patterns/tabs/scope-tabs";
 import { SearchField } from "@/components/patterns/list/search-field";
+import { useSettingsProject } from "@/features/settings/queries";
 
 /**
  * The list column of a master/detail section: a bar with the title and count, a
  * band, the rows and a footer. A section with a Global/Project scope puts the tabs
  * in the band, the project picker under it and the search below; one without puts
- * the search in the band. Footer actions fill the width, side by side when there
- * are two. The pane shows its pending, read-error and empty states in place of
- * the rows.
+ * the search in the band. Every piece under the bar starts `pane` below the one
+ * before it, and a scope switch slides the whole content in from that side. Footer
+ * actions fill the width, side by side when there are two. The pane shows its
+ * pending, read-error and empty states in place of the rows.
  */
 export function ListPane({
 	title,
@@ -60,35 +62,51 @@ export function ListPane({
 }) {
 	const failure = error === undefined || error === null ? undefined : errorView(error);
 	const search = <SearchField value={query} onChange={onQueryChange} label={searchLabel} />;
+	// The band already ends `pane` below its tabs or search; this stack's rows are `pane` apart,
+	// so the space under the bar is the same whether a scope, notices or neither are shown.
+	const stack = scope !== undefined || notices !== undefined;
+	const project = useSettingsProject();
+	// A scope switch keeps this pane mounted, so the scrolling content is keyed by the chosen
+	// project: every switch replays its entrance, from the left for Global and the right for a
+	// project, whether it shows rows, a notice or an empty state.
+	const contentKey = scope === undefined ? undefined : (project ?? "global");
+	const contentEnter = project === undefined ? "animate-enter-left" : "animate-enter-right";
 	return (
 		<Pane border className="h-full w-full">
 			<PaneBar title={title} meta={count} />
-			<PaneBand>{scope === undefined ? search : <ScopeTabs section={scope} />}</PaneBand>
-			{scope !== undefined && <ProjectPicker section={scope} />}
-			{notices !== undefined && (
-				<div className="shrink-0 animate-enter-drop px-pane pt-pane enter-delay-1">{notices}</div>
+			<PaneBand className="animate-enter-drop enter-delay-1">
+				{scope === undefined ? search : <ScopeTabs section={scope} />}
+			</PaneBand>
+			{stack && (
+				<div className="grid shrink-0 animate-enter-drop gap-pane px-pane enter-delay-2">
+					{scope !== undefined && <ProjectPicker section={scope} />}
+					{notices !== undefined && <div>{notices}</div>}
+					{scope !== undefined && search}
+				</div>
 			)}
-			{scope !== undefined && (
-				<div className="shrink-0 animate-enter-drop p-pane enter-delay-2">{search}</div>
-			)}
-			<div
-				className={cn(
-					"min-h-0 flex-1 overflow-y-auto px-pane pb-pane",
-					scope === undefined && "pt-pane",
-				)}
-			>
-				{pending ? (
-					<LoadingState label={pendingLabel} />
-				) : failure !== undefined ? (
-					<StatusView {...failure} />
-				) : empty !== undefined ? (
-					<StatusView icon={InboxIcon} title={empty} />
-				) : (
-					children
-				)}
+			{/* The clip keeps the entrance inside the column: the content slides in from its edge. */}
+			<div className="min-h-0 flex-1 overflow-hidden">
+				<div
+					key={contentKey}
+					className={cn(
+						"h-full w-full overflow-y-auto px-pane pb-pane",
+						stack && "pt-pane",
+						scope !== undefined && contentEnter,
+					)}
+				>
+					{pending ? (
+						<LoadingState label={pendingLabel} />
+					) : failure !== undefined ? (
+						<StatusView {...failure} />
+					) : empty !== undefined ? (
+						<StatusView icon={InboxIcon} title={empty} />
+					) : (
+						children
+					)}
+				</div>
 			</div>
 			{footer !== undefined && (
-				<PaneFooter fill stacked={footerStacked}>
+				<PaneFooter fill stacked={footerStacked} className="animate-enter-rise enter-delay-2">
 					{footer}
 				</PaneFooter>
 			)}

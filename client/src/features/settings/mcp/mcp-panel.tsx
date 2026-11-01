@@ -2,7 +2,6 @@ import { useMatchRoute } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
-import { cn } from "@/lib/cn";
 import type { McpScope } from "shared";
 
 import { Button } from "@/components/ui/button";
@@ -103,10 +102,6 @@ function McpPanel({ selected }: { selected: { scope: McpScope; name: string } | 
 	const refresh = useSettingsRefresh();
 	const projectPath = useSettingsProject();
 	const scope: McpScope = projectPath === undefined ? "global" : "project";
-	const motion = {
-		key: projectPath ?? "global",
-		className: projectPath === undefined ? "animate-enter-left" : "animate-enter-right",
-	};
 	const [query, setQuery] = useState("");
 	const [adding, setAdding] = useState(false);
 
@@ -151,6 +146,36 @@ function McpPanel({ selected }: { selected: { scope: McpScope; name: string } | 
 						(server.kind !== "server" || server.relation !== "replaced-by-project"),
 				)
 			: [];
+	/** The list's alerts; none means no slot, so the stack under the band stays tight. */
+	const notices = [
+		settings.data?.error === undefined ? undefined : (
+			<Notice key="read" tone="error">
+				{settings.data.error}
+			</Notice>
+		),
+		mcpDisabled !== true ? undefined : (
+			<Notice key="disabled" tone="warning">
+				MCP is off in settings.json (<code>-builtin:mcp</code>).
+			</Notice>
+		),
+		mcpDisabled === true || unreachable.length === 0 || reach === undefined ? undefined : (
+			<Notice key="unreachable" tone="warning">
+				The model cannot call {unreachable.map((server) => server.name).join(", ")}:{" "}
+				{unreachableReason(reach)}.
+			</Notice>
+		),
+		mcpDisabled === true || unreachable.length > 0 || stalled.length === 0 ? undefined : (
+			<Notice key="stalled" tone="warning">
+				The model cannot call {stalled.map((server) => server.name).join(", ")}: no live session has{" "}
+				<code>codemode</code> or <code>tool_search</code>.
+			</Notice>
+		),
+		codemode.error === null ? undefined : (
+			<Notice key="codemode" tone="error">
+				{codemode.error.message}
+			</Notice>
+		),
+	].filter((notice) => notice !== undefined);
 
 	return (
 		<>
@@ -158,31 +183,7 @@ function McpPanel({ selected }: { selected: { scope: McpScope; name: string } | 
 				title="MCP servers"
 				count={own.length}
 				error={settings.error}
-				notices={
-					<div className="grid gap-2">
-						{settings.data?.error !== undefined && (
-							<Notice tone="error">{settings.data.error}</Notice>
-						)}
-						{mcpDisabled === true && (
-							<Notice tone="warning">
-								MCP is off in settings.json (<code>-builtin:mcp</code>).
-							</Notice>
-						)}
-						{mcpDisabled !== true && unreachable.length > 0 && reach !== undefined && (
-							<Notice tone="warning">
-								The model cannot call {unreachable.map((server) => server.name).join(", ")}:{" "}
-								{unreachableReason(reach)}.
-							</Notice>
-						)}
-						{mcpDisabled !== true && unreachable.length === 0 && stalled.length > 0 && (
-							<Notice tone="warning">
-								The model cannot call {stalled.map((server) => server.name).join(", ")}: no live
-								session has <code>codemode</code> or <code>tool_search</code>.
-							</Notice>
-						)}
-						{codemode.error !== null && <Notice tone="error">{codemode.error.message}</Notice>}
-					</div>
-				}
+				notices={notices.length === 0 ? undefined : <div className="grid gap-2">{notices}</div>}
 				scope="/settings/mcp"
 				query={query}
 				onQueryChange={setQuery}
@@ -216,9 +217,7 @@ function McpPanel({ selected }: { selected: { scope: McpScope; name: string } | 
 					</>
 				}
 			>
-				<div key={motion.key} className={cn("min-w-0", motion.className)}>
-					<ServerGroup servers={visible} selected={selected} />
-				</div>
+				<ServerGroup servers={visible} selected={selected} />
 				{unlisted.length > 0 && (
 					<ListGroup title="Registered by an extension">
 						{unlisted.map((server) => (

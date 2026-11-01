@@ -99,13 +99,7 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 				</>
 			}
 		>
-			<div
-				key={project?.path ?? "global"}
-				className={cn(
-					"grid min-w-0 grid-cols-[minmax(0,1fr)]",
-					inProject ? "animate-enter-right" : "animate-enter-left",
-				)}
-			>
+			<div className="grid min-w-0 grid-cols-[minmax(0,1fr)]">
 				{groups.map((group) => (
 					<ListGroup key={group.id} title={group.title}>
 						{group.skills.map((skill) => (
