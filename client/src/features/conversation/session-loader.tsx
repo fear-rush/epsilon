@@ -15,7 +15,7 @@ export function SessionLoader({ snapshot }: { snapshot: ConversationSnapshot }) 
 		);
 	}
 	return (
-		<div className="flex min-h-0 flex-1 items-center justify-center animate-enter-fade">
+		<div className="flex min-h-0 flex-1 items-center justify-center animate-enter-rise">
 			<LoadingState label="Loading the session…" />
 		</div>
 	);

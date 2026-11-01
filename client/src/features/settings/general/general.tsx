@@ -74,7 +74,7 @@ function GeneralBody({ snapshot }: { snapshot: SettingsSnapshot }) {
 	);
 
 	return (
-		<div className="grid gap-section animate-enter-left">
+		<div className="grid gap-section">
 			{snapshot.error !== undefined && <Notice tone="error">{snapshot.error}</Notice>}
 			<Section title="App">
 				<Row

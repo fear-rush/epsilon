@@ -177,7 +177,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 					)}
 
 					{runStatus}
-					<div className="composer-settle">{composer}</div>
+					<div className="animate-enter-rise">{composer}</div>
 				</>
 			)}
 		</div>

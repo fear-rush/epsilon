@@ -14,6 +14,8 @@ import { PaneFooter } from "./pane-footer";
 /**
  * A detail column: the title bar with its actions, a tabs band when the page has
  * tabs, the scrolling body and an optional footer. On a phone a back link joins the bar.
+ * The bar fades and everything under it — tabs, body, footer — rises as one, so a
+ * page from any list reveals the same way. A tab switch replays the body's rise.
  */
 export function DetailPage({
 	title,
@@ -63,7 +65,7 @@ export function DetailPage({
 			/>
 			{tabs !== undefined && (
 				// The tabs sit in the same column as the page's content, not at the pane's edge.
-				<PaneBand gutter="page" className="px-0">
+				<PaneBand gutter="page" className="animate-enter-rise px-0">
 					<div className="mx-auto w-full max-w-content px-page">{tabs}</div>
 				</PaneBand>
 			)}
@@ -71,7 +73,7 @@ export function DetailPage({
 				{children}
 			</PaneBody>
 			{(footer !== undefined || footerStatus !== undefined) && (
-				<PaneFooter gutter="page" status={footerStatus}>
+				<PaneFooter gutter="page" status={footerStatus} className="animate-enter-rise">
 					{footer}
 				</PaneFooter>
 			)}

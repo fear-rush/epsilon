@@ -25,7 +25,7 @@ export function PaneFooter({
 	return (
 		<div
 			className={cn(
-				"flex shrink-0 animate-enter-rise items-center gap-2 border-t py-3 enter-delay-2",
+				"flex shrink-0 items-center gap-2 border-t py-3",
 				GUTTER_CLASS[gutter],
 				className,
 			)}

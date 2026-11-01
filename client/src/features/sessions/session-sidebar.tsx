@@ -275,7 +275,7 @@ export function SessionSidebar() {
 			/>
 
 			{sessions.data !== undefined && (
-				<PaneBand>
+				<PaneBand className="animate-enter-drop enter-delay-1">
 					<SearchField value={query} onChange={setQuery} label="Search chats" />
 				</PaneBand>
 			)}

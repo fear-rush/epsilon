@@ -27,7 +27,7 @@ import { ToolTrace } from "./tool-trace";
 export function Transcript({ rows }: { rows: TranscriptRow[] }) {
 	return (
 		<MessageScrollerProvider autoScroll>
-			<MessageScroller className="conversation-enter">
+			<MessageScroller>
 				<MessageScrollerViewport>
 					<MessageScrollerContent className="mx-auto w-full max-w-3xl gap-6 px-3 py-8 sm:px-6">
 						{rows.map((row) => (

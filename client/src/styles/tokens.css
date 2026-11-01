@@ -50,8 +50,9 @@
 	--text-code: 0.75rem;
 	--text-code--line-height: 1.5;
 
-	/* Motion: one curve, three durations, five entrances. Things under a bar (tabs,
-	   search, a picker) drop in from above; things over a footer rise from below. */
+	/* Motion: one curve, three durations, five entrances. A list's band and a picker
+	   drop in from above; a selected pane's tabs, body and footer rise as one reveal,
+	   and a chat's rows and composer use that same rise. */
 	--ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
 	--animate-enter-fade: enter-fade 220ms var(--ease-settle) both;
 	--animate-enter-rise: enter-rise 360ms var(--ease-settle) both;
