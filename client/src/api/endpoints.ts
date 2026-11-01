@@ -544,6 +544,31 @@ export const deleteSkillBundleFile = async (
 	});
 };
 
+/** Creates one folder in a skill folder, with the folders above it. */
+export const createSkillBundleFolder = async (
+	project: Project,
+	root: SkillRoot,
+	name: string,
+	path: string,
+): Promise<void> => {
+	await api.POST("/api/settings/skills/{root}/{name}/folder", {
+		params: { path: { root, name }, query: { project } },
+		body: { path },
+	});
+};
+
+/** Deletes one empty folder in a skill folder. */
+export const deleteSkillBundleFolder = async (
+	project: Project,
+	root: SkillRoot,
+	name: string,
+	path: string,
+): Promise<void> => {
+	await api.DELETE("/api/settings/skills/{root}/{name}/folder", {
+		params: { path: { root, name }, query: { project, path } },
+	});
+};
+
 /** Turns one skill on or off through the `skills` setting. `filePath` comes from the snapshot. */
 export const setSkillEnabled = async (
 	project: Project,

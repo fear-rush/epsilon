@@ -1,27 +1,23 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 
-import { deleteSkillBundleFile, saveSkillBundleFile } from "@/api/endpoints";
+import { deleteSkillBundleFile } from "@/api/endpoints";
 import { settingsKeys } from "@/api/keys";
 import type { SkillRoot } from "@/api/types";
-import { Button } from "@/components/ui/button";
-import { FieldError } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 import { CancelDialog, DeleteDialog } from "@/components/patterns/dialog/confirm-dialogs";
 import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { StatusView } from "@/components/patterns/status/status-view";
+import { useLastDefined } from "@/hooks/use-last-defined";
 import { useSettingsProject, useSkillFiles } from "@/features/settings/queries";
 import { SkillFileDialog } from "./skill-file-dialog";
-import { newFileProblem, type BundleEntry } from "./skill-file-tree";
+import type { BundleEntry } from "./skill-file-tree";
 import { SkillFilesList } from "./skill-files-list";
 
 /**
  * The files bundled next to SKILL.md, as the Files card. A text file opens in a
- * dialog with its own Save and Discard. Nothing here touches the form draft:
- * each file is written on its own.
+ * dialog with its own Save and Discard, and the Raw view adds and removes files.
+ * Nothing here touches the form draft: each file is written on its own.
  */
 export function SkillFiles({
 	root,
@@ -36,6 +32,7 @@ export function SkillFiles({
 	const queryClient = useQueryClient();
 	const list = useSkillFiles(root, name);
 	const [open, setOpen] = useState<string | undefined>();
+	const shownOpen = useLastDefined(open);
 	const [dirty, setDirty] = useState(false);
 	// A switch that waits for the answer to "discard changes?".
 	const [pending, setPending] = useState<(() => void) | undefined>();
@@ -75,7 +72,6 @@ export function SkillFiles({
 	if (list.error !== null) return <StatusView {...errorView(list.error)} />;
 
 	const files = list.data.files;
-	const existing = new Set(files.map((file) => file.path));
 	// SKILL.md is the Instructions card.
 	const listed = files
 		.filter((file) => file.path !== "SKILL.md")
@@ -99,28 +95,15 @@ export function SkillFiles({
 				</p>
 			)}
 
-			<NewFile
-				existing={existing}
+			<SkillFileDialog
+				open={open !== undefined}
 				root={root}
 				name={name}
-				onCreated={(path) => {
-					refresh();
-					setOpen(path);
-				}}
-				guarded={guarded}
+				path={shownOpen}
+				onDirtyChange={changeDirty}
+				onSaved={refresh}
+				onClose={() => guarded(() => setOpen(undefined))}
 			/>
-
-			{open !== undefined && (
-				<SkillFileDialog
-					key={open}
-					root={root}
-					name={name}
-					path={open}
-					onDirtyChange={changeDirty}
-					onSaved={refresh}
-					onClose={() => guarded(() => setOpen(undefined))}
-				/>
-			)}
 
 			<CancelDialog
 				open={pending !== undefined}
@@ -149,67 +132,6 @@ export function SkillFiles({
 					if (removing !== undefined) remove.mutate(removing.path);
 				}}
 			/>
-		</div>
-	);
-}
-
-function NewFile({
-	existing,
-	root,
-	name,
-	onCreated,
-	guarded,
-}: {
-	existing: ReadonlySet<string>;
-	root: SkillRoot;
-	name: string;
-	onCreated: (path: string) => void;
-	guarded: (action: () => void) => void;
-}) {
-	const project = useSettingsProject();
-	const [path, setPath] = useState("");
-	const [problem, setProblem] = useState<string | undefined>();
-	const create = useMutation({
-		mutationFn: (target: string) => saveSkillBundleFile(project, root, name, target, ""),
-		onSuccess: (_, target) => {
-			setPath("");
-			onCreated(target);
-		},
-	});
-
-	const submit = () => {
-		const trimmed = path.trim();
-		const found = newFileProblem(trimmed, existing);
-		setProblem(found);
-		if (found === undefined) guarded(() => create.mutate(trimmed));
-	};
-
-	return (
-		<div className="grid gap-1.5">
-			<div className="flex gap-2">
-				<Input
-					value={path}
-					placeholder="references/notes.md"
-					aria-label="New file path"
-					aria-invalid={problem !== undefined}
-					onChange={(event) => {
-						setPath(event.target.value);
-						setProblem(undefined);
-						create.reset();
-					}}
-					onKeyDown={(event) => {
-						if (event.key !== "Enter") return;
-						event.preventDefault();
-						submit();
-					}}
-				/>
-				<Button type="button" variant="outline" disabled={create.isPending} onClick={submit}>
-					{create.isPending ? <Spinner data-icon="inline-start" /> : <PlusIcon />}
-					Add file
-				</Button>
-			</div>
-			{problem !== undefined && <FieldError>{problem}</FieldError>}
-			{create.error !== null && <FieldError>{create.error.message}</FieldError>}
 		</div>
 	);
 }

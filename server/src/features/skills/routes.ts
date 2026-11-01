@@ -9,6 +9,7 @@ import { settingsFolder, settingsScopeQuerySchema } from "../projects";
 import {
 	skillBundleFileInputSchema,
 	skillBundleFileSchema,
+	skillBundleFolderInputSchema,
 	skillBundleListSchema,
 	skillDocumentSchema,
 	skillEnabledInputSchema,
@@ -18,7 +19,9 @@ import {
 	skillRootSchema,
 } from "./contract";
 import {
+	createSkillBundleFolder,
 	deleteSkillBundleFile,
+	deleteSkillBundleFolder,
 	listListedSkillFiles,
 	listSkillFiles,
 	readListedSkillFile,
@@ -181,6 +184,41 @@ const deleteFileRoute = createRoute({
 	responses: {
 		204: { description: "The file is gone, and live engines reloaded" },
 		400: { description: "The file could not be removed", content: errorContent },
+	},
+});
+
+const createFolderRoute = createRoute({
+	method: "post",
+	path: `${skillPath}/folder`,
+	tags: ["settings"],
+	operationId: "createSkillBundleFolder",
+	description:
+		"Create one folder in a skill folder, with the folders above it. SKILL.md, unsafe paths, symlinks and a path that already exists are refused",
+	request: {
+		params: skillParams,
+		query: settingsScopeQuerySchema,
+		body: {
+			required: true,
+			content: { "application/json": { schema: skillBundleFolderInputSchema } },
+		},
+	},
+	responses: {
+		204: { description: "The folder exists, and live engines reloaded" },
+		400: { description: "The folder could not be created", content: errorContent },
+	},
+});
+
+const deleteFolderRoute = createRoute({
+	method: "delete",
+	path: `${skillPath}/folder`,
+	tags: ["settings"],
+	operationId: "deleteSkillBundleFolder",
+	description:
+		"Delete one empty folder in a skill folder. A file, a folder holding anything, SKILL.md, an unsafe path and a symlink are refused",
+	request: { params: skillParams, query: bundleFileQuery },
+	responses: {
+		204: { description: "The folder is gone, and live engines reloaded" },
+		400: { description: "The folder could not be removed", content: errorContent },
 	},
 });
 
@@ -451,6 +489,29 @@ export const skillsRoutes = ({ home, userHome, engines }: Deps) => {
 			const { project, path } = c.req.valid("query");
 			return configWrite(c, engines, async () =>
 				deleteSkillBundleFile(
+					await skillRootDir(home, project, root),
+					name,
+					path,
+					linkRootsOf(home),
+				),
+			);
+		})
+		.openapi(createFolderRoute, (c) => {
+			const { root, name } = c.req.valid("param");
+			return configWrite(c, engines, async () =>
+				createSkillBundleFolder(
+					await skillRootDir(home, c.req.valid("query").project, root),
+					name,
+					c.req.valid("json").path,
+					linkRootsOf(home),
+				),
+			);
+		})
+		.openapi(deleteFolderRoute, (c) => {
+			const { root, name } = c.req.valid("param");
+			const { project, path } = c.req.valid("query");
+			return configWrite(c, engines, async () =>
+				deleteSkillBundleFolder(
 					await skillRootDir(home, project, root),
 					name,
 					path,

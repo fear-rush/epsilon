@@ -1,6 +1,9 @@
+import { FilePlusIcon, FolderPlusIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { FileTree } from "@/components/editor/file-tree";
+import type { FileTreeTarget } from "@/components/editor/file-tree";
+import { Tip } from "@/components/patterns/tip";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { CancelDialog } from "@/components/patterns/dialog/confirm-dialogs";
@@ -8,6 +11,9 @@ import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { StatusView } from "@/components/patterns/status/status-view";
+import { SkillDeleteEntryDialog } from "./skill-delete-entry-dialog";
+import { SkillNewEntryDialog } from "./skill-new-entry-dialog";
+import type { NewEntryKind } from "./skill-new-entry-dialog";
 import { RawPane } from "./skill-raw-pane";
 import { useRawFile, useRawFiles, useRawSave, type RawSource } from "./skill-raw-source";
 
@@ -39,6 +45,15 @@ export function SkillRaw({
 		() => list.data?.files.map((file) => ({ path: file.path, disabled: !file.text })) ?? [],
 		[list.data],
 	);
+	const folders = list.data?.folders ?? [];
+	const [creating, setCreating] = useState<NewEntryKind | undefined>();
+	const [removing, setRemoving] = useState<FileTreeTarget | undefined>();
+	/** Switching files from the tree, asking first when this file has unsaved text. */
+	const select = (next: string): void => {
+		if (next === path) return;
+		if (dirty) setPending(next);
+		else onPathChange(next);
+	};
 
 	// The page's callback may change on every render; only leaving the tab clears the flag.
 	const report = useRef(onDirtyChange);
@@ -63,20 +78,45 @@ export function SkillRaw({
 	return (
 		<div className="flex min-h-0 flex-1 flex-col gap-card md:flex-row">
 			<div className="flex min-h-0 shrink-0 flex-col gap-2 md:w-nav">
-				<div className="flex h-8 items-center text-meta font-medium text-muted-foreground">
-					Files
+				<div className="flex h-8 items-center justify-between gap-2">
+					<span className="text-meta font-medium text-muted-foreground">Files</span>
+					{source.kind === "editable" && (
+						<div className="flex items-center">
+							<Tip label="New file">
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon-sm"
+									aria-label="New file"
+									onClick={() => setCreating("file")}
+								>
+									<FilePlusIcon />
+								</Button>
+							</Tip>
+							<Tip label="New folder">
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon-sm"
+									aria-label="New folder"
+									onClick={() => setCreating("folder")}
+								>
+									<FolderPlusIcon />
+								</Button>
+							</Tip>
+						</div>
+					)}
 				</div>
 				<nav className="max-h-dialog-body-sm min-h-0 flex-1 overflow-y-auto rounded-xl border bg-card p-2 md:max-h-none">
 					<FileTree
 						files={files}
+						folders={folders}
 						selected={path}
 						first="SKILL.md"
 						disabledHint="Binary file"
-						onSelect={(next) => {
-							if (next === path) return;
-							if (dirty) setPending(next);
-							else onPathChange(next);
-						}}
+						onSelect={select}
+						onDelete={source.kind === "editable" ? setRemoving : undefined}
+						protectedPaths={["SKILL.md"]}
 					/>
 				</nav>
 			</div>
@@ -101,6 +141,36 @@ export function SkillRaw({
 					setPending(undefined);
 				}}
 			/>
+			{source.kind === "editable" && (
+				<>
+					<SkillDeleteEntryDialog
+						entry={removing}
+						root={source.root}
+						name={source.name}
+						onClose={() => setRemoving(undefined)}
+						onDeleted={(entry) => {
+							setRemoving(undefined);
+							if (!entry.folder && entry.path === path) {
+								changeDirty(false);
+								onPathChange("SKILL.md");
+							}
+						}}
+					/>
+					<SkillNewEntryDialog
+						open={creating !== undefined}
+						kind={creating}
+						root={source.root}
+						name={source.name}
+						files={files.map((file) => file.path)}
+						folders={folders}
+						onClose={() => setCreating(undefined)}
+						onCreated={(created) => {
+							setCreating(undefined);
+							if (creating === "file") select(created);
+						}}
+					/>
+				</>
+			)}
 		</div>
 	);
 }

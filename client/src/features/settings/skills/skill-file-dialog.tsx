@@ -17,9 +17,10 @@ import { languageOf } from "./skill-file-tree";
 /**
  * One bundled text file, opened from the Files card. It has its own Save and
  * Discard; the form's draft is never touched. The page asks before closing it
- * with unsaved text.
+ * with unsaved text. It stays mounted while closed, so both transitions play.
  */
 export function SkillFileDialog({
+	open,
 	root,
 	name,
 	path,
@@ -27,9 +28,11 @@ export function SkillFileDialog({
 	onSaved,
 	onClose,
 }: {
+	open: boolean;
 	root: SkillRoot;
 	name: string;
-	path: string;
+	/** Cleared as it closes; the last path stays on screen for the exit. */
+	path: string | undefined;
 	onDirtyChange: (dirty: boolean) => void;
 	onSaved: () => void;
 	onClose: () => void;
@@ -39,6 +42,15 @@ export function SkillFileDialog({
 	// What the file held when it was read or last saved, and the text being edited.
 	const [savedText, setSavedText] = useState<string | undefined>();
 	const [edited, setEdited] = useState<string | undefined>();
+	/** A new opening starts from the file on disk, not from the last draft. */
+	const [wasOpen, setWasOpen] = useState(false);
+	if (open !== wasOpen) {
+		setWasOpen(open);
+		if (open) {
+			setSavedText(undefined);
+			setEdited(undefined);
+		}
+	}
 	const base = savedText ?? query.data;
 	const text = edited ?? base ?? "";
 	const dirty = base !== undefined && text !== base;
@@ -47,7 +59,7 @@ export function SkillFileDialog({
 		onDirtyChange(next !== base);
 	};
 	const save = useMutation({
-		mutationFn: (value: string) => saveSkillBundleFile(project, root, name, path, value),
+		mutationFn: (value: string) => saveSkillBundleFile(project, root, name, path ?? "", value),
 		onSuccess: (_, value) => {
 			setSavedText(value);
 			onDirtyChange(value !== text);
@@ -55,17 +67,23 @@ export function SkillFileDialog({
 		},
 	});
 
+	/** Closing drops the last refusal, so the next opening starts clean. */
+	const close = () => {
+		save.reset();
+		onClose();
+	};
+
 	return (
 		<DialogFrame
-			open
+			open={open}
 			onOpenChange={(next) => {
-				if (!next) onClose();
+				if (!next) close();
 			}}
 			size="lg"
-			title={<span className="font-mono">{path}</span>}
+			title={<span className="font-mono">{path ?? ""}</span>}
 			footer={
 				<>
-					<Button type="button" variant="outline" onClick={onClose}>
+					<Button type="button" variant="outline" onClick={close}>
 						Close
 					</Button>
 					<Button
@@ -92,15 +110,15 @@ export function SkillFileDialog({
 		>
 			{query.isPending ? (
 				<div className="flex h-full items-center justify-center">
-					<LoadingState label={`Reading ${path}…`} />
+					<LoadingState label={`Reading ${path ?? "the file"}…`} />
 				</div>
 			) : query.error !== null ? (
 				<StatusView {...errorView(query.error)} />
 			) : (
 				<div className="flex h-full min-h-0 flex-col gap-2">
 					<CodeEditor
-						label={path}
-						language={languageOf(path)}
+						label={path ?? ""}
+						language={languageOf(path ?? "")}
 						value={text}
 						onChange={edit}
 						className="min-h-0 flex-1"

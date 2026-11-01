@@ -3097,12 +3097,19 @@
 							"$ref": "#/components/schemas/SkillBundleEntry"
 						}
 					},
+					"folders": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
 					"skipped": {
 						"type": "integer"
 					}
 				},
 				"required": [
 					"files",
+					"folders",
 					"skipped"
 				]
 			},
@@ -3184,6 +3191,17 @@
 					"description",
 					"body",
 					"modelInvocation"
+				]
+			},
+			"SkillBundleFolderInput": {
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"path"
 				]
 			},
 			"SkillEnabledInput": {
@@ -6301,6 +6319,137 @@
 					},
 					"400": {
 						"description": "The file could not be removed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/skills/{root}/{name}/folder": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "createSkillBundleFolder",
+				"description": "Create one folder in a skill folder, with the folders above it. SKILL.md, unsafe paths, symlinks and a path that already exists are refused",
+				"parameters": [
+					{
+						"schema": {
+							"$ref": "#/components/schemas/SkillRoot"
+						},
+						"required": true,
+						"name": "root",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 64,
+							"pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SkillBundleFolderInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The folder exists, and live engines reloaded"
+					},
+					"400": {
+						"description": "The folder could not be created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "deleteSkillBundleFolder",
+				"description": "Delete one empty folder in a skill folder. A file, a folder holding anything, SKILL.md, an unsafe path and a symlink are refused",
+				"parameters": [
+					{
+						"schema": {
+							"$ref": "#/components/schemas/SkillRoot"
+						},
+						"required": true,
+						"name": "root",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 64,
+							"pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+						},
+						"required": true,
+						"name": "name",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "The file's path inside the skill folder, with / between folders"
+						},
+						"required": true,
+						"description": "The file's path inside the skill folder, with / between folders",
+						"name": "path",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "The folder is gone, and live engines reloaded"
+					},
+					"400": {
+						"description": "The folder could not be removed",
 						"content": {
 							"application/json": {
 								"schema": {

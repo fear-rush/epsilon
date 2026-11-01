@@ -167,6 +167,8 @@ const skillBundleEntrySchema = z
 export const skillBundleListSchema = z
 	.object({
 		files: z.array(skillBundleEntrySchema),
+		/** Every folder, empty ones included, so the tree can show one just created. */
+		folders: z.array(z.string()),
 		/** Symlinks and files past the file limit, which are not listed. */
 		skipped: z.number().int(),
 	})
@@ -179,3 +181,7 @@ export const skillBundleFileSchema = z
 export const skillBundleFileInputSchema = z
 	.object({ text: z.string() })
 	.openapi("SkillBundleFileInput");
+
+export const skillBundleFolderInputSchema = z
+	.object({ path: z.string() })
+	.openapi("SkillBundleFolderInput");

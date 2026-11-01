@@ -138,14 +138,17 @@ const looksLikeText = async (path: string): Promise<boolean> => {
 /** Every regular file under the folder; links and files past the limit are counted, not listed. */
 const walk = async (directory: string): Promise<SkillBundleList> => {
 	const files: SkillBundleList["files"] = [];
+	const folders: SkillBundleList["folders"] = [];
 	let skipped = 0;
 	const visit = async (folder: string, prefix: string): Promise<void> => {
 		for (const entry of await readdir(folder, { withFileTypes: true })) {
 			const path = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
 			if (isStrippedPath(path)) continue;
 			if (entry.isSymbolicLink()) skipped += 1;
-			else if (entry.isDirectory()) await visit(join(folder, entry.name), path);
-			else if (entry.isFile()) {
+			else if (entry.isDirectory()) {
+				folders.push(path);
+				await visit(join(folder, entry.name), path);
+			} else if (entry.isFile()) {
 				if (files.length >= IMPORT_MAX_FILES) {
 					skipped += 1;
 					continue;
@@ -157,7 +160,8 @@ const walk = async (directory: string): Promise<SkillBundleList> => {
 	};
 	await visit(directory, "");
 	files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
-	return { files, skipped };
+	folders.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+	return { files, folders, skipped };
 };
 
 /** Every file in the skill folder, `SKILL.md` included. */
@@ -209,6 +213,7 @@ export const listListedSkillFiles = async (filePath: string): Promise<SkillBundl
 	if (info?.isFile() !== true) throw new Error(`${basename(filePath)} does not exist`);
 	return {
 		files: [{ path: basename(filePath), size: info.size, text: await looksLikeText(filePath) }],
+		folders: [],
 		skipped: 0,
 	};
 };
@@ -247,6 +252,48 @@ export const writeSkillBundleFile = async (
 	}
 	await mkdir(dirname(full), { recursive: true });
 	await writeFile(full, text, "utf8");
+};
+
+/**
+ * Creates one folder inside a skill, with the folders above it. SKILL.md, an unsafe
+ * path, a symlink on the way and a path that already exists are refused.
+ */
+export const createSkillBundleFolder = async (
+	root: string,
+	name: string,
+	path: string,
+	linkRoots: readonly string[] = [],
+): Promise<void> => {
+	const directory = await skillFolder(root, name, linkRoots);
+	const problem = bundlePathProblem(path, false);
+	if (problem !== undefined) throw new Error(problem);
+	const full = await resolveBundlePath(directory, path);
+	if ((await lstatOrUndefined(full)) !== undefined) throw new Error(`${path} already exists`);
+	await mkdir(full, { recursive: true });
+};
+
+/**
+ * Deletes one empty folder inside a skill. A file, a folder holding anything or a
+ * symlink on the walk is refused; deleting a file prunes the folders above it, so
+ * a folder only needs this while it is empty.
+ */
+export const deleteSkillBundleFolder = async (
+	root: string,
+	name: string,
+	path: string,
+	linkRoots: readonly string[] = [],
+): Promise<void> => {
+	const directory = await skillFolder(root, name, linkRoots);
+	const problem = bundlePathProblem(path, false);
+	if (problem !== undefined) throw new Error(problem);
+	const full = await resolveBundlePath(directory, path);
+	const info = await lstatOrUndefined(full);
+	if (info === undefined) throw new Error(`${path} does not exist`);
+	if (!info.isDirectory()) throw new Error(`${path} is a file, not a folder`);
+	if ((await readdir(full)).length > 0) {
+		throw new Error(`${path} is not empty; delete the files in it first`);
+	}
+	await rmdir(full);
 };
 
 /** Deletes one bundled file, then the folders it leaves empty (never the skill folder). */

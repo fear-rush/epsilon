@@ -164,11 +164,14 @@ export const useSkillFiles = (root: SkillRoot, name: string | undefined) => {
 };
 
 /** One bundled text file. The panel keeps its own draft, so a refetch never replaces typing. */
-export const useSkillBundleFile = (root: SkillRoot, name: string, path: string) => {
+export const useSkillBundleFile = (root: SkillRoot, name: string, path: string | undefined) => {
 	const project = useSettingsProject();
 	return useQuery({
-		queryKey: settingsKeys.skillFile(project, root, name, path),
-		queryFn: ({ signal }) => fetchSkillBundleFile(project, root, name, path, signal),
+		queryKey: settingsKeys.skillFile(project, root, name, path ?? ""),
+		queryFn:
+			path === undefined
+				? skipToken
+				: ({ signal }) => fetchSkillBundleFile(project, root, name, path, signal),
 		gcTime: 0,
 		refetchOnWindowFocus: false,
 	});

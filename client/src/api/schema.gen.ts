@@ -819,6 +819,24 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/settings/skills/{root}/{name}/folder": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Create one folder in a skill folder, with the folders above it. SKILL.md, unsafe paths, symlinks and a path that already exists are refused */
+		post: operations["createSkillBundleFolder"];
+		/** Delete one empty folder in a skill folder. A file, a folder holding anything, SKILL.md, an unsafe path and a symlink are refused */
+		delete: operations["deleteSkillBundleFolder"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/settings/skills/enabled": {
 		parameters: {
 			query?: never;
@@ -1585,6 +1603,7 @@ export interface components {
 		};
 		SkillBundleList: {
 			files: components["schemas"]["SkillBundleEntry"][];
+			folders: string[];
 			skipped: number;
 		};
 		SkillBundleEntry: {
@@ -1608,6 +1627,9 @@ export interface components {
 			metadata?: {
 				[key: string]: string;
 			};
+		};
+		SkillBundleFolderInput: {
+			path: string;
 		};
 		SkillEnabledInput: {
 			filePath: string;
@@ -3741,6 +3763,80 @@ interface operations {
 				content?: never;
 			};
 			/** The file could not be removed */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Create one folder in a skill folder, with the folders above it. SKILL.md, unsafe paths, symlinks and a path that already exists are refused */
+	createSkillBundleFolder: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path: {
+				root: components["schemas"]["SkillRoot"];
+				name: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["SkillBundleFolderInput"];
+			};
+		};
+		responses: {
+			/** The folder exists, and live engines reloaded */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The folder could not be created */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Delete one empty folder in a skill folder. A file, a folder holding anything, SKILL.md, an unsafe path and a symlink are refused */
+	deleteSkillBundleFolder: {
+		parameters: {
+			query: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+				/** The file's path inside the skill folder, with / between folders */
+				path: string;
+			};
+			header?: never;
+			path: {
+				root: components["schemas"]["SkillRoot"];
+				name: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The folder is gone, and live engines reloaded */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The folder could not be removed */
 			400: {
 				headers: {
 					[name: string]: unknown;
