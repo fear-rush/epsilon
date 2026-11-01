@@ -8,7 +8,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { FolderIcon, MoreHorizontalIcon } from "lucide-react";
 import { memo, useState } from "react";
 import { cn } from "@/lib/cn";
-import type { Place, SnapshotBranch } from "shared";
+import type { Place } from "shared";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -79,20 +79,28 @@ function SessionHeaderImpl({
 	autoCompaction,
 	autoRetry,
 	isCompacting,
-	branches,
+	blocked,
+	cloning,
+	onTree,
+	onFork,
+	onClone,
 }: {
 	sessionId: string;
 	store: ConversationStore;
 	title?: string;
 	place: Place;
 	busy: boolean;
-	/** A chat with no messages has no file yet, so there is nothing to move or copy. */
+	/** A chat with no file has nothing to export, fork or clone yet. */
 	empty: boolean;
 	autoCompaction: boolean;
 	autoRetry: boolean;
 	isCompacting: boolean;
-	/** The active branch's user messages, which the fork dialog lists. */
-	branches: SnapshotBranch[];
+	/** Why branch actions are refused right now; undefined when they are possible. */
+	blocked: string | undefined;
+	cloning: boolean;
+	onTree: () => void;
+	onFork: () => void;
+	onClone: () => void;
 }) {
 	const [moving, setMoving] = useState(false);
 
@@ -110,8 +118,11 @@ function SessionHeaderImpl({
 							autoCompaction={autoCompaction}
 							autoRetry={autoRetry}
 							isCompacting={isCompacting}
-							project={place.kind === "project" ? place.path : undefined}
-							branches={branches}
+							blocked={blocked}
+							cloning={cloning}
+							onTree={onTree}
+							onFork={onFork}
+							onClone={onClone}
 						/>
 						{place.kind === "chat" && (
 							<DropdownMenu>

@@ -178,9 +178,10 @@ export class ConversationStore {
 	}
 
 	/**
-	 * Go back to a user message of this branch: pi moves the leaf to just before it,
-	 * so the next message starts a sibling branch. The tab fills its own draft with
-	 * the text; this only moves the engine.
+	 * Move the leaf to an entry of this session's tree, including a branch the
+	 * transcript no longer shows. A user message goes back to its parent, so the next
+	 * prompt starts a sibling branch. The tab fills its own draft with the text; this
+	 * only moves the engine.
 	 */
 	navigateTree(entryId: string, summarize: boolean): void {
 		this.sendCommand({ type: "navigate_tree", entryId, summarize });

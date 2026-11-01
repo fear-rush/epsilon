@@ -465,8 +465,8 @@ export class LiveSession {
 			case "navigate_tree": {
 				// pi refuses while a run or a compaction is going, and that refusal is the
 				// tab's answer. A user message moves the leaf to its parent and hands its
-				// text back for the editor; the tab already holds it, so the snapshot says
-				// the rest: the transcript ends before the message and the branch is new.
+				// text back for the editor; any other entry becomes the leaf. The tab
+				// already holds a user message's text, so the snapshot says the rest.
 				const result = await agent.navigateTree(command.entryId, {
 					summarize: command.summarize === true,
 				});

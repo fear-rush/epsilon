@@ -12,6 +12,7 @@ import { ConfirmDialog, QuestionDialog } from "@/features/conversation/dialogs";
 import { Transcript } from "@/features/conversation/transcript";
 import { Composer } from "@/features/conversation/composer/composer";
 import { useConversation } from "@/features/conversation/use-conversation";
+import { useBranching } from "@/features/conversation/use-branching";
 import { ChatBar } from "@/features/conversation/chat-bar";
 import { RunStatus } from "@/features/conversation/run-status";
 import { ComposerPlace, SessionHeader } from "@/features/conversation/session-header";
@@ -49,7 +50,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 		autoCompaction,
 		autoRetry,
 		queue,
-		branches,
+		tree,
 		drift,
 	} = snapshot.state;
 	const confirmations = dialogs.filter(isConfirm);
@@ -59,14 +60,35 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 	/** pi fills the place in once the engine is up; until then the page's own answer holds. */
 	const where = snapshot.state.place ?? place;
 	const empty = rows.length === 0;
+	const {
+		blocked,
+		cloning,
+		composerKey,
+		openTree,
+		openFork,
+		clone: cloneChat,
+		dialogs: branchDialogs,
+	} = useBranching({
+		store,
+		tree,
+		empty,
+		project: where.kind === "project" ? where.path : undefined,
+		busy,
+		isCompacting,
+	});
 	// Every prop here survives a streaming token, so the element does too.
 	const composer = useMemo(
 		() => (
 			<Composer
+				key={composerKey}
 				store={store}
 				busy={busy}
-				isCompacting={isCompacting}
-				branches={branches}
+				tree={tree}
+				empty={empty}
+				blocked={blocked}
+				onTree={openTree}
+				onFork={openFork}
+				onClone={cloneChat}
 				models={models}
 				model={model}
 				thinkingLevel={thinkingLevel}
@@ -83,8 +105,12 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 		[
 			store,
 			busy,
-			isCompacting,
-			branches,
+			tree,
+			blocked,
+			openTree,
+			openFork,
+			cloneChat,
+			composerKey,
 			models,
 			model,
 			thinkingLevel,
@@ -141,7 +167,11 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				autoCompaction={autoCompaction}
 				autoRetry={autoRetry}
 				isCompacting={isCompacting}
-				branches={branches}
+				blocked={blocked}
+				cloning={cloning}
+				onTree={openTree}
+				onFork={openFork}
+				onClone={cloneChat}
 			/>
 
 			{questions.map((question) => (
@@ -180,6 +210,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 					<div className="animate-enter-rise">{composer}</div>
 				</>
 			)}
+			{branchDialogs}
 		</div>
 	);
 }

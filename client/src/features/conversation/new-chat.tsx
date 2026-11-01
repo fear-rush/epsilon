@@ -14,6 +14,7 @@ import { ChatBar } from "@/features/conversation/chat-bar";
 import { SessionLoader } from "@/features/conversation/session-loader";
 import { ComposerPlace } from "@/features/conversation/session-header";
 import { useConversation } from "@/features/conversation/use-conversation";
+import { branchBlocked } from "@/features/conversation/branch-rules";
 import { ConversationWelcome } from "@/features/conversation/welcome";
 import { FolderDialog, TrustGate, useRecentProjects } from "@/features/projects";
 
@@ -64,7 +65,7 @@ function DraftConversation({
 	const {
 		busy,
 		isCompacting,
-		branches,
+		tree,
 		statuses,
 		commands,
 		models,
@@ -93,8 +94,9 @@ function DraftConversation({
 			<Composer
 				store={store}
 				busy={busy}
-				isCompacting={isCompacting}
-				branches={branches}
+				tree={tree}
+				empty
+				blocked={branchBlocked(busy, isCompacting)}
 				models={models}
 				model={model}
 				thinkingLevel={thinkingLevel}
@@ -117,7 +119,7 @@ function DraftConversation({
 			store,
 			busy,
 			isCompacting,
-			branches,
+			tree,
 			models,
 			model,
 			thinkingLevel,

@@ -2,22 +2,11 @@
  * The session's own controls. Compaction belongs to this chat; pi's two automatic
  * settings are global, so the menu says they apply to every chat instead of
  * pretending they are per-session switches. Export reads the transcript and writes
- * a copy, so a run in progress does not block it. A fork or a clone answers a new
- * session id, so the page moves to that chat instead of replacing this one
- * (docs/DECISIONS.md, Session copies).
+ * a copy, so a run in progress does not block it. The Branch group is pi's three
+ * ways to move or copy the chat; the composer answers the same commands from `/`.
  */
-import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import {
-	CopyIcon,
-	FileDownIcon,
-	FileJsonIcon,
-	GitForkIcon,
-	Minimize2Icon,
-	SlidersHorizontalIcon,
-} from "lucide-react";
+import { FileDownIcon, FileJsonIcon, Minimize2Icon, SlidersHorizontalIcon } from "lucide-react";
 import { useState } from "react";
-import type { SnapshotBranch } from "shared";
 
 import { Tip } from "@/components/patterns/tip";
 import { Button } from "@/components/ui/button";
@@ -31,11 +20,10 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cloneSession, exportSession } from "@/api/endpoints";
-import { sessionKeys } from "@/api/keys";
+import { exportSession } from "@/api/endpoints";
 import type { ExportedSession, ExportFormat } from "@/api/types";
+import { BranchItems } from "./branch-items";
 import { CompactContextDialog } from "./compact-context-dialog";
-import { ForkSessionDialog } from "./fork-dialog";
 import type { ConversationStore } from "./store";
 
 /** Hand the answer's text to the browser's own download, under the name the server chose. */
@@ -57,26 +45,27 @@ export function SessionControls({
 	autoCompaction,
 	autoRetry,
 	isCompacting,
-	project,
-	branches,
+	blocked,
+	cloning,
+	onTree,
+	onFork,
+	onClone,
 }: {
 	store: ConversationStore;
-	/** A chat with no messages has no session file yet, so pi has nothing to copy. */
+	/** A chat with no file has nothing to export, fork or clone yet. */
 	empty: boolean;
 	autoCompaction: boolean;
 	autoRetry: boolean;
 	isCompacting: boolean;
-	/** The folder a project chat runs in, so a copy opens in the same place. */
-	project: string | undefined;
-	/** The active branch's user messages: what "fork from a message" can reach. */
-	branches: SnapshotBranch[];
+	/** Why branch actions are refused right now; undefined when they are possible. */
+	blocked: string | undefined;
+	cloning: boolean;
+	onTree: () => void;
+	onFork: () => void;
+	onClone: () => void;
 }) {
-	const navigate = useNavigate();
-	const queryClient = useQueryClient();
 	const [compacting, setCompacting] = useState(false);
 	const [exporting, setExporting] = useState(false);
-	const [cloning, setCloning] = useState(false);
-	const [forking, setForking] = useState(false);
 
 	/** A refusal goes where a refused command goes, because there is no dialog to hold it. */
 	const exportAs = async (format: ExportFormat): Promise<void> => {
@@ -87,24 +76,6 @@ export function SessionControls({
 			store.reportProblem(cause instanceof Error ? cause.message : String(cause));
 		} finally {
 			setExporting(false);
-		}
-	};
-
-	/** pi copies the branch up to where this chat is now, under a new id to open next. */
-	const cloneChat = async (): Promise<void> => {
-		setCloning(true);
-		try {
-			const id = await cloneSession(store.sessionId);
-			await queryClient.invalidateQueries({ queryKey: sessionKeys.all });
-			await navigate({
-				to: "/sessions/$sessionId",
-				params: { sessionId: id },
-				search: { project },
-			});
-		} catch (cause) {
-			store.reportProblem(cause instanceof Error ? cause.message : String(cause));
-		} finally {
-			setCloning(false);
 		}
 	};
 
@@ -125,7 +96,16 @@ export function SessionControls({
 						<SlidersHorizontalIcon />
 					</DropdownMenuTrigger>
 				</Tip>
-				<DropdownMenuContent align="end" className="w-72">
+				<DropdownMenuContent align="end" className="w-80">
+					<BranchItems
+						blocked={blocked}
+						empty={empty}
+						cloning={cloning}
+						onTree={onTree}
+						onFork={onFork}
+						onClone={onClone}
+					/>
+					<DropdownMenuSeparator />
 					<DropdownMenuGroup>
 						<DropdownMenuLabel>This chat</DropdownMenuLabel>
 						<DropdownMenuItem disabled={isCompacting} onClick={() => setCompacting(true)}>
@@ -139,14 +119,6 @@ export function SessionControls({
 						<DropdownMenuItem disabled={empty || exporting} onClick={() => void exportAs("jsonl")}>
 							<FileJsonIcon />
 							Export as JSONL
-						</DropdownMenuItem>
-						<DropdownMenuItem disabled={empty || cloning} onClick={() => void cloneChat()}>
-							<CopyIcon />
-							Clone this chat
-						</DropdownMenuItem>
-						<DropdownMenuItem disabled={empty} onClick={() => setForking(true)}>
-							<GitForkIcon />
-							Fork from a message…
 						</DropdownMenuItem>
 					</DropdownMenuGroup>
 					<DropdownMenuSeparator />
@@ -183,13 +155,6 @@ export function SessionControls({
 				open={compacting}
 				onOpenChange={setCompacting}
 				onCompact={(instructions) => store.compact(instructions)}
-			/>
-			<ForkSessionDialog
-				open={forking}
-				onOpenChange={setForking}
-				sessionId={store.sessionId}
-				project={project}
-				branches={branches}
 			/>
 		</>
 	);

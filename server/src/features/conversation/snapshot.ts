@@ -1,7 +1,7 @@
 /**
- * The snapshot a tab receives on attach: pi's transcript, its models and what
- * `/` can expand, read synchronously from the live engine. The transcript is
- * pi's; nothing here is stored on the server.
+ * The snapshot a tab receives on attach: pi's transcript, its models, the session
+ * tree and what `/` offers, read synchronously from the live engine. The
+ * transcript is pi's; nothing here is stored on the server.
  *
  * `readModelsFrom` is the models this engine will actually accept. pi's synchronous
  * `getAvailableSnapshot()` is a cached view and can be smaller than the truth: on
@@ -17,18 +17,20 @@ import type {
 	AgentSession,
 	ContextUsage as PiContextUsage,
 	ModelRuntime,
+	SessionEntry,
 	SessionMessageEntry,
 	SessionStats as PiSessionStats,
+	SessionTreeNode,
 } from "@earendil-works/pi-coding-agent";
 import { resolveModelScopeWithDiagnostics } from "@earendil-works/pi-coding-agent";
-import { isVisibleMessage } from "shared";
+import { EPSILON_COMMANDS, isVisibleMessage } from "shared";
 import type {
 	ContextUsage,
 	Place,
 	Snapshot,
-	SnapshotBranch,
 	SnapshotCommand,
 	SnapshotModel,
+	SnapshotTreeNode,
 	SessionStats,
 } from "shared";
 
@@ -112,8 +114,12 @@ const availableModels = async (runtime: ModelRuntime) => {
 };
 
 const commandsOf = (agent: AgentSession): SnapshotCommand[] => {
-	const commands: SnapshotCommand[] = [];
+	// Epsilon runs these in the composer before a prompt exists, so a pi command
+	// that took one of the names would never be reached. Epsilon's wins.
+	const localNames = new Set<string>(EPSILON_COMMANDS.map((command) => command.name));
+	const commands: SnapshotCommand[] = EPSILON_COMMANDS.map((command) => ({ ...command }));
 	for (const command of agent.extensionRunner.getRegisteredCommands()) {
+		if (localNames.has(command.invocationName)) continue;
 		commands.push({
 			name: command.invocationName,
 			description: command.description,
@@ -121,6 +127,7 @@ const commandsOf = (agent: AgentSession): SnapshotCommand[] => {
 		});
 	}
 	for (const template of agent.promptTemplates) {
+		if (localNames.has(template.name)) continue;
 		commands.push({ name: template.name, description: template.description, source: "prompt" });
 	}
 	for (const skill of agent.resourceLoader.getSkills().skills) {
@@ -171,20 +178,91 @@ const textOfContent = (content: UserContent): string => {
 	return content.map((part) => (part.type === "text" ? part.text : "")).join("");
 };
 
-/**
- * The user messages of the branch pi currently holds, root to leaf. Going back to
- * one of them moves the leaf to just before it and starts a sibling branch from the
- * next prompt; other branches are not listed (docs/DECISIONS.md, Branching).
- */
-const branchesOf = (agent: AgentSession): SnapshotBranch[] => {
-	const branches: SnapshotBranch[] = [];
-	for (const entry of agent.sessionManager.getBranch()) {
-		if (entry.type !== "message" || entry.message.role !== "user") continue;
-		const text = textOfContent(entry.message.content);
-		if (text.trim() === "") continue;
-		branches.push({ entryId: entry.id, text });
+/** How much of a reply or a summary a tree row shows; a user message keeps its whole text. */
+const PREVIEW_LENGTH = 160;
+
+/** One line of a text, for a row that must stay small however long the message is. */
+const previewOf = (text: string): string => {
+	const line = text.trim().replace(/\s+/g, " ");
+	return line.length > PREVIEW_LENGTH ? `${line.slice(0, PREVIEW_LENGTH)}…` : line;
+};
+
+/** A point the picker can move to. Tool results and state entries have no row of their own. */
+const pickable = (entry: SessionEntry): boolean =>
+	(entry.type === "message" &&
+		(entry.message.role === "user" || entry.message.role === "assistant")) ||
+	entry.type === "branch_summary" ||
+	entry.type === "compaction";
+
+type TreeRow = Omit<SnapshotTreeNode, "children">;
+
+/** One row of the tree, or undefined when the entry is folded into its nearest ancestor. */
+const rowOf = (
+	node: SessionTreeNode,
+	activeIds: Set<string>,
+	currentId: string | undefined,
+): TreeRow | undefined => {
+	const entry = node.entry;
+	let row: Pick<TreeRow, "entryId" | "kind" | "text"> | undefined;
+	if (entry.type === "message" && entry.message.role === "user") {
+		row = { entryId: entry.id, kind: "user", text: textOfContent(entry.message.content) };
+	} else if (entry.type === "message" && entry.message.role === "assistant") {
+		const content = entry.message.content;
+		const text = content.map((part) => (part.type === "text" ? part.text : "")).join("");
+		const thinking = content
+			.map((part) => (part.type === "thinking" ? part.thinking : ""))
+			.join("");
+		const tools = content.flatMap((part) => (part.type === "toolCall" ? [part.name] : []));
+		row = {
+			entryId: entry.id,
+			kind: "assistant",
+			text:
+				text.trim() !== ""
+					? previewOf(text)
+					: thinking.trim() !== ""
+						? previewOf(thinking)
+						: tools.length > 0
+							? `Tool call: ${tools.join(", ")}`
+							: previewOf(entry.message.errorMessage ?? "No text"),
+		};
+	} else if (entry.type === "branch_summary" || entry.type === "compaction") {
+		row = { entryId: entry.id, kind: "summary", text: previewOf(entry.summary) };
 	}
-	return branches;
+	if (row === undefined) return undefined;
+	return {
+		...row,
+		label: node.label,
+		active: activeIds.has(entry.id),
+		current: entry.id === currentId,
+	};
+};
+
+const flattenTree = (
+	nodes: SessionTreeNode[],
+	activeIds: Set<string>,
+	currentId: string | undefined,
+): SnapshotTreeNode[] => {
+	const rows: SnapshotTreeNode[] = [];
+	for (const node of nodes) {
+		const children = flattenTree(node.children, activeIds, currentId);
+		const row = rowOf(node, activeIds, currentId);
+		if (row === undefined) rows.push(...children);
+		else rows.push({ ...row, children });
+	}
+	return rows;
+};
+
+/**
+ * The session tree, one node per pickable entry, with the active branch marked.
+ * Navigating to any node moves pi's leaf there: a user message goes back to the
+ * composer, another entry continues after it. This is how an abandoned branch
+ * stays reachable (docs/DECISIONS.md, Branching).
+ */
+const treeOf = (agent: AgentSession): SnapshotTreeNode[] => {
+	const branch = agent.sessionManager.getBranch();
+	const activeIds = new Set(branch.map((entry) => entry.id));
+	const currentId = [...branch].reverse().find(pickable)?.id;
+	return flattenTree(agent.sessionManager.getTree(), activeIds, currentId);
 };
 
 /** The model in use stays offered even when `enabledModels` does not match it. */
@@ -227,7 +305,7 @@ export const buildSnapshot = (
 				steering: [...agent.getSteeringMessages()],
 				followUp: [...agent.getFollowUpMessages()],
 			},
-			branches: branchesOf(agent),
+			tree: treeOf(agent),
 		},
 		messages: agent.messages.filter(isVisibleMessage),
 		// The list the session carries, so the picker and `set_model` agree

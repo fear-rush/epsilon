@@ -194,24 +194,32 @@ is Epsilon's own). A stored project list (a second truth beside pi's session fil
 
 ## Branching
 
-Going back is one direction of pi's session tree, and this is v1 of it: the composer
-lists the user messages of the branch the transcript shows, and picking one calls
-`AgentSession.navigateTree`, which moves the leaf to just before that message and
-hands its text back for the box. Sending it starts a new branch; the one it left
+pi's session file is a tree, and the session controls' Branch group offers its three
+ways to branch: the session tree (`/tree`), a fork at a user message (`/fork`) and a
+clone of the active branch (`/clone`). The tree lists the user messages, replies and summaries
+pi can move the leaf to, including branches the transcript no longer shows, and
+picking one calls `AgentSession.navigateTree`. A user message moves the leaf to its
+parent and hands its text back for the box; any other entry becomes the leaf and the
+chat continues after it. The next prompt starts a sibling branch, and the one it left
 stays in the session file. pi refuses the move while a run or a compaction is going,
 so the control is disabled with that reason.
 
 Why: moving the leaf is a command on the live engine, and the text coming back to the
 composer is what makes the new branch start from the message the operator picked
-rather than a retyped copy of it.
+rather than a retyped copy of it. Listing the whole tree is what makes an abandoned
+branch reachable again.
 
 The picker can also ask pi to summarise the branch being left (`navigateTree`'s
 `summarize`). That is a model call in the middle of the navigation, so it is a checkbox
 that defaults to off, and the result is a summary message in the transcript.
 
-Not: a tree of the other branches, so an abandoned branch stays reachable only through
-its session file. A fork at a message or a clone is a second session file rather than a
-command on this one (Session copies).
+pi's `/tree`, `/fork` and `/clone` are terminal commands over the SDK, not extension
+commands, so `get_commands` does not carry them. Epsilon lists them in the composer's
+`/` palette itself and handles them before a prompt is sent; a pi command that takes
+one of those names is skipped.
+
+A fork at a message or a clone is a second session file rather than a command on this
+one (Session copies).
 
 ## Outside changes
 
@@ -233,8 +241,11 @@ Writing the reload as a second session (the file is the one the operator is look
 ## Session copies
 
 Forking a chat at a message and cloning it at the position it is at each produce a **new
-session under a new id**, and the REST route answers that id so the page navigates to it. A
-copy runs on an `AgentSessionRuntime` built for that request alone and disposed in `finally`:
+session under a new id**, and the REST route answers that id so the page navigates to it. The
+fork picker lists every user message in the session tree, not only the active branch, and the
+picked text is handed to the new chat's composer: pi's `/fork` puts it back in the editor,
+and Epsilon opens a new session id instead of rebinding the current one. A copy runs on an
+`AgentSessionRuntime` built for that request alone and disposed in `finally`:
 pi's `fork` replaces the session a runtime holds, so a copy cannot borrow the live engine. The
 transient runtime is wired like the engine (same settings manager, same resource loader with
 the CLI's built-ins and Epsilon's defaults, same UI bridge, with no tab behind it), so an

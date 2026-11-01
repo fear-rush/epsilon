@@ -15,7 +15,7 @@ import type { JsonAgentSessionEvent } from "../pi";
  * Bumped whenever a frame's shape changes. The client sends it in `hello` and
  * reloads on a mismatch instead of guessing.
  */
-export const PROTOCOL_VERSION = 12;
+export const PROTOCOL_VERSION = 13;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([
@@ -149,11 +149,11 @@ export const commandSchema = z.discriminatedUnion("type", [
 	/** Drop the prompts pi has queued for the active run. */
 	z.object({ type: z.literal("clear_queue") }),
 	/**
-	 * Go back to an entry of the active branch. pi moves the leaf there, so the next
-	 * prompt starts a sibling branch; a user message hands its text back for the
-	 * composer, which already has it, so only the move matters here.
+	 * Move the leaf to an entry of this session's tree, which may be on another
+	 * branch. A user message becomes the leaf's parent, so the next prompt starts a
+	 * sibling branch; pi hands its text back, and the composer already holds it.
+	 * `summarize` asks pi to condense the branch being left.
 	 */
-	/** Go back to an earlier user message, optionally summarising the branch left behind. */
 	z.object({
 		type: z.literal("navigate_tree"),
 		entryId: z.string().min(1),
@@ -226,13 +226,14 @@ export const snapshotModelSchema = z.object({
 export type SnapshotModel = z.infer<typeof snapshotModelSchema>;
 
 /**
- * One entry of the slash palette: what `prompt` expands. `sourceInfo` and the
- * owning resource belong to the resources page (S8).
+ * One entry of the slash palette: what `prompt` expands, or a command Epsilon
+ * runs itself before a prompt is sent. `sourceInfo` and the owning resource
+ * belong to the resources page (S8).
  */
 export const snapshotCommandSchema = z.object({
 	name: z.string(),
 	description: z.string().optional(),
-	source: z.enum(["extension", "prompt", "skill"]),
+	source: z.enum(["extension", "prompt", "skill", "epsilon"]),
 });
 
 export type SnapshotCommand = z.infer<typeof snapshotCommandSchema>;
@@ -279,12 +280,36 @@ const promptQueueSchema = z.object({
 export type PromptQueue = z.infer<typeof promptQueueSchema>;
 
 /**
- * A message the composer can go back to: one user message of the active branch.
- * The text is whole, because picking it puts it back in the editor.
+ * One point of the session tree the picker draws: a user message, an assistant
+ * reply or a summary. Entries with no pickable point (tool results, model
+ * changes) are folded into their nearest shown ancestor, as pi's default tree
+ * view does, so `children` are the next points on each path.
  */
-const snapshotBranchSchema = z.object({ entryId: z.string(), text: z.string() });
+export type SnapshotTreeNode = {
+	entryId: string;
+	kind: "user" | "assistant" | "summary";
+	/** Whole text for a user message, which goes back in the box; a one-line preview otherwise. */
+	text: string;
+	/** The label pi's tree carries on this entry, if any. */
+	label?: string;
+	/** This entry is on the active branch the transcript shows. */
+	active: boolean;
+	/** The last point of the active branch the picker can show: the chat's position. */
+	current: boolean;
+	children: SnapshotTreeNode[];
+};
 
-export type SnapshotBranch = z.infer<typeof snapshotBranchSchema>;
+const snapshotTreeNodeSchema: z.ZodType<SnapshotTreeNode> = z.lazy(() =>
+	z.object({
+		entryId: z.string(),
+		kind: z.enum(["user", "assistant", "summary"]),
+		text: z.string(),
+		label: z.string().optional(),
+		active: z.boolean(),
+		current: z.boolean(),
+		children: z.array(snapshotTreeNodeSchema),
+	}),
+);
 
 /** What the transcript page reads from the engine, never from command replies. */
 export const snapshotStateSchema = z.object({
@@ -305,8 +330,8 @@ export const snapshotStateSchema = z.object({
 	autoCompaction: z.boolean(),
 	autoRetry: z.boolean(),
 	queue: promptQueueSchema,
-	/** The active branch's user messages, root to leaf: what going back can reach. */
-	branches: z.array(snapshotBranchSchema),
+	/** The session tree the picker draws, from pi's own tree. */
+	tree: z.array(snapshotTreeNodeSchema),
 });
 
 export type SnapshotState = z.infer<typeof snapshotStateSchema>;

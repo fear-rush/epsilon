@@ -75,14 +75,23 @@
 				"steering": [],
 				"followUp": []
 			},
-			"branches": [
+			"tree": [
 				{
 					"entryId": "user-1",
-					"text": "Read file.txt and reply with its contents."
-				},
-				{
-					"entryId": "user-2",
-					"text": "Run bash 'echo s1-ok' and reply with its output."
+					"kind": "user",
+					"text": "Read file.txt and reply with its contents.",
+					"active": true,
+					"current": false,
+					"children": [
+						{
+							"entryId": "user-2",
+							"kind": "user",
+							"text": "Run bash 'echo s1-ok' and reply with its output.",
+							"active": true,
+							"current": true,
+							"children": []
+						}
+					]
 				}
 			]
 		},

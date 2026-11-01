@@ -1,7 +1,8 @@
 import { ArrowUpIcon, PaperclipIcon, SquareIcon } from "lucide-react";
-import { memo, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
 import {
+	EPSILON_COMMANDS,
 	PROMPT_IMAGE_BASE64_TOTAL_MAX,
 	PROMPT_IMAGE_BYTES_MAX,
 	PROMPT_IMAGE_MAX,
@@ -10,15 +11,16 @@ import {
 import type {
 	ContextUsage,
 	PromptBehavior,
-	SnapshotBranch,
 	SnapshotCommand,
 	SnapshotModel,
+	SnapshotTreeNode,
 	ThinkingLevel,
 	UiStatus,
 } from "shared";
 
 import { shortcut } from "@/components/patterns/shortcut";
 import { Tip } from "@/components/patterns/tip";
+import { clearPendingDraft, pendingDraftOf } from "@/features/conversation/pending-draft";
 import type { ConversationStore } from "@/features/conversation/store";
 import {
 	InputGroup,
@@ -28,7 +30,6 @@ import {
 } from "@/components/ui/input-group";
 import type { Attachment } from "./attachments";
 import { AttachmentStrip } from "./attachments";
-import { BranchMenu } from "./branch-menu";
 import { ContextMeter } from "./context-meter";
 import { ModelMenu } from "./model-menu";
 import { Palette } from "./palette";
@@ -91,10 +92,16 @@ const readAttachment = async (file: File): Promise<Attachment | undefined> => {
 type ComposerProps = {
 	store: ConversationStore;
 	busy: boolean;
-	/** pi is replacing the transcript, so a move in the tree is refused as well. */
-	isCompacting: boolean;
-	/** The active branch's user messages, which going back can reach. */
-	branches: SnapshotBranch[];
+	/** The session tree, so `/tree` knows whether there is anything to show. */
+	tree: SnapshotTreeNode[];
+	/** A chat with no message has nothing to fork, clone or move to yet. */
+	empty: boolean;
+	/** Why pi refuses a branch action right now; undefined when it is possible. */
+	blocked: string | undefined;
+	/** Open the page's tree dialog, fork dialog and clone action. */
+	onTree?: () => void;
+	onFork?: () => void;
+	onClone?: () => void;
 	models: SnapshotModel[];
 	model: SnapshotModel | undefined;
 	thinkingLevel: ThinkingLevel;
@@ -117,8 +124,12 @@ type ComposerProps = {
 function ComposerImpl({
 	store,
 	busy,
-	isCompacting,
-	branches,
+	tree,
+	empty,
+	blocked,
+	onTree,
+	onFork,
+	onClone,
 	models,
 	model,
 	thinkingLevel,
@@ -132,7 +143,7 @@ function ComposerImpl({
 	header,
 	onSent,
 }: ComposerProps) {
-	const [draft, setDraft] = useState("");
+	const [draft, setDraft] = useState(() => pendingDraftOf(store.sessionId));
 	/** The highlighted command, and the draft it was dismissed at. */
 	const [selected, setSelected] = useState<string>();
 	const [dismissed, setDismissed] = useState<string>();
@@ -143,6 +154,11 @@ function ComposerImpl({
 	/** The images the next prompt carries, and why the last attach was refused. */
 	const [attachments, setAttachments] = useState<Attachment[]>([]);
 	const [notice, setNotice] = useState<string>();
+
+	// The fork put its message here before navigating; this composer is the reader.
+	useEffect(() => {
+		clearPendingDraft(store.sessionId);
+	}, [store.sessionId]);
 
 	const query = commandQuery(draft);
 	const matches =
@@ -156,8 +172,8 @@ function ComposerImpl({
 	);
 
 	const pick = (name: string) => {
-		// pi expands `/name` through its extension runner and prompt templates when a
-		// prompt carries it, so the palette fills the draft and the next Enter runs it.
+		// pi expands its own `/name` when a prompt carries it, and answers Epsilon's
+		// own before a prompt exists, so the palette fills the draft for Enter either way.
 		setDraft(`/${name} `);
 		setSelected(name);
 		textareaRef.current?.focus();
@@ -223,6 +239,51 @@ function ComposerImpl({
 		setNotice(undefined);
 	};
 
+	/** A command Epsilon runs itself; a refusal is a line under the box, not a prompt. */
+	const runLocalCommand = (name: (typeof EPSILON_COMMANDS)[number]["name"]): void => {
+		if (name === "reload") {
+			store.reload();
+			return;
+		}
+		if (blocked !== undefined) {
+			setNotice(blocked);
+			return;
+		}
+		if (name === "tree") {
+			if (tree.length === 0) {
+				setNotice("The session tree has no message yet. Send one first.");
+				return;
+			}
+			if (onTree === undefined) {
+				setNotice("The session tree is not available here.");
+				return;
+			}
+			onTree();
+			return;
+		}
+		if (name === "fork") {
+			if (empty) {
+				setNotice("Fork needs a message first.");
+				return;
+			}
+			if (onFork === undefined) {
+				setNotice("Fork is not available here.");
+				return;
+			}
+			onFork();
+			return;
+		}
+		if (empty) {
+			setNotice("Clone needs a message first.");
+			return;
+		}
+		if (onClone === undefined) {
+			setNotice("Clone is not available here.");
+			return;
+		}
+		onClone();
+	};
+
 	/**
 	 * Send the draft. `behavior` joins a run that is already going: Enter steers,
 	 * Ctrl/⌘+Enter waits for the run to settle. An idle composer ignores it.
@@ -245,45 +306,32 @@ function ComposerImpl({
 			setDraft("");
 			return;
 		}
-		// A reload is a socket command, not a prompt: pi would hand `/reload` to the
-		// model. It works while a run streams because it does not touch the run.
-		if (message === "/reload") {
+		// `/tree`, `/fork`, `/clone` and `/reload` are Epsilon's own commands: pi
+		// would hand them to the model, so the composer answers them itself.
+		const local = EPSILON_COMMANDS.find((command) => `/${command.name}` === message);
+		if (local !== undefined) {
 			if (attachments.length > 0) {
-				setNotice("Reload takes no images: remove them, or send them in a message.");
+				setNotice(`${local.name} takes no images: remove them, or send them in a message.`);
 				return;
 			}
-			store.reload();
-		} else {
-			store.prompt(
-				message,
-				busy ? (behavior ?? "steer") : undefined,
-				attachments.length === 0
-					? undefined
-					: attachments.map(({ mimeType, data }) => ({ mimeType, data })),
-			);
-			onSent?.();
+			setDraft("");
+			setAttachments([]);
+			setNotice(undefined);
+			runLocalCommand(local.name);
+			return;
 		}
+		store.prompt(
+			message,
+			busy ? (behavior ?? "steer") : undefined,
+			attachments.length === 0
+				? undefined
+				: attachments.map(({ mimeType, data }) => ({ mimeType, data })),
+		);
+		onSent?.();
 		setDraft("");
 		setAttachments([]);
 		setNotice(undefined);
 	};
-
-	/**
-	 * Go back to an earlier message of this branch. The text goes into the box first,
-	 * so it is ready whether or not the engine accepted the move; sending it then
-	 * starts a new branch in place of what followed the message.
-	 */
-	const goBack = (branch: SnapshotBranch, summarize: boolean) => {
-		setDraft(branch.text);
-		store.navigateTree(branch.entryId, summarize);
-	};
-
-	/** pi refuses a move while the tree is busy, so the control says why instead. */
-	const goBackBlocked = busy
-		? "Wait for the run to finish: pi refuses to move the tree while it streams"
-		: isCompacting
-			? "Wait for the compaction to finish: pi refuses to move the tree while it compacts"
-			: undefined;
 
 	const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
 		if (paletteOpen) {
@@ -322,12 +370,7 @@ function ComposerImpl({
 	return (
 		<div className={inline ? undefined : "border-t p-3"}>
 			<div ref={surfaceRef} className="mx-auto w-full max-w-4xl">
-				{(header !== undefined || branches.length > 0) && (
-					<div className="flex min-w-0 items-center justify-between gap-2 pb-2">
-						<div className="min-w-0 flex-1">{header}</div>
-						<BranchMenu branches={branches} blocked={goBackBlocked} onGoBack={goBack} />
-					</div>
-				)}
+				{header !== undefined && <div className="min-w-0 pb-2">{header}</div>}
 				<form
 					ref={formRef}
 					onSubmit={(event) => {
@@ -362,7 +405,7 @@ function ComposerImpl({
 						<InputGroupTextarea
 							ref={textareaRef}
 							// An empty chat is opened to be typed in, so the caret starts here.
-							autoFocus={inline}
+							autoFocus={inline || draft !== ""}
 							value={draft}
 							onChange={(event) => setDraft(event.target.value)}
 							onKeyDown={onKeyDown}
