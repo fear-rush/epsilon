@@ -8,6 +8,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { TrashIcon, Trash2Icon, Undo2Icon } from "lucide-react";
 import { useState } from "react";
 
+import { useLastDefined } from "@/hooks/use-last-defined";
+
 import { Button } from "@/components/ui/button";
 import { DialogFrame } from "@/components/patterns/dialog/dialog-frame";
 import { DeleteDialog } from "@/components/patterns/dialog/confirm-dialogs";
@@ -31,6 +33,7 @@ export function TrashDialog({
 }) {
 	const queryClient = useQueryClient();
 	const [purging, setPurging] = useState<TrashedSession | undefined>(undefined);
+	const shownPurging = useLastDefined(purging);
 	const trash = useQuery({
 		queryKey: sessionKeys.trash,
 		queryFn: ({ signal }) => fetchTrash(signal),
@@ -122,9 +125,9 @@ export function TrashDialog({
 				open={purging !== undefined}
 				title="Delete this chat for good?"
 				description={
-					purging === undefined
+					shownPurging === undefined
 						? ""
-						: `${sessionLabel(purging)} is removed from Epsilon's trash. This cannot be undone.`
+						: `${sessionLabel(shownPurging)} is removed from Epsilon's trash. This cannot be undone.`
 				}
 				error={purge.error}
 				pending={purge.isPending}

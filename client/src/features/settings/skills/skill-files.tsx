@@ -37,6 +37,7 @@ export function SkillFiles({
 	// A switch that waits for the answer to "discard changes?".
 	const [pending, setPending] = useState<(() => void) | undefined>();
 	const [removing, setRemoving] = useState<BundleEntry | undefined>();
+	const shownRemoving = useLastDefined(removing);
 
 	const changeDirty = (value: boolean) => {
 		setDirty(value);
@@ -120,7 +121,7 @@ export function SkillFiles({
 			/>
 			<DeleteDialog
 				open={removing !== undefined}
-				title={`Delete ${removing?.path ?? "file"}?`}
+				title={`Delete ${shownRemoving?.path ?? "file"}?`}
 				description="The file is removed from the skill folder."
 				error={remove.error}
 				pending={remove.isPending}

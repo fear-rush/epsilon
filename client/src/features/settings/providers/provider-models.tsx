@@ -13,6 +13,7 @@ import { InlineStatus } from "@/components/patterns/status/inline-status";
 import { Notice } from "@/components/patterns/status/notice";
 import { Section } from "@/components/patterns/section/section";
 import { useAnimatedRows } from "@/components/patterns/section/use-animated-rows";
+import { useLastDefined } from "@/hooks/use-last-defined";
 import { testInputOf } from "./provider-draft";
 import type { ProviderDraft } from "./provider-draft";
 import { ProviderImportDialog } from "./provider-import-dialog";
@@ -65,6 +66,7 @@ export function ProviderModels({
 	const [overriding, setOverriding] = useState<ProviderModelInput | undefined>(undefined);
 	const [importOpen, setImportOpen] = useState(false);
 	const [replacing, setReplacing] = useState<"add" | "import" | undefined>(undefined);
+	const shownReplacing = useLastDefined(replacing);
 	const api = parseProviderApi(draft.api);
 	const importable =
 		api !== undefined && PROVIDER_APIS.some((entry) => entry.id === api && entry.modelsPath);
@@ -226,7 +228,7 @@ export function ProviderModels({
 			<DeleteDialog
 				open={replacing !== undefined}
 				title="Replace pi's catalog?"
-				description={`${replacing === "import" ? "Fetching models" : "Adding a model"} replaces the ${detail?.catalog.length ?? 0} models pi ships. Overrides are cleared.`}
+				description={`${shownReplacing === "import" ? "Fetching models" : "Adding a model"} replaces the ${detail?.catalog.length ?? 0} models pi ships. Overrides are cleared.`}
 				error={null}
 				confirmLabel="Replace catalog"
 				onOpenChange={(open) => {

@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { useLastDefined } from "@/hooks/use-last-defined";
 import { SessionItem } from "@/features/sessions/session-item";
 import { ImportSessionDialog } from "@/features/sessions/import-dialog";
 import { RenameDialog } from "@/features/sessions/rename-dialog";
@@ -135,7 +136,9 @@ export function SessionSidebar() {
 	const queryClient = useQueryClient();
 	const { isMobile, setOpenMobile } = useSidebar();
 	const [pendingDelete, setPendingDelete] = useState<SessionSummary | undefined>(undefined);
+	const shownDelete = useLastDefined(pendingDelete);
 	const [pendingProject, setPendingProject] = useState<ProjectSessions | undefined>(undefined);
+	const shownProject = useLastDefined(pendingProject);
 	const [renaming, setRenaming] = useState<SessionSummary | undefined>(undefined);
 	const [renameOpen, setRenameOpen] = useState(false);
 	const [trashOpen, setTrashOpen] = useState(false);
@@ -416,9 +419,9 @@ export function SessionSidebar() {
 				open={pendingDelete !== undefined}
 				title="Delete this chat?"
 				description={
-					pendingDelete === undefined
+					shownDelete === undefined
 						? ""
-						: `${sessionLabel(pendingDelete)} leaves the list, and its file moves to Epsilon's trash, where Recently deleted can restore it.`
+						: `${sessionLabel(shownDelete)} leaves the list, and its file moves to Epsilon's trash, where Recently deleted can restore it.`
 				}
 				error={remove.error}
 				pending={remove.isPending}
@@ -436,11 +439,11 @@ export function SessionSidebar() {
 
 			<DeleteDialog
 				open={pendingProject !== undefined}
-				title={`Remove ${pendingProject?.project.name ?? "this project"} from Epsilon?`}
+				title={`Remove ${shownProject?.project.name ?? "this project"} from Epsilon?`}
 				description={
-					pendingProject === undefined
+					shownProject === undefined
 						? ""
-						: `Its ${pendingProject.sessions.length === 1 ? "chat moves" : `${pendingProject.sessions.length} chats move`} to Epsilon's trash, where Recently deleted can restore ${pendingProject.sessions.length === 1 ? "it" : "them"}. The folder ${pendingProject.project.path} and its files stay where they are, and opening it again starts fresh.`
+						: `Its ${shownProject.sessions.length === 1 ? "chat moves" : `${shownProject.sessions.length} chats move`} to Epsilon's trash, where Recently deleted can restore ${shownProject.sessions.length === 1 ? "it" : "them"}. The folder ${shownProject.project.path} and its files stay where they are, and opening it again starts fresh.`
 				}
 				error={forgetProject.error}
 				pending={forgetProject.isPending}
