@@ -10,7 +10,7 @@ export function ListGroup({ title, children }: { title?: string; children: React
 	return (
 		<section className="-mx-pane grid grid-cols-[minmax(0,1fr)] gap-row border-t px-pane py-2 first:mx-0 first:border-t-0 first:px-0 first:pt-0">
 			{title !== undefined && (
-				<h3 className="px-2 py-1 text-meta font-medium text-muted-foreground">{title}</h3>
+				<h3 className="py-1 text-meta font-medium text-muted-foreground">{title}</h3>
 			)}
 			{children}
 		</section>

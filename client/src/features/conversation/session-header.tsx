@@ -43,7 +43,7 @@ export function ComposerPlace({ place, onChange }: { place: Place; onChange?: ()
 			<span className="truncate">{place.path}</span>
 		</>
 	);
-	const className = "flex min-w-0 items-center gap-2 border-t px-1 text-meta text-muted-foreground";
+	const className = "flex min-w-0 items-center gap-2 border-t px-2 text-meta text-muted-foreground";
 	if (onChange === undefined) {
 		return <div className={cn(className, "pt-2")}>{content}</div>;
 	}

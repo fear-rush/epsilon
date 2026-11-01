@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 const ITEM =
-	"flex w-full min-w-0 flex-col items-stretch rounded-md pad-item text-left transition-colors duration-fast hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none";
+	"-mx-2 flex min-w-0 flex-col items-stretch rounded-md px-2 py-2 text-left transition-colors duration-fast hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none";
 
 type ListItemProps<TRouter extends RegisteredRouter = RegisteredRouter, TOptions = unknown> = {
 	name: ReactNode;

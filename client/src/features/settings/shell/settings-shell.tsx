@@ -23,17 +23,25 @@ const itemsFor = (query: string): SettingsSection[] => {
 };
 
 /** The router reports which section is open; this file does not subscribe to the match itself. */
-function NavLink({ section }: { section: SettingsSection }) {
+function NavLink({
+	section,
+	className,
+}: {
+	section: SettingsSection;
+	/** Bleed for the link's chip: the phone strip zeroes it so its pills keep their own padding. */
+	className?: string;
+}) {
 	const Icon = section.icon;
 	return (
 		<Link to={section.to} className="block" activeProps={{ "aria-current": "page" }}>
 			{({ isActive }) => (
 				<span
 					className={cn(
-						"flex items-center gap-2 rounded-md pad-item text-body transition-colors duration-fast",
+						"-mx-2 flex items-center gap-2 rounded-md px-2 py-2 text-body transition-colors duration-fast",
 						isActive
 							? "bg-muted font-medium text-foreground"
 							: "text-muted-foreground hover:bg-muted/60",
+						className,
 					)}
 				>
 					<Icon className="size-4" />
@@ -76,7 +84,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
 							</Link>
 						}
 					/>
-					<PaneBand>
+					<PaneBand className="animate-enter-drop enter-delay-1">
 						<div className="relative w-full">
 							<SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
 							<Input
@@ -88,11 +96,11 @@ export function SettingsShell({ children }: { children: ReactNode }) {
 							/>
 						</div>
 					</PaneBand>
-					<nav className="grid gap-section overflow-y-auto p-pane">
+					<nav className="grid gap-section overflow-y-auto px-pane pb-pane">
 						{filtering ? (
 							<div className="grid gap-row">
 								{results.length === 0 ? (
-									<p className="px-2 text-meta text-muted-foreground">No matching section.</p>
+									<p className="text-meta text-muted-foreground">No matching section.</p>
 								) : (
 									results.map((section) => <NavLink key={section.to} section={section} />)
 								)}
@@ -106,9 +114,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
 										index === 0 ? "enter-delay-1" : "enter-delay-2",
 									)}
 								>
-									<p className="px-2 pb-1 text-meta font-medium text-muted-foreground">
-										{group.label}
-									</p>
+									<p className="pb-1 text-meta font-medium text-muted-foreground">{group.label}</p>
 									{group.items.map((section) => (
 										<NavLink key={section.to} section={section} />
 									))}
@@ -121,7 +127,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
 				<div className="flex min-h-0 min-w-0 flex-1 flex-col">
 					<nav className="flex gap-1 overflow-x-auto p-2 md:hidden">
 						{SETTINGS_SECTIONS.map((section) => (
-							<NavLink key={section.to} section={section} />
+							<NavLink key={section.to} section={section} className="mx-0" />
 						))}
 					</nav>
 					<main className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</main>

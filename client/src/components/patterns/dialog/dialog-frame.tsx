@@ -29,11 +29,13 @@ const HEIGHT: Record<DialogSize, string> = {
 /**
  * A dialog that never resizes: a title and optional description, a body of fixed
  * height that scrolls inside, and a footer that stays put. Full width on a phone.
+ * `body="content"` is for a dialog with one step, which has nothing to keep steady.
  */
 export function DialogFrame({
 	open,
 	onOpenChange,
 	size,
+	body = "fixed",
 	title,
 	description,
 	footer,
@@ -42,6 +44,8 @@ export function DialogFrame({
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	size: DialogSize;
+	/** `content` lets the body size to what it holds; a fixed height keeps steps steady. */
+	body?: "fixed" | "content";
 	title: ReactNode;
 	description?: ReactNode;
 	footer?: ReactNode;
@@ -54,7 +58,11 @@ export function DialogFrame({
 					<DialogTitle>{title}</DialogTitle>
 					{description !== undefined && <DialogDescription>{description}</DialogDescription>}
 				</DialogHeader>
-				<div className={cn("min-h-0 overflow-y-auto", HEIGHT[size])}>{children}</div>
+				{/* `px-3 -mx-3` leaves the dialog's gutter: a row's hover chip bleeds 8px into it and its
+				    focus ring needs the rest. */}
+				<div className={cn("-mx-3 min-h-0 overflow-y-auto px-3", body === "fixed" && HEIGHT[size])}>
+					{children}
+				</div>
 				{footer !== undefined && <DialogFooter>{footer}</DialogFooter>}
 			</DialogContent>
 		</Dialog>
