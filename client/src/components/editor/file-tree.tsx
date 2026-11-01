@@ -195,7 +195,7 @@ function TreeNode({
 						<FolderIcon />
 						<span className="truncate">{node.name}</span>
 					</CollapsibleTrigger>
-					<CollapsibleContent>
+					<CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-all duration-slow ease-in-out data-starting-style:h-0 data-ending-style:h-0">
 						<ul role="group" className="mt-0.5 ml-3 grid gap-0.5 border-l pl-1.5">
 							{node.children.map((child) => (
 								<TreeNode
