@@ -15,7 +15,7 @@ import type { JsonAgentSessionEvent } from "../pi";
  * Bumped whenever a frame's shape changes. The client sends it in `hello` and
  * reloads on a mismatch instead of guessing.
  */
-export const PROTOCOL_VERSION = 14;
+export const PROTOCOL_VERSION = 15;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([
@@ -226,14 +226,16 @@ export const snapshotModelSchema = z.object({
 export type SnapshotModel = z.infer<typeof snapshotModelSchema>;
 
 /**
- * One entry of the slash palette: what `prompt` expands, or a command Epsilon
- * runs itself before a prompt is sent. `sourceInfo` and the owning resource
+ * One entry of the slash palette: what `prompt` expands, or a command Epsilon or pi's
+ * own host answers before a prompt is sent. `sourceInfo` and the owning resource
  * belong to the resources page (S8).
  */
 export const snapshotCommandSchema = z.object({
 	name: z.string(),
 	description: z.string().optional(),
-	source: z.enum(["extension", "prompt", "skill", "epsilon"]),
+	/** What the name takes, in pi's own bracket notation: `<provider/model>`. */
+	argumentHint: z.string().optional(),
+	source: z.enum(["builtin", "extension", "prompt", "skill"]),
 });
 
 export type SnapshotCommand = z.infer<typeof snapshotCommandSchema>;
@@ -362,13 +364,14 @@ export const serverFrameSchema = z.discriminatedUnion("t", [
 	z.object({ t: z.literal("dialog-closed"), sessionId: z.string(), id: z.string() }),
 	z.object({ t: z.literal("ui"), sessionId: z.string(), request: extensionDisplaySchema }),
 	/**
-	 * A change the tab could not have made: another process wrote this chat's file.
-	 * `kind` names what the row should offer, so a new kind is a protocol change.
+	 * A change the tab could not have made: another process wrote this chat's file, or
+	 * a built-in command was answered with a sentence instead of an action. `kind`
+	 * names what the row is about, so a new kind is a protocol change.
 	 */
 	z.object({
 		t: z.literal("notice"),
 		sessionId: z.string(),
-		kind: z.literal("external-change"),
+		kind: z.enum(["external-change", "command"]),
 		text: z.string(),
 	}),
 	z.object({

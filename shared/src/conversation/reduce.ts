@@ -104,7 +104,9 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 		case "notice":
 			return {
 				...withNotice(state, "notice", frame.text),
-				drift: frame.text,
+				// Only a change on disk raises the reload offer; a command's own sentence
+				// has nothing to reload.
+				drift: frame.kind === "external-change" ? frame.text : state.drift,
 			};
 		case "command-result":
 			// A command the engine refused must not vanish. The frame names it, so

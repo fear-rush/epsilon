@@ -20,24 +20,11 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { exportSession } from "@/api/endpoints";
-import type { ExportedSession, ExportFormat } from "@/api/types";
+import type { ExportFormat } from "@/api/types";
 import { BranchItems } from "./branch-items";
 import { CompactContextDialog } from "./compact-context-dialog";
+import { downloadExport } from "./export-file";
 import type { ConversationStore } from "./store";
-
-/** Hand the answer's text to the browser's own download, under the name the server chose. */
-const saveAs = ({ filename, mimeType, text }: ExportedSession): void => {
-	const url = URL.createObjectURL(new Blob([text], { type: mimeType }));
-	const link = document.createElement("a");
-	link.href = url;
-	link.download = filename;
-	document.body.append(link);
-	link.click();
-	link.remove();
-	// The download reads the blob after this task, so the URL has to outlive it.
-	setTimeout(() => URL.revokeObjectURL(url), 0);
-};
 
 export function SessionControls({
 	store,
@@ -71,7 +58,7 @@ export function SessionControls({
 	const exportAs = async (format: ExportFormat): Promise<void> => {
 		setExporting(true);
 		try {
-			saveAs(await exportSession(store.sessionId, format));
+			await downloadExport(store.sessionId, format);
 		} catch (cause) {
 			store.reportProblem(cause instanceof Error ? cause.message : String(cause));
 		} finally {

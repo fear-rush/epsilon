@@ -40,7 +40,8 @@ import type { AnswerOutcome, FrameSink } from "./dialogs";
 import { setCodingTools, toJsonEvent } from "./engine";
 import { bindHost } from "./host/bindings";
 import { SessionHost } from "./host/host";
-import { buildSnapshot, readModelsFrom } from "./snapshot";
+import { buildSnapshot, readModelsFrom, shadowedCommandsOf } from "./snapshot";
+import { runBuiltin } from "./slash";
 import { UiBridge } from "./ui-context";
 
 /** A session with no tab keeps the last few frames worth showing on the next one. */
@@ -157,6 +158,8 @@ export class LiveSession {
 	private lastOwnActivity = 0;
 	/** Set once a change is reported, so one write does not fill the transcript with rows. */
 	private driftSeen = false;
+	/** Shadowed command names already reported, so a resync does not repeat itself. */
+	private readonly reportedShadowed = new Set<string>();
 
 	private constructor(options: LiveSessionOptions) {
 		const { sessionId, place, onEmpty, onReplaced, home } = options;
@@ -222,6 +225,7 @@ export class LiveSession {
 		this.file = host.file;
 		this.models = (await readModelsFrom(host.session.modelRuntime, patternsOf(this.home))).scoped;
 		this.watch();
+		this.reportShadowed();
 	}
 
 	/**
@@ -237,6 +241,7 @@ export class LiveSession {
 		this.file = host.file;
 		this.driftSeen = false;
 		this.watch();
+		this.reportShadowed();
 		if (host.id !== from) {
 			this.emit({
 				t: "session-replaced",
@@ -471,12 +476,38 @@ export class LiveSession {
 		// this engine's own work, not another process's.
 		if (Date.now() - this.lastOwnActivity < 2_000) return;
 		this.driftSeen = true;
-		this.emit({
-			t: "notice",
-			sessionId: this.sessionId,
-			kind: "external-change",
-			text: "This chat's file changed outside Epsilon. Reload to read what is on disk now.",
-		});
+		this.notice(
+			"This chat's file changed outside Epsilon. Reload to read what is on disk now.",
+			"external-change",
+		);
+	}
+
+	/**
+	 * A built-in command took its name from an extension command, so the extension one
+	 * cannot be reached from `/`. Say so once per name (invariant 8: no silent drop).
+	 */
+	private reportShadowed(): void {
+		const host = this.host;
+		if (host === undefined) return;
+		for (const name of shadowedCommandsOf(host.session)) {
+			if (this.reportedShadowed.has(name)) continue;
+			this.reportedShadowed.add(name);
+			this.notice(
+				`An extension command named /${name} is shadowed by pi's built-in /${name}, so the built-in runs here.`,
+				"command",
+			);
+		}
+	}
+
+	/**
+	 * One sentence for the transcript, with the kind that decides what the row offers.
+	 * A command can run before any tab is watching (the shadowing report is one), so a
+	 * sentence nobody could receive waits for the next subscriber, as a failure does.
+	 */
+	private notice(text: string, kind: "external-change" | "command"): void {
+		const frame: ServerFrame = { t: "notice", sessionId: this.sessionId, kind, text };
+		if (this.frames.count === 0) this.frames.defer(frame);
+		else this.frames.emit(frame);
 	}
 
 	/**
@@ -491,9 +522,25 @@ export class LiveSession {
 	private async dispatch(command: Command): Promise<void> {
 		const agent = this.engine;
 		switch (command.type) {
-			case "prompt":
+			case "prompt": {
+				// A built-in slash command is pi's editor's job in a terminal. Here the host
+				// is the editor, so it runs before the text can reach the model.
+				const handled = await runBuiltin(
+					{
+						host: this.liveHost,
+						home: this.home,
+						reload: () => this.reload(),
+						notice: (text) => this.notice(text, "command"),
+					},
+					command.text,
+				);
+				if (handled) {
+					this.resync();
+					return;
+				}
 				await this.prompt(command.text, command.behavior, command.images);
 				return;
+			}
 			case "abort":
 				this.dialogs.cancelAll();
 				await agent.abort();
@@ -594,6 +641,9 @@ export class LiveSession {
 		const agent = this.engine;
 		await agent.reload();
 		this.models = (await readModelsFrom(agent.modelRuntime, patternsOf(this.home))).scoped;
+		// A reloaded resource set has its own palette, so a name can collide for the
+		// first time here.
+		this.reportShadowed();
 		this.resync();
 	}
 
@@ -635,10 +685,14 @@ export class LiveSession {
 		});
 	}
 
-	private get engine(): AgentSession {
+	private get liveHost(): SessionHost {
 		const host = this.host;
 		if (host === undefined) throw new Error("This session has no live engine");
-		return host.session;
+		return host;
+	}
+
+	private get engine(): AgentSession {
+		return this.liveHost.session;
 	}
 
 	private fail(error: Error, code: ProtocolErrorCode = "AGENT_FAILED"): void {

@@ -1,15 +1,17 @@
 import { ArrowUpIcon, PaperclipIcon, SquareIcon } from "lucide-react";
 import { memo, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
-	EPSILON_COMMANDS,
 	PROMPT_IMAGE_BASE64_TOTAL_MAX,
 	PROMPT_IMAGE_BYTES_MAX,
 	PROMPT_IMAGE_MAX,
+	parseBuiltinCommand,
 	promptImagesBase64Length,
 } from "shared";
 import type {
 	ContextUsage,
+	ParsedBuiltinCommand,
 	PromptBehavior,
 	SnapshotCommand,
 	SnapshotModel,
@@ -30,6 +32,8 @@ import {
 } from "@/components/ui/input-group";
 import type { Attachment } from "./attachments";
 import { AttachmentStrip } from "./attachments";
+import type { ComposerCommandContext, RouteTarget } from "./builtin-commands";
+import { runComposerCommand } from "./builtin-commands";
 import { ContextMeter } from "./context-meter";
 import { ModelMenu } from "./model-menu";
 import { Palette } from "./palette";
@@ -154,6 +158,10 @@ function ComposerImpl({
 	/** The images the next prompt carries, and why the last attach was refused. */
 	const [attachments, setAttachments] = useState<Attachment[]>([]);
 	const [notice, setNotice] = useState<string>();
+	/** `/model` and `/thinking` with no argument open the menus the footer holds. */
+	const [modelMenuOpen, setModelMenuOpen] = useState(false);
+	const [thinkingMenuOpen, setThinkingMenuOpen] = useState(false);
+	const navigate = useNavigate();
 
 	// The fork put its message here before navigating; this composer is the reader.
 	useEffect(() => {
@@ -239,49 +247,47 @@ function ComposerImpl({
 		setNotice(undefined);
 	};
 
-	/** A command Epsilon runs itself; a refusal is a line under the box, not a prompt. */
-	const runLocalCommand = (name: (typeof EPSILON_COMMANDS)[number]["name"]): void => {
-		if (name === "reload") {
-			store.reload();
+	/** Where a route command goes: the settings shell and the chat list are pages. */
+	const openRoute = (target: RouteTarget): void => {
+		if (target === "chats") void navigate({ to: "/", search: {} });
+		else if (target === "providers") void navigate({ to: "/settings/providers" });
+		else void navigate({ to: "/settings/general" });
+	};
+
+	/**
+	 * What a browser-served command may touch. Rebuilt per command instead of memoized:
+	 * a command is rare, and a stale handler would act on the previous render's state.
+	 */
+	const composerCommandContext = (): ComposerCommandContext => ({
+		store,
+		models,
+		tree,
+		thinkingLevels: availableThinkingLevels,
+		empty,
+		blocked,
+		openTree: onTree,
+		openFork: onFork,
+		clone: onClone,
+		openModelMenu: () => setModelMenuOpen(true),
+		openThinkingMenu: () => setThinkingMenuOpen(true),
+		navigate: openRoute,
+	});
+
+	/**
+	 * A command in pi's built-in list. The browser acts here, or the host runs pi's own
+	 * session operation on the engine; a row that can do neither answers with its
+	 * sentence. Either way the model never sees the text.
+	 */
+	const runCommand = async ({ command, argument }: ParsedBuiltinCommand, text: string) => {
+		if (command.surface === "pi") {
+			store.prompt(text);
 			return;
 		}
-		if (blocked !== undefined) {
-			setNotice(blocked);
-			return;
+		try {
+			setNotice(await runComposerCommand(command, argument, composerCommandContext()));
+		} catch (cause) {
+			setNotice(cause instanceof Error ? cause.message : String(cause));
 		}
-		if (name === "tree") {
-			if (tree.length === 0) {
-				setNotice("The session tree has no message yet. Send one first.");
-				return;
-			}
-			if (onTree === undefined) {
-				setNotice("The session tree is not available here.");
-				return;
-			}
-			onTree();
-			return;
-		}
-		if (name === "fork") {
-			if (empty) {
-				setNotice("Fork needs a message first.");
-				return;
-			}
-			if (onFork === undefined) {
-				setNotice("Fork is not available here.");
-				return;
-			}
-			onFork();
-			return;
-		}
-		if (empty) {
-			setNotice("Clone needs a message first.");
-			return;
-		}
-		if (onClone === undefined) {
-			setNotice("Clone is not available here.");
-			return;
-		}
-		onClone();
 	};
 
 	/**
@@ -306,18 +312,20 @@ function ComposerImpl({
 			setDraft("");
 			return;
 		}
-		// `/tree`, `/fork`, `/clone` and `/reload` are Epsilon's own commands: pi
-		// would hand them to the model, so the composer answers them itself.
-		const local = EPSILON_COMMANDS.find((command) => `/${command.name}` === message);
-		if (local !== undefined) {
+		// `/tree`, `/compact` and the rest of pi's built-in commands are the host's or
+		// this page's, never the model's: pi's editor answers them in a terminal.
+		const parsed = parseBuiltinCommand(message);
+		if (parsed !== undefined) {
 			if (attachments.length > 0) {
-				setNotice(`${local.name} takes no images: remove them, or send them in a message.`);
+				setNotice(
+					`/${parsed.command.name} takes no images: remove them, or send them in a message.`,
+				);
 				return;
 			}
 			setDraft("");
 			setAttachments([]);
 			setNotice(undefined);
-			runLocalCommand(local.name);
+			void runCommand(parsed, message);
 			return;
 		}
 		store.prompt(
@@ -435,11 +443,15 @@ function ComposerImpl({
 							<ModelMenu
 								models={models}
 								model={model}
+								open={modelMenuOpen}
+								onOpenChange={setModelMenuOpen}
 								onSelect={(next) => store.setModel(next.provider, next.id)}
 							/>
 							<ThinkingMenu
 								level={thinkingLevel}
 								levels={availableThinkingLevels}
+								open={thinkingMenuOpen}
+								onOpenChange={setThinkingMenuOpen}
 								onSelect={(level) => store.setThinkingLevel(level)}
 							/>
 							<ToolsMenu

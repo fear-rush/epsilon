@@ -160,6 +160,12 @@ Other facts worth having before embedding:
   id, but it does tear the extension runners down and start them again: extensions see
   `session_shutdown` and then `session_start`, both with reason `reload` (Extensions,
   below). Epsilon exposes it as a socket command and calls it after every settings write.
+- `prompt()` dispatches extension commands, prompt templates and `/skill:` entries. It
+  does **not** dispatch pi's built-in slash commands: `/compact`, `/model` and the rest
+  of `dist/core/slash-commands.js` are answered by the TUI's submit handler, so a host
+  that forwards the raw text sends `/compact` to the model. Epsilon carries the name
+  list as a table both sides read and answers each row itself
+  ([DECISIONS.md](DECISIONS.md), Built-in commands).
 
 ## Events
 

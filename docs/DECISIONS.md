@@ -49,6 +49,31 @@ receives no extension identity. It says an extension asked.
 Not: exiting the server. Ignoring the call, which is what an unbound handler does:
 the extension's own cleanup would then never run.
 
+## Built-in commands
+
+pi's 24 built-in slash commands are the TUI's editor, not the SDK: `prompt()`
+dispatches extension commands, templates and skills, and nothing else. A name pi has
+is therefore Epsilon's to answer, and `shared/src/conversation/commands.ts` is the one
+table both sides read. Each row names who serves it:
+
+- `surface: "pi"`: the host calls pi's own session operation on the runtime
+  (`compact`, `name`, `new`, `import`, `reload`), from the prompt path, before the text
+  can reach the model.
+- `surface: "epsilon"`: the browser owns the surface, because a route, a dialog, the
+  clipboard or a download is the only place the command can act.
+
+A row with a `refusal` has no web surface in this build; its sentence names the
+capability and where it lives, and it is shown instead. A name the table does not hold
+stays a prompt, which is how an extension command, a template and a `/skill:` entry
+still reach pi. A builtin wins over an extension command of the same name, the way
+pi's editor does, and the shadowed command is named in a notice rather than dropped.
+
+Why: sending `/compact` to the model is worse than refusing it. pi's names are a closed
+list in the pinned package, so one table is cheap and both sides can check it.
+
+Not: teaching `prompt()` the names (not an SDK capability), or a second list in the
+server (the two would drift, and the browser decides which surface a name has).
+
 ## Socket vocabulary
 
 The browser socket carries Epsilon's own commands and zod shapes, defined in `shared/`.
@@ -64,6 +89,10 @@ another version reloads.
 Why: with no RPC envelope under it, pi's RPC types would be a translation layer, and a
 change to pi's private types would become a change to Epsilon's public contract.
 `/reload` is a socket command, never a slash command the model sees.
+
+The `notice` frame carries what no command result can: `external-change` is the file
+written by another process, and `command` is a sentence a built-in command answered
+with instead of acting. Only the first offers a reload.
 
 Not: keeping pi's RPC types for compatibility (nothing speaks them). Request/response
 frames for reads (the engine exposes state synchronously, so a snapshot needs no round
@@ -239,9 +268,8 @@ The picker can also ask pi to summarise the branch being left (`navigateTree`'s
 that defaults to off, and the result is a summary message in the transcript.
 
 pi's `/tree`, `/fork` and `/clone` are terminal commands over the SDK, not extension
-commands, so `get_commands` does not carry them. Epsilon lists them in the composer's
-`/` palette itself and handles them before a prompt is sent; a pi command that takes
-one of those names is skipped.
+commands, so `get_commands` does not carry them. Epsilon answers every name pi's editor
+answers, from the table in `shared/src/conversation/commands.ts` (Built-in commands).
 
 A fork at a message or a clone is a second session file rather than a command on this
 one (Session copies).

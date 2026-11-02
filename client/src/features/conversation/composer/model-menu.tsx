@@ -18,6 +18,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 type ModelMenuProps = {
 	models: SnapshotModel[];
 	model: SnapshotModel | undefined;
+	/** The composer opens it, because `/model` with no argument asks for this menu. */
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
 	onSelect: (model: SnapshotModel) => void;
 };
 
@@ -51,8 +54,7 @@ const searchText = (model: SnapshotModel): string =>
  * the id and the provider case-insensitively, the current provider's group leads,
  * and the box opens scrolled to the model in use.
  */
-export function ModelMenu({ models, model, onSelect }: ModelMenuProps) {
-	const [open, setOpen] = useState(false);
+export function ModelMenu({ models, model, open, onOpenChange, onSelect }: ModelMenuProps) {
 	const [query, setQuery] = useState("");
 	const current = model === undefined ? "" : modelKey(model);
 	const needle = query.trim().toLowerCase();
@@ -64,7 +66,7 @@ export function ModelMenu({ models, model, onSelect }: ModelMenuProps) {
 		<Popover
 			open={open}
 			onOpenChange={(next) => {
-				setOpen(next);
+				onOpenChange(next);
 				if (!next) setQuery("");
 			}}
 		>
@@ -107,7 +109,7 @@ export function ModelMenu({ models, model, onSelect }: ModelMenuProps) {
 											data-checked={value === current}
 											onSelect={() => {
 												onSelect(candidate);
-												setOpen(false);
+												onOpenChange(false);
 											}}
 										>
 											<span className="truncate">{candidate.name}</span>

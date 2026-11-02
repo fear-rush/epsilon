@@ -8,6 +8,7 @@ import type { ContextUsage } from "shared";
 
 import { Tip } from "@/components/patterns/tip";
 import { InputGroupText } from "@/components/ui/input-group";
+import { costLabel } from "@/features/conversation/cost";
 
 const grouped = new Intl.NumberFormat(undefined);
 
@@ -24,12 +25,6 @@ const trimZero = (value: number): string =>
 const percentLabel = (percent: number): string => {
 	if (percent > 0 && percent < 0.1) return "<0.1%";
 	return `${percent.toFixed(1).replace(/\.0$/, "")}%`;
-};
-
-/** Cents for a real bill, four decimals while a session has cost almost nothing. */
-const costLabel = (cost: number): string => {
-	if (cost === 0) return "$0";
-	return cost < 0.01 ? `$${cost.toFixed(4)}` : `$${cost.toFixed(2)}`;
 };
 
 export function ContextMeter({ usage, cost }: { usage: ContextUsage | undefined; cost: number }) {

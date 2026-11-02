@@ -32,16 +32,21 @@ const labels: Record<ThinkingLevel, string> = {
 export function ThinkingMenu({
 	level,
 	levels,
+	open,
+	onOpenChange,
 	onSelect,
 }: {
 	level: ThinkingLevel;
 	levels: ThinkingLevel[];
+	/** The composer opens it, because `/thinking` with no argument asks for this menu. */
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
 	onSelect: (level: ThinkingLevel) => void;
 }) {
 	if (levels.length <= 1) return null;
 
 	return (
-		<DropdownMenu>
+		<DropdownMenu open={open} onOpenChange={onOpenChange}>
 			<Tooltip>
 				<TooltipTrigger
 					render={

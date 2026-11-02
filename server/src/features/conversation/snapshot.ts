@@ -23,7 +23,7 @@ import type {
 	SessionTreeNode,
 } from "@earendil-works/pi-coding-agent";
 import { resolveModelScopeWithDiagnostics } from "@earendil-works/pi-coding-agent";
-import { EPSILON_COMMANDS, isVisibleMessage } from "shared";
+import { BUILTIN_COMMANDS, builtinCommand, isVisibleMessage } from "shared";
 import type {
 	ContextUsage,
 	Place,
@@ -113,13 +113,23 @@ const availableModels = async (runtime: ModelRuntime) => {
 	}
 };
 
+/**
+ * What `/` offers: pi's built-in commands first, then the extension commands,
+ * prompt templates and skills `prompt()` still dispatches. A builtin wins over a
+ * name it shadows, the way pi's editor does; `shadowedCommandsOf` names the losers
+ * so a tab hears about it instead of a command quietly disappearing.
+ */
 const commandsOf = (agent: AgentSession): SnapshotCommand[] => {
-	// Epsilon runs these in the composer before a prompt exists, so a pi command
-	// that took one of the names would never be reached. Epsilon's wins.
-	const localNames = new Set<string>(EPSILON_COMMANDS.map((command) => command.name));
-	const commands: SnapshotCommand[] = EPSILON_COMMANDS.map((command) => ({ ...command }));
+	const commands: SnapshotCommand[] = BUILTIN_COMMANDS.map((command) => ({
+		name: command.name,
+		description: command.description,
+		// Only some rows take an argument, so the literal table has no such field
+		// on all of them; `in` is the narrow that reads it.
+		argumentHint: "argumentHint" in command ? command.argumentHint : undefined,
+		source: "builtin",
+	}));
 	for (const command of agent.extensionRunner.getRegisteredCommands()) {
-		if (localNames.has(command.invocationName)) continue;
+		if (builtinCommand(command.invocationName) !== undefined) continue;
 		commands.push({
 			name: command.invocationName,
 			description: command.description,
@@ -127,7 +137,7 @@ const commandsOf = (agent: AgentSession): SnapshotCommand[] => {
 		});
 	}
 	for (const template of agent.promptTemplates) {
-		if (localNames.has(template.name)) continue;
+		if (builtinCommand(template.name) !== undefined) continue;
 		commands.push({ name: template.name, description: template.description, source: "prompt" });
 	}
 	for (const skill of agent.resourceLoader.getSkills().skills) {
@@ -138,6 +148,23 @@ const commandsOf = (agent: AgentSession): SnapshotCommand[] => {
 		});
 	}
 	return commands;
+};
+
+/**
+ * Extension commands and templates a builtin takes the name from. pi's editor
+ * answers the builtin, so the extension one is unreachable from `/` here.
+ */
+export const shadowedCommandsOf = (agent: AgentSession): string[] => {
+	const shadowed = new Set<string>();
+	for (const command of agent.extensionRunner.getRegisteredCommands()) {
+		if (builtinCommand(command.invocationName) !== undefined) {
+			shadowed.add(command.invocationName);
+		}
+	}
+	for (const template of agent.promptTemplates) {
+		if (builtinCommand(template.name) !== undefined) shadowed.add(template.name);
+	}
+	return [...shadowed];
 };
 
 /**

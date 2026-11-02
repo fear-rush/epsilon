@@ -64,6 +64,11 @@ export function Palette({
 									onSelect={() => onPick(command.name)}
 								>
 									<span className="shrink-0 font-mono whitespace-nowrap">/{command.name}</span>
+									{command.argumentHint !== undefined && (
+										<span className="shrink-0 font-mono whitespace-nowrap text-meta text-muted-foreground">
+											{command.argumentHint}
+										</span>
+									)}
 									<span className="min-w-0 flex-1 truncate text-meta text-muted-foreground">
 										{command.description}
 									</span>

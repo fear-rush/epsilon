@@ -39,7 +39,13 @@ export {
 } from "./protocol/frames";
 export { dialogAnswerSchema, dialogQuestionSchema, extensionDisplaySchema } from "./protocol/extui";
 export type { DialogAnswer, DialogQuestion, ExtensionDisplay } from "./protocol/extui";
-export { EPSILON_COMMANDS } from "./conversation/commands";
+export { BUILTIN_COMMANDS, builtinCommand, parseBuiltinCommand } from "./conversation/commands";
+export type {
+	BuiltinCommand,
+	ComposerCommandName,
+	HostCommandName,
+	ParsedBuiltinCommand,
+} from "./conversation/commands";
 export {
 	PERMISSION_MODE_VALUES,
 	PERMISSION_STATUS_KEY,
