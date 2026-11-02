@@ -55,14 +55,59 @@ export const reasoningCompatSchema = z
 
 export type ReasoningCompat = z.infer<typeof reasoningCompatSchema>;
 
+const providerModelCostTierSchema = z
+	.object({
+		/** The tier applies when the whole request's input exceeds this count. */
+		inputTokensAbove: z.number(),
+		input: z.number(),
+		output: z.number(),
+		cacheRead: z.number(),
+		cacheWrite: z.number(),
+	})
+	.openapi("ProviderModelCostTier");
+
 const providerModelCostSchema = z
 	.object({
 		input: z.number(),
 		output: z.number(),
 		cacheRead: z.number(),
 		cacheWrite: z.number(),
+		/** Request-wide pricing tiers; the highest matching threshold applies. */
+		tiers: z.array(providerModelCostTierSchema).optional(),
 	})
 	.openapi("ProviderModelCost");
+
+/** How a request may be shaped before it leaves the engine. */
+const modelInputLimitsSchema = z
+	.object({
+		maxRequestBytes: z.number().int().positive().optional(),
+		images: z
+			.object({
+				resize: z
+					.object({
+						maxWidth: z.number().int().positive().optional(),
+						maxHeight: z.number().int().positive().optional(),
+						maxBytes: z.number().int().positive().optional(),
+						jpegQuality: z.number().int().min(1).max(100).optional(),
+					})
+					.optional(),
+				maxPerMessage: z.number().int().positive().optional(),
+				maxPerRequest: z.number().int().positive().optional(),
+			})
+			.optional(),
+	})
+	.openapi("ModelInputLimits");
+
+/** The cache lifetime pi warms for each retention tier, in seconds. */
+const modelPromptCacheSchema = z
+	.object({
+		short: z.number().positive().optional(),
+		long: z.number().positive().optional(),
+	})
+	.openapi("ModelPromptCache");
+
+/** Extra request-body fields, merged into every request pi sends for the model. */
+const samplingParamsSchema = z.record(z.string(), z.unknown()).openapi("SamplingParams");
 
 /** One model entry the panel edits. Unset fields keep pi's defaults. */
 const providerModelInputSchema = z
@@ -77,6 +122,14 @@ const providerModelInputSchema = z
 		thinkingLevelMap: thinkingLevelMapSchema.optional(),
 		compat: reasoningCompatSchema.optional(),
 		input: z.array(z.enum(["text", "image"])).optional(),
+		inputLimits: modelInputLimitsSchema.optional(),
+		promptCache: modelPromptCacheSchema.optional(),
+		samplingParams: samplingParamsSchema.optional(),
+		samplingParamsByThinkingLevel: z
+			.partialRecord(thinkingLevelSchema, samplingParamsSchema)
+			.optional(),
+		/** Per-model request headers. The values stay on the server when read. */
+		headers: z.record(z.string(), z.string()).optional(),
 		contextWindow: z.number().int().positive().optional(),
 		maxTokens: z.number().int().positive().optional(),
 		cost: providerModelCostSchema.optional(),
@@ -124,6 +177,10 @@ const providerInputSchema = z
 		headers: z.record(z.string(), z.string()).optional(),
 		/** Provider-wide reasoning format; a model's compat overrides it per key. */
 		compat: reasoningCompatSchema.optional(),
+		/** Whether pi sends the resolved key as `Authorization: Bearer`. */
+		authHeader: z.union([z.literal(""), z.boolean()]).optional(),
+		/** pi's radius OAuth flow. It needs a base URL. */
+		oauth: z.union([z.literal(""), z.literal("radius")]).optional(),
 		/** Omit for a built-in provider whose catalog must stay in place. */
 		models: z.array(providerModelInputSchema).optional(),
 		modelOverrides: z.record(z.string(), modelOverrideSchema).optional(),
@@ -183,6 +240,8 @@ const providerStoredSchema = z
 		baseUrl: z.string().optional(),
 		api: providerApiSchema.optional(),
 		compat: reasoningCompatSchema.optional(),
+		authHeader: z.boolean().optional(),
+		oauth: z.literal("radius").optional(),
 	})
 	.openapi("ProviderStored");
 
@@ -255,6 +314,8 @@ const providerTestInputSchema = z
 		headers: z.record(z.string(), z.string()).optional(),
 		/** The provider's reasoning format, as the draft has it. */
 		compat: reasoningCompatSchema.optional(),
+		/** pi's `authHeader` as the draft has it; unset keeps the stored entry's. */
+		authHeader: z.boolean().optional(),
 		/** A reasoning level for the test; omitted sends no reasoning fields. */
 		level: thinkingLevelSchema.optional(),
 		/** The model to try. Without one, the provider's first model is used. */

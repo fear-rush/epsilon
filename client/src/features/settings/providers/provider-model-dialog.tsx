@@ -21,13 +21,14 @@ import { Input } from "@/components/ui/input";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { ModelCostFields } from "./provider-model-cost";
+import { ModelAdvancedFields } from "./provider-model-advanced";
 import { ModelReasoningFields } from "./provider-reasoning-fields";
 import { formOf, touchedBy, valueOf } from "./provider-model-form";
 import type { ModelField, ModelForm } from "./provider-model-form";
 import { TestLevelSelect } from "./test-level-select";
 import { useDialogMotion } from "@/hooks/use-dialog-motion";
 import { keepUntouched } from "@/components/patterns/form/use-draft-form";
-import { modelFieldErrors, modelFields } from "./provider-validation";
+import { advancedFields, modelFieldErrors, modelFields } from "./provider-validation";
 import type { ModelFieldErrors } from "./provider-validation";
 import type { ProviderModelInput } from "@/api/types";
 import type { ModelOverride } from "@/api/types";
@@ -60,15 +61,25 @@ export function ProviderModelDialog({
 	const [touched, setTouched] = useState<ReadonlySet<ModelField>>(() => new Set());
 	const [errors, setErrors] = useState<ModelFieldErrors>({});
 	const [testing, setTesting] = useState(false);
+	const [advancedOpen, setAdvancedOpen] = useState(false);
 	const [testLevel, setTestLevel] = useState("none");
 	const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | undefined>();
 	const endpoint = mode === "model";
-	const validate = () => modelFieldErrors(form, endpoint);
+	const validate = () => {
+		const found: ModelFieldErrors = modelFieldErrors(form, endpoint);
+		const headers = form.headerRows.some(
+			(row) => row.key.trim() === "" || (row.value.trim() === "" && !row.stored),
+		);
+		if (headers) found.headers = "Fill the header name and value, or remove the row.";
+		if (advancedFields.some((field) => found[field] !== undefined)) setAdvancedOpen(true);
+		return found;
+	};
 	const update = (patch: Partial<ModelForm>) => {
 		setForm((current) => ({ ...current, ...patch }));
 		setTouched((current) => touchedBy(current, patch));
 		setTestResult(undefined);
-		setErrors((current) => keepUntouched(current, modelFields, Object.keys(patch)));
+		const changed = Object.keys(patch).map((key) => (key === "headerRows" ? "headers" : key));
+		setErrors((current) => keepUntouched(current, modelFields, changed));
 	};
 	const api = parseProviderApi(form.api);
 
@@ -219,6 +230,13 @@ export function ProviderModelDialog({
 						</Notice>
 					)}
 				<ModelCostFields form={form} errors={errors} update={update} endpoint={endpoint} />
+				<ModelAdvancedFields
+					form={form}
+					errors={errors}
+					update={update}
+					open={advancedOpen}
+					onOpenChange={setAdvancedOpen}
+				/>
 
 				{testResult !== undefined && (
 					<Notice tone={testResult.ok ? "success" : "error"}>{testResult.message}</Notice>

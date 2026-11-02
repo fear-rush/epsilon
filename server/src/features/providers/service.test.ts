@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { agentHome } from "../../platform/agent-home";
 import type { AgentHome } from "../../platform/agent-home";
 import { modelRuntime } from "../../platform/pi";
+import type { ModelOverride, ProviderModelInput } from "./contract";
 import { readProviderDetail, removeProvider, writeProvider } from "./service";
 
 const home = async (): Promise<AgentHome> =>
@@ -95,6 +96,118 @@ describe("provider catalog", () => {
 });
 
 describe("provider writes", () => {
+	test("every documented model field survives a round trip", async () => {
+		const root = await home();
+		const model: ProviderModelInput = {
+			id: "acme-1",
+			name: "Acme",
+			api: "openai-completions",
+			baseUrl: "https://example.test/v1",
+			reasoning: true,
+			thinkingLevelMap: { low: "low", high: "high", max: null },
+			compat: { supportsReasoningEffort: true },
+			input: ["text", "image"],
+			inputLimits: {
+				maxRequestBytes: 1000,
+				images: {
+					resize: { maxWidth: 800, maxHeight: 600, maxBytes: 100_000, jpegQuality: 80 },
+					maxPerMessage: 4,
+					maxPerRequest: 8,
+				},
+			},
+			promptCache: { short: 300, long: 3600 },
+			samplingParams: { temperature: 0.2, thinking: { type: "enabled" } },
+			samplingParamsByThinkingLevel: { high: { reasoning_effort: "high" } },
+			headers: { "x-gateway": "one" },
+			contextWindow: 1000,
+			maxTokens: 100,
+			cost: {
+				input: 1,
+				output: 2,
+				cacheRead: 0.1,
+				cacheWrite: 0.2,
+				tiers: [
+					{
+						inputTokensAbove: 200_000,
+						input: 2,
+						output: 4,
+						cacheRead: 0.2,
+						cacheWrite: 0.4,
+					},
+				],
+			},
+		};
+
+		await writeProvider(root, {
+			id: "acme",
+			name: "Acme",
+			baseUrl: "https://example.test/v1",
+			api: "openai-completions",
+			models: [model],
+		});
+
+		expect((await stored(root)).providers.acme.models[0]).toEqual(model);
+		const detail = await readProviderDetail(root, await modelRuntime(root), "acme");
+		const view = detail?.models[0];
+		expect(view?.inputLimits).toEqual(model.inputLimits);
+		expect(view?.promptCache).toEqual(model.promptCache);
+		expect(view?.samplingParams).toEqual(model.samplingParams);
+		expect(view?.samplingParamsByThinkingLevel).toEqual(model.samplingParamsByThinkingLevel);
+		expect(view?.cost).toEqual(model.cost);
+		// A stored header value never comes back to the browser; its key does.
+		expect(view?.headers).toEqual({ "x-gateway": "" });
+	});
+
+	test("every documented override field survives a round trip", async () => {
+		const root = await home();
+		const override: ModelOverride = {
+			name: "Chosen",
+			reasoning: true,
+			thinkingLevelMap: { high: "high" },
+			compat: { thinkingFormat: "deepseek" },
+			input: ["text"],
+			inputLimits: { maxRequestBytes: 500 },
+			promptCache: { short: 60 },
+			samplingParams: { temperature: 0 },
+			samplingParamsByThinkingLevel: { low: { reasoning_effort: "low" } },
+			headers: { "x-override": "two" },
+			contextWindow: 2000,
+			maxTokens: 200,
+			cost: { input: 1, output: 2, cacheRead: 0.1, cacheWrite: 0.2 },
+		};
+
+		await writeProvider(root, { id: "openai", modelOverrides: { "gpt-5": override } });
+		expect((await stored(root)).providers.openai.modelOverrides["gpt-5"]).toEqual(override);
+
+		const detail = await readProviderDetail(root, await modelRuntime(root), "openai");
+		expect(detail?.modelOverrides["gpt-5"]?.headers).toEqual({ "x-override": "" });
+	});
+
+	test("a provider's auth header and radius OAuth survive a round trip", async () => {
+		const root = await home();
+		await writeProvider(root, {
+			id: "acme",
+			name: "Acme",
+			baseUrl: "https://example.test/v1",
+			api: "openai-completions",
+			authHeader: true,
+			oauth: "radius",
+		});
+
+		expect((await stored(root)).providers.acme).toMatchObject({
+			authHeader: true,
+			oauth: "radius",
+		});
+		const detail = await readProviderDetail(root, await modelRuntime(root), "acme");
+		expect(detail?.stored).toMatchObject({ authHeader: true, oauth: "radius" });
+
+		await writeProvider(root, { id: "acme", authHeader: "", oauth: "" });
+		const cleared = (await stored(root)).providers.acme;
+		expect(cleared.authHeader).toBeUndefined();
+		expect(cleared.oauth).toBeUndefined();
+		expect(cleared.name).toBe("Acme");
+	});
+
 	test("keeps unknown keys on the entry, its models and its overrides", async () => {
 		const root = await home();
 		await writeFile(

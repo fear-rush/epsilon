@@ -95,7 +95,12 @@ const probe = async (target: Target, key: string, keyless: boolean): Promise<Pro
 	const headers = keyless
 		? {
 				...target.draftHeaders,
-				...Object.fromEntries(authHeadersFor(target.api).map((name) => [name, null])),
+				...Object.fromEntries(
+					// A configured auth header also carries the placeholder, so suppress it too.
+					[...authHeadersFor(target.api), ...(target.authHeader ? ["authorization"] : [])].map(
+						(name) => [name, null],
+					),
+				),
 			}
 		: target.headers;
 
@@ -289,6 +294,19 @@ export const testProviderForHome = async (
 	if (requested?.baseUrl !== undefined) configModel.baseUrl = requested.baseUrl;
 	const levelMap = requested?.thinkingLevelMap ?? runtimeModel?.thinkingLevelMap;
 	if (levelMap !== undefined) configModel.thinkingLevelMap = levelMap;
+	if (requested?.inputLimits !== undefined) configModel.inputLimits = requested.inputLimits;
+	if (requested?.promptCache !== undefined) configModel.promptCache = requested.promptCache;
+	if (requested?.samplingParams !== undefined)
+		configModel.samplingParams = requested.samplingParams;
+	// The extension-facing model config has no per-level sampling params, so the
+	// probe cannot apply them; the saved models.json still can.
+	//
+	// A blank header value means "the server already has it"; the throwaway runtime
+	// does not, so sending the blank would suppress the header instead of keeping it.
+	const typedHeaders = Object.fromEntries(
+		Object.entries(requested?.headers ?? {}).filter(([, value]) => value !== ""),
+	);
+	if (Object.keys(typedHeaders).length > 0) configModel.headers = typedHeaders;
 	const compat = { ...input.compat, ...runtimeModel?.compat, ...requested?.compat };
 	if (Object.keys(compat).length > 0) {
 		// SAFETY: compat is a family-specific view of the same loose model field; pi
@@ -313,7 +331,7 @@ export const testProviderForHome = async (
 		api,
 		baseUrl,
 		configModel,
-		authHeader: entry?.authHeader === true,
+		authHeader: input.authHeader ?? entry?.authHeader ?? false,
 		level: input.level,
 		headers,
 		draftHeaders: draft,

@@ -6,9 +6,61 @@
 import { z } from "zod";
 import { parseProviderApi } from "shared";
 
-import { setOrDelete } from "../../platform/patch";
+import { mergeSecrets, setOrDelete } from "../../platform/patch";
 import type { ModelOverride, ReasoningCompat, ThinkingLevelMap } from "./contract";
 import { reasoningCompatSchema, thinkingLevelMapSchema } from "./contract";
+
+const storedCostTierSchema = z.looseObject({
+	inputTokensAbove: z.number(),
+	input: z.number(),
+	output: z.number(),
+	cacheRead: z.number(),
+	cacheWrite: z.number(),
+});
+
+const storedCostSchema = z.looseObject({
+	input: z.number(),
+	output: z.number(),
+	cacheRead: z.number(),
+	cacheWrite: z.number(),
+	tiers: z.array(storedCostTierSchema).optional(),
+});
+
+/** Nested blocks are loose too: a key this version does not model survives a write. */
+const storedInputLimitsSchema = z.looseObject({
+	maxRequestBytes: z.number().optional(),
+	images: z
+		.looseObject({
+			resize: z
+				.looseObject({
+					maxWidth: z.number().optional(),
+					maxHeight: z.number().optional(),
+					maxBytes: z.number().optional(),
+					jpegQuality: z.number().optional(),
+				})
+				.optional(),
+			maxPerMessage: z.number().optional(),
+			maxPerRequest: z.number().optional(),
+		})
+		.optional(),
+});
+
+const storedPromptCacheSchema = z.looseObject({
+	short: z.number().optional(),
+	long: z.number().optional(),
+});
+
+const storedSamplingParamsSchema = z.record(z.string(), z.unknown());
+
+const storedSamplingByLevelSchema = z.looseObject({
+	off: storedSamplingParamsSchema.optional(),
+	minimal: storedSamplingParamsSchema.optional(),
+	low: storedSamplingParamsSchema.optional(),
+	medium: storedSamplingParamsSchema.optional(),
+	high: storedSamplingParamsSchema.optional(),
+	xhigh: storedSamplingParamsSchema.optional(),
+	max: storedSamplingParamsSchema.optional(),
+});
 
 const storedModelSchema = z.looseObject({
 	id: z.string(),
@@ -19,16 +71,14 @@ const storedModelSchema = z.looseObject({
 	thinkingLevelMap: thinkingLevelMapSchema.optional(),
 	compat: reasoningCompatSchema.optional(),
 	input: z.array(z.string()).optional(),
+	inputLimits: storedInputLimitsSchema.optional(),
+	promptCache: storedPromptCacheSchema.optional(),
+	samplingParams: storedSamplingParamsSchema.optional(),
+	samplingParamsByThinkingLevel: storedSamplingByLevelSchema.optional(),
+	headers: z.record(z.string(), z.string()).optional(),
 	contextWindow: z.number().optional(),
 	maxTokens: z.number().optional(),
-	cost: z
-		.looseObject({
-			input: z.number(),
-			output: z.number(),
-			cacheRead: z.number(),
-			cacheWrite: z.number(),
-		})
-		.optional(),
+	cost: storedCostSchema.optional(),
 });
 
 const providerEntrySchema = z.looseObject({
@@ -38,6 +88,8 @@ const providerEntrySchema = z.looseObject({
 	apiKey: z.string().optional(),
 	headers: z.record(z.string(), z.string()).optional(),
 	compat: reasoningCompatSchema.optional(),
+	authHeader: z.boolean().optional(),
+	oauth: z.literal("radius").optional(),
 	models: z.array(storedModelSchema).optional(),
 	modelOverrides: z.record(z.string(), storedModelSchema.omit({ id: true })).optional(),
 });
@@ -59,9 +111,14 @@ export type StoredFields = {
 	thinkingLevelMap?: ThinkingLevelMap;
 	compat?: ReasoningCompat;
 	input?: string[];
+	inputLimits?: NonNullable<ModelOverride["inputLimits"]>;
+	promptCache?: NonNullable<ModelOverride["promptCache"]>;
+	samplingParams?: NonNullable<ModelOverride["samplingParams"]>;
+	samplingParamsByThinkingLevel?: NonNullable<ModelOverride["samplingParamsByThinkingLevel"]>;
+	headers?: Record<string, string>;
 	contextWindow?: number;
 	maxTokens?: number;
-	cost?: { input: number; output: number; cacheRead: number; cacheWrite: number };
+	cost?: NonNullable<ModelOverride["cost"]>;
 };
 
 /** The API family a stored entry names, or undefined when it names none. */
@@ -79,6 +136,15 @@ export const fieldsOf = (model: StoredFields): ModelOverride => ({
 	input: model.input?.filter(
 		(kind): kind is "text" | "image" => kind === "text" || kind === "image",
 	),
+	inputLimits: model.inputLimits,
+	promptCache: model.promptCache,
+	samplingParams: model.samplingParams,
+	samplingParamsByThinkingLevel: model.samplingParamsByThinkingLevel,
+	// Header values stay on the server, like a provider's; the keys seed the editor.
+	headers:
+		model.headers === undefined
+			? undefined
+			: Object.fromEntries(Object.keys(model.headers).map((key) => [key, ""])),
 	contextWindow: model.contextWindow,
 	maxTokens: model.maxTokens,
 	cost: model.cost,
@@ -133,8 +199,29 @@ export const mergeModelFields = (
 	writeField(next, "thinkingLevelMap", input.thinkingLevelMap, policy, false);
 	writeField(next, "compat", input.compat, policy, false);
 	writeField(next, "input", input.input, policy, true);
+	writeField(next, "inputLimits", input.inputLimits, policy, false);
+	writeField(next, "promptCache", input.promptCache, policy, false);
+	writeField(next, "samplingParams", input.samplingParams, policy, false);
+	writeField(
+		next,
+		"samplingParamsByThinkingLevel",
+		input.samplingParamsByThinkingLevel,
+		policy,
+		false,
+	);
 	writeField(next, "contextWindow", input.contextWindow, policy, true);
 	writeField(next, "maxTokens", input.maxTokens, policy, true);
 	writeField(next, "cost", input.cost, policy, true);
+	// A header value never comes back to the browser, so a blank one keeps the stored
+	// value and a key left out of the record is removed.
+	if (input.headers === undefined) {
+		if (policy === "unset") delete next.headers;
+	} else {
+		const headers = mergeSecrets(input.headers, stored.headers ?? {}, {
+			onMissingStored: "drop",
+		});
+		if (headers === undefined) delete next.headers;
+		else next.headers = headers;
+	}
 	return next;
 };

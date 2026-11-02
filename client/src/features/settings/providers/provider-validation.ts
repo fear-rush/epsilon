@@ -15,6 +15,13 @@ import { z } from "zod";
 import { providerApiSchema, providerIdSchema } from "shared";
 
 import type { ProviderDraft } from "./provider-draft";
+import {
+	costTiersSchema,
+	jsonOf,
+	samplingByLevelSchema,
+	samplingParamsSchema,
+} from "./provider-model-form";
+import type { ModelForm } from "./provider-model-form";
 
 const trim = (value: string): string => value.trim();
 
@@ -75,6 +82,10 @@ export function providerFieldErrors(
 		(row) => row.key.trim() === "" || (!row.stored && row.value.trim() === ""),
 	);
 	if (incomplete) errors.headers = "Fill the header name and value, or remove the row.";
+	// pi refuses the file when radius OAuth has no base URL of its own.
+	if (draft.oauth && draft.baseUrl.trim() === "") {
+		errors.baseUrl = "pi needs a base URL for radius OAuth.";
+	}
 	return errors;
 }
 
@@ -86,7 +97,20 @@ export type ModelField =
 	| "costInput"
 	| "costOutput"
 	| "costCacheRead"
-	| "costCacheWrite";
+	| "costCacheWrite"
+	| "costTiers"
+	| "maxRequestBytes"
+	| "imageResizeWidth"
+	| "imageResizeHeight"
+	| "imageResizeBytes"
+	| "imageJpegQuality"
+	| "imageMaxPerMessage"
+	| "imageMaxPerRequest"
+	| "promptCacheShort"
+	| "promptCacheLong"
+	| "samplingParams"
+	| "samplingParamsByLevel"
+	| "headers";
 
 export type ModelFieldErrors = Partial<Record<ModelField, string>>;
 
@@ -99,18 +123,41 @@ export const modelFields: readonly ModelField[] = [
 	"costOutput",
 	"costCacheRead",
 	"costCacheWrite",
+	"costTiers",
+	"maxRequestBytes",
+	"imageResizeWidth",
+	"imageResizeHeight",
+	"imageResizeBytes",
+	"imageJpegQuality",
+	"imageMaxPerMessage",
+	"imageMaxPerRequest",
+	"promptCacheShort",
+	"promptCacheLong",
+	"samplingParams",
+	"samplingParamsByLevel",
+	"headers",
 ];
 
-const costFields: readonly ModelField[] = [
-	"costInput",
-	"costOutput",
-	"costCacheRead",
-	"costCacheWrite",
+const costFields = ["costInput", "costOutput", "costCacheRead", "costCacheWrite"] as const;
+
+/** The controls inside the Advanced card, so a failed save can open it. */
+export const advancedFields: readonly ModelField[] = [
+	"costTiers",
+	"maxRequestBytes",
+	"imageResizeWidth",
+	"imageResizeHeight",
+	"imageResizeBytes",
+	"imageJpegQuality",
+	"imageMaxPerMessage",
+	"imageMaxPerRequest",
+	"promptCacheShort",
+	"promptCacheLong",
+	"samplingParams",
+	"samplingParamsByLevel",
+	"headers",
 ];
 
-export type ModelFormValues = Record<ModelField, string>;
-
-export function modelFieldErrors(form: ModelFormValues, endpoint = true): ModelFieldErrors {
+export function modelFieldErrors(form: ModelForm, endpoint = true): ModelFieldErrors {
 	const filled = costFields.filter((field) => form[field].trim() !== "").length;
 	const allOrNone = filled === 0 || filled === costFields.length;
 
@@ -121,11 +168,51 @@ export function modelFieldErrors(form: ModelFormValues, endpoint = true): ModelF
 			(value) => value === "" || (countPattern.test(value) && Number(value) > 0),
 			"Use a whole number of tokens.",
 		);
+	const wholeNumber = z
+		.string()
+		.transform(trim)
+		.refine(
+			(value) => value === "" || (countPattern.test(value) && Number(value) > 0),
+			"Use a whole number above 0.",
+		);
+	const jpegQuality = z
+		.string()
+		.transform(trim)
+		.refine(
+			(value) =>
+				value === "" || (countPattern.test(value) && Number(value) >= 1 && Number(value) <= 100),
+			"Use a whole number from 1 to 100.",
+		);
+	const seconds = z
+		.string()
+		.transform(trim)
+		.refine(
+			(value) => value === "" || (amountPattern.test(value) && Number(value) > 0),
+			"Use a number above 0.",
+		);
 	const cost = z
 		.string()
 		.transform(trim)
 		.refine((value) => value === "" || amountPattern.test(value), "Use a number, e.g. 3 or 0.5.")
 		.refine((value) => value !== "" || allOrNone, "Fill all four costs, or leave them all empty.");
+	const jsonObject = z
+		.string()
+		.refine(
+			(value) => value.trim() === "" || samplingParamsSchema.safeParse(jsonOf(value)).success,
+			"Use a JSON object, or leave it empty.",
+		);
+	const jsonLevels = z
+		.string()
+		.refine(
+			(value) => value.trim() === "" || samplingByLevelSchema.safeParse(jsonOf(value)).success,
+			"Use a JSON object keyed by thinking level, or leave it empty.",
+		);
+	const jsonTiers = z
+		.string()
+		.refine(
+			(value) => value.trim() === "" || costTiersSchema.safeParse(jsonOf(value)).success,
+			"Use a JSON array of tiers, or leave it empty.",
+		);
 
 	const result = z
 		.object({
@@ -140,12 +227,28 @@ export function modelFieldErrors(form: ModelFormValues, endpoint = true): ModelF
 			costOutput: cost,
 			costCacheRead: cost,
 			costCacheWrite: cost,
+			costTiers: jsonTiers,
+			maxRequestBytes: wholeNumber,
+			imageResizeWidth: wholeNumber,
+			imageResizeHeight: wholeNumber,
+			imageResizeBytes: wholeNumber,
+			imageJpegQuality: jpegQuality,
+			imageMaxPerMessage: wholeNumber,
+			imageMaxPerRequest: wholeNumber,
+			promptCacheShort: seconds,
+			promptCacheLong: seconds,
+			samplingParams: jsonObject,
+			samplingParamsByLevel: jsonLevels,
 		})
 		.safeParse(form);
 
 	const errors = fieldErrors(result, modelFields);
 	// An override dialog shows no base URL field, so a stored one must not block it.
 	if (!endpoint) delete errors.baseUrl;
+	// pi's cost needs its four rates before it can carry tiers.
+	if (form.costTiers.trim() !== "" && filled !== costFields.length) {
+		errors.costTiers = "Fill all four rates, or clear the tiers.";
+	}
 	return errors;
 }
 

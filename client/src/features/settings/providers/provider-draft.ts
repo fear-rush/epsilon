@@ -32,6 +32,10 @@ export type ProviderDraft = {
 	headers: PairRow[];
 	/** Provider-wide reasoning format; each model's compat overrides it. */
 	compat: ReasoningCompat;
+	/** pi's `authHeader`: unset keeps pi's default, yes forces a Bearer header. */
+	authHeader: "" | "yes" | "no";
+	/** pi's radius OAuth flow; it needs a base URL. */
+	oauth: boolean;
 	models: ProviderModelInput[];
 	modelOverrides: Record<string, ModelOverride>;
 	/** False keeps pi's catalog for a provider pi ships. */
@@ -50,6 +54,9 @@ export const draftOf = (detail: ProviderDetail | undefined): ProviderDraft => {
 		apiKey: "",
 		headers: (detail?.headerKeys ?? []).map((key) => ({ key, value: "", stored: true })),
 		compat: detail?.stored.compat ?? {},
+		authHeader:
+			detail?.stored.authHeader === undefined ? "" : detail.stored.authHeader ? "yes" : "no",
+		oauth: detail?.stored.oauth === "radius",
 		models: detail?.models ?? [],
 		modelOverrides: detail?.modelOverrides ?? {},
 		customCatalog: detail === undefined ? true : !detail.builtin || detail.models.length > 0,
@@ -70,6 +77,8 @@ export const inputOf = (draft: ProviderDraft, builtin: boolean): ProviderInput =
 		api: api ?? "",
 		apiKey: draft.apiKey.trim() || undefined,
 		compat: compatForApi(draft.compat, api),
+		authHeader: draft.authHeader === "" ? "" : draft.authHeader === "yes",
+		oauth: draft.oauth ? "radius" : "",
 		headers: Object.fromEntries(
 			draft.headers
 				// A blank value keeps a stored header; it never creates one.
@@ -96,6 +105,7 @@ export const testInputOf = (
 		draft.headers.filter((row) => row.key.trim() !== "").map((row) => [row.key.trim(), row.value]),
 	),
 	compat: compatForApi(draft.compat, parseProviderApi(draft.api)),
+	authHeader: draft.authHeader === "" ? undefined : draft.authHeader === "yes",
 	level,
 	model,
 });

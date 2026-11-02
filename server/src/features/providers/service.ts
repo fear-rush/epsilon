@@ -160,6 +160,8 @@ export const readProviderDetail = async (
 			baseUrl: entry?.baseUrl,
 			api: apiOf(entry),
 			compat: entry?.compat,
+			authHeader: entry?.authHeader,
+			oauth: entry?.oauth,
 		},
 		builtin: shipped.has(providerId),
 		custom: entry !== undefined,
@@ -196,6 +198,14 @@ export const writeProvider = (home: AgentHome, input: ProviderInput): Promise<vo
 		if (input.api !== undefined) setOrDelete(next, "api", input.api);
 		if (input.apiKey !== undefined && input.apiKey !== "") next.apiKey = input.apiKey;
 		if (input.compat !== undefined) setOrDelete(next, "compat", input.compat);
+		if (input.authHeader !== undefined) {
+			if (input.authHeader === "") delete next.authHeader;
+			else next.authHeader = input.authHeader;
+		}
+		if (input.oauth !== undefined) {
+			if (input.oauth === "") delete next.oauth;
+			else next.oauth = input.oauth;
+		}
 		if (input.headers !== undefined) {
 			// A blank value for an existing key keeps the stored secret; the browser
 			// only ever sees the key name. Keys left out are removed.

@@ -209,6 +209,11 @@ merges an override field by field: a field written with pi's own value would pin
 a written `reasoning: false` would turn thinking off on a model that supports it. An
 override never carries an API family or base URL either: pi ignores both there, so the
 dialog offers neither and a stored pair stays in the file without affecting a test.
+A model's advanced fields (`inputLimits`, `promptCache`, the sampling parameters,
+`cost.tiers`) seed from pi's effective model, and a blank control is absent, so a save
+never writes a default the operator did not choose. A model's header values stay on
+the server like a provider's: the dialog edits the keys and replaces a value only
+when one is typed.
 
 The settings page reads every key once rather than per control: pi's effective value,
 the layer that supplies it (the project's `.pi/settings.json`, the home's

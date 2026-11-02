@@ -8,6 +8,15 @@ import { useState } from "react";
 import { parseProviderApi, providerApiInfo, providerBaseUrlProblem } from "shared";
 
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Tip } from "@/components/patterns/tip";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,6 +38,12 @@ import type { ProviderFieldErrors } from "./provider-validation";
 function UrlCode({ children }: { children: string }) {
 	return <code className="font-mono text-meta break-all">{children}</code>;
 }
+
+const AUTH_HEADER_ITEMS = [
+	{ value: "auto", label: "pi default" },
+	{ value: "yes", label: "Send as Bearer" },
+	{ value: "no", label: "Never" },
+];
 
 export function ProviderConnection({
 	draft,
@@ -146,6 +161,46 @@ export function ProviderConnection({
 								A credential from auth.json is in use. A typed key goes to models.json.
 							</FieldDescription>
 						)}
+					</Field>
+					<Field>
+						<FieldLabel htmlFor="provider-auth-header">Authorization header</FieldLabel>
+						<Select
+							items={AUTH_HEADER_ITEMS}
+							value={draft.authHeader === "" ? "auto" : draft.authHeader}
+							onValueChange={(next) => {
+								if (next === null) return;
+								update({ authHeader: next === "yes" ? "yes" : next === "no" ? "no" : "" });
+							}}
+						>
+							<SelectTrigger id="provider-auth-header" className="w-full">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectGroup>
+									{AUTH_HEADER_ITEMS.map((item) => (
+										<SelectItem key={item.value} value={item.value}>
+											{item.label}
+										</SelectItem>
+									))}
+								</SelectGroup>
+							</SelectContent>
+						</Select>
+						<FieldDescription>
+							How pi sends the resolved key when the endpoint needs a bearer header.
+						</FieldDescription>
+					</Field>
+					<Field>
+						<div className="flex items-center gap-2">
+							<Checkbox
+								id="provider-oauth"
+								checked={draft.oauth}
+								onCheckedChange={(checked) => update({ oauth: checked === true })}
+							/>
+							<FieldLabel htmlFor="provider-oauth">Radius OAuth</FieldLabel>
+						</div>
+						<FieldDescription>
+							pi runs the radius OAuth flow for this provider; it needs a base URL.
+						</FieldDescription>
 					</Field>
 					{apiInfo !== undefined && (
 						<CollapsibleSection title="Reasoning defaults">

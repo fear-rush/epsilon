@@ -1150,6 +1150,8 @@ export interface components {
 			baseUrl?: string;
 			api?: "openai-completions" | "openai-responses" | "anthropic-messages" | "google-generative-ai";
 			compat?: components["schemas"]["ReasoningCompat"];
+			authHeader?: boolean;
+			oauth?: "radius";
 		};
 		ReasoningCompat: {
 			thinkingFormat?: "openai" | "openrouter" | "deepseek" | "together" | "baseten" | "zai" | "qwen" | "chat-template" | "qwen-chat-template" | "string-thinking" | "ant-ling";
@@ -1169,6 +1171,21 @@ export interface components {
 			thinkingLevelMap?: components["schemas"]["ThinkingLevelMap"];
 			compat?: components["schemas"]["ReasoningCompat"];
 			input?: ("text" | "image")[];
+			inputLimits?: components["schemas"]["ModelInputLimits"];
+			promptCache?: components["schemas"]["ModelPromptCache"];
+			samplingParams?: components["schemas"]["SamplingParams"];
+			samplingParamsByThinkingLevel?: {
+				off?: components["schemas"]["SamplingParams"];
+				minimal?: components["schemas"]["SamplingParams"];
+				low?: components["schemas"]["SamplingParams"];
+				medium?: components["schemas"]["SamplingParams"];
+				high?: components["schemas"]["SamplingParams"];
+				xhigh?: components["schemas"]["SamplingParams"];
+				max?: components["schemas"]["SamplingParams"];
+			};
+			headers?: {
+				[key: string]: string;
+			};
 			contextWindow?: number;
 			maxTokens?: number;
 			cost?: components["schemas"]["ProviderModelCost"];
@@ -1182,7 +1199,35 @@ export interface components {
 			xhigh?: string | null;
 			max?: string | null;
 		};
+		ModelInputLimits: {
+			maxRequestBytes?: number;
+			images?: {
+				resize?: {
+					maxWidth?: number;
+					maxHeight?: number;
+					maxBytes?: number;
+					jpegQuality?: number;
+				};
+				maxPerMessage?: number;
+				maxPerRequest?: number;
+			};
+		};
+		ModelPromptCache: {
+			short?: number;
+			long?: number;
+		};
+		SamplingParams: {
+			[key: string]: unknown;
+		};
 		ProviderModelCost: {
+			input: number;
+			output: number;
+			cacheRead: number;
+			cacheWrite: number;
+			tiers?: components["schemas"]["ProviderModelCostTier"][];
+		};
+		ProviderModelCostTier: {
+			inputTokensAbove: number;
 			input: number;
 			output: number;
 			cacheRead: number;
@@ -1196,6 +1241,21 @@ export interface components {
 			thinkingLevelMap?: components["schemas"]["ThinkingLevelMap"];
 			compat?: components["schemas"]["ReasoningCompat"];
 			input?: ("text" | "image")[];
+			inputLimits?: components["schemas"]["ModelInputLimits"];
+			promptCache?: components["schemas"]["ModelPromptCache"];
+			samplingParams?: components["schemas"]["SamplingParams"];
+			samplingParamsByThinkingLevel?: {
+				off?: components["schemas"]["SamplingParams"];
+				minimal?: components["schemas"]["SamplingParams"];
+				low?: components["schemas"]["SamplingParams"];
+				medium?: components["schemas"]["SamplingParams"];
+				high?: components["schemas"]["SamplingParams"];
+				xhigh?: components["schemas"]["SamplingParams"];
+				max?: components["schemas"]["SamplingParams"];
+			};
+			headers?: {
+				[key: string]: string;
+			};
 			contextWindow?: number;
 			maxTokens?: number;
 			cost?: components["schemas"]["ProviderModelCost"];
@@ -1225,6 +1285,7 @@ export interface components {
 				[key: string]: string;
 			};
 			compat?: components["schemas"]["ReasoningCompat"];
+			authHeader?: boolean;
 			level?: "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 			model?: components["schemas"]["ProviderModelInput"];
 		};
@@ -1282,6 +1343,8 @@ export interface components {
 				[key: string]: string;
 			};
 			compat?: components["schemas"]["ReasoningCompat"];
+			authHeader?: "" | boolean;
+			oauth?: "" | "radius";
 			models?: components["schemas"]["ProviderModelInput"][];
 			modelOverrides?: {
 				[key: string]: components["schemas"]["ModelOverride"];

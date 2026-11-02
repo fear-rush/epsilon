@@ -60,3 +60,65 @@ test("a legacy override's api never reaches the test payload", () => {
 	expect(payload.baseUrl).toBe(shipped.baseUrl);
 	expect(form.maxTokens).toBe("64000");
 });
+
+/** pi's `gpt-5` with every documented model field filled in. */
+const full: ProviderModelInput = {
+	...shipped,
+	inputLimits: {
+		maxRequestBytes: 1000,
+		images: {
+			resize: { maxWidth: 800, maxHeight: 600, maxBytes: 100_000, jpegQuality: 80 },
+			maxPerMessage: 4,
+			maxPerRequest: 8,
+		},
+	},
+	promptCache: { short: 300, long: 3600 },
+	samplingParams: { temperature: 0.2, top_p: 0.9 },
+	samplingParamsByThinkingLevel: { high: { reasoning_effort: "high" } },
+	// The server sends a stored header with a blank value; a typed draft value has
+	// to survive the same way.
+	headers: { "x-gateway": "one" },
+	cost: {
+		input: 1.25,
+		output: 10,
+		cacheRead: 0.125,
+		cacheWrite: 0,
+		tiers: [
+			{
+				inputTokensAbove: 200_000,
+				input: 2,
+				output: 20,
+				cacheRead: 0.2,
+				cacheWrite: 0,
+			},
+		],
+	},
+};
+
+test("every advanced field round-trips through the form", () => {
+	const saved = valueOf(formOf(full), undefined);
+	expect(saved.inputLimits).toEqual(full.inputLimits);
+	expect(saved.promptCache).toEqual(full.promptCache);
+	expect(saved.samplingParams).toEqual(full.samplingParams);
+	expect(saved.samplingParamsByThinkingLevel).toEqual(full.samplingParamsByThinkingLevel);
+	expect(saved.cost).toEqual(full.cost);
+	expect(saved.headers).toEqual(full.headers);
+});
+
+test("an override writes an advanced field only when it was touched", () => {
+	const form = formOf(shipped);
+	const saved = overrideOf(
+		valueOf({ ...form, promptCacheLong: "600" }, shipped.api),
+		touchedBy(new Set(), { promptCacheLong: "600" }),
+	);
+	expect(saved).toEqual({ promptCache: { long: 600 } });
+});
+
+test("removing every header row clears the override's headers", () => {
+	const form = formOf(shipped, { headers: { "x-old": "" } });
+	const saved = overrideOf(
+		valueOf({ ...form, headerRows: [] }, shipped.api),
+		touchedBy(new Set(), { headerRows: [] }),
+	);
+	expect(saved.headers).toEqual({});
+});

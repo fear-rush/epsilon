@@ -40,64 +40,95 @@ export function PairRows({
 	keyPlaceholder?: string;
 	onChange: (rows: PairRow[]) => void;
 }) {
+	return (
+		<Section title={title}>
+			<div className="p-4">
+				<PairRowList
+					rows={rows}
+					error={error}
+					addLabel={addLabel}
+					keyLabel={keyLabel}
+					valueLabel={valueLabel}
+					keyPlaceholder={keyPlaceholder}
+					onChange={onChange}
+				/>
+			</div>
+		</Section>
+	);
+}
+
+/** The rows without the card, for a form that already draws its own surface. */
+export function PairRowList({
+	rows,
+	error,
+	addLabel,
+	keyLabel,
+	valueLabel,
+	keyPlaceholder,
+	onChange,
+}: {
+	rows: PairRow[];
+	error?: string;
+	addLabel: string;
+	keyLabel: string;
+	valueLabel: string;
+	keyPlaceholder?: string;
+	onChange: (rows: PairRow[]) => void;
+}) {
 	const { closing, remove } = useAnimatedRows(rows, onChange);
 	const update = (index: number, patch: Partial<PairRow>) =>
 		onChange(rows.map((row, at) => (at === index ? { ...row, ...patch } : row)));
 
 	return (
-		<Section title={title}>
-			<div className="p-4">
-				<div className="grid gap-2">
-					{rows.map((row, index) => (
-						<AnimatedRow key={index} closing={closing === index}>
-							<div className="flex items-center gap-2">
-								<Input
-									value={row.key}
-									disabled={row.stored}
-									placeholder={keyPlaceholder ?? keyLabel}
-									aria-label={keyLabel}
-									onChange={(event) => update(index, { key: event.target.value })}
-								/>
-								<Input
-									value={row.value}
-									placeholder={row.stored ? "Stored value" : "Value"}
-									aria-label={valueLabel}
-									onChange={(event) => update(index, { value: event.target.value })}
-								/>
-								<Tooltip>
-									<TooltipTrigger
-										render={
-											<Button
-												type="button"
-												variant="destructive"
-												size="icon-sm"
-												aria-label={`Remove ${row.key || "row"}`}
-												disabled={closing !== undefined}
-												onClick={() => remove(index)}
-											/>
-										}
-									>
-										<Trash2Icon />
-									</TooltipTrigger>
-									<TooltipContent>Remove</TooltipContent>
-								</Tooltip>
-							</div>
-						</AnimatedRow>
-					))}
-					<div>
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							onClick={() => onChange([...rows, { key: "", value: "", stored: false }])}
-						>
-							<PlusIcon />
-							{addLabel}
-						</Button>
+		<div className="grid gap-2">
+			{rows.map((row, index) => (
+				<AnimatedRow key={index} closing={closing === index}>
+					<div className="flex items-center gap-2">
+						<Input
+							value={row.key}
+							disabled={row.stored}
+							placeholder={keyPlaceholder ?? keyLabel}
+							aria-label={keyLabel}
+							onChange={(event) => update(index, { key: event.target.value })}
+						/>
+						<Input
+							value={row.value}
+							placeholder={row.stored ? "Stored value" : "Value"}
+							aria-label={valueLabel}
+							onChange={(event) => update(index, { value: event.target.value })}
+						/>
+						<Tooltip>
+							<TooltipTrigger
+								render={
+									<Button
+										type="button"
+										variant="destructive"
+										size="icon-sm"
+										aria-label={`Remove ${row.key || "row"}`}
+										disabled={closing !== undefined}
+										onClick={() => remove(index)}
+									/>
+								}
+							>
+								<Trash2Icon />
+							</TooltipTrigger>
+							<TooltipContent>Remove</TooltipContent>
+						</Tooltip>
 					</div>
-					{error !== undefined && <FieldError>{error}</FieldError>}
-				</div>
+				</AnimatedRow>
+			))}
+			<div>
+				<Button
+					type="button"
+					variant="outline"
+					size="sm"
+					onClick={() => onChange([...rows, { key: "", value: "", stored: false }])}
+				>
+					<PlusIcon />
+					{addLabel}
+				</Button>
 			</div>
-		</Section>
+			{error !== undefined && <FieldError>{error}</FieldError>}
+		</div>
 	);
 }

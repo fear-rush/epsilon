@@ -1446,6 +1446,15 @@
 					},
 					"compat": {
 						"$ref": "#/components/schemas/ReasoningCompat"
+					},
+					"authHeader": {
+						"type": "boolean"
+					},
+					"oauth": {
+						"type": "string",
+						"enum": [
+							"radius"
+						]
 					}
 				}
 			},
@@ -1528,6 +1537,47 @@
 								"text",
 								"image"
 							]
+						}
+					},
+					"inputLimits": {
+						"$ref": "#/components/schemas/ModelInputLimits"
+					},
+					"promptCache": {
+						"$ref": "#/components/schemas/ModelPromptCache"
+					},
+					"samplingParams": {
+						"$ref": "#/components/schemas/SamplingParams"
+					},
+					"samplingParamsByThinkingLevel": {
+						"type": "object",
+						"properties": {
+							"off": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"minimal": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"low": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"medium": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"high": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"xhigh": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"max": {
+								"$ref": "#/components/schemas/SamplingParams"
+							}
+						}
+					},
+					"headers": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
 						}
 					},
 					"contextWindow": {
@@ -1628,6 +1678,67 @@
 					}
 				}
 			},
+			"ModelInputLimits": {
+				"type": "object",
+				"properties": {
+					"maxRequestBytes": {
+						"type": "integer",
+						"exclusiveMinimum": 0
+					},
+					"images": {
+						"type": "object",
+						"properties": {
+							"resize": {
+								"type": "object",
+								"properties": {
+									"maxWidth": {
+										"type": "integer",
+										"exclusiveMinimum": 0
+									},
+									"maxHeight": {
+										"type": "integer",
+										"exclusiveMinimum": 0
+									},
+									"maxBytes": {
+										"type": "integer",
+										"exclusiveMinimum": 0
+									},
+									"jpegQuality": {
+										"type": "integer",
+										"minimum": 1,
+										"maximum": 100
+									}
+								}
+							},
+							"maxPerMessage": {
+								"type": "integer",
+								"exclusiveMinimum": 0
+							},
+							"maxPerRequest": {
+								"type": "integer",
+								"exclusiveMinimum": 0
+							}
+						}
+					}
+				}
+			},
+			"ModelPromptCache": {
+				"type": "object",
+				"properties": {
+					"short": {
+						"type": "number",
+						"exclusiveMinimum": 0
+					},
+					"long": {
+						"type": "number",
+						"exclusiveMinimum": 0
+					}
+				}
+			},
+			"SamplingParams": {
+				"type": "object",
+				"additionalProperties": {}
+			},
 			"ProviderModelCost": {
 				"type": "object",
 				"properties": {
@@ -1642,9 +1753,42 @@
 					},
 					"cacheWrite": {
 						"type": "number"
+					},
+					"tiers": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ProviderModelCostTier"
+						}
 					}
 				},
 				"required": [
+					"input",
+					"output",
+					"cacheRead",
+					"cacheWrite"
+				]
+			},
+			"ProviderModelCostTier": {
+				"type": "object",
+				"properties": {
+					"inputTokensAbove": {
+						"type": "number"
+					},
+					"input": {
+						"type": "number"
+					},
+					"output": {
+						"type": "number"
+					},
+					"cacheRead": {
+						"type": "number"
+					},
+					"cacheWrite": {
+						"type": "number"
+					}
+				},
+				"required": [
+					"inputTokensAbove",
 					"input",
 					"output",
 					"cacheRead",
@@ -1687,6 +1831,47 @@
 								"text",
 								"image"
 							]
+						}
+					},
+					"inputLimits": {
+						"$ref": "#/components/schemas/ModelInputLimits"
+					},
+					"promptCache": {
+						"$ref": "#/components/schemas/ModelPromptCache"
+					},
+					"samplingParams": {
+						"$ref": "#/components/schemas/SamplingParams"
+					},
+					"samplingParamsByThinkingLevel": {
+						"type": "object",
+						"properties": {
+							"off": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"minimal": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"low": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"medium": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"high": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"xhigh": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"max": {
+								"$ref": "#/components/schemas/SamplingParams"
+							}
+						}
+					},
+					"headers": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
 						}
 					},
 					"contextWindow": {
@@ -1816,6 +2001,9 @@
 					},
 					"compat": {
 						"$ref": "#/components/schemas/ReasoningCompat"
+					},
+					"authHeader": {
+						"type": "boolean"
 					},
 					"level": {
 						"type": "string",
@@ -2075,6 +2263,35 @@
 					},
 					"compat": {
 						"$ref": "#/components/schemas/ReasoningCompat"
+					},
+					"authHeader": {
+						"anyOf": [
+							{
+								"type": "string",
+								"enum": [
+									""
+								]
+							},
+							{
+								"type": "boolean"
+							}
+						]
+					},
+					"oauth": {
+						"anyOf": [
+							{
+								"type": "string",
+								"enum": [
+									""
+								]
+							},
+							{
+								"type": "string",
+								"enum": [
+									"radius"
+								]
+							}
+						]
 					},
 					"models": {
 						"type": "array",

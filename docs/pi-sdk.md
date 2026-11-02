@@ -327,17 +327,24 @@ exports neither the store nor its cross-process lock.
 
 `models.json` is parsed with `ModelConfig.load()`, which is read-only. Its provider
 fields are documented in pi's `docs/models-configuration.md`: `name`, `baseUrl`,
-`apiKey`, `api`, `headers`, `models`, `modelOverrides`, `compat` and the per-model
-extras (`thinkingLevelMap`, `inputLimits`, `promptCache`, `samplingParams`). The
-panel writes `thinkingLevelMap` and the reasoning subset of `compat` from the model
-dialog, provider-wide `compat` from the provider's reasoning defaults, and keeps
-every unknown key in both objects. A model
+`apiKey`, `api`, `headers`, `authHeader`, `oauth`, `models`, `modelOverrides`,
+`compat` and the per-model extras (`thinkingLevelMap`, `inputLimits`, `promptCache`,
+`samplingParams`, `samplingParamsByThinkingLevel`, `headers`). The panel writes
+`thinkingLevelMap` and the reasoning subset of `compat` from the model dialog,
+provider-wide `compat` from the provider's reasoning defaults, and keeps every
+unknown key in both objects. A model
 needs only `id`; `input` defaults to `["text"]`, `contextWindow` to 128000 and
 `maxTokens` to 16384. `cost` is optional, and when present its four fields are
-required. A `modelOverrides` object merges field by field for object fields such as
-`cost`; every other field replaces the model's value. `ModelRuntime.getModels()`
-returns the composed model, with the stored override already applied, so the panel
-seeds its dialog from the runtime's answer rather than from the file.
+required; `cost.tiers` is optional. A `modelOverrides` object merges field by field
+for object fields such as `cost`; every other field replaces the model's value.
+`ModelRuntime.getModels()` returns the composed model, with the stored override
+already applied, so the panel seeds its dialog from the runtime's answer rather
+than from the file. The runtime's composed model also carries `inputLimits`,
+`promptCache`, `samplingParams` and `samplingParamsByThinkingLevel`, but never the
+per-model header values: `rawModelHeaders()` applies those from the file. The
+extension-facing `ProviderModelConfig` that `registerProvider()` takes has no
+`samplingParamsByThinkingLevel`, so a provider registered at runtime cannot set
+that field while `models.json` can.
 
 ## Skills
 
