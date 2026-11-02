@@ -233,13 +233,15 @@ key order. Either way the file is flushed and the live engines reload, and a key
 panel does not model is refused. A project's value wins over the home's, so the panel
 shows it read-only instead of letting a write appear to do nothing.
 
-Signing in with an account is the dashboard's too, because `ModelRuntime.login()` is a
-host API: the panel starts the flow, relays the questions and links pi reports, and
-cancels it. It never writes `auth.json` itself; a credential changes only through
-`login()` and `logout()`. `auth.json` holds one credential per provider and pi uses it
-ahead of a key in `models.json` and ahead of the environment, so the panel names the
-credential in use and offers sign-out, instead of letting a typed key look active
-while an account shadows it. A provider pi ships needs no endpoint from the panel
+Signing in, with an account or with the API-key method a provider declares, is the
+dashboard's too, because `ModelRuntime.login()` is a host API: the panel starts the
+flow, relays the questions and links pi reports, and cancels it. A provider-scoped
+`env` value such as Cloudflare's account id arrives as another prompt, so the same
+relay renders it. It never writes `auth.json` itself; a credential changes only
+through `login()` and `logout()`. `auth.json` holds one credential per provider and
+pi uses it ahead of a key in `models.json` and ahead of the environment, so the panel
+names the credential in use and offers sign-out, instead of letting a typed key look
+active while an account shadows it. A provider pi ships needs no endpoint from the panel
 for that: pi supplies the endpoint, the API family and the catalog, and the credential
 supplies the auth, so those fields are an override there rather than part of adding
 it. A provider the operator defines has none of them and needs all of them.

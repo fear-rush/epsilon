@@ -67,11 +67,53 @@ describe("provider sign-in", () => {
 		});
 	});
 
+	test("advertises the only method a provider offers", async () => {
+		const root = await home();
+		const detail = await readProviderDetail(
+			root,
+			await modelRuntime(root),
+			"cloudflare-workers-ai",
+		);
+		// pi offers no account sign-in here, so the panel's only way in is the key.
+		expect(detail?.auth).toEqual({
+			apiKey: { name: "Cloudflare API key", interactive: true },
+		});
+	});
+
+	test("an API-key method that collects provider env stores both values", async () => {
+		const root = await home();
+		await startProviderLogin(root, "cloudflare-workers-ai", "api_key", () => {});
+
+		const key = await poll(
+			() => readProviderLogin(root, "cloudflare-workers-ai"),
+			(snapshot) => snapshot.question?.kind === "secret",
+		);
+		if (key.question === undefined) throw new Error("pi asked nothing");
+		answerProviderLogin(root, "cloudflare-workers-ai", key.question.id, "cf-test-not-a-key");
+
+		// The account id is a provider-scoped env value, asked as its own question.
+		const account = await poll(
+			() => readProviderLogin(root, "cloudflare-workers-ai"),
+			(snapshot) => snapshot.question?.kind === "text",
+		);
+		if (account.question === undefined) throw new Error("pi asked no account id");
+		answerProviderLogin(root, "cloudflare-workers-ai", account.question.id, "account-id");
+
+		const done = await poll(() => readProviderLogin(root, "cloudflare-workers-ai"), settled);
+		expect(done.status).toBe("succeeded");
+		expect((await stored(root))["cloudflare-workers-ai"]).toEqual({
+			type: "api_key",
+			key: "cf-test-not-a-key",
+			env: { CLOUDFLARE_ACCOUNT_ID: "account-id" },
+		});
+	});
+
 	test("reports the account pi declares and the credential in use", async () => {
 		const root = await home();
 		const runtime = await modelRuntime(root);
 		expect((await readProviderDetail(root, runtime, "anthropic"))?.auth).toEqual({
 			oauth: { name: "Anthropic (Claude Pro/Max)", subscription: true },
+			apiKey: { name: "Anthropic API key", interactive: true },
 		});
 
 		await startProviderLogin(root, "anthropic", "api_key", () => {});

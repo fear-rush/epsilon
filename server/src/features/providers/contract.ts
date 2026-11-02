@@ -217,9 +217,10 @@ export const providerViewSchema = z
 export type ProviderView = z.infer<typeof providerViewSchema>;
 
 /**
- * How pi can sign in to one provider: the account it offers and the credential it
- * already stores. Both a stored credential and a models.json key may exist, and pi
- * uses the stored one first, so the panel names the one in use.
+ * How pi can sign in to one provider: the account it offers, the API-key method it
+ * declares, and the credential it already stores. Both a stored credential and a
+ * models.json key may exist, and pi uses the stored one first, so the panel names
+ * the one in use.
  */
 const providerOauthSchema = z
 	.object({
@@ -231,12 +232,23 @@ const providerOauthSchema = z
 	})
 	.openapi("ProviderOauth");
 
+const providerApiKeyAuthSchema = z
+	.object({
+		/** pi's name for the method, e.g. "Anthropic API key". */
+		name: z.string(),
+		/** True when pi prompts for the key and any provider-scoped env values. */
+		interactive: z.boolean(),
+	})
+	.openapi("ProviderApiKeyAuth");
+
 const providerAuthSchema = z
 	.object({
 		/** The kind of credential auth.json holds for this provider. */
 		credential: z.enum(["api_key", "oauth"]).optional(),
 		/** The account sign-in pi declares, when it declares one. */
 		oauth: providerOauthSchema.optional(),
+		/** The API-key method pi declares, when it declares one. */
+		apiKey: providerApiKeyAuthSchema.optional(),
 	})
 	.openapi("ProviderAuth");
 

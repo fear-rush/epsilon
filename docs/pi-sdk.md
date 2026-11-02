@@ -306,6 +306,14 @@ sign-ins for one provider cannot run at the same time. `LoginOptions.getDeviceId
 read by the providers that name an agent (ChatGPT's); pi's CLI passes
 `SettingsManager.getOrCreateDeviceId()`.
 
+`ProviderAuth` declares `apiKey?: ApiKeyAuth` and `oauth?: OAuthAuth`. An API-key
+method with `login` asks for the key and for any provider-scoped `env`
+(`ApiKeyCredential.env`, such as Cloudflare's account id) through the same prompt
+callback, so a host that already relays questions needs nothing special for it;
+`apiKey.name` is the label a panel shows. A method without `login` is ambient-only,
+so a host has nothing to start and only the environment or a stored key can configure
+it.
+
 A custom `models.json` endpoint gets pi's fabricated API-key login, which asks for one
 bare key and nothing else, so the dashboard writes that key to `models.json`'s
 documented `apiKey` field instead: the field accepts a literal, `$NAME`, or `!command`

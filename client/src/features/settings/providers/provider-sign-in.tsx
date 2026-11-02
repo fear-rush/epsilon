@@ -50,10 +50,12 @@ import {
 } from "@/api/endpoints";
 import { useProviderLogin, useSettingsRefresh } from "@/features/settings/queries";
 import { Section } from "@/components/patterns/section/section";
-import type { ProviderDetail, ProviderLoginQuestion, ProviderLoginSnapshot } from "@/api/types";
-
-/** The account a run belongs to, from the provider detail. */
-type Account = NonNullable<ProviderDetail["auth"]["oauth"]>;
+import type {
+	ProviderDetail,
+	ProviderLoginQuestion,
+	ProviderLoginSnapshot,
+	ProviderLoginType,
+} from "@/api/types";
 
 /** What pi will use for this provider, in pi's own precedence order. */
 const describeCredential = (detail: ProviderDetail) => {
@@ -89,7 +91,7 @@ const describeCredential = (detail: ProviderDetail) => {
 				? { title: "A credential is in use", note: "pi did not say which one." }
 				: {
 						title: "No credential yet",
-						note: "Sign in with an account, or set your own endpoint and key below.",
+						note: "Sign in, or set your own endpoint and key below.",
 					};
 	}
 };
@@ -183,14 +185,14 @@ const stepLineOf = (flow: ProviderLoginSnapshot): string => {
  * the flow and owns the way out, so cancelling is never a link lost under the steps.
  */
 function SignInFlow({
-	account,
+	title,
 	flow,
 	answering,
 	cancelling,
 	onAnswer,
 	onCancel,
 }: {
-	account: Account;
+	title: string;
 	flow: ProviderLoginSnapshot;
 	answering: boolean;
 	cancelling: boolean;
@@ -206,7 +208,7 @@ function SignInFlow({
 						<Spinner />
 					</ItemMedia>
 					<ItemContent>
-						<ItemTitle>{account.label ?? `Sign in with ${account.name}`}</ItemTitle>
+						<ItemTitle>{title}</ItemTitle>
 						<ItemDescription>{stepLineOf(flow)}</ItemDescription>
 					</ItemContent>
 					<ItemActions>
@@ -288,6 +290,8 @@ function SignInFlow({
 function SignInBlock({ detail }: { detail: ProviderDetail }) {
 	const providerId = detail.id;
 	const account = detail.auth.oauth;
+	const apiKey = detail.auth.apiKey;
+	const canUseApiKey = apiKey?.interactive === true;
 	const queryClient = useQueryClient();
 	const refresh = useSettingsRefresh();
 	const login = useProviderLogin(providerId);
@@ -314,7 +318,7 @@ function SignInBlock({ detail }: { detail: ProviderDetail }) {
 	};
 
 	const signIn = useMutation({
-		mutationFn: () => startProviderLogin(providerId, "oauth"),
+		mutationFn: (type: ProviderLoginType) => startProviderLogin(providerId, type),
 		// A new flow cannot have a cancel left over from the last one.
 		onMutate: () => setConfirming(false),
 		onSuccess: keep,
@@ -363,12 +367,16 @@ function SignInBlock({ detail }: { detail: ProviderDetail }) {
 
 	return (
 		<>
-			<Section title="Account">
+			<Section title="Sign-in">
 				<div className="pad-row">
 					<div className="flex flex-col gap-3">
-						{running && account !== undefined ? (
+						{running ? (
 							<SignInFlow
-								account={account}
+								title={
+									flow.type === "api_key"
+										? `Signing in with ${apiKey?.name ?? "an API key"}`
+										: (account?.label ?? `Sign in with ${account?.name ?? "the account"}`)
+								}
 								flow={flow}
 								answering={answer.isPending}
 								cancelling={cancel.isPending}
@@ -393,13 +401,23 @@ function SignInBlock({ detail }: { detail: ProviderDetail }) {
 
 								<div className="flex flex-wrap items-center gap-2">
 									{account !== undefined && (
-										<Button disabled={signIn.isPending} onClick={() => signIn.mutate()}>
+										<Button disabled={signIn.isPending} onClick={() => signIn.mutate("oauth")}>
 											{signIn.isPending ? (
 												<Spinner data-icon="inline-start" />
 											) : (
 												<LogInIcon data-icon="inline-start" />
 											)}
 											{account.label ?? `Sign in with ${account.name}`}
+										</Button>
+									)}
+									{canUseApiKey && (
+										<Button disabled={signIn.isPending} onClick={() => signIn.mutate("api_key")}>
+											{signIn.isPending ? (
+												<Spinner data-icon="inline-start" />
+											) : (
+												<KeyRoundIcon data-icon="inline-start" />
+											)}
+											Sign in with {apiKey.name}
 										</Button>
 									)}
 									{detail.auth.credential !== undefined && (
@@ -452,10 +470,14 @@ function SignInBlock({ detail }: { detail: ProviderDetail }) {
 }
 
 /**
- * The account block exists only where pi declares an account sign-in or has already
- * stored a credential. A provider with neither is configured by the key field alone.
+ * The block exists where pi declares a sign-in the panel can start, or where a
+ * credential is stored that needs a sign-out. A provider with none of those is
+ * configured by the key field alone.
  */
 export function ProviderSignIn({ detail }: { detail: ProviderDetail }) {
-	if (detail.auth.oauth === undefined && detail.auth.credential === undefined) return null;
+	const { oauth, apiKey, credential } = detail.auth;
+	if (oauth === undefined && apiKey?.interactive !== true && credential === undefined) {
+		return null;
+	}
 	return <SignInBlock detail={detail} />;
 }

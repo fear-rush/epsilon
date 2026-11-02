@@ -735,6 +735,9 @@
 					},
 					"oauth": {
 						"$ref": "#/components/schemas/ProviderOauth"
+					},
+					"apiKey": {
+						"$ref": "#/components/schemas/ProviderApiKeyAuth"
 					}
 				}
 			},
@@ -754,6 +757,21 @@
 				"required": [
 					"name",
 					"subscription"
+				]
+			},
+			"ProviderApiKeyAuth": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"interactive": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"name",
+					"interactive"
 				]
 			},
 			"SnapshotModel": {

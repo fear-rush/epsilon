@@ -1002,11 +1002,16 @@ export interface components {
 		ProviderAuth: {
 			credential?: "api_key" | "oauth";
 			oauth?: components["schemas"]["ProviderOauth"];
+			apiKey?: components["schemas"]["ProviderApiKeyAuth"];
 		};
 		ProviderOauth: {
 			name: string;
 			label?: string;
 			subscription: boolean;
+		};
+		ProviderApiKeyAuth: {
+			name: string;
+			interactive: boolean;
 		};
 		SnapshotModel: {
 			provider: string;

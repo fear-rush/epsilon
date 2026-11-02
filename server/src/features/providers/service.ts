@@ -62,6 +62,13 @@ const oauthOf = (provider: RuntimeProvider): ProviderDetail["auth"]["oauth"] => 
 	};
 };
 
+/** pi's API-key method. Ambient-only providers omit `login`, so the panel cannot start one. */
+const apiKeyOf = (provider: RuntimeProvider): ProviderDetail["auth"]["apiKey"] => {
+	const apiKey = provider.auth.apiKey;
+	if (apiKey === undefined) return undefined;
+	return { name: apiKey.name, interactive: apiKey.login !== undefined };
+};
+
 export const listProviders = async (
 	home: AgentHome,
 	runtime: ModelRuntime,
@@ -126,6 +133,7 @@ export const listBuiltins = async (
 			auth: {
 				credential: credentials.get(provider.id),
 				oauth: oauthOf(provider),
+				apiKey: apiKeyOf(provider),
 			},
 		}))
 		.sort((left, right) => left.name.localeCompare(right.name));
@@ -172,6 +180,7 @@ export const readProviderDetail = async (
 		auth: {
 			credential,
 			oauth: provider === undefined ? undefined : oauthOf(provider),
+			apiKey: provider === undefined ? undefined : apiKeyOf(provider),
 		},
 		models: (entry?.models ?? []).map(modelInputOf),
 		modelOverrides: Object.fromEntries(
