@@ -39,10 +39,18 @@ const reduceDisplay = (
 	const frame = request.request;
 	switch (frame.method) {
 		case "setStatus": {
-			const statuses = state.statuses.filter((status) => status.key !== frame.statusKey);
-			if (frame.statusText === undefined) return { ...state, statuses };
+			const index = state.statuses.findIndex((status) => status.key === frame.statusKey);
+			if (frame.statusText === undefined) {
+				return { ...state, statuses: state.statuses.filter((_status, at) => at !== index) };
+			}
 			const next: UiStatus = { key: frame.statusKey, text: frame.statusText };
-			return { ...state, statuses: [...statuses, next] };
+			// A key keeps the place it first took, so a status that updates does not
+			// jump to the end of the rail while the operator watches it.
+			if (index === -1) return { ...state, statuses: [...state.statuses, next] };
+			return {
+				...state,
+				statuses: state.statuses.map((status, at) => (at === index ? next : status)),
+			};
 		}
 		case "setWidget": {
 			const widgets = state.widgets.filter((widget) => widget.key !== frame.widgetKey);

@@ -154,6 +154,10 @@ The composer is the editor: it reports its draft to the engine, debounced, so
 `getEditorText` answers what was typed. `setEditorText` replaces the draft and
 `pasteToEditor` appends to it, applied once by the composer that is on screen.
 
+Every keyed status is drawn in a rail above the composer, in the order the keys first
+appeared, and clearing one removes its row. The permission key is the exception: the
+footer's menu draws it in the browser's words.
+
 Why: terminal components have no data form, and the set of extensions is open-ended, so
 an adapter has no cost ceiling. A theme in a browser has nothing to colour, so the text
 is the whole answer.

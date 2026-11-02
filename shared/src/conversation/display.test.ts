@@ -9,6 +9,7 @@ import { describe, expect, test } from "bun:test";
 import { serverFrameSchema } from "../protocol/frames";
 import { reduce, takeEditorRequest } from "./reduce";
 import { emptyConversation } from "./state";
+import type { ConversationState } from "./state";
 
 const sessionId = "test";
 
@@ -58,5 +59,36 @@ describe("an extension's write into the composer", () => {
 		const taken = takeEditorRequest(write("append", "text"));
 
 		expect(taken.editorRequest).toBeUndefined();
+	});
+});
+
+/** A keyed status write, reducing onto the state a tab already has. */
+const status = (state: ConversationState, statusKey: string, statusText?: string) =>
+	reduce(
+		state,
+		serverFrameSchema.parse({
+			t: "ui",
+			sessionId,
+			request: { method: "setStatus", statusKey, statusText },
+		}),
+	);
+
+describe("an extension status", () => {
+	test("keeps the place a key first took when it updates", () => {
+		let state = status(emptyConversation, "build", "compiling");
+		state = status(state, "test", "running");
+		state = status(state, "build", "done");
+
+		expect(state.statuses).toEqual([
+			{ key: "build", text: "done" },
+			{ key: "test", text: "running" },
+		]);
+	});
+
+	test("is gone once the extension clears it", () => {
+		let state = status(emptyConversation, "build", "compiling");
+		state = status(state, "build");
+
+		expect(state.statuses).toEqual([]);
 	});
 });

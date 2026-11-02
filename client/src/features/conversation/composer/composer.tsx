@@ -3,6 +3,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
+	PERMISSION_STATUS_KEY,
 	PROMPT_IMAGE_BASE64_TOTAL_MAX,
 	PROMPT_IMAGE_BYTES_MAX,
 	PROMPT_IMAGE_MAX,
@@ -427,10 +428,23 @@ function ComposerImpl({
 		}
 	};
 
+	// Every keyed status an extension set, except the permission mode: the footer's
+	// menu already draws that one, in the browser's words rather than the extension's.
+	const rail = statuses.filter((status) => status.key !== PERMISSION_STATUS_KEY);
+
 	return (
 		<div className={inline ? undefined : "border-t p-3"}>
 			<div ref={surfaceRef} className="mx-auto w-full max-w-4xl">
 				{header !== undefined && <div className="min-w-0 pb-2">{header}</div>}
+				{rail.length > 0 && (
+					<div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-1 pb-1 text-meta text-muted-foreground">
+						{rail.map((status) => (
+							<span key={status.key} data-status-key={status.key} className="min-w-0 truncate">
+								{status.text}
+							</span>
+						))}
+					</div>
+				)}
 				<form
 					ref={formRef}
 					onSubmit={(event) => {
