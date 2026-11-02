@@ -1077,9 +1077,19 @@ export interface components {
 				name: string;
 				tools: number;
 				toolNames: string[];
+				registered: boolean;
+				annotations: {
+					[key: string]: components["schemas"]["ToolAnnotations"];
+				};
 			})[];
 			codemode: boolean;
 			toolSearch: boolean;
+		};
+		ToolAnnotations: {
+			readOnlyHint?: boolean;
+			destructiveHint?: boolean;
+			idempotentHint?: boolean;
+			openWorldHint?: boolean;
 		};
 		SkillView: {
 			name: string;

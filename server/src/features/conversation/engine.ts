@@ -17,6 +17,8 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 
 import { discussExtension } from "./extensions/discuss";
+import { mcpObserverExtension } from "./extensions/mcp-observer";
+import type { McpReportSink } from "./extensions/mcp-observer";
 import { permissionExtension } from "./extensions/permission";
 
 /**
@@ -46,7 +48,12 @@ const EPSILON_DEFAULTS: InlineExtension[] = [
  * Epsilon's defaults, so a copy's transient runtime sees the same set
  * (docs/DECISIONS.md, Default extensions).
  */
-export const builtinExtensions = (): InlineExtension[] => [...CLI_BUILTINS, ...EPSILON_DEFAULTS];
+export const builtinExtensions = (onMcpReport?: McpReportSink): InlineExtension[] => [
+	...CLI_BUILTINS,
+	...EPSILON_DEFAULTS,
+	// A copy or a test with no sink to report to needs no observer.
+	...(onMcpReport === undefined ? [] : [mcpObserverExtension(onMcpReport)]),
+];
 
 /**
  * The built-in tools that run commands or change files: what the composer's tool

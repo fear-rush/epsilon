@@ -563,12 +563,27 @@ Turborepo or the runtime.
   `./rpc-entry`; `dist/modes/json-event.js` is private. The host carries its own
   copy of the transform in `server/src/features/conversation/engine.ts`.
 - **pi exposes no MCP connection state.** A connected server's tools appear in
-  `session.getAllTools()` with `namespace.name === "mcp__<server>"`, and
-  `session.getActiveToolNames()` says whether `codemode`/`tool_search` are active.
-  That is all a host can read: failed, needs-sign-in and still-connecting are
-  indistinguishable, so the panel reports tool counts and names (recovered from the registered `mcp__<server>__<tool>`, which pi sanitizes) and says which question it
+  `session.getAllTools()` with `namespace.name === "mcp__<server>"` and, when the
+  server sent hints, `annotations` (`readOnlyHint`, `destructiveHint`,
+  `idempotentHint`, `openWorldHint`). `session.getActiveToolNames()` says whether
+  `codemode`/`tool_search` are active. That is all a host can read: pi keeps its six
+  connection states (`connecting`, `connected`, `disconnected`, `needs-auth`,
+  `failed`, `closed`) inside its own MCP extension, so failed, needs-sign-in and
+  still-connecting are indistinguishable, and the panel says which question it
   cannot answer. Servers an extension registers with `pi.registerMcpServer()` are
-  only visible from inside an extension (`pi.getMcpServers()`), not from the files.
+  only visible from inside an extension: `pi.getMcpServers()` answers
+  `{ name, config, extensionPath }` for them, `mcp_servers_change` carries the same
+  list whenever it changes, and servers defined in `mcp.json` take precedence, so
+  those are not in it. None of it is reachable from the files.
+- **Handling `mcp_servers_change` silences pi's own warning.** pi reports "MCP
+  server X is registered, but no loaded extension connects MCP servers" only when no
+  extension handles that event (`runner.reportUnhandledMcpServers`), so a handler
+  that merely observes is indistinguishable from one that connects. Epsilon's
+  observer accepts this: in every configuration with pi's own MCP extension loaded
+  nothing changes, and where MCP support was replaced the panel still names the
+  server as registered with no tools. An extension that only wants to observe
+  without that cost has to read `pi.getMcpServers()` on `session_start` alone and
+  miss the registrations that happen later.
 - **The embedded engine trusts whatever folder it is given.** `SettingsManager.create`
   starts with `projectTrusted = true`, and nothing in `createAgentSession()` runs a
   trust decision, so `.pi/settings.json` and `.pi/mcp.json` load with an empty

@@ -19,11 +19,14 @@ import type {
 
 import type { AgentHome } from "../../../platform/agent-home";
 import { builtinExtensions, setCodingTools } from "../engine";
+import type { McpReportSink } from "../extensions/mcp-observer";
 
 export type RuntimeFactoryOptions = {
 	home: AgentHome;
 	/** A chat's folder holds no `.pi`, so only a project's folder can be trusted. */
 	chat: boolean;
+	/** Where the MCP observer reports; absent for a copy, which has no panel. */
+	onMcpReport?: McpReportSink;
 };
 
 /**
@@ -54,7 +57,7 @@ export const createRuntimeFactory =
 			settingsManager: SettingsManager.create(cwd, options.home.dir, {
 				projectTrusted: !options.chat,
 			}),
-			resourceLoaderOptions: { extensionFactories: builtinExtensions() },
+			resourceLoaderOptions: { extensionFactories: builtinExtensions(options.onMcpReport) },
 		});
 		const created = await createAgentSessionFromServices({
 			services,

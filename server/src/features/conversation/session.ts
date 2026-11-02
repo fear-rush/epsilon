@@ -10,7 +10,11 @@
  * it moved to; every id the chat held keeps reaching this object through the
  * registry.
  */
-import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
+import type {
+	AgentSession,
+	AgentSessionEvent,
+	ToolAnnotations,
+} from "@earendil-works/pi-coding-agent";
 import type {
 	AutocompleteReply,
 	Command,
@@ -35,6 +39,7 @@ import type { AnswerOutcome, FrameSink } from "./dialogs";
 import { toJsonEvent } from "./engine";
 import { SessionFrames } from "./frames";
 import { suggestionsFor } from "./commands/autocomplete";
+import type { McpObserverReport } from "./extensions/mcp-observer";
 import { bindHost } from "./host/bindings";
 import { SessionHost } from "./host/host";
 import { buildSnapshot, readModelsFrom, shadowedCommandsOf } from "./snapshot";
@@ -83,6 +88,8 @@ export class LiveSession {
 	private returnedQueue: PromptQueue | undefined;
 	/** What an extension's autocomplete providers suggested for the tab that asked. */
 	private returnedAutocomplete: AutocompleteReply | undefined;
+	/** What the MCP observer last saw in this engine: servers extensions registered. */
+	private mcpReport: McpObserverReport | undefined;
 	/** Set once a provider failed, so a keystroke does not repeat the notice. */
 	private reportedSuggestionError = false;
 	/** The models the picker offers, refreshed when the engine's providers change. */
@@ -148,6 +155,11 @@ export class LiveSession {
 			sessionId: this.currentId,
 			file: this.file,
 			chat: this.chat,
+			// Kept on the session, so a tab that attaches later still sees what the
+			// observer reported while it was away.
+			onMcpReport: (report) => {
+				this.mcpReport = report;
+			},
 		});
 		this.host = host;
 		await this.wire(host);
@@ -243,14 +255,19 @@ export class LiveSession {
 		const agent = this.host?.session;
 		if (agent === undefined)
 			return { sessions: 0, servers: [], codemode: false, toolSearch: false };
-		const tools: { namespace: string; name: string }[] = [];
+		const tools: { namespace: string; name: string; annotations?: ToolAnnotations }[] = [];
 		for (const tool of agent.getAllTools()) {
 			const namespace = tool.namespace?.name;
 			if (namespace !== undefined && namespace.startsWith("mcp__")) {
-				tools.push({ namespace, name: tool.name });
+				tools.push({ namespace, name: tool.name, annotations: tool.annotations });
 			}
 		}
-		return mcpLiveOf({ names, tools, active: agent.getActiveToolNames() });
+		return mcpLiveOf({
+			names,
+			tools,
+			active: agent.getActiveToolNames(),
+			registered: this.mcpReport?.registered,
+		});
 	}
 
 	/**

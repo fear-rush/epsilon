@@ -1021,12 +1021,23 @@
 									"items": {
 										"type": "string"
 									}
+								},
+								"registered": {
+									"type": "boolean"
+								},
+								"annotations": {
+									"type": "object",
+									"additionalProperties": {
+										"$ref": "#/components/schemas/ToolAnnotations"
+									}
 								}
 							},
 							"required": [
 								"name",
 								"tools",
-								"toolNames"
+								"toolNames",
+								"registered",
+								"annotations"
 							]
 						}
 					},
@@ -1043,6 +1054,23 @@
 					"codemode",
 					"toolSearch"
 				]
+			},
+			"ToolAnnotations": {
+				"type": "object",
+				"properties": {
+					"readOnlyHint": {
+						"type": "boolean"
+					},
+					"destructiveHint": {
+						"type": "boolean"
+					},
+					"idempotentHint": {
+						"type": "boolean"
+					},
+					"openWorldHint": {
+						"type": "boolean"
+					}
+				}
 			},
 			"SkillView": {
 				"type": "object",

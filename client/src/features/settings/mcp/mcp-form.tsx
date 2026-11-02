@@ -213,7 +213,7 @@ function McpServerForm({
 				<>
 					<McpServerCard draft={draft} update={update} />
 					<McpConnection draft={draft} errors={errors} update={update} />
-					<McpTools draft={draft} toolNames={liveServer?.toolNames} update={update} />
+					<McpTools draft={draft} live={liveServer} update={update} />
 					<McpAdvanced
 						draft={draft}
 						errors={errors}

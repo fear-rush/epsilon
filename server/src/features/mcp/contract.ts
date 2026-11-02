@@ -288,17 +288,41 @@ export type McpReach = z.infer<typeof mcpReachSchema>;
  * server registered once it connected, so this cannot tell failed from
  * needs-sign-in from still-connecting; the panel says which one it means.
  */
+/** The hints an MCP server may send with a tool, pi's own `ToolAnnotations`. */
+const toolAnnotationsSchema = z
+	.object({
+		/** The tool does not modify its environment. */
+		readOnlyHint: z.boolean().optional(),
+		/** It may delete or overwrite data, rather than only add to it. */
+		destructiveHint: z.boolean().optional(),
+		/** Repeating a call with the same arguments has no further effect. */
+		idempotentHint: z.boolean().optional(),
+		/** It reaches an open world of external entities rather than a closed domain. */
+		openWorldHint: z.boolean().optional(),
+	})
+	.openapi("ToolAnnotations");
+
+/** What an MCP server says about a tool, which changes how a caller should treat it. */
+export type McpToolAnnotations = z.infer<typeof toolAnnotationsSchema>;
+
 export const mcpLiveSchema = z
 	.object({
 		/** Live engines that answered. Zero means no session is open in this process. */
 		sessions: z.number().int(),
-		/** Servers with at least one registered tool, how many, and the names pi registered them under. */
+		/**
+		 * Servers a live engine can see: the ones holding at least one tool, and the ones
+		 * an extension registered, which may hold none.
+		 */
 		servers: z.array(
 			z.object({
 				name: z.string(),
 				tools: z.number().int(),
 				/** The server's own tool names, as far as the registered name lets them be recovered. */
 				toolNames: z.array(z.string()),
+				/** An extension registered it, so zero tools is "no tools yet", not "unknown". */
+				registered: z.boolean(),
+				/** The hints the server sent for each tool, by the name listed above. */
+				annotations: z.record(z.string(), toolAnnotationsSchema),
 			}),
 		),
 		/** The reaching tools that are active in at least one live engine. */

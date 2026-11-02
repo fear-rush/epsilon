@@ -7,7 +7,16 @@
  */
 import { mcpNamespaceOf } from "shared";
 
-import type { McpLive } from "./contract";
+import type { McpLive, McpToolAnnotations } from "./contract";
+
+/** One live engine's view of a server: its tools, their hints, and whether an extension registered it. */
+type ServerEntry = {
+	toolNames: string[];
+	annotations: Record<string, McpToolAnnotations>;
+	registered: boolean;
+};
+
+const entryOf = (): ServerEntry => ({ toolNames: [], annotations: {}, registered: false });
 
 /**
  * The name a server offers a tool under, recovered from the name pi registered it
@@ -21,28 +30,45 @@ const toolNameOf = (namespace: string, registered: string): string =>
 
 /**
  * One live engine's answer. `tools` carries one entry per registered MCP tool,
- * with its `mcp__<server>` namespace and the name it was registered under;
- * `active` are the reaching tools the model can call right now.
+ * with its `mcp__<server>` namespace, the name it was registered under and the
+ * hints the server sent; `active` are the reaching tools the model can call right
+ * now. A server an extension registered is listed even with no tools, which is the
+ * one thing its tools cannot tell the panel.
  */
 export function mcpLiveOf(input: {
 	/** The configured names, so a server is reported by the name the panel lists. */
 	names: readonly string[];
 	/** One entry per tool the server registered. */
-	tools: Iterable<{ namespace: string; name: string }>;
+	tools: Iterable<{ namespace: string; name: string; annotations?: McpToolAnnotations }>;
 	active: readonly string[];
+	/** Servers extensions registered, connected or not. */
+	registered?: readonly string[];
 }): McpLive {
 	const configured = new Map(input.names.map((name) => [mcpNamespaceOf(name), name]));
-	const names = new Map<string, string[]>();
+	const byNamespace = new Map((input.registered ?? []).map((name) => [mcpNamespaceOf(name), name]));
+	const servers = new Map<string, ServerEntry>();
+	for (const name of byNamespace.values()) {
+		servers.set(name, { ...entryOf(), registered: true });
+	}
 	for (const tool of input.tools) {
-		const server = configured.get(tool.namespace) ?? tool.namespace.replace(/^mcp__/, "");
-		names.set(server, [...(names.get(server) ?? []), toolNameOf(tool.namespace, tool.name)]);
+		const server =
+			configured.get(tool.namespace) ??
+			byNamespace.get(tool.namespace) ??
+			tool.namespace.replace(/^mcp__/, "");
+		const entry = servers.get(server) ?? entryOf();
+		const name = toolNameOf(tool.namespace, tool.name);
+		entry.toolNames.push(name);
+		if (tool.annotations !== undefined) entry.annotations[name] = tool.annotations;
+		servers.set(server, entry);
 	}
 	return {
 		sessions: 1,
-		servers: [...names].map(([name, toolNames]) => ({
+		servers: [...servers].map(([name, entry]) => ({
 			name,
-			tools: toolNames.length,
-			toolNames: toolNames.toSorted(),
+			tools: entry.toolNames.length,
+			toolNames: entry.toolNames.toSorted(),
+			registered: entry.registered,
+			annotations: entry.annotations,
 		})),
 		codemode: input.active.includes("codemode"),
 		toolSearch: input.active.includes("tool_search"),
@@ -51,20 +77,28 @@ export function mcpLiveOf(input: {
 
 /** The union over the live engines; a server counts as connected if any engine holds its tools. */
 export function aggregateMcpLive(states: readonly McpLive[]): McpLive {
-	const tools = new Map<string, Set<string>>();
+	const servers = new Map<string, ServerEntry>();
 	for (const state of states) {
 		for (const server of state.servers) {
-			const known = tools.get(server.name) ?? new Set<string>();
-			for (const name of server.toolNames) known.add(name);
-			tools.set(server.name, known);
+			const entry = servers.get(server.name) ?? entryOf();
+			entry.toolNames = [...new Set([...entry.toolNames, ...server.toolNames])];
+			entry.annotations = { ...entry.annotations, ...server.annotations };
+			entry.registered = entry.registered || server.registered;
+			servers.set(server.name, entry);
 		}
 	}
 	return {
 		// Summed rather than counted: a session can dispose between the registry's
 		// filter and this call, and it then answers with no session of its own.
 		sessions: states.reduce((total, state) => total + state.sessions, 0),
-		servers: [...tools]
-			.map(([name, known]) => ({ name, tools: known.size, toolNames: [...known].toSorted() }))
+		servers: [...servers]
+			.map(([name, entry]) => ({
+				name,
+				tools: entry.toolNames.length,
+				toolNames: entry.toolNames.toSorted(),
+				registered: entry.registered,
+				annotations: entry.annotations,
+			}))
 			.sort((left, right) => left.name.localeCompare(right.name)),
 		codemode: states.some((state) => state.codemode),
 		toolSearch: states.some((state) => state.toolSearch),

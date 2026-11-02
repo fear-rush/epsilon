@@ -18,6 +18,7 @@ import type {
 import type { AgentHome } from "../../../platform/agent-home";
 import { createRuntimeFactory, openSessionManager } from "./factory";
 import { bindHost } from "./bindings";
+import type { McpReportSink } from "../extensions/mcp-observer";
 import type { UiHost } from "../ui-context";
 
 /** Why pi built the session a host holds now; the same words as `session_start`. */
@@ -43,6 +44,8 @@ export type HostOptions = {
 	sessionId: string;
 	file: string | undefined;
 	chat: boolean;
+	/** Where the MCP observer reports; absent for a copy, which has no panel. */
+	onMcpReport?: McpReportSink;
 };
 
 export class SessionHost {
@@ -67,7 +70,11 @@ export class SessionHost {
 		// The reason travels in `session_start`, which pi builds for the session it is
 		// about to apply; the factory sees it before the rebind hook runs.
 		const reason: ReasonBox = { current: "startup" };
-		const factory = createRuntimeFactory({ home: options.home, chat: options.chat });
+		const factory = createRuntimeFactory({
+			home: options.home,
+			chat: options.chat,
+			onMcpReport: options.onMcpReport,
+		});
 		const tracked: CreateAgentSessionRuntimeFactory = async (input) => {
 			reason.current = input.sessionStartEvent?.reason ?? "startup";
 			return factory(input);

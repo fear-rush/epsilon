@@ -489,8 +489,16 @@ The defaults exist in the dashboard's engine only. They are not written into the
 and are not claimed to exist in a terminal; the dashboard is therefore more guarded than
 a terminal using the same agent home, and the docs say so.
 
+One default observes rather than guards: `mcp-observer` reports the servers extensions
+registered, and its session merges that into the live MCP answer, so a server that
+connected no tool is still named instead of silently missing. pi keeps every connection
+state inside its own MCP extension, so the panel says which question it cannot answer
+rather than guessing between failed, needs-sign-in and still-connecting. The observer
+reads no files, connects nothing and is not a second MCP client.
+
 Why: writing extension files into pi's home makes Epsilon a writer of pi's configuration
-and lets copies drift from the repository.
+and lets copies drift from the repository. A registered server with no tools is a state
+the files cannot show and the panel must not hide.
 
 Not: seeding extension files into the home. Telling operators to copy files. Claiming
 parity with the terminal.
