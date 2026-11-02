@@ -5,10 +5,10 @@
  * Creation is async, so a concurrent attach awaits the same promise instead of
  * opening a second writer on one session file.
  *
- * The folder a session runs in is pi's record in its file. Only a session with
- * no file yet takes its place from the tab, and a project folder must be trusted
- * in pi's store before an engine is built there (docs/DECISIONS.md, Chats and
- * projects).
+ * The folder a session runs in is pi's record in its file, unless that folder is
+ * gone: then the page's chosen place is used for this open, never written back. A
+ * project folder must be trusted in pi's store before an engine is built there
+ * (docs/DECISIONS.md, Chats and projects).
  */
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -16,6 +16,7 @@ import { resolve } from "node:path";
 import type { Place } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
+import { isDirectory } from "../../platform/fs";
 import { locateSession } from "../../platform/pi";
 import type { Skill } from "../../platform/pi";
 import type { McpLive } from "../mcp";
@@ -237,7 +238,7 @@ export class SessionRegistry {
 
 	private async locate(sessionId: string, place: Place | undefined): Promise<Location> {
 		const located = await locateSession(sessionId, this.home);
-		if (located !== undefined) return this.locationOf(located);
+		if (located !== undefined) return this.locationOf(located, place);
 		if (place === undefined) throw new Error("The agent home has no such session.");
 		const cwd = place.kind === "project" ? place.path : this.home.chatsDir;
 		const resolved = placeOf(cwd, this.home.chatsDir);
@@ -251,20 +252,37 @@ export class SessionRegistry {
 	}
 
 	/**
-	 * Where an existing session runs: the folder pi recorded in its file, which a
-	 * project has to be trusted in. A copy reads the file from here too.
+	 * Where an existing session runs. A folder pi recorded still governs, and a
+	 * project has to be trusted. When that folder is gone, the tab's chosen place is
+	 * the override pi's `SessionManager.open()` takes: the file and its header stay
+	 * as they are, and the choice is made again on the next open.
 	 */
-	private async locationOf(located: { file: string; cwd: string }): Promise<Location> {
-		if (located.cwd === "") {
-			throw new Error("This session predates pi recording its folder, so it has nowhere to run.");
-		}
-		const place = placeOf(located.cwd, this.home.chatsDir);
-		if (place.kind === "chat") {
-			await mkdir(this.home.chatsDir, { recursive: true });
+	private async locationOf(
+		located: { file: string; cwd: string },
+		override?: Place,
+	): Promise<Location> {
+		if (await isDirectory(located.cwd)) {
+			const place = placeOf(located.cwd, this.home.chatsDir);
+			if (place.kind === "chat") {
+				await mkdir(this.home.chatsDir, { recursive: true });
+				return { cwd: located.cwd, file: located.file, place };
+			}
+			await trustedProjectFolder(this.home, located.cwd);
 			return { cwd: located.cwd, file: located.file, place };
 		}
-		await trustedProjectFolder(this.home, located.cwd);
-		return { cwd: located.cwd, file: located.file, place };
+		if (override === undefined) {
+			throw new Error(
+				located.cwd === ""
+					? "This session predates pi recording its folder, so choose a folder to continue in."
+					: `This chat's folder no longer exists: ${located.cwd}. Choose a folder to continue in.`,
+			);
+		}
+		if (override.kind === "chat") {
+			await mkdir(this.home.chatsDir, { recursive: true });
+			return { cwd: this.home.chatsDir, file: located.file, place: override };
+		}
+		const folder = await trustedProjectFolder(this.home, override.path);
+		return { cwd: folder, file: located.file, place: { kind: "project", path: folder } };
 	}
 
 	/**

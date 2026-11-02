@@ -795,6 +795,12 @@ Turborepo or the runtime.
   live tools; the next run writes the loadout to the transcript and reopening the
   session restores it. A change before the first message lives only in memory,
   like a `model_change` (below).
+- **`SessionManager.open()` does not require the recorded folder.** It takes a
+  `cwdOverride` as the third argument, and the session header keeps the old cwd, so
+  the choice applies to that open only. The helpers that detect this
+  (`getMissingSessionCwdIssue`, `assertSessionCwdExists`, `MissingSessionCwdError`)
+  are private; a host checks `getCwd()` with its own filesystem call. `findById` is
+  the wrong lookup here: it creates the default directory first.
 - **`SessionManager.findById(cwd)` creates a directory.** It goes through
   `getDefaultSessionDir`, which `mkdir`s `sessions/--<cwd>--` even when `sessionDir`
   names another place. Look an id up through `SessionManager.listAll(sessionDir)` or

@@ -968,6 +968,7 @@ export interface components {
 			modified: string;
 			messageCount: number;
 			firstMessage: string;
+			cwdMissing: boolean;
 			running: boolean;
 			needsInput: boolean;
 			pinned: boolean;

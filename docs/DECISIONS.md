@@ -341,6 +341,13 @@ the parent writes the parent's `true` and removes the folder's record. An engine
 is already open keeps the resources it loaded until it is rebuilt; the page and the
 next engine use the new answer.
 
+A chat whose recorded folder is gone offers the chats folder or another project for
+that open. pi's `SessionManager.open()` takes the chosen folder as a `cwdOverride`, so
+the session file and its header are untouched and the next open asks again. The page
+offers the choice; the server refuses with a sentence when none is given, and it only
+uses a chosen folder when the recorded one is missing, so a tab cannot redirect a
+healthy session.
+
 The list of projects is derived from the folders pi's session files record; nothing
 stores it. A folder opened but never used exists only in the page URL until its first
 message. A chat moves into a project through `SessionManager.forkFrom`, which writes

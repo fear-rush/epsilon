@@ -111,6 +111,9 @@
 					"firstMessage": {
 						"type": "string"
 					},
+					"cwdMissing": {
+						"type": "boolean"
+					},
 					"running": {
 						"type": "boolean"
 					},
@@ -128,6 +131,7 @@
 					"modified",
 					"messageCount",
 					"firstMessage",
+					"cwdMissing",
 					"running",
 					"needsInput",
 					"pinned"

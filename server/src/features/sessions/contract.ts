@@ -17,6 +17,8 @@ const sessionSummarySchema = z
 		modified: z.string(),
 		messageCount: z.number().int().nonnegative(),
 		firstMessage: z.string(),
+		/** The folder pi recorded for this session is gone; opening needs a new one. */
+		cwdMissing: z.boolean(),
 		running: z.boolean(),
 		needsInput: z.boolean(),
 		/** Epsilon's own preference, from `pinned-sessions.json`. */

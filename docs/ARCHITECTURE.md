@@ -100,8 +100,9 @@ Every failure is visible; silence is never acceptable. An unconfigured home repl
 the page with one notice that opens Settings. A frame or file the code cannot read
 produces a notice naming it. Engine start failures, extension errors and refused
 commands arrive as error frames or `command-result { ok: false }`. An unsupported
-capability gets a notice, never a dead control. An engine bug takes every live
-session down with the server; session files survive
+capability gets a notice, never a dead control. A session whose recorded folder is
+gone offers the chats folder or another project, and never moves the file. An engine
+bug takes every live session down with the server; session files survive
 ([DECISIONS.md](DECISIONS.md), Embedded engine).
 
 ## UI rules that are not obvious from the code

@@ -10,6 +10,7 @@ import { rm, rmdir } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import type { AgentHome } from "../../platform/agent-home";
+import { isDirectory } from "../../platform/fs";
 import { forkSession, listAllSessions, locateSession, setSessionName } from "../../platform/pi";
 import type { StoredSession } from "../../platform/pi";
 import type { CopyOutcome } from "../conversation";
@@ -52,10 +53,19 @@ export const groupSessions = async (
 	const byId = new Map(live.map((session) => [session.id, session]));
 	const chats: SessionSummary[] = [];
 	const projects = new Map<string, SessionSummary[]>();
+	// One stat per distinct folder, not per session: a deleted project is the case
+	// this flags, and every chat in it answers the same.
+	const missing = new Map<string, boolean>();
+	await Promise.all(
+		[...new Set(stored.map((session) => session.cwd))].map(async (cwd) => {
+			missing.set(cwd, !(await isDirectory(cwd)));
+		}),
+	);
 	for (const session of stored) {
 		const running = byId.get(session.id);
 		const summary: SessionSummary = {
 			...session,
+			cwdMissing: missing.get(session.cwd) ?? false,
 			pinned: pinned.has(session.id),
 			running: running !== undefined,
 			needsInput: running?.needsInput ?? false,

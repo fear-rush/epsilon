@@ -21,14 +21,33 @@ import { RunStatus } from "@/features/conversation/run-status";
 import { ComposerPlace, SessionHeader } from "@/features/conversation/session-header";
 import { ConversationWelcome } from "@/features/conversation/welcome";
 import { SessionLoader } from "@/features/conversation/session-loader";
-import { TrustGate } from "@/features/projects";
+import { ContinueSession, TrustGate } from "@/features/projects";
+import { useSessionRow } from "@/features/sessions";
 
 const isConfirm = (
 	question: DialogQuestion,
 ): question is Extract<DialogQuestion, { method: "confirm" }> => question.method === "confirm";
 
 /** `project` names the folder of a project session; without it the page is a chat. */
-export function SessionView({ sessionId, project }: { sessionId: string; project?: string }) {
+export function SessionView({
+	sessionId,
+	project,
+	continued,
+}: {
+	sessionId: string;
+	project?: string;
+	/** The operator chose a folder for this open because the recorded one is gone. */
+	continued?: boolean;
+}) {
+	const session = useSessionRow(sessionId);
+	if (session?.cwdMissing === true && continued !== true) {
+		return (
+			<div className="flex min-h-0 flex-1 flex-col">
+				<ChatBar />
+				<ContinueSession session={session} />
+			</div>
+		);
+	}
 	if (project === undefined) {
 		return <Conversation sessionId={sessionId} place={{ kind: "chat" }} />;
 	}
