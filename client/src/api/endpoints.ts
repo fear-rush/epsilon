@@ -39,6 +39,7 @@ import type {
 	SkillImportCommit,
 	SkillImportReport,
 	SkillInput,
+	SkillPathInput,
 	SkillRoot,
 } from "./types";
 import type { McpScope } from "shared";
@@ -571,6 +572,17 @@ export const setSkillFolderLinked = async (
 ): Promise<void> => {
 	const path = linked ? "/api/settings/skills/folders/link" : "/api/settings/skills/folders/unlink";
 	await api.POST(path, { params: scoped(project), body: { folder } });
+};
+
+/** Adds a folder or one `.md` file to the scope's `skills` setting. */
+export const addSkillPath = async (project: Project, path: string): Promise<void> => {
+	const body: SkillPathInput = { path };
+	await api.POST("/api/settings/skills/paths", { params: scoped(project), body });
+};
+
+/** Removes every entry naming that path, a `-path` switch included. */
+export const removeSkillPath = async (project: Project, path: string): Promise<void> => {
+	await api.DELETE("/api/settings/skills/paths", { params: { query: { project, path } } });
 };
 
 /**

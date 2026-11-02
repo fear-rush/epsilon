@@ -12,6 +12,7 @@ import { cn } from "@/lib/cn";
 import type { SkillView } from "@/api/types";
 import { useSettings, useSettingsProject } from "@/features/settings/queries";
 import { ForeignSkills } from "./foreign-skills";
+import { SkillPaths } from "./skill-paths";
 import { ImportSkillsDialog } from "./import/import-dialog";
 import { groupSkills } from "./skill-groups";
 import { skillKey, skillSearch } from "./skill-search";
@@ -129,6 +130,7 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 						))}
 					</ListGroup>
 				))}
+				<SkillPaths paths={settings.data?.skillPaths ?? []} />
 				<ForeignSkills skills={foreign} />
 			</div>
 		</ListPane>

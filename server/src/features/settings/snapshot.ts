@@ -18,7 +18,7 @@ import { isMcpTurnedOff, listMcpServers } from "../mcp";
 import { listPackages } from "../packages";
 import { projectStatus } from "../projects";
 import { listBuiltins, listProviders, modelsDocument } from "../providers";
-import { listForeignSkills, listSkills, untrustedSkills } from "../skills";
+import { listForeignSkills, listSkills, skillSourcePaths, untrustedSkills } from "../skills";
 import type { SettingsSnapshot } from "./contract";
 
 /**
@@ -85,6 +85,7 @@ export const readSettings = async (
 		mcpDisabled,
 		skills: project !== null && !project.trusted ? await untrustedSkills(folder) : skills,
 		skillsLive: live.engines > 0,
+		skillPaths: skillSourcePaths(folder, home, project === null ? "user" : "project"),
 		foreignSkills: listForeignSkills(folder, home, userHome, project === null ? null : folder),
 		packages,
 		ready: offers.models.length > 0,

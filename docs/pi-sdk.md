@@ -400,7 +400,9 @@ and `resource-loader.js` (1.4.0):
   directory, its `SKILL.md` path, or either relative to the scope's base folder. A
   package skill is filtered through that package's entry instead.
 - **Folders of other agents** (`~/.claude/skills`, `~/.codex/skills`) are not
-  scanned. A plain path in the `skills` array adds the folder.
+  scanned. A plain path in the `skills` array adds the folder: any directory, or one
+  `.md` file. A file with no frontmatter `name` takes its parent folder's name, which a
+  flat file makes an invalid skill name, so give a standalone file a `name`.
 - **Skills an extension adds at runtime** come from the `resources_discover` event,
   which returns `skillPaths` (and `promptPaths` and `themePaths`). pi extends the live
   resource loader with them, tagged `source: "extension:<file name>"` and

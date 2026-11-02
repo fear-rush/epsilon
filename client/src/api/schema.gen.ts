@@ -804,6 +804,24 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/settings/skills/paths": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Add a folder or a .md file to the scope's skills setting, so pi reads the skills where they are. An entry already naming that path is replaced */
+		post: operations["addSkillPath"];
+		/** Remove every entry that names a path from the scope's skills setting, a -path switch included */
+		delete: operations["removeSkillPath"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/settings/packages": {
 		parameters: {
 			query?: never;
@@ -1011,6 +1029,7 @@ export interface components {
 			}) | null);
 			skills: components["schemas"]["SkillView"][];
 			skillsLive: boolean;
+			skillPaths: string[];
 			foreignSkills: components["schemas"]["ForeignSkillView"][];
 			packages: components["schemas"]["PackageView"][];
 			ready: boolean;
@@ -1721,6 +1740,9 @@ export interface components {
 		};
 		SkillFolderInput: {
 			folder: string;
+		};
+		SkillPathInput: {
+			path: string;
 		};
 		PackageResources: {
 			extensions: ({
@@ -3915,6 +3937,73 @@ interface operations {
 				content?: never;
 			};
 			/** The folder could not be unlinked */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Add a folder or a .md file to the scope's skills setting, so pi reads the skills where they are. An entry already naming that path is replaced */
+	addSkillPath: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["SkillPathInput"];
+			};
+		};
+		responses: {
+			/** The path is in the skills setting, and live engines reloaded */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The path was refused */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Remove every entry that names a path from the scope's skills setting, a -path switch included */
+	removeSkillPath: {
+		parameters: {
+			query: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+				path: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The path is out of the skills setting, and live engines reloaded */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The path was not in the setting */
 			400: {
 				headers: {
 					[name: string]: unknown;

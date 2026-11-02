@@ -57,5 +57,6 @@ export type SkillImportCandidate = Schemas["SkillImportCandidate"];
 export type SkillImportCommit = Schemas["SkillImportCommit"];
 export type SkillImportReport = Schemas["SkillImportReport"];
 export type SkillInput = Schemas["SkillInput"];
+export type SkillPathInput = Schemas["SkillPathInput"];
 export type SkillRoot = Schemas["SkillRoot"];
 export type SkillView = Schemas["SkillView"];

@@ -489,6 +489,11 @@ none open the list is pi's file answer and the pane says it is from files.
 The composer palette lists the `/skill:` rows only while pi's `enableSkillCommands` is
 on. Typing one still runs it either way, because pi's expansion does not consult the
 setting; the palette follows the switch, not a rule of its own.
+The Skills pane lists the scope's plain `skills` entries under Skill paths, with Add and
+Remove. Add stores the resolved absolute path and first drops any entry naming the same
+target, a `-path` switch included, so the source loads instead of being force-excluded;
+Remove drops every entry naming it, so no switch outlives its source. The other agents'
+folder buttons are presets over the same array.
 Fields from other agents (Claude Code's `context`, `user-invocable` and the rest) are
 shown read-only with a notice that pi ignores them.
 Turning one skill off is a `-<path>` entry in pi's `skills` setting; a skill folder of

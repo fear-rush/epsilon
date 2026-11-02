@@ -16,6 +16,7 @@ import {
 	skillFileSchema,
 	skillFolderInputSchema,
 	skillInputSchema,
+	skillPathInputSchema,
 	skillRootSchema,
 } from "./contract";
 import {
@@ -28,6 +29,7 @@ import {
 	readSkillBundleFile,
 	writeSkillBundleFile,
 } from "./files";
+import { addSkillPath, removeSkillPath } from "./paths";
 import { readRawSkill, writeRawSkill } from "./raw";
 import { linkSkillFolder, unlinkSkillFolder } from "./foreign";
 import { skillRootDir } from "./root";
@@ -344,6 +346,37 @@ const unlinkRoute = createRoute({
 	},
 });
 
+const addPathRoute = createRoute({
+	method: "post",
+	path: "/api/settings/skills/paths",
+	tags: ["settings"],
+	operationId: "addSkillPath",
+	description:
+		"Add a folder or a .md file to the scope's skills setting, so pi reads the skills where they are. An entry already naming that path is replaced",
+	request: {
+		query: settingsScopeQuerySchema,
+		body: { required: true, content: { "application/json": { schema: skillPathInputSchema } } },
+	},
+	responses: {
+		204: { description: "The path is in the skills setting, and live engines reloaded" },
+		400: { description: "The path was refused", content: errorContent },
+	},
+});
+
+const removePathRoute = createRoute({
+	method: "delete",
+	path: "/api/settings/skills/paths",
+	tags: ["settings"],
+	operationId: "removeSkillPath",
+	description:
+		"Remove every entry that names a path from the scope's skills setting, a -path switch included",
+	request: { query: settingsScopeQuerySchema.extend({ path: z.string().min(1) }) },
+	responses: {
+		204: { description: "The path is out of the skills setting, and live engines reloaded" },
+		400: { description: "The path was not in the setting", content: errorContent },
+	},
+});
+
 /** The global skills folders a linked skill folder may point into. */
 const linkRootsOf = (home: AgentHome): string[] =>
 	home.userAgentsSkillsDir === undefined
@@ -547,6 +580,29 @@ export const skillsRoutes = ({ home, userHome, engines }: Deps) => {
 					userHome,
 					scope.project,
 					c.req.valid("json").folder,
+				);
+			}),
+		)
+		.openapi(addPathRoute, (c) =>
+			configWrite(c, engines, async () => {
+				const scope = await scopeOf(c.req.valid("query").project);
+				await addSkillPath(
+					scope.folder,
+					home,
+					scope.project === null ? "user" : "project",
+					c.req.valid("json").path,
+				);
+			}),
+		)
+		.openapi(removePathRoute, (c) =>
+			configWrite(c, engines, async () => {
+				const { project, path } = c.req.valid("query");
+				const scope = await scopeOf(project);
+				await removeSkillPath(
+					scope.folder,
+					home,
+					scope.project === null ? "user" : "project",
+					path,
 				);
 			}),
 		);

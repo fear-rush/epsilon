@@ -527,6 +527,12 @@
 					"skillsLive": {
 						"type": "boolean"
 					},
+					"skillPaths": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
 					"foreignSkills": {
 						"type": "array",
 						"items": {
@@ -562,6 +568,7 @@
 					"project",
 					"skills",
 					"skillsLive",
+					"skillPaths",
 					"foreignSkills",
 					"packages",
 					"ready"
@@ -3669,6 +3676,18 @@
 				},
 				"required": [
 					"folder"
+				]
+			},
+			"SkillPathInput": {
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"minLength": 1
+					}
+				},
+				"required": [
+					"path"
 				]
 			},
 			"PackageResources": {
@@ -6959,6 +6978,97 @@
 					},
 					"400": {
 						"description": "The folder could not be unlinked",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/skills/paths": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "addSkillPath",
+				"description": "Add a folder or a .md file to the scope's skills setting, so pi reads the skills where they are. An entry already naming that path is replaced",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SkillPathInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The path is in the skills setting, and live engines reloaded"
+					},
+					"400": {
+						"description": "The path was refused",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "removeSkillPath",
+				"description": "Remove every entry that names a path from the scope's skills setting, a -path switch included",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						},
+						"required": true,
+						"name": "path",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "The path is out of the skills setting, and live engines reloaded"
+					},
+					"400": {
+						"description": "The path was not in the setting",
 						"content": {
 							"application/json": {
 								"schema": {

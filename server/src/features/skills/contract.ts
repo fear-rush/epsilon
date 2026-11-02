@@ -156,6 +156,8 @@ export const skillFolderInputSchema = z
 	.object({ folder: z.string().min(1) })
 	.openapi("SkillFolderInput");
 
+export const skillPathInputSchema = z.object({ path: z.string().min(1) }).openapi("SkillPathInput");
+
 /** One file inside a skill folder, as the file list shows it. */
 const skillBundleEntrySchema = z
 	.object({
