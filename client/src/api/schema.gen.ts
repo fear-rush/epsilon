@@ -956,6 +956,7 @@ export interface components {
 			home: string;
 			defaultModel: components["schemas"]["DefaultModel"];
 			agent: components["schemas"]["AgentLimits"];
+			settings: components["schemas"]["SettingView"][];
 			modelScope: {
 				matched: number;
 				available: number;
@@ -981,14 +982,24 @@ export interface components {
 			provider: string;
 			modelId: string;
 		}) | null;
-		AgentLimits: {
+		AgentLimits: ({
 			compactionEnabled: boolean;
 			compactionReserveTokens: number;
 			compactionKeepRecentTokens: number;
 			retryEnabled: boolean;
 			retryMaxRetries: number;
 			enabledModels: (string[]) | null;
+		}) | null;
+		SettingView: {
+			key: string;
+			value: string | number | boolean | null | (string[]) | ({
+				[key: string]: unknown;
+			});
+			scope: components["schemas"]["SettingScope"];
+			terminalOnly: boolean;
+			error?: string;
 		};
+		SettingScope: "project" | "global" | "default";
 		ProviderView: {
 			id: string;
 			name: string;

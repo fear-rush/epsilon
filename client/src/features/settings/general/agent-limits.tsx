@@ -18,7 +18,7 @@ import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";
 import { useSettingsRefresh } from "@/features/settings/queries";
 
-type Limits = SettingsSnapshot["agent"];
+type Limits = NonNullable<SettingsSnapshot["agent"]>;
 type Scope = SettingsSnapshot["modelScope"];
 
 type Draft = {

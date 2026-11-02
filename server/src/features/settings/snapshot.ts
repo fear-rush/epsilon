@@ -8,7 +8,7 @@ import type { AgentHome } from "../../platform/agent-home";
 import { modelRuntime } from "../../platform/pi";
 import { readModelsFrom } from "../conversation";
 import type { SessionRegistry } from "../conversation";
-import { readAgentLimits, readDefaultModel } from "../general";
+import { readAgentLimits, readDefaultModel, readEnabledModels, readSettingViews } from "../general";
 import { isMcpTurnedOff, listMcpServers } from "../mcp";
 import { listPackages } from "../packages";
 import { projectStatus } from "../projects";
@@ -51,7 +51,7 @@ export const readSettings = async (
 	const [providers, builtins, offers, mcp, mcpDisabled, skills, packages] = await Promise.all([
 		listProviders(home, runtime),
 		listBuiltins(home, runtime),
-		readModelsFrom(runtime, agent.enabledModels),
+		readModelsFrom(runtime, readEnabledModels(home)),
 		listMcpServers(home, folder),
 		isMcpTurnedOff(folder, home),
 		listSkills(folder, home, project === null ? null : folder),
@@ -67,6 +67,7 @@ export const readSettings = async (
 		// an operator can see what it matches without the list going blank.
 		models: offers.models,
 		agent,
+		settings: readSettingViews(home, project === null ? null : folder),
 		modelScope: offers.scope ?? {
 			matched: offers.models.length,
 			available: offers.models.length,

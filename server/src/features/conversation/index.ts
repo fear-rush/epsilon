@@ -1,3 +1,4 @@
 /** What other features may use from conversation. */
 export { readModelsFrom } from "./snapshot";
-export type { CopyOutcome, SessionRegistry } from "./registry";
+export { SessionRegistry } from "./registry";
+export type { CopyOutcome } from "./registry";

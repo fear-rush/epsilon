@@ -640,6 +640,15 @@ Turborepo or the runtime.
   write `globalSettings.hideThinkingBlock` and save pi's own `settings.json`, so a
   host that changes it from the browser needs no file code and a terminal sees the
   same value.
+- **A setting's value, its layer and its refusal are three separate reads.**
+  `getSettings()` is the merged view, `getGlobalSettings()` and
+  `getProjectSettings()` are the files as loaded, and the getters add pi's built-in
+  default, which appears in neither file. `getCacheWarmingMode()` and
+  `getDefaultProjectTrust()` read the global layer alone, so a project value for
+  either is kept by pi and does nothing. `getCompactionReserveTokens()`,
+  `getCompactionKeepRecentTokens()` and `getHttpIdleTimeoutMs()` throw on a value pi
+  refuses, so a host that reads many keys catches per key: one hand-edited number
+  would otherwise fail every read of the file.
 - **Installed packages are bound to one platform.** Native optional dependencies are
   resolved at install time. Install on the machine that runs them; config
   files are portable, dependency trees are not.

@@ -204,6 +204,13 @@ Every settings write reloads the live engines. A pi-shipped provider keeps its c
 and is edited through `modelOverrides`; importing models is Epsilon's own bounded HTTP
 call, disabled where an API family has no shared list shape.
 
+The settings page reads every key once rather than per control: pi's effective value,
+the layer that supplies it (the project's `.pi/settings.json`, the home's
+`settings.json`, or pi's built-in default), and whether only a terminal can apply it.
+A key pi reads from the home alone never reports the project as its layer. A value pi
+refuses is that key's error on screen; it never fails the page, and the panel does not
+present a limit pi would not use.
+
 Signing in with an account is the dashboard's too, because `ModelRuntime.login()` is a
 host API: the panel starts the flow, relays the questions and links pi reports, and
 cancels it. It never writes `auth.json` itself; a credential changes only through

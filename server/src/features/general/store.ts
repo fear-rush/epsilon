@@ -58,18 +58,34 @@ const numbersDocument = (home: AgentHome) =>
 		},
 	});
 
-/** The resolved limits: pi merges the home and the folder, so this is what runs. */
-export const readAgentLimits = (home: AgentHome): AgentLimits => {
-	const settings = globalSettings(home);
-	const retry = settings.getRetrySettings();
-	return {
-		compactionEnabled: settings.getCompactionEnabled(),
-		compactionReserveTokens: settings.getCompactionReserveTokens(),
-		compactionKeepRecentTokens: settings.getCompactionKeepRecentTokens(),
-		retryEnabled: retry.enabled,
-		retryMaxRetries: retry.maxRetries,
-		enabledModels: settings.getEnabledModels() ?? null,
-	};
+/**
+ * pi's model scope on its own. Its getter never throws, so the snapshot keeps
+ * this answer even when a compaction number makes `readAgentLimits` refuse.
+ */
+export const readEnabledModels = (home: AgentHome): string[] | null =>
+	globalSettings(home).getEnabledModels() ?? null;
+
+/**
+ * The resolved limits: pi merges the home and the folder, so this is what runs.
+ * Null when pi refuses one of the numbers, which makes its getter throw; the keyed
+ * read in `settings.ts` names that key, and the panel withholds this form rather
+ * than showing a number pi would not use.
+ */
+export const readAgentLimits = (home: AgentHome): AgentLimits | null => {
+	try {
+		const settings = globalSettings(home);
+		const retry = settings.getRetrySettings();
+		return {
+			compactionEnabled: settings.getCompactionEnabled(),
+			compactionReserveTokens: settings.getCompactionReserveTokens(),
+			compactionKeepRecentTokens: settings.getCompactionKeepRecentTokens(),
+			retryEnabled: retry.enabled,
+			retryMaxRetries: retry.maxRetries,
+			enabledModels: settings.getEnabledModels() ?? null,
+		};
+	} catch {
+		return null;
+	}
 };
 
 /**

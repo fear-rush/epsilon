@@ -428,6 +428,12 @@
 					"agent": {
 						"$ref": "#/components/schemas/AgentLimits"
 					},
+					"settings": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/SettingView"
+						}
+					},
 					"modelScope": {
 						"type": "object",
 						"properties": {
@@ -527,6 +533,7 @@
 					"home",
 					"defaultModel",
 					"agent",
+					"settings",
 					"modelScope",
 					"providers",
 					"builtins",
@@ -561,7 +568,10 @@
 				]
 			},
 			"AgentLimits": {
-				"type": "object",
+				"type": [
+					"object",
+					"null"
+				],
 				"properties": {
 					"compactionEnabled": {
 						"type": "boolean"
@@ -599,6 +609,63 @@
 					"retryEnabled",
 					"retryMaxRetries",
 					"enabledModels"
+				]
+			},
+			"SettingView": {
+				"type": "object",
+				"properties": {
+					"key": {
+						"type": "string"
+					},
+					"value": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "number"
+							},
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							},
+							{
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							},
+							{
+								"type": "object",
+								"additionalProperties": {}
+							}
+						]
+					},
+					"scope": {
+						"$ref": "#/components/schemas/SettingScope"
+					},
+					"terminalOnly": {
+						"type": "boolean"
+					},
+					"error": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"key",
+					"value",
+					"scope",
+					"terminalOnly"
+				]
+			},
+			"SettingScope": {
+				"type": "string",
+				"enum": [
+					"project",
+					"global",
+					"default"
 				]
 			},
 			"ProviderView": {

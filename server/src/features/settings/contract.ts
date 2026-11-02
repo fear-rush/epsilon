@@ -5,7 +5,7 @@
  */
 import { z } from "@hono/zod-openapi";
 
-import { agentLimitsSchema, defaultModelSchema } from "../general";
+import { agentLimitsSchema, defaultModelSchema, settingViewSchema } from "../general";
 import { mcpLiveSchema, mcpReachSchema, mcpServerViewSchema } from "../mcp";
 import { packageViewSchema } from "../packages";
 import { projectStatusSchema } from "../projects";
@@ -16,8 +16,10 @@ export const settingsSnapshotSchema = z
 	.object({
 		home: z.string(),
 		defaultModel: defaultModelSchema.nullable(),
-		/** The agent-wide compaction and retry limits, and pi's model scope. */
-		agent: agentLimitsSchema,
+		/** The agent-wide compaction and retry limits; null when pi refuses one of the numbers. */
+		agent: agentLimitsSchema.nullable(),
+		/** Every `settings.json` key the panel names, with its layer and any per-key error. */
+		settings: z.array(settingViewSchema),
 		/** What `enabledModels` matches right now, and pi's diagnostics for it. */
 		modelScope: z.object({
 			matched: z.number().int().nonnegative(),
