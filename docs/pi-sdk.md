@@ -679,11 +679,16 @@ What the SDK exports for that decision:
 
 Epsilon runs the chain in `server/src/features/projects/trust.ts`, over the store,
 `hasTrustRequiringProjectResources()`, `Extension.handlers` and the settings getter.
-The project page, every route that runs in a project, and the engine's
-`projectTrusted` argument use its answer. A live engine has no extension set loaded
-before that decision yet, so its answer comes from the store and the default. With
-no synchronous dialog, the `"ask"` step is not trusted: the page then shows its
-Trust gate ([DECISIONS.md](DECISIONS.md), Chats and projects).
+The project page and every route that runs in a project use its answer with no
+extension set, so their answer comes from the store and the default.
+
+A gated project's engine starts untrusted and passes pi's bootstrap
+`extensionsResult` through `ResourceLoaderReloadOptions.resolveProjectTrust`, so a
+`project_trust` handler decides before the folder's own extensions, skills and
+`SYSTEM.md` load. Handlers see `hasUI: false`: there is no synchronous dialog, and
+`"ask"` is answered by the page's Trust gate, which shows because the answer is
+false. A handler that throws is reported in the chat as pi's extension error, and the
+rest of the chain still decides ([DECISIONS.md](DECISIONS.md), Chats and projects).
 
 ## The CLI, for what an embedding host does not do
 

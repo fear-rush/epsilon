@@ -328,7 +328,8 @@ the choice survives a reopen. `read` stays on either way, because skills need it
 
 Nothing runs in a project folder until pi trusts it. Trust is pi's chain, not a
 single saved flag: a folder with nothing pi gates is trusted with no record, then a
-saved `trust.json` decision (a parent's covers its subfolders), then the home's
+`project_trust` extension may answer before any project resource loads, then a saved
+`trust.json` decision (a parent's covers its subfolders), then the home's
 `defaultProjectTrust`. When that leaves the question open the page asks, and the
 server refuses to build an engine or write project settings in a folder pi does not
 trust. The Trust button writes the same store `/trust` writes, so a terminal and the

@@ -11,6 +11,7 @@
  */
 import type { AgentHome } from "../../platform/agent-home";
 import type {
+	LoadExtensionsResult,
 	ProjectTrustContext,
 	ProjectTrustEvent,
 	ProjectTrustEventResult,
@@ -19,10 +20,21 @@ import type {
 import { hasProjectResources, projectTrustStore, untrustedSettings } from "../../platform/pi";
 
 /** One loaded extension and the `project_trust` handlers it registered. */
-type ProjectTrustExtension = {
+export type ProjectTrustExtension = {
 	path: string;
 	handlers: readonly ProjectTrustHandler[];
 };
+
+/**
+ * The extensions a bootstrap pass loaded, ready for pi's event. `Extension.handlers`
+ * is typed with pi's generic handler; the event name fixes this signature.
+ */
+export const trustExtensions = (result: LoadExtensionsResult): ProjectTrustExtension[] =>
+	result.extensions.map((extension) => ({
+		path: extension.path,
+		// SAFETY: the map is keyed by event name, and this key only holds ProjectTrustHandler entries.
+		handlers: (extension.handlers.get("project_trust") ?? []) as ProjectTrustHandler[],
+	}));
 
 /** The context the settings page and an engine have: no dialog, so never asked. */
 const headlessTrustContext = (cwd: string): ProjectTrustContext => ({

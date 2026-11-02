@@ -123,8 +123,8 @@ export class LiveSession {
 	);
 	/** Shadowed command names already reported, so a resync does not repeat itself. */
 	private readonly reportedShadowed = new Set<string>();
-	/** Settings files already reported as unloadable, so a replacement does not repeat it. */
-	private readonly reportedSettings = new Set<string>();
+	/** Problems already reported, so a replacement does not repeat one. */
+	private readonly reportedProblems = new Set<string>();
 	/** The one resync armed for pi's next cache warm, which has no session event. */
 	private warmTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -180,6 +180,7 @@ export class LiveSession {
 				this.mcpReport = report;
 			},
 			onSettingsReport: (problems) => this.reportSettings(problems),
+			onTrustReport: (problems) => this.reportTrust(problems),
 		});
 		this.host = host;
 		await this.wire(host);
@@ -524,9 +525,22 @@ export class LiveSession {
 	private reportSettings(problems: SettingsProblem[]): void {
 		for (const problem of problems) {
 			const text = `${problem.path ?? "settings.json"} could not be loaded, so pi ignored it: ${problem.error.message}`;
-			if (this.reportedSettings.has(text)) continue;
-			this.reportedSettings.add(text);
+			if (this.reportedProblems.has(text)) continue;
+			this.reportedProblems.add(text);
 			this.notice(text, "settings");
+		}
+	}
+
+	/**
+	 * A `project_trust` handler that threw. pi reports it as an extension error and
+	 * keeps deciding, so the chat says it once and the folder is still decided by the
+	 * rest of the chain.
+	 */
+	private reportTrust(problems: string[]): void {
+		for (const text of problems) {
+			if (this.reportedProblems.has(text)) continue;
+			this.reportedProblems.add(text);
+			this.notice(text, "extension");
 		}
 	}
 

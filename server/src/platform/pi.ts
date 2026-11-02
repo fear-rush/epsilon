@@ -25,6 +25,7 @@ import type {
 import type { AgentHome } from "./agent-home";
 
 export type {
+	LoadExtensionsResult,
 	ModelRuntime,
 	PackageSource,
 	ProjectTrustContext,

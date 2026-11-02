@@ -18,7 +18,8 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 
 import type { AgentHome } from "../../../platform/agent-home";
-import { decideProjectTrust } from "../../projects";
+import { hasProjectResources } from "../../../platform/pi";
+import { decideProjectTrust, trustExtensions } from "../../projects";
 import { builtinExtensions, setCodingTools } from "../engine";
 import type { McpReportSink } from "../extensions/mcp-observer";
 
@@ -27,12 +28,14 @@ export type SettingsProblem = ReturnType<SettingsManager["drainErrors"]>[number]
 
 export type RuntimeFactoryOptions = {
 	home: AgentHome;
-	/** A chat's folder holds no `.pi`, so only a project's folder can be trusted. */
+	/** A chat starts with the coding tools off. */
 	chat: boolean;
 	/** Where the MCP observer reports; absent for a copy, which has no panel. */
 	onMcpReport?: McpReportSink;
 	/** Where a settings file pi could not load is reported; absent for a copy. */
 	onSettingsReport?: (problems: SettingsProblem[]) => void;
+	/** Where a `project_trust` handler's error is reported; absent for a copy. */
+	onTrustReport?: (problems: string[]) => void;
 };
 
 /**
@@ -50,22 +53,38 @@ export const openSessionManager = (
 		: SessionManager.open(file, undefined, cwd);
 
 /**
- * Trust is decided before the services exist, because the resource loader reads the
- * folder's `.pi` the moment it is built. `decideProjectTrust()` runs pi's chain; a
- * build has no extensions loaded yet, so their `project_trust` step is left for the
- * bootstrap pass that loads them.
+ * Trust is decided before the services load the folder. A folder with nothing pi
+ * gates is trusted outright. A gated folder starts untrusted, so its own extensions,
+ * skills and `SYSTEM.md` stay out of the bootstrap pass; pi's resource loader then
+ * runs `project_trust` over the extensions that did load, and reloads with the real
+ * answer (`ResourceLoaderReloadOptions.resolveProjectTrust`).
  */
 export const createRuntimeFactory =
 	(options: RuntimeFactoryOptions): CreateAgentSessionRuntimeFactory =>
 	async ({ cwd, sessionManager, sessionStartEvent }): Promise<CreateAgentSessionRuntimeResult> => {
-		const projectTrusted = await decideProjectTrust({ cwd, home: options.home });
-		const settings = SettingsManager.create(cwd, options.home.dir, { projectTrusted });
+		const gated = hasProjectResources(cwd);
+		const settings = SettingsManager.create(cwd, options.home.dir, {
+			projectTrusted: !gated,
+		});
+		const trustProblems: string[] = [];
 		const services = await createAgentSessionServices({
 			cwd,
 			agentDir: options.home.dir,
 			settingsManager: settings,
 			resourceLoaderOptions: { extensionFactories: builtinExtensions(options.onMcpReport) },
+			resourceLoaderReloadOptions: gated
+				? {
+						resolveProjectTrust: ({ extensionsResult }) =>
+							decideProjectTrust({
+								cwd,
+								home: options.home,
+								extensions: trustExtensions(extensionsResult),
+								onExtensionError: (message) => trustProblems.push(message),
+							}),
+					}
+				: undefined,
 		});
+		if (trustProblems.length > 0) options.onTrustReport?.(trustProblems);
 		// pi records a file it could not load and falls back to its defaults; the host
 		// says so once instead of presenting the fallback as the operator's choice.
 		const problems = settings.drainErrors();
@@ -81,5 +100,12 @@ export const createRuntimeFactory =
 		if (options.chat && sessionManager.getEntryCount() === 0) {
 			setCodingTools(created.session, false);
 		}
-		return { ...created, services, diagnostics: services.diagnostics };
+		return {
+			...created,
+			services,
+			diagnostics: [
+				...services.diagnostics,
+				...trustProblems.map((message) => ({ type: "warning" as const, message })),
+			],
+		};
 	};

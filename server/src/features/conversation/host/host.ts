@@ -49,6 +49,8 @@ export type HostOptions = {
 	onMcpReport?: McpReportSink;
 	/** Where a settings file pi could not load is reported. */
 	onSettingsReport?: (problems: SettingsProblem[]) => void;
+	/** Where a `project_trust` handler's error is reported. */
+	onTrustReport?: (problems: string[]) => void;
 };
 
 export class SessionHost {
@@ -78,6 +80,7 @@ export class SessionHost {
 			chat: options.chat,
 			onMcpReport: options.onMcpReport,
 			onSettingsReport: options.onSettingsReport,
+			onTrustReport: options.onTrustReport,
 		});
 		const tracked: CreateAgentSessionRuntimeFactory = async (input) => {
 			reason.current = input.sessionStartEvent?.reason ?? "startup";
