@@ -244,7 +244,9 @@ relay renders it. It never writes `auth.json` itself; a credential changes only
 through `login()` and `logout()`. `auth.json` holds one credential per provider and
 pi uses it ahead of a key in `models.json` and ahead of the environment, so the panel
 names the credential in use and offers sign-out, instead of letting a typed key look
-active while an account shadows it. Deleting a provider entry removes only its
+active while an account shadows it. An ambient credential is named by pi's own label,
+so an environment variable reads as `ANTHROPIC_API_KEY` rather than "an environment
+variable". Deleting a provider entry removes only its
 `models.json` entry; a stored credential changes through the sign-out control alone, so
 removing a base-URL override from a built-in provider cannot sign the account out. A
 provider pi ships needs no endpoint from the panel for that: pi supplies the endpoint,

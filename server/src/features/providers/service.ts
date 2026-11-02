@@ -88,6 +88,7 @@ export const listProviders = async (
 				modelCount: runtime.getModels(provider.id).length,
 				configured: status.configured,
 				source: status.source,
+				sourceLabel: status.label,
 				hasKey: config?.apiKey !== undefined,
 				custom: config !== undefined,
 				builtin: shipped.has(provider.id),
@@ -175,6 +176,7 @@ export const readProviderDetail = async (
 		custom: entry !== undefined,
 		configured: status.configured,
 		source: status.source,
+		sourceLabel: status.label,
 		hasKey: entry?.apiKey !== undefined,
 		headerKeys: Object.keys(entry?.headers ?? {}),
 		auth: {

@@ -991,6 +991,7 @@ export interface components {
 			modelCount: number;
 			configured: boolean;
 			source?: string;
+			sourceLabel?: string;
 			hasKey: boolean;
 			custom: boolean;
 			builtin: boolean;
@@ -1143,6 +1144,7 @@ export interface components {
 			custom: boolean;
 			configured: boolean;
 			source?: string;
+			sourceLabel?: string;
 			hasKey: boolean;
 			headerKeys: string[];
 			auth: components["schemas"]["ProviderAuth"];

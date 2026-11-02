@@ -322,8 +322,9 @@ output, which the fabricated prompt cannot express.
 `auth.json` holds at most one credential per provider, and pi resolves it first: a
 stored credential wins over a `models.json` `apiKey` and over the ambient environment.
 `getProviderAuthStatus()` names which one it is (`stored`, `runtime`, `environment`,
-`models_json_key`, `models_json_command`, `fallback`), and `listCredentials()` is the
-non-secret enumeration of `{ providerId, type }`.
+`models_json_key`, `models_json_command`, `fallback`), with a `label` for the source in
+pi's own words (`ANTHROPIC_API_KEY`, `~/.aws/credentials`), and `listCredentials()` is
+the non-secret enumeration of `{ providerId, type }`.
 
 Readiness is not a model count. `checkAuth(providerId)` resolves that provider's auth
 and returns `{ type, source }`, or `undefined` when it has no credential; it runs the

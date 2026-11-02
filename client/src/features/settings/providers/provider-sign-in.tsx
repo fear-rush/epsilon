@@ -81,7 +81,11 @@ const describeCredential = (detail: ProviderDetail) => {
 			};
 		case "environment":
 			return {
-				title: "An environment variable is in use",
+				// pi's label is the variable or credentials file it read, not a secret.
+				title:
+					detail.sourceLabel === undefined
+						? "An environment variable is in use"
+						: `${detail.sourceLabel} is in use`,
 				note: "pi reads it from the process the agent runs in.",
 			};
 		case "runtime":

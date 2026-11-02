@@ -691,6 +691,9 @@
 					"source": {
 						"type": "string"
 					},
+					"sourceLabel": {
+						"type": "string"
+					},
 					"hasKey": {
 						"type": "boolean"
 					},
@@ -1407,6 +1410,9 @@
 						"type": "boolean"
 					},
 					"source": {
+						"type": "string"
+					},
+					"sourceLabel": {
 						"type": "string"
 					},
 					"hasKey": {

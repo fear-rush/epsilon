@@ -205,6 +205,8 @@ export const providerViewSchema = z
 		configured: z.boolean(),
 		/** Where the credential came from: stored, environment, models.json, ... */
 		source: z.string().optional(),
+		/** pi's label for that source, e.g. `ANTHROPIC_API_KEY`. Not a secret. */
+		sourceLabel: z.string().optional(),
 		/** A literal key in models.json. The key itself never leaves the server. */
 		hasKey: z.boolean(),
 		/** True when models.json has an entry for this id. */
@@ -278,6 +280,8 @@ const providerDetailSchema = z
 		custom: z.boolean(),
 		configured: z.boolean(),
 		source: z.string().optional(),
+		/** pi's label for that source, e.g. `ANTHROPIC_API_KEY`. Not a secret. */
+		sourceLabel: z.string().optional(),
 		hasKey: z.boolean(),
 		/** Header names only. Values stay on the server. */
 		headerKeys: z.array(z.string()),

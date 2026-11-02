@@ -37,6 +37,21 @@ describe("provider catalog", () => {
 		});
 	});
 
+	test("a detail names the environment variable pi read", async () => {
+		const previous = process.env.ANTHROPIC_API_KEY;
+		process.env.ANTHROPIC_API_KEY = "sk-test-not-a-key";
+		try {
+			const root = await home();
+			const detail = await readProviderDetail(root, await modelRuntime(root), "anthropic");
+			expect(detail?.source).toBe("environment");
+			// The variable's name, never its value.
+			expect(detail?.sourceLabel).toBe("ANTHROPIC_API_KEY");
+		} finally {
+			if (previous === undefined) delete process.env.ANTHROPIC_API_KEY;
+			else process.env.ANTHROPIC_API_KEY = previous;
+		}
+	});
+
 	test("an override that names one field leaves pi's reasoning on", async () => {
 		const root = await home();
 		const shipped = (await modelRuntime(root))
