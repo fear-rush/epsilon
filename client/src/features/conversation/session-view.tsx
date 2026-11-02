@@ -70,6 +70,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 		isCompacting,
 		isRetrying,
 		isBashRunning,
+		bash,
 		autoCompaction,
 		autoRetry,
 		queue,
@@ -156,6 +157,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				isRetrying={isRetrying}
 				isBashRunning={isBashRunning}
 				bashCommand={snapshot.bashCommand}
+				bashOutput={bash?.output ?? ""}
 				queue={queue}
 				drift={drift}
 				onReload={() => store.reloadSession()}
@@ -165,7 +167,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				onClearQueue={() => store.clearQueue()}
 			/>
 		),
-		[store, isCompacting, isRetrying, isBashRunning, snapshot.bashCommand, queue, drift],
+		[store, isCompacting, isRetrying, isBashRunning, snapshot.bashCommand, bash, queue, drift],
 	);
 
 	// A session that has no snapshot yet shows a loader, not an empty transcript.

@@ -16,6 +16,8 @@ type RunStatusProps = {
 	isBashRunning: boolean;
 	/** The command this tab sent, when it still knows it; another tab's has no name here. */
 	bashCommand: string | undefined;
+	/** What that command has written so far, as pi streams it. */
+	bashOutput: string;
 	queue: PromptQueue;
 	/** A message naming a change another process made to this chat's file. */
 	drift: string | undefined;
@@ -31,6 +33,7 @@ export function RunStatus({
 	isRetrying,
 	isBashRunning,
 	bashCommand,
+	bashOutput,
 	queue,
 	drift,
 	onReload,
@@ -75,16 +78,23 @@ export function RunStatus({
 				</div>
 			)}
 			{isBashRunning && (
-				<div className="flex items-center gap-2 rounded-xl border bg-background px-3 py-2 text-meta">
-					<Spinner />
-					<span className="min-w-0 flex-1 truncate">
-						{bashCommand === undefined
-							? "Shell command running…"
-							: `Shell command running: ${bashCommand}`}
-					</span>
-					<Button size="sm" variant="destructive" onClick={onAbortBash}>
-						Stop
-					</Button>
+				<div className="flex flex-col gap-2 rounded-xl border bg-background px-3 py-2 text-meta">
+					<div className="flex items-center gap-2">
+						<Spinner />
+						<span className="min-w-0 flex-1 truncate">
+							{bashCommand === undefined
+								? "Shell command running…"
+								: `Shell command running: ${bashCommand}`}
+						</span>
+						<Button size="sm" variant="destructive" onClick={onAbortBash}>
+							Stop
+						</Button>
+					</div>
+					{bashOutput !== "" && (
+						<pre className="max-h-40 overflow-auto rounded-md border bg-muted/40 p-2 whitespace-pre-wrap">
+							{bashOutput}
+						</pre>
+					)}
 				</div>
 			)}
 			{queued.length > 0 && (

@@ -81,6 +81,9 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				stats: frame.snapshot.state.stats,
 				isRetrying: frame.snapshot.state.isRetrying,
 				isBashRunning: frame.snapshot.state.isBashRunning,
+				// A snapshot is the engine's own read, so it also ends any run this tab
+				// was following the output of.
+				bash: null,
 				autoCompaction: frame.snapshot.state.autoCompaction,
 				autoRetry: frame.snapshot.state.autoRetry,
 				queue: frame.snapshot.state.queue,

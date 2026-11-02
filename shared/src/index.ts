@@ -134,6 +134,7 @@ export type {
 } from "./conversation/state";
 export { reduce } from "./conversation/reduce";
 export { isStreaming, transcript } from "./conversation/selectors";
+export { costLabel, tokenLabel } from "./conversation/format";
 export {
 	bashArgsSchema,
 	editArgsSchema,

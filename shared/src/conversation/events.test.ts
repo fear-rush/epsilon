@@ -177,3 +177,69 @@ describe("a notice", () => {
 		expect(rows.at(-1)?.kind).toBe("user");
 	});
 });
+
+describe("a compaction", () => {
+	const result = {
+		summary: "what happened so far",
+		firstKeptEntryId: "entry-1",
+		tokensBefore: 12_345,
+		estimatedTokensAfter: 2_000,
+		usage: {
+			input: 100,
+			output: 20,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 120,
+			cost: { input: 0.04, output: 0.01, cacheRead: 0, cacheWrite: 0, total: 0.05 },
+		},
+	};
+	const end = (
+		fields: Partial<Extract<JsonAgentSessionEvent, { type: "compaction_end" }>>,
+	): JsonAgentSessionEvent => ({
+		type: "compaction_end",
+		reason: "manual",
+		result: undefined,
+		aborted: false,
+		willRetry: false,
+		...fields,
+	});
+	const noticeOf = (event: JsonAgentSessionEvent) => {
+		const state = feed([event]);
+		return state.notices.at(-1);
+	};
+
+	test("reports how much it replaced and what it billed", () => {
+		const notice = noticeOf(end({ result }));
+		expect(notice?.text).toBe("Compacted from 12k tokens (120 tokens billed, $0.05)");
+		expect(notice?.kind).toBe("compaction");
+	});
+
+	test("a cancelled compaction reads as cancelled, by its own reason", () => {
+		expect(noticeOf(end({ aborted: true }))?.text).toBe("Compaction cancelled");
+		expect(noticeOf(end({ aborted: true, reason: "threshold" }))?.text).toBe(
+			"Auto-compaction cancelled",
+		);
+	});
+
+	test("a failed compaction reports pi's message as a failure", () => {
+		const notice = noticeOf(end({ errorMessage: "context length exceeded" }));
+		expect(notice?.kind).toBe("error");
+		expect(notice?.text).toBe("Compaction failed: context length exceeded");
+	});
+
+	test("a summarization retry keeps the compaction visible while it runs", () => {
+		const retried = feed([
+			end({ errorMessage: "provider timeout" }),
+			{
+				type: "summarization_retry_scheduled",
+				attempt: 1,
+				maxAttempts: 3,
+				delayMs: 2_000,
+				errorMessage: "provider timeout",
+			},
+			{ type: "summarization_retry_attempt_start", source: "compaction", reason: "manual" },
+		]);
+		expect(retried.isCompacting).toBe(true);
+		expect(retried.notices.at(-1)?.text).toContain("Retrying the summary (attempt 1 of 3 in 2s)");
+	});
+});

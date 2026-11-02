@@ -11,6 +11,7 @@
 import { z } from "zod";
 
 import { contentParts, imagesOf, textOf } from "./content";
+import { tokenLabel } from "./format";
 import type {
 	ConversationMessage,
 	ConversationState,
@@ -177,6 +178,29 @@ const otherRow = (message: OtherMessage, key: string): TranscriptRow => {
 	return row;
 };
 
+type BashExecutionMessage = Extract<ConversationMessage, { role: "bashExecution" }>;
+
+/** A cancelled command has no exit code, and it did not succeed either. */
+const bashStatus = (message: BashExecutionMessage): ToolRun["status"] =>
+	message.cancelled || (message.exitCode !== undefined && message.exitCode !== 0) ? "error" : "ok";
+
+/** What pi's own bash card says about a command beyond its output, in its words. */
+const bashNote = (message: BashExecutionMessage): string | undefined => {
+	const parts: string[] = [];
+	if (message.cancelled) parts.push("(cancelled)");
+	else if (message.exitCode !== undefined && message.exitCode !== 0) {
+		parts.push(`(exit ${message.exitCode})`);
+	}
+	if (message.truncated) {
+		parts.push(
+			message.fullOutputPath === undefined
+				? "Output truncated."
+				: `Output truncated. Full output: ${message.fullOutputPath}`,
+		);
+	}
+	return parts.length === 0 ? undefined : parts.join("\n");
+};
+
 const otherRowOf = (message: OtherMessage, key: string): TranscriptRow => {
 	switch (message.role) {
 		case "bashExecution":
@@ -189,13 +213,20 @@ const otherRowOf = (message: OtherMessage, key: string): TranscriptRow => {
 					args: { command: message.command },
 					output: message.output,
 					images: [],
-					status: message.exitCode === undefined || message.exitCode === 0 ? "ok" : "error",
+					status: bashStatus(message),
+					note: bashNote(message),
 				},
 			};
 		case "branchSummary":
 			return { kind: "summary", key, label: "branch summary", text: message.summary };
 		case "compactionSummary":
-			return { kind: "summary", key, label: "compaction summary", text: message.summary };
+			// pi's own label for the block a compaction leaves: how much it replaced.
+			return {
+				kind: "summary",
+				key,
+				label: `Compacted from ${tokenLabel(message.tokensBefore)} tokens`,
+				text: message.summary,
+			};
 		case "custom": {
 			const content = z.string().safeParse(message.content);
 			return {

@@ -78,6 +78,13 @@ export type Notice = {
 /** A keyed status string an extension set, such as the permission state. */
 export type UiStatus = { key: string; text: string };
 
+/** A `!cmd` this process is running, and the output it has written so far. */
+type BashRun = {
+	/** pi's id for the run, so a delta cannot land in the previous command's output. */
+	id: string | undefined;
+	output: string;
+};
+
 /** Keyed widget lines an extension set, placed around the composer. */
 export type UiWidget = { key: string; placement: "aboveEditor" | "belowEditor"; lines: string[] };
 
@@ -122,6 +129,8 @@ export type ConversationState = {
 	/** An automatic retry is waiting to run again after a failed request. */
 	isRetrying: boolean;
 	isBashRunning: boolean;
+	/** The `!cmd` in flight, if this tab has seen any of its output. */
+	bash: BashRun | null;
 	/** pi's two automatic settings; both are on in pi's defaults (settings-defaults.js). */
 	autoCompaction: boolean;
 	autoRetry: boolean;
@@ -162,6 +171,7 @@ export const emptyConversation: ConversationState = {
 	stats: noStats,
 	isRetrying: false,
 	isBashRunning: false,
+	bash: null,
 	autoCompaction: true,
 	autoRetry: true,
 	queue: { steering: [], followUp: [] },

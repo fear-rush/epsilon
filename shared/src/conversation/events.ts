@@ -6,6 +6,7 @@
 import type { JsonAgentSessionEvent } from "../pi";
 
 import { contentParts, imagesOf, textOf } from "./content";
+import { costLabel, tokenLabel } from "./format";
 import type {
 	ConversationMessage,
 	ConversationState,
@@ -162,6 +163,62 @@ const settleTools = (tools: ToolRun[]): ToolRun[] =>
 		tool.status === "running" ? { ...tool, status: "error", note: SETTLED_TOOL_NOTE } : tool,
 	);
 
+/** A delay as pi shows it in a retry status: whole seconds, never a raw millisecond count. */
+const seconds = (ms: number): string => `${Math.max(1, Math.round(ms / 1_000))}s`;
+
+/**
+ * What triggered a compaction, in pi's own words (`CompactionStatusIndicator`):
+ * `overflow` is the one case where the reason itself is the news.
+ */
+const compactionStart = (reason: "manual" | "threshold" | "overflow"): string => {
+	if (reason === "manual") return "Compacting context";
+	if (reason === "overflow") return "Context overflow detected, auto-compacting";
+	return "Auto-compacting";
+};
+
+/**
+ * A compaction reports one of three outcomes, and each of them reads differently:
+ * it worked, the user stopped it, or pi refused. The billed usage is what the
+ * summary call cost; pi leaves it out when the provider gave none.
+ */
+const compactionEnd = (
+	state: ConversationState,
+	event: Extract<JsonAgentSessionEvent, { type: "compaction_end" }>,
+): ConversationState => {
+	const settled = { ...state, isCompacting: false };
+	if (event.aborted) {
+		return withNotice(
+			settled,
+			"compaction",
+			event.reason === "manual" ? "Compaction cancelled" : "Auto-compaction cancelled",
+		);
+	}
+	const result = event.result;
+	if (result === undefined) {
+		const reason = event.errorMessage ?? "pi gave no reason";
+		return withNotice(settled, "error", `Compaction failed: ${reason}`);
+	}
+	const usage = result.usage;
+	const billed = usage === undefined ? "" : ` (${billedTokens(usage)})`;
+	return withNotice(
+		settled,
+		"compaction",
+		`Compacted from ${tokenLabel(result.tokensBefore)} tokens${billed}`,
+	);
+};
+
+/** What the summary itself cost: every billed token and the money, as pi says it. */
+const billedTokens = (usage: {
+	input: number;
+	output: number;
+	cacheRead: number;
+	cacheWrite: number;
+	cost: { total: number };
+}): string => {
+	const tokens = usage.input + usage.output + usage.cacheRead + usage.cacheWrite;
+	return `${tokenLabel(tokens)} tokens billed, ${costLabel(usage.cost.total)}`;
+};
+
 export const reduceEvent = (
 	state: ConversationState,
 	event: JsonAgentSessionEvent,
@@ -188,6 +245,14 @@ export const reduceEvent = (
 				...state,
 				queue: { steering: [...event.steering], followUp: [...event.followUp] },
 			};
+		case "bash_execution_update": {
+			// A delta belongs to the run pi names, so a late chunk after the command
+			// finished cannot land in the next one's output.
+			const current = state.bash;
+			const output =
+				current !== null && current.id === event.id ? current.output + event.delta : event.delta;
+			return { ...state, bash: { id: event.id, output } };
+		}
 		case "message_start":
 			if (event.message.role !== "assistant") return state;
 			return { ...state, streaming: { blocks: [] } };
@@ -284,22 +349,37 @@ export const reduceEvent = (
 			return withNotice(
 				{ ...state, isCompacting: true },
 				"compaction",
-				"Compacting the conversation",
+				compactionStart(event.reason),
 			);
 		case "compaction_end":
-			return withNotice({ ...state, isCompacting: false }, "compaction", "Compaction finished");
+			return compactionEnd(state, event);
 		case "auto_retry_start":
 			return withNotice(
 				{ ...state, isRetrying: true },
 				"retry",
-				`Retrying the request (attempt ${event.attempt})`,
+				`Retrying the request (attempt ${event.attempt} of ${event.maxAttempts} in ${seconds(event.delayMs)}): ${event.errorMessage}`,
 			);
-		case "auto_retry_end":
+		case "auto_retry_end": {
+			const settled = { ...state, isRetrying: false };
+			if (event.success) return withNotice(settled, "retry", `Retry ${event.attempt} succeeded`);
 			return withNotice(
-				{ ...state, isRetrying: false },
+				settled,
 				"retry",
-				event.success ? "Retry succeeded" : "Retry failed",
+				`Retry failed after ${event.attempt} attempt${event.attempt === 1 ? "" : "s"}: ${event.finalError ?? "pi gave no reason"}`,
 			);
+		}
+		case "summarization_retry_scheduled":
+			return withNotice(
+				state,
+				"retry",
+				`Retrying the summary (attempt ${event.attempt} of ${event.maxAttempts} in ${seconds(event.delayMs)}): ${event.errorMessage}`,
+			);
+		case "summarization_retry_attempt_start":
+			// The scheduled notice already names the retry; this event is its start, so
+			// the only new fact is that a compaction source is compacting again.
+			return event.source === "compaction" ? { ...state, isCompacting: true } : state;
+		case "summarization_retry_finished":
+			return { ...state, isCompacting: false };
 		default:
 			return state;
 	}
