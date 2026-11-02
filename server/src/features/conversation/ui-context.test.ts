@@ -124,3 +124,54 @@ describe("an extension that aborts its prompt", () => {
 		}
 	});
 });
+
+/**
+ * An extension that reads the operator's draft and writes to it, which is how a
+ * skill or a template fills the composer. The report the tab sends is the only
+ * source: pi's own host answers an empty string there.
+ */
+const fills = `
+export default function fills(pi) {
+	pi.registerCommand("fill", {
+		description: "Replace the draft, then paste into it",
+		handler: async (_args, ctx) => {
+			ctx.ui.setEditorText(\`read:\${ctx.ui.getEditorText()}\`);
+			ctx.ui.pasteToEditor("+pasted");
+		},
+	});
+}
+`;
+
+describe("an extension that writes into the composer", () => {
+	test("reads the draft the tab reported and sends both writes", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "epsilon-editor-"));
+		const home = agentHome(dir);
+		await mkdir(join(dir, "extensions"), { recursive: true });
+		await mkdir(home.chatsDir, { recursive: true });
+		await writeFile(join(dir, "extensions", "fills.ts"), fills, "utf8");
+		const registry = new SessionRegistry(home);
+		try {
+			const session = await registry.ensure(crypto.randomUUID(), { kind: "chat" });
+			// What the socket does with an `editor` frame from a tab.
+			session.setEditorText("typed");
+			const frames: ServerFrame[] = [];
+			const unsubscribe = session.subscribe((frame) => frames.push(frame));
+			try {
+				await session.run({ type: "prompt", text: "/fill" });
+			} finally {
+				unsubscribe();
+			}
+
+			const writes = frames
+				.filter((frame) => frame.t === "ui" && frame.request.method === "set_editor_text")
+				.map((frame) => (frame.t === "ui" ? frame.request : undefined));
+			expect(writes).toEqual([
+				{ method: "set_editor_text", text: "read:typed", mode: "replace" },
+				{ method: "set_editor_text", text: "+pasted", mode: "append" },
+			]);
+		} finally {
+			await registry.disposeAll();
+			await rm(dir, { recursive: true, force: true });
+		}
+	});
+});

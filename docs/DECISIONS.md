@@ -150,6 +150,10 @@ asking, so dropping the escapes keeps the line it was drawing while refusing the
 would lose it. `notify` keeps the severity pi sent, and a missing one reads as `info`,
 so an extension error is not drawn like a status line.
 
+The composer is the editor: it reports its draft to the engine, debounced, so
+`getEditorText` answers what was typed. `setEditorText` replaces the draft and
+`pasteToEditor` appends to it, applied once by the composer that is on screen.
+
 Why: terminal components have no data form, and the set of extensions is open-ended, so
 an adapter has no cost ceiling. A theme in a browser has nothing to colour, so the text
 is the whole answer.

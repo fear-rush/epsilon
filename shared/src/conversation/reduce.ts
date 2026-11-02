@@ -14,6 +14,13 @@ import { isVisibleMessage } from "./state";
 import type { ConversationState, Notice, UiStatus, UiWidget } from "./state";
 
 /**
+ * The composer took the draft an extension wrote, so the request is spent. It is
+ * cleared rather than kept, because an append applied twice would double the text.
+ */
+export const takeEditorRequest = (state: ConversationState): ConversationState =>
+	state.editorRequest === undefined ? state : { ...state, editorRequest: undefined };
+
+/**
  * An extension's `notify` severity decides the notice's appearance, so an `error`
  * from an extension reads like an error instead of a status line. pi's default
  * when an extension passes no type is `info`, which is an ordinary notice.
@@ -52,11 +59,7 @@ const reduceDisplay = (
 		case "notify":
 			return withNotice(state, notifyKind(frame.notifyType), frame.message);
 		case "set_editor_text":
-			return withNotice(
-				state,
-				"notice",
-				"An extension tried to fill the composer: not supported here.",
-			);
+			return { ...state, editorRequest: { text: frame.text, mode: frame.mode } };
 	}
 };
 

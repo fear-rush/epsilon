@@ -23,6 +23,8 @@ import type { AskOptions, Dialogs } from "./dialogs";
 export type UiHost = {
 	ask: (question: DialogQuestion, options?: AskOptions) => Promise<DialogAnswer>;
 	display: (request: ExtensionDisplay) => void;
+	/** The draft the composer last reported, which an extension's `getEditorText` reads. */
+	editorText: () => string;
 	/** A method that needs pi's TUI. The host shows one notice per method. */
 	unsupported: (method: string) => void;
 	fail: (error: Error, code?: ProtocolErrorCode) => void;
@@ -30,6 +32,8 @@ export type UiHost = {
 
 export class UiBridge {
 	private readonly early = new Set<string>();
+	/** The composer's draft as the tab last reported it; empty until one attaches. */
+	private editor = "";
 	readonly host: UiHost;
 
 	constructor(
@@ -40,12 +44,18 @@ export class UiBridge {
 		this.host = {
 			ask: dialogs.ask,
 			display: dialogs.display,
+			editorText: () => this.editor,
 			unsupported: (method) => {
 				if (this.hasSubscriber()) this.dialogs.unsupported(method);
 				else this.early.add(method);
 			},
 			fail,
 		};
+	}
+
+	/** A tab reported its draft; this is what `getEditorText` answers from then on. */
+	setEditorText(text: string): void {
+		this.editor = text;
 	}
 
 	/** Called when a tab arrives: one notice for everything held back. */
@@ -152,13 +162,15 @@ export const createUiContext = (host: UiHost): ExtensionUIContext => ({
 		host.display({ method: "setTitle", title });
 	},
 	setEditorText(text) {
-		host.display({ method: "set_editor_text", text });
+		host.display({ method: "set_editor_text", text, mode: "replace" });
 	},
+	// pi's paste inserts into the editor at the cursor; a browser has no cursor here,
+	// so it appends to the draft, which is where the caret already is.
 	pasteToEditor(text) {
-		host.display({ method: "set_editor_text", text });
+		host.display({ method: "set_editor_text", text, mode: "append" });
 	},
-	// Nothing in the server can read or write a composer, answer terminal input
-	// or render a TUI component. Each one says so once instead of failing silently.
+	// The rest of the terminal surface: raw key input, and pi-tui components the
+	// browser cannot render. Each one says so once instead of failing silently.
 	onTerminalInput() {
 		host.unsupported("onTerminalInput");
 		return () => undefined;
@@ -188,7 +200,7 @@ export const createUiContext = (host: UiHost): ExtensionUIContext => ({
 		return undefined as T;
 	},
 	getEditorText() {
-		return "";
+		return host.editorText();
 	},
 	addAutocompleteProvider() {
 		host.unsupported("addAutocompleteProvider");

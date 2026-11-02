@@ -11,6 +11,7 @@ import {
 } from "shared";
 import type {
 	ContextUsage,
+	EditorRequest,
 	ParsedBuiltinCommand,
 	PromptBehavior,
 	SnapshotCommand,
@@ -60,6 +61,12 @@ const commandQuery = (draft: string): string | undefined => {
 
 /** A megabyte as a file size reads it, for the caps the protocol states in bytes. */
 const MEGABYTE = 1024 * 1024;
+
+/**
+ * How long the composer waits after a keystroke before reporting its draft, so an
+ * extension's `getEditorText` reads what was typed without a frame per key.
+ */
+const EDITOR_REPORT_DELAY_MS = 120;
 
 /** What one image may hold, in the words of the message that refuses it. */
 const IMAGE_MEGABYTES = PROMPT_IMAGE_BYTES_MAX / MEGABYTE;
@@ -127,6 +134,8 @@ type ComposerProps = {
 	onSent?: () => void;
 	/** Prompts an abort or a Clear took back from pi, for the draft. */
 	restoreDraft: string | undefined;
+	/** A draft an extension wrote: `setEditorText` replaces it, its paste appends. */
+	editorRequest: EditorRequest | undefined;
 };
 
 function ComposerImpl({
@@ -152,6 +161,7 @@ function ComposerImpl({
 	header,
 	onSent,
 	restoreDraft,
+	editorRequest,
 }: ComposerProps) {
 	const [draft, setDraft] = useState(() => pendingDraftOf(store.sessionId));
 	/** The highlighted command, and the draft it was dismissed at. */
@@ -184,6 +194,24 @@ function ComposerImpl({
 		);
 		store.clearRestoreDraft();
 	}, [restoreDraft, store]);
+
+	// An extension's `getEditorText` reads this from the server, so the draft is
+	// reported after each pause rather than on every keystroke.
+	useEffect(() => {
+		const timer = setTimeout(() => store.reportEditor(draft), EDITOR_REPORT_DELAY_MS);
+		return () => clearTimeout(timer);
+	}, [draft, store]);
+
+	/** Set once an extension's write has been taken, so a second pass cannot apply it. */
+	const takenRef = useRef<EditorRequest | undefined>(undefined);
+	useEffect(() => {
+		if (editorRequest === undefined || takenRef.current === editorRequest) return;
+		takenRef.current = editorRequest;
+		setDraft((current) =>
+			editorRequest.mode === "append" ? current + editorRequest.text : editorRequest.text,
+		);
+		store.dismissEditorRequest();
+	}, [editorRequest, store]);
 
 	const query = commandQuery(draft);
 	const matches =

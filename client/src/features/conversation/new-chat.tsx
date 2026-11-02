@@ -75,6 +75,7 @@ function DraftConversation({
 		codingTools,
 		contextUsage,
 		stats,
+		editorRequest,
 	} = snapshot.state;
 	const where = snapshot.state.place ?? place;
 
@@ -104,6 +105,7 @@ function DraftConversation({
 				availableThinkingLevels={availableThinkingLevels}
 				statuses={statuses}
 				restoreDraft={undefined}
+				editorRequest={editorRequest}
 				commands={commands}
 				codingTools={codingTools}
 				contextUsage={contextUsage}
@@ -131,6 +133,7 @@ function DraftConversation({
 			codingTools,
 			contextUsage,
 			stats.cost,
+			editorRequest,
 			onChangeProject,
 			where,
 			start,

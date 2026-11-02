@@ -63,6 +63,15 @@ export const dialogAnswerSchema = z.discriminatedUnion("method", [
 export type DialogAnswer = z.infer<typeof dialogAnswerSchema>;
 
 /**
+ * How an extension writes into the composer. pi has two methods: `setEditorText`
+ * replaces the draft, and `pasteToEditor` inserts at the cursor, which a browser
+ * reads as an append.
+ */
+const editorWriteSchema = z.enum(["replace", "append"]);
+
+export type EditorWriteMode = z.infer<typeof editorWriteSchema>;
+
+/**
  * A method that shows something and never waits. `setStatus` and `setWidget`
  * are keyed and replayed to a late-attaching tab; the rest happen once.
  */
@@ -84,7 +93,11 @@ export const extensionDisplaySchema = z.discriminatedUnion("method", [
 		widgetPlacement: z.enum(["aboveEditor", "belowEditor"]).optional(),
 	}),
 	z.object({ method: z.literal("setTitle"), title: z.string() }),
-	z.object({ method: z.literal("set_editor_text"), text: z.string() }),
+	z.object({
+		method: z.literal("set_editor_text"),
+		text: z.string(),
+		mode: editorWriteSchema,
+	}),
 ]);
 
 export type ExtensionDisplay = z.infer<typeof extensionDisplaySchema>;

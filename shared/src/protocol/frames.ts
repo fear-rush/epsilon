@@ -15,7 +15,7 @@ import type { JsonAgentSessionEvent } from "../pi";
  * Bumped whenever a frame's shape changes. The client sends it in `hello` and
  * reloads on a mismatch instead of guessing.
  */
-export const PROTOCOL_VERSION = 18;
+export const PROTOCOL_VERSION = 19;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([
@@ -217,6 +217,11 @@ export const clientFrameSchema = z.discriminatedUnion("t", [
 	z.object({ t: z.literal("detach"), sessionId: z.string() }),
 	z.object({ t: z.literal("command"), sessionId: z.string(), command: commandSchema }),
 	z.object({ t: z.literal("dialog"), sessionId: z.string(), answer: dialogAnswerSchema }),
+	/**
+	 * The composer's draft, debounced. An extension's `getEditorText()` reads it, and
+	 * pi's own editor has no cursor API, so the text is all a report can carry.
+	 */
+	z.object({ t: z.literal("editor"), sessionId: z.string(), text: z.string() }),
 	z.object({ t: z.literal("ping") }),
 ]);
 

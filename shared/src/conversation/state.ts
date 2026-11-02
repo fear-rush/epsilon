@@ -2,7 +2,7 @@
  * What the browser shows. Built only from socket frames, so replaying a fixture
  * twice produces the same state.
  */
-import type { DialogQuestion } from "../protocol/extui";
+import type { DialogQuestion, EditorWriteMode } from "../protocol/extui";
 import type { JsonAgentSessionEvent } from "../pi";
 import type {
 	ContextUsage,
@@ -108,6 +108,13 @@ type BashRun = {
 /** Keyed widget lines an extension set, placed around the composer. */
 export type UiWidget = { key: string; placement: "aboveEditor" | "belowEditor"; lines: string[] };
 
+/**
+ * A draft an extension wrote into the composer: `replace` for `setEditorText`,
+ * `append` for `pasteToEditor`. It is a one-shot request, not the draft itself;
+ * the composer takes it and drops it.
+ */
+export type EditorRequest = { text: string; mode: EditorWriteMode };
+
 export type ConversationState = {
 	messages: ConversationMessage[];
 	tools: ToolRun[];
@@ -120,6 +127,8 @@ export type ConversationState = {
 	widgets: UiWidget[];
 	/** Set by an extension through `setTitle`. */
 	title?: string;
+	/** A draft an extension wrote, until a composer takes it. */
+	editorRequest?: EditorRequest;
 	/** pi's own session name, from `set_session_name` or the terminal. */
 	sessionName?: string;
 	/** A turn is in progress. `agent_start` starts it and `agent_settled` ends it;

@@ -264,6 +264,14 @@ export class LiveSession {
 		return this.dialogs.answer(answer);
 	}
 
+	/**
+	 * The draft a tab reported, kept for the extensions that read it. A tab that is
+	 * not live has no extension to answer, so the report is dropped there instead.
+	 */
+	setEditorText(text: string): void {
+		this.bridge.setEditorText(text);
+	}
+
 	/** Rename through the live engine, so every tab watching gets the new snapshot. */
 	rename(name: string): boolean {
 		const agent = this.host?.session;

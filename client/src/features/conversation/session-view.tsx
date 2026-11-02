@@ -77,6 +77,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 		queue,
 		tree,
 		drift,
+		editorRequest,
 	} = snapshot.state;
 	const confirmations = dialogs.filter(isConfirm);
 	const questions = dialogs.filter((dialog) => !isConfirm(dialog));
@@ -127,6 +128,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				inline={empty}
 				header={where.kind === "project" ? <ComposerPlace place={where} /> : undefined}
 				restoreDraft={snapshot.restoreDraft}
+				editorRequest={editorRequest}
 			/>
 		),
 		[
@@ -139,6 +141,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 			openFork,
 			cloneChat,
 			composerKey,
+			editorRequest,
 			models,
 			model,
 			thinkingLevel,

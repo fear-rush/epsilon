@@ -88,6 +88,11 @@ Other facts worth having before embedding:
     TUI component), `setEditorText`, `pasteToEditor`, `getEditorText`. `notify`'s
     optional second argument is `info | warning | error`, and pi sends no type when an
     extension omits it, so a host reads a missing type as `info`.
+    `setEditorText` and `pasteToEditor` are fire-and-forget and have no reply. The TUI
+    makes the paste insert at the editor's cursor; the RPC host falls back to
+    `setEditorText`. `getEditorText` is **synchronous**, so it can only answer what the
+    host already holds: the TUI reads the editor, and the RPC host always answers `""`.
+    A host with a real composer reports the draft into the engine and answers from that.
   - **working and view state**: `setWorkingMessage`, `setWorkingVisible`,
     `setWorkingIndicator`, `setHiddenThinkingLabel`, `getToolsExpanded`,
     `setToolsExpanded`
@@ -107,7 +112,7 @@ Other facts worth having before embedding:
     unchanged. A host that returns a stub which throws kills whichever handler reads
     it, and pi counts a failed `tool_call` handler as blocking the tool. Epsilon answers
     the dialog group and the display half of the state groups, reports the terminal
-    group once, and returns silent defaults for `getEditorText`, `getEditorComponent`,
+    group once, and returns silent defaults for `getEditorComponent`,
     `getAllThemes`, `getTheme` and `getToolsExpanded`
     ([DECISIONS.md](DECISIONS.md), UI contract).
 - `NewSessionOptions.id` creates a session with an exact id. `SessionManager` lists,

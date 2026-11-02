@@ -16,7 +16,7 @@ import type { LiveSession } from "./session";
 /** What the socket uses of a live session; a test stands in with a small fake. */
 export type Watchable = Pick<
 	LiveSession,
-	"isOpen" | "subscribe" | "release" | "run" | "answerDialog"
+	"isOpen" | "subscribe" | "release" | "run" | "answerDialog" | "setEditorText"
 >;
 
 /** What the socket uses of the registry. `SessionRegistry` satisfies it. */
@@ -134,6 +134,11 @@ const route = async (engines: Engines, socket: ChatSocket, frame: ClientFrame): 
 		}
 		case "dialog":
 			answer(engines, socket, frame);
+			return;
+		case "editor":
+			// The composer's draft, for an extension's `getEditorText`. Nothing to answer:
+			// a report for a session that is no longer live is simply too late.
+			engines.find(frame.sessionId)?.setEditorText(frame.text);
 			return;
 		case "ping":
 			send(socket, { t: "pong" });

@@ -27,6 +27,8 @@ const tab = (): ChatSocket & { sent: string[] } => {
 
 const fakeSession = () => {
 	const calls = { subscribed: 0, released: 0 };
+	/** Every draft a tab reported, in arrival order. */
+	const editor: string[] = [];
 	const session: Watchable = {
 		isOpen: true,
 		subscribe: () => {
@@ -38,8 +40,11 @@ const fakeSession = () => {
 		},
 		run: async () => undefined,
 		answerDialog: () => "answered",
+		setEditorText: (text) => {
+			editor.push(text);
+		},
 	};
-	return { session, calls };
+	return { session, calls, editor };
 };
 
 const send = (engines: Engines, socket: ChatSocket, frame: ClientFrame): void =>
@@ -79,5 +84,36 @@ describe("attaching while the engine is being built", () => {
 
 		expect(calls.subscribed).toBe(1);
 		expect(calls.released).toBe(0);
+	});
+});
+
+describe("the composer's draft report", () => {
+	test("reaches the live session and is never answered", () => {
+		const { session, editor } = fakeSession();
+		const engines: Engines = { ensure: async () => session, find: () => session };
+		const socket = tab();
+		send(engines, socket, { t: "hello", protocol: PROTOCOL_VERSION, tabId: "t" });
+		const before = socket.sent.length;
+
+		send(engines, socket, { t: "editor", sessionId: "s1", text: "half a thought" });
+
+		expect(editor).toEqual(["half a thought"]);
+		expect(socket.sent.slice(before)).toEqual([]);
+	});
+
+	test("is dropped, without an error, once the engine is gone", () => {
+		const engines: Engines = {
+			ensure: async () => {
+				throw new Error("nothing should be built for a report");
+			},
+			find: () => undefined,
+		};
+		const socket = tab();
+		send(engines, socket, { t: "hello", protocol: PROTOCOL_VERSION, tabId: "t" });
+		const before = socket.sent.length;
+
+		send(engines, socket, { t: "editor", sessionId: "gone", text: "half a thought" });
+
+		expect(socket.sent.slice(before)).toEqual([]);
 	});
 });

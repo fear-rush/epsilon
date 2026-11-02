@@ -125,6 +125,7 @@ export { isVisibleMessage } from "./conversation/state";
 export type {
 	ConversationMessage,
 	ConversationState,
+	EditorRequest,
 	NestedToolRun,
 	Notice,
 	SnapshotMessage,
@@ -133,7 +134,7 @@ export type {
 	UiStatus,
 	UiWidget,
 } from "./conversation/state";
-export { reduce } from "./conversation/reduce";
+export { reduce, takeEditorRequest } from "./conversation/reduce";
 export { isStreaming, transcript } from "./conversation/selectors";
 export { costLabel, tokenLabel } from "./conversation/format";
 export {

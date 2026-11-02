@@ -13,7 +13,7 @@ import type {
 	ServerFrame,
 	ThinkingLevel,
 } from "shared";
-import { emptyConversation, reduce } from "shared";
+import { emptyConversation, reduce, takeEditorRequest } from "shared";
 import type { ConversationState } from "shared";
 
 import { link } from "@/socket/link";
@@ -197,6 +197,19 @@ export class ConversationStore {
 	/** The composer took the restored prompts into its draft, so they are not offered twice. */
 	clearRestoreDraft(): void {
 		this.update({ restoreDraft: undefined });
+	}
+
+	/**
+	 * The composer's draft, for an extension's `getEditorText`. Reported debounced, so
+	 * an extension reads a pause's worth of typing rather than every keystroke.
+	 */
+	reportEditor(text: string): void {
+		link.send({ t: "editor", sessionId: this.sessionId, text });
+	}
+
+	/** The composer took the draft an extension wrote, so the request is spent. */
+	dismissEditorRequest(): void {
+		this.update({ state: takeEditorRequest(this.snapshot.state) });
 	}
 
 	/** Re-read extensions, skills and packages without replacing the session. */

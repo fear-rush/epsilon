@@ -20,6 +20,7 @@ import { SessionHost } from "./host";
 const NO_TAB: UiHost = {
 	ask: async (question) => ({ id: question.id, method: "cancel" }),
 	display: () => undefined,
+	editorText: () => "",
 	unsupported: () => undefined,
 	fail: (error) => {
 		throw error;
