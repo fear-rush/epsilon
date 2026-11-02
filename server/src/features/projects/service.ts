@@ -7,10 +7,11 @@
  */
 import { mkdir, readdir, realpath, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, join } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { hasProjectResources, isProjectTrusted, trustProject } from "../../platform/pi";
+import type { SettingsScope } from "../../platform/pi";
 import type { FolderListing, ProjectStatus } from "./contract";
 import { isInside, projectName } from "./domain";
 
@@ -177,3 +178,19 @@ export const createFolder = async (
  */
 export const settingsFolder = (home: AgentHome, project: string | undefined): Promise<string> =>
 	project === undefined ? Promise.resolve(home.chatsDir) : trustedProjectFolder(home, project);
+
+/**
+ * A project-scoped settings operation needs a project; `what` names the file or
+ * folder it would touch, so the refusal says what was not done.
+ */
+export const requireProject = (project: string | undefined, what: string): string => {
+	if (project === undefined) throw new Error(`Pick a project to change ${what}`);
+	return project;
+};
+
+/**
+ * The folder a settings file's relative entries resolve against: the agent home
+ * for its own `settings.json`, the project's `.pi` for the project's.
+ */
+export const settingsBaseDir = (home: AgentHome, folder: string, scope: SettingsScope): string =>
+	scope === "user" ? home.dir : resolve(folder, ".pi");

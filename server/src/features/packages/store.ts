@@ -20,6 +20,7 @@ import {
 	writePackageEntries,
 } from "../../platform/pi";
 import type { PackageSource, ResolvedResource } from "../../platform/pi";
+import { settingsBaseDir } from "../projects";
 import type {
 	PackageResourceInput,
 	PackageResources,
@@ -68,8 +69,7 @@ const rebasedSource = (
 		!source.startsWith("file:") &&
 		!NON_LOCAL.some((prefix) => source.startsWith(prefix));
 	if (!plainRelative) return source;
-	const base = scope === "project" ? resolve(folder, ".pi") : home.dir;
-	return resolve(base, source);
+	return resolve(settingsBaseDir(home, folder, scope), source);
 };
 
 export const removePackage = async (

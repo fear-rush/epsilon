@@ -4,7 +4,7 @@ import type { McpScope } from "shared";
 import type { Deps } from "../../deps";
 import type { AgentHome } from "../../platform/agent-home";
 import { configWrite, failure, toError } from "../../platform/http";
-import { settingsFolder } from "../projects";
+import { requireProject, settingsFolder } from "../projects";
 import {
 	autoEnableMcpRoute,
 	deleteMcpRoute,
@@ -30,12 +30,8 @@ import {
  * needs a project: without one the folder is the chats folder, and a write there
  * would give every chat a project file.
  */
-const folderFor = (home: AgentHome, project: string | undefined, scope: McpScope) => {
-	if (scope === "project" && project === undefined) {
-		throw new Error("Pick a project to change its .pi/mcp.json");
-	}
-	return settingsFolder(home, project);
-};
+const folderFor = (home: AgentHome, project: string | undefined, scope: McpScope) =>
+	settingsFolder(home, scope === "project" ? requireProject(project, "its .pi/mcp.json") : project);
 
 // Registration order is the order of the generated OpenAPI document.
 export const mcpRoutes = ({ home, engines }: Deps) =>

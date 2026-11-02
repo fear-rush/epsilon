@@ -2,7 +2,7 @@ import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import type { Deps } from "../../deps";
 import type { AgentHome } from "../../platform/agent-home";
 import { configWrite, errorContent, failure, toError } from "../../platform/http";
-import { settingsFolder, settingsScopeQuerySchema } from "../projects";
+import { requireProject, settingsFolder, settingsScopeQuerySchema } from "../projects";
 import {
 	packageResourcesSchema,
 	packageResourceInputSchema,
@@ -64,12 +64,11 @@ const packageResourcesRoute = createRoute({
 });
 
 /** A project package lives in that project's settings, so it needs one. */
-const folderFor = (home: AgentHome, project: string | undefined, scope: PackageScope) => {
-	if (scope === "project" && project === undefined) {
-		throw new Error("Pick a project to change its .pi/settings.json");
-	}
-	return settingsFolder(home, project);
-};
+const folderFor = (home: AgentHome, project: string | undefined, scope: PackageScope) =>
+	settingsFolder(
+		home,
+		scope === "project" ? requireProject(project, "its .pi/settings.json") : project,
+	);
 
 const setPackageResourceRoute = createRoute({
 	method: "put",

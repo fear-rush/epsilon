@@ -8,6 +8,7 @@ import { join, resolve } from "node:path";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { loadSkillFolder, readSkillEntries, writeSkillEntries } from "../../platform/pi";
+import { settingsBaseDir } from "../projects";
 import type { ForeignAgent, ForeignSkillView } from "./contract";
 
 type ForeignFolder = {
@@ -39,9 +40,6 @@ const entryDir = (entry: string, base: string, userHome: string): string | undef
 	return resolve(base, entry);
 };
 
-const baseOf = (scope: "user" | "project", folder: string, home: AgentHome): string =>
-	scope === "user" ? home.dir : resolve(folder, ".pi");
-
 const linkedEntries = (
 	folder: string,
 	home: AgentHome,
@@ -49,7 +47,8 @@ const linkedEntries = (
 	target: ForeignFolder,
 ): string[] =>
 	readSkillEntries(folder, home, target.scope).filter(
-		(entry) => entryDir(entry, baseOf(target.scope, folder, home), userHome) === target.dir,
+		(entry) =>
+			entryDir(entry, settingsBaseDir(home, folder, target.scope), userHome) === target.dir,
 	);
 
 /**

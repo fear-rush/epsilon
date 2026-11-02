@@ -1,7 +1,7 @@
 /** The directory behind each skills root, and the trust check project roots need. */
 import { projectAgentsSkillsDir, projectSkillsDir } from "../../platform/agent-home";
 import type { AgentHome } from "../../platform/agent-home";
-import { trustedProjectFolder } from "../projects";
+import { requireProject, trustedProjectFolder } from "../projects";
 import type { SkillRoot } from "./contract";
 
 /**
@@ -18,7 +18,6 @@ export const skillRootDir = async (
 		if (home.userAgentsSkillsDir === undefined) throw new Error("~/.agents/skills is not known");
 		return home.userAgentsSkillsDir;
 	}
-	if (project === undefined) throw new Error("Pick a project to change its skills");
-	const folder = await trustedProjectFolder(home, project);
+	const folder = await trustedProjectFolder(home, requireProject(project, "its skills"));
 	return root === "project-pi" ? projectSkillsDir(folder) : projectAgentsSkillsDir(folder);
 };

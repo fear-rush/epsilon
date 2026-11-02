@@ -11,11 +11,8 @@ import { dirname, resolve } from "node:path";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { readSkillEntries, writeSkillEntries } from "../../platform/pi";
+import { settingsBaseDir } from "../projects";
 import { listSkills } from "./inventory";
-
-/** The folder a settings file's relative entries are read against. */
-const baseOf = (scope: "user" | "project", folder: string, home: AgentHome): string =>
-	scope === "user" ? home.dir : resolve(folder, ".pi");
 
 /** Whether an override entry force-excludes this skill, however it was spelled. */
 const excludes = (entry: string, base: string, dir: string): boolean => {
@@ -47,7 +44,7 @@ export const setSkillEnabled = async (
 	}
 	if (skill.toggle === "none") throw new Error("This skill cannot be turned off from here");
 
-	const base = baseOf(skill.scope, folder, home);
+	const base = settingsBaseDir(home, folder, skill.scope);
 	const entries = readSkillEntries(folder, home, skill.scope);
 	const rest = entries.filter((entry) => !excludes(entry, base, skill.dir));
 	const next = enabled ? rest : [...rest, `-${skill.dir}`];

@@ -4,6 +4,8 @@ export { projectStatusSchema, settingsScopeQuerySchema } from "./contract";
 export {
 	ProjectNotTrustedError,
 	projectStatus,
+	requireProject,
+	settingsBaseDir,
 	settingsFolder,
 	trustedProjectFolder,
 } from "./service";
