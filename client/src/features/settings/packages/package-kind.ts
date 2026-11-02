@@ -18,3 +18,27 @@ export const scopeOf = (project: string | undefined): PackageView["scope"] =>
 /** The scope segment of a packages URL. Any scope that is not the project's is the home's. */
 export const scopeOfSegment = (segment: string): PackageView["scope"] =>
 	segment === "project" ? "project" : "user";
+
+/** A badge for a row the other scope also declares; `own` needs none. */
+export const relationLabel = (entry: PackageView): string | undefined => {
+	switch (entry.relation) {
+		case "overrides":
+			return "Overrides Global";
+		case "inherited":
+			return "Global";
+		default:
+			return undefined;
+	}
+};
+
+/** The detail's Scope row, including which declaration wins. */
+export const scopeLabel = (entry: PackageView): string => {
+	switch (entry.relation) {
+		case "overrides":
+			return "Project, overrides Global";
+		case "inherited":
+			return "Global, inherited by this project";
+		default:
+			return entry.scope === "project" ? "Project" : "Global";
+	}
+};

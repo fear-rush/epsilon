@@ -10,7 +10,7 @@ import { Notice } from "@/components/patterns/status/notice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { usePackageUpdates, useSettings, useSettingsProject } from "@/features/settings/queries";
-import { packageLine, scopeOf } from "./package-kind";
+import { packageLine, relationLabel, scopeOf } from "./package-kind";
 import { PackageInstallDialog } from "./package-install-dialog";
 
 function PackagesList({ selected }: { selected: string | undefined }) {
@@ -21,11 +21,11 @@ function PackagesList({ selected }: { selected: string | undefined }) {
 	const [query, setQuery] = useState("");
 	const [installing, setInstalling] = useState(false);
 
-	// A project tab lists only the project's own packages.
-	const own = (settings.data?.packages ?? []).filter((entry) => entry.scope === scope);
+	// The read is already scoped: a project tab also carries the global entries it inherits.
+	const rows = settings.data?.packages ?? [];
 	const outdated = new Set((updates.data ?? []).map((entry) => `${entry.scope}\0${entry.source}`));
 	const needle = query.trim().toLowerCase();
-	const visible = own.filter((entry) =>
+	const visible = rows.filter((entry) =>
 		`${entry.source} ${packageLine(entry)}`.toLowerCase().includes(needle),
 	);
 
@@ -33,7 +33,7 @@ function PackagesList({ selected }: { selected: string | undefined }) {
 		<>
 			<ListPane
 				title="Packages"
-				count={own.length}
+				count={rows.length}
 				scope="/settings/packages"
 				query={query}
 				onQueryChange={setQuery}
@@ -50,7 +50,7 @@ function PackagesList({ selected }: { selected: string | undefined }) {
 				}
 				empty={
 					visible.length === 0
-						? own.length === 0
+						? rows.length === 0
 							? "No packages installed"
 							: "Nothing matches"
 						: undefined
@@ -68,24 +68,31 @@ function PackagesList({ selected }: { selected: string | undefined }) {
 				}
 			>
 				<ListGroup>
-					{visible.map((entry) => (
-						<ListItem
-							key={entry.source}
-							name={entry.source}
-							description={packageLine(entry)}
-							selected={selected === entry.source}
-							trailing={
-								outdated.has(`${entry.scope}\0${entry.source}`) ? (
-									<Badge variant="info">Update</Badge>
-								) : undefined
-							}
-							link={{
-								to: "/settings/packages/$scope/$source",
-								params: { scope: entry.scope, source: entry.source },
-								search: true,
-							}}
-						/>
-					))}
+					{visible.map((entry) => {
+						const relation = relationLabel(entry);
+						const update = outdated.has(`${entry.scope}\0${entry.source}`);
+						return (
+							<ListItem
+								key={`${entry.scope}\0${entry.source}`}
+								name={entry.source}
+								description={packageLine(entry)}
+								selected={selected === entry.source}
+								trailing={
+									relation === undefined && !update ? undefined : (
+										<span className="flex items-center gap-1">
+											{relation !== undefined && <Badge variant="outline">{relation}</Badge>}
+											{update && <Badge variant="info">Update</Badge>}
+										</span>
+									)
+								}
+								link={{
+									to: "/settings/packages/$scope/$source",
+									params: { scope: entry.scope, source: entry.source },
+									search: true,
+								}}
+							/>
+						);
+					})}
 				</ListGroup>
 			</ListPane>
 			<PackageInstallDialog open={installing} scope={scope} onOpenChange={setInstalling} />

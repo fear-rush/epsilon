@@ -1345,11 +1345,24 @@
 					},
 					"installedPath": {
 						"type": "string"
+					},
+					"filtered": {
+						"type": "boolean"
+					},
+					"relation": {
+						"type": "string",
+						"enum": [
+							"own",
+							"overrides",
+							"inherited"
+						]
 					}
 				},
 				"required": [
 					"source",
-					"scope"
+					"scope",
+					"filtered",
+					"relation"
 				]
 			},
 			"SettingWriteInput": {

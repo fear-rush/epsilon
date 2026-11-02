@@ -1199,6 +1199,8 @@ export interface components {
 			source: string;
 			scope: "user" | "project";
 			installedPath?: string;
+			filtered: boolean;
+			relation: "own" | "overrides" | "inherited";
 		};
 		SettingWriteInput: {
 			key: string;

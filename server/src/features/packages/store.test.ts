@@ -37,6 +37,7 @@ afterAll(() => {
 const localPackage = async (name: string, skills: string[]) => {
 	const base = join(scratch, name);
 	const pkg = join(base, "pkg");
+	await mkdir(pkg, { recursive: true });
 	for (const skill of skills) {
 		await mkdir(join(pkg, "skills", skill), { recursive: true });
 		await writeFile(
@@ -149,6 +150,48 @@ describe("package resources", () => {
 				enabled: false,
 			}),
 		).rejects.toThrow(/does not provide/);
+	});
+
+	test("one row for a project entry over the user's, and inherited rows for the rest", async () => {
+		const { home, project } = await localPackage("rows", []);
+		await mkdir(project, { recursive: true });
+		const other = join(scratch, "rows", "other");
+		await writePackageEntries(home.chatsDir, home, "user", ["../pkg", other]);
+		await writePackageEntries(project, home, "project", [{ source: "../../pkg", autoload: false }]);
+
+		const rows = listPackages(project, home);
+		expect(rows).toHaveLength(2);
+		expect(rows[0]).toMatchObject({
+			source: "../../pkg",
+			scope: "project",
+			filtered: true,
+			relation: "overrides",
+		});
+		expect(rows[1]).toMatchObject({ source: other, scope: "user", relation: "inherited" });
+
+		// The home's own folder has no project layer, so every row is its own.
+		expect(
+			listPackages(home.chatsDir, home).map((entry) => [entry.source, entry.relation]),
+		).toEqual([
+			["../pkg", "own"],
+			[other, "own"],
+		]);
+	});
+
+	test("the same npm package at two versions is one row", async () => {
+		const { home, project } = await localPackage("npm-rows", []);
+		await mkdir(project, { recursive: true });
+		await writePackageEntries(home.chatsDir, home, "user", ["npm:@scope/tool@1.2.0"]);
+		await writePackageEntries(project, home, "project", ["npm:@scope/tool@2.0.0"]);
+
+		const rows = listPackages(project, home);
+		expect(rows).toHaveLength(1);
+		expect(rows[0]).toMatchObject({
+			source: "npm:@scope/tool@2.0.0",
+			scope: "project",
+			filtered: false,
+			relation: "overrides",
+		});
 	});
 
 	test("an update check skips a local package, and only a declared source can be updated", async () => {

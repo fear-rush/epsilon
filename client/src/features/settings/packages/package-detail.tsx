@@ -24,9 +24,8 @@ import {
 	useSettingsProject,
 	useSettingsRefresh,
 } from "@/features/settings/queries";
+import { scopeLabel } from "./package-kind";
 import { PackageProvides } from "./package-provides";
-
-const SCOPE_LABEL = { user: "Global", project: "Project" } as const;
 
 /** One declared package: where it is declared and installed, and what it provides. */
 export function PackageDetail({ scope, source }: { scope: PackageView["scope"]; source: string }) {
@@ -124,7 +123,7 @@ export function PackageDetail({ scope, source }: { scope: PackageView["scope"]; 
 		>
 			<Section title="Package">
 				<Row title="Source">{source}</Row>
-				<Row title="Scope">{SCOPE_LABEL[entry.scope]}</Row>
+				<Row title="Scope">{scopeLabel(entry)}</Row>
 				{entry.installedPath !== undefined && <Row title="Install path">{entry.installedPath}</Row>}
 			</Section>
 			{update.error !== null && (

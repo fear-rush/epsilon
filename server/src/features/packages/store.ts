@@ -10,7 +10,8 @@
  * to add back, so turning a resource on removes the pattern.
  */
 
-import { basename, dirname, extname, isAbsolute, relative, resolve } from "node:path";
+import { homedir } from "node:os";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { z } from "zod";
 import type { AgentHome } from "../../platform/agent-home";
 import {
@@ -29,14 +30,79 @@ import type {
 	PackageView,
 } from "./contract";
 
-export const listPackages = (folder: string, home: AgentHome): PackageView[] =>
-	packageManager(folder, home)
-		.listConfiguredPackages()
-		.map((entry) => ({
-			source: entry.source,
-			scope: entry.scope,
-			installedPath: entry.installedPath,
-		}));
+/** The prefixes pi reads as something other than a plain path. */
+const NON_LOCAL = ["npm:", "git:", "github:", "http:", "https:", "ssh:", "builtin:"];
+
+/** One entry as pi's settings declare it, before Epsilon relates it to the other scope. */
+type DeclaredPackage = ReturnType<
+	ReturnType<typeof packageManager>["listConfiguredPackages"]
+>[number];
+
+/** The identity pi dedupes a package by: an npm name, a resolved local path, else the source. */
+const packageIdentity = (
+	folder: string,
+	home: AgentHome,
+	source: string,
+	scope: PackageScope,
+): string => {
+	if (source.startsWith("npm:")) {
+		const spec = source.slice("npm:".length).trim();
+		const at = spec.lastIndexOf("@");
+		return `npm:${at > 0 ? spec.slice(0, at) : spec}`;
+	}
+	const local =
+		!source.startsWith("file:") && !NON_LOCAL.some((prefix) => source.startsWith(prefix));
+	if (!local) {
+		// pi normalizes SSH and HTTPS spellings of a git repo through a private parser
+		// Epsilon cannot reach, so a git source is compared as written.
+		return source;
+	}
+	const expanded =
+		source === "~"
+			? homedir()
+			: source.startsWith("~/")
+				? join(homedir(), source.slice(2))
+				: source;
+	return `local:${resolve(settingsBaseDir(home, folder, scope), expanded)}`;
+};
+
+const rowOf = (entry: DeclaredPackage, relation: PackageView["relation"]): PackageView => ({
+	source: entry.source,
+	scope: entry.scope,
+	installedPath: entry.installedPath,
+	filtered: entry.filtered,
+	relation,
+});
+
+/**
+ * One row per package. On a project folder that means the project's entries, with
+ * the global entries they leave alone marked `inherited`; an entry whose identity
+ * matches a global one is the single row for that package, marked `overrides`.
+ * On the home's own folder every declared entry is `own`.
+ */
+export const listPackages = (folder: string, home: AgentHome): PackageView[] => {
+	const declared = packageManager(folder, home).listConfiguredPackages();
+	if (folder === home.chatsDir) return declared.map((entry) => rowOf(entry, "own"));
+	const users = declared.filter((entry) => entry.scope === "user");
+	const projects = declared.filter((entry) => entry.scope === "project");
+	const userIds = new Set(
+		users.map((entry) => packageIdentity(folder, home, entry.source, "user")),
+	);
+	const projectIds = new Set(
+		projects.map((entry) => packageIdentity(folder, home, entry.source, "project")),
+	);
+	return [
+		...projects.map((entry) =>
+			rowOf(
+				entry,
+				userIds.has(packageIdentity(folder, home, entry.source, "project")) ? "overrides" : "own",
+			),
+		),
+		...users
+			.filter((entry) => !projectIds.has(packageIdentity(folder, home, entry.source, "user")))
+			.map((entry) => rowOf(entry, "inherited")),
+	];
+};
 
 export const installPackage = async (
 	folder: string,
@@ -48,8 +114,6 @@ export const installPackage = async (
 };
 
 /** The prefixes pi reads as something other than a plain path. */
-const NON_LOCAL = ["npm:", "git:", "github:", "http:", "https:", "ssh:", "builtin:"];
-
 /**
  * A local source is declared relative to the settings file that holds it, while pi
  * matches an input source from the process's folder. Only a plain relative path

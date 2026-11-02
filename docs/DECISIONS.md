@@ -341,9 +341,12 @@ switching an inherited MCP server there writes an override in the project file. 
 package's page switches its resources one by one; the switch is a filter in the
 package entry of the file the tab names, so the package itself stays installed. A
 package pi reports as outdated carries the marker on its row and its page, and
-Update runs pi's own updater, whose npm or git failure text is shown as it is. The
-project is in the Settings URL, so a project's menu in the sidebar links straight to
-it.
+Update runs pi's own updater, whose npm or git failure text is shown as it is. A
+project tab shows one row per package: a project entry that matches a global one hides
+the global row and says it overrides it, while a global package the project leaves
+alone shows as inherited. The match follows pi's identity, an npm name, a resolved local
+path, or the source string for a git URL. The project is in the Settings URL, so a
+project's menu in the sidebar links straight to it.
 
 Why: skills, MCP servers and packages exist at two scopes in pi, and an Epsilon tied
 to one startup folder could only ever show one project's scope. Opening any folder

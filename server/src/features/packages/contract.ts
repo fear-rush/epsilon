@@ -17,6 +17,10 @@ export const packageViewSchema = z
 		source: z.string(),
 		scope: packageScopeSchema,
 		installedPath: z.string().optional(),
+		/** True when the settings entry is an object with filters or `autoload`, not a bare source. */
+		filtered: z.boolean(),
+		/** Which declaration wins when both scopes name the same package. */
+		relation: z.enum(["own", "overrides", "inherited"]),
 	})
 	.openapi("PackageView");
 

@@ -502,10 +502,12 @@ An entry is a source string or an object with `source`, an optional `autoload`, 
 optional `extensions`, `skills`, `prompts` and `themes` arrays. A filter pattern is
 a path relative to the package root: `-rel` forces it off, `+rel` forces it on,
 `!rel` excludes what a glob includes, and a plain entry includes it. An empty array
-disables that whole kind. `autoload: false` makes the entry a delta over the package
-of the same source in the other scope, so only the named files load; `pi config`
-removes the entry when its last filter goes, which restores the parent. A project
-entry without `autoload: false` replaces a global entry of the same package.
+disables that whole kind. `autoload: false` makes the entry a delta over the package of
+the same identity in the other scope, so only the named files load; `pi config` removes
+the entry when its last filter goes, which restores the parent. A project entry without
+`autoload: false` replaces a global entry of the same package. Identity is an npm
+package name without its version, a git host and path, or a local path resolved against
+the settings file's folder.
 `checkForAvailableUpdates()` answers which npm and git sources are outdated; a local
 source, an exact npm version and an offline pi are never checked. `update(source)`
 runs the npm or git command itself: a failed command rejects with the command line
