@@ -261,9 +261,9 @@ function Row({ row }: { row: TranscriptRow }) {
 				</Fragment>
 			);
 		case "notice":
-			if (row.notice.kind === "error") {
+			if (row.notice.kind === "error" || row.notice.kind === "warning") {
 				return (
-					<Notice tone="error">
+					<Notice tone={row.notice.kind}>
 						<span className="block max-h-48 overflow-auto whitespace-pre-wrap">
 							{row.notice.text}
 						</span>

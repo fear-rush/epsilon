@@ -88,7 +88,8 @@ export type StreamingTurn = {
 
 export type Notice = {
 	id: number;
-	kind: "compaction" | "retry" | "notice" | "error";
+	/** `warning` is an extension's own severity, kept so it reads as one. */
+	kind: "compaction" | "retry" | "notice" | "warning" | "error";
 	text: string;
 	/** How many messages had arrived when this notice happened, for ordering. */
 	afterMessages: number;

@@ -137,13 +137,20 @@ only source).
 ## UI contract
 
 Epsilon renders the extension UI methods that are data (`select`, `confirm`, `input`,
-`editor`, `notify`, `setStatus`, `setWidget` as text, `setTitle`), through
+`editor`, `notify`, `setStatus`, `setWidget` as text, `setTitle`, `theme`), through
 `ExtensionUIContext`. A method that needs pi's terminal UI (`custom`, footer and header
 components, terminal input) answers with a visible notice naming it, once. Silence is
 never an answer. Dialog timeouts are enforced by the engine.
 
+`ctx.ui.theme` answers with a value whose colour methods return their text unchanged.
+pi does not export the theme it uses itself, and an extension reads `theme` without
+asking, so dropping the escapes keeps the line it was drawing while refusing the call
+would lose it. `notify` keeps the severity pi sent, and a missing one reads as `info`,
+so an extension error is not drawn like a status line.
+
 Why: terminal components have no data form, and the set of extensions is open-ended, so
-an adapter has no cost ceiling.
+an adapter has no cost ceiling. A theme in a browser has nothing to colour, so the text
+is the whole answer.
 
 Not: rendering `pi-tui` components headlessly in the browser (couples the server to pi's
 internals and produces terminal-shaped dialogs). A per-extension UI adapter.

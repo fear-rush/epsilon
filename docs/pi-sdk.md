@@ -79,7 +79,9 @@ Other facts worth having before embedding:
   (`dist/core/extensions/types.d.ts`):
   - **answer** a person: `select`, `confirm`, `input`, `editor`
   - **show** state: `notify`, `setStatus`, `setTitle`, `setWidget` (text lines or a
-    TUI component), `setEditorText`, `pasteToEditor`, `getEditorText`
+    TUI component), `setEditorText`, `pasteToEditor`, `getEditorText`. `notify`'s
+    optional second argument is `info | warning | error`, and pi sends no type when an
+    extension omits it, so a host reads a missing type as `info`.
   - **working and view state**: `setWorkingMessage`, `setWorkingVisible`,
     `setWorkingIndicator`, `setHiddenThinkingLabel`, `getToolsExpanded`,
     `setToolsExpanded`
@@ -88,12 +90,18 @@ Other facts worth having before embedding:
     theme trio `getAllThemes`, `getTheme`, `setTheme`
     `custom` exists and takes a component factory, so a host with no terminal cannot
     render it. `theme` does not belong with the trio: it is a working `Theme` in every
-    mode where a host supplies a uiContext, and pi's own headless host answers it with
-    its exported `theme` (`dist/index.d.ts` exports `Theme`, `theme`, `initTheme`).
-    A host that returns a stub which throws kills whichever handler reads it, and pi
-    counts a failed `tool_call` handler as blocking the tool. Epsilon answers the
-    dialog group and the display half of the state groups, reports the terminal group
-    once, and returns silent defaults for `getEditorText`, `getEditorComponent`,
+    mode where a host supplies a uiContext, and an extension reads it without asking.
+    The singleton is **not** reachable: it lives in the internal
+    `dist/modes/interactive/theme/theme.js`, the package's `exports` map names only
+    `.` and `./rpc-entry`, and
+    `dist/index.d.ts` exports `Theme`, `initTheme` and the `get*Theme` helpers but not
+    `theme`. pi's own RPC mode reaches it by an internal relative import that a host
+    cannot copy, and `new Theme(...)` throws without pi's token tables. A host must
+    therefore supply its own `Theme` value where every colour method returns its text
+    unchanged. A host that returns a stub which throws kills whichever handler reads
+    it, and pi counts a failed `tool_call` handler as blocking the tool. Epsilon answers
+    the dialog group and the display half of the state groups, reports the terminal
+    group once, and returns silent defaults for `getEditorText`, `getEditorComponent`,
     `getAllThemes`, `getTheme` and `getToolsExpanded`
     ([DECISIONS.md](DECISIONS.md), UI contract).
 - `NewSessionOptions.id` creates a session with an exact id. `SessionManager` lists,

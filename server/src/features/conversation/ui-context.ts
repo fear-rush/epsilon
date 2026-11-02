@@ -12,6 +12,8 @@ import type {
 	ExtensionUIContext,
 	ExtensionWidgetOptions,
 	Theme,
+	ThemeBg,
+	ThemeColor,
 } from "@earendil-works/pi-coding-agent";
 import type { DialogAnswer, DialogQuestion, ExtensionDisplay, ProtocolErrorCode } from "shared";
 
@@ -62,16 +64,41 @@ const answerValue = (answer: DialogAnswer): string | undefined =>
 const answerConfirmed = (answer: DialogAnswer): boolean =>
 	answer.method === "confirm" && answer.confirmed;
 
-// SAFETY: a Theme has no headless value. Every property read throws before the
-// proxy can serve one, so no caller ever gets a working Theme member.
-const unsupportedTheme = new Proxy(
-	{},
-	{
-		get(): never {
-			throw new Error("epsilon has no terminal theme; the browser renders instead");
-		},
-	},
-) as Theme;
+const asIs = (text: string): string => text;
+/** `fg` and `bg` take the colour first, so their text is the second argument. */
+const asIsColoured = (_colour: ThemeColor | ThemeBg, text: string): string => text;
+
+/**
+ * pi's `theme` singleton lives in an internal module the package's `exports` map
+ * does not expose, and `new Theme(...)` throws without pi's own token tables. An
+ * extension only uses a theme to wrap text in ANSI escapes for a terminal, and
+ * the browser discards those, so every member hands its text back unchanged.
+ * Throwing instead would kill the handler that read it, and pi counts a failed
+ * `tool_call` handler as blocking the tool.
+ */
+const headlessTheme: Pick<Theme, keyof Theme> = {
+	appearance: "dark",
+	// SAFETY: `colors` is only read to hand a token back to a colour method, which
+	// ignores it here. An empty record is the honest answer: this theme has none.
+	colors: {} as Theme["colors"],
+	style: asIs,
+	fg: asIsColoured,
+	bg: asIsColoured,
+	bold: asIs,
+	italic: asIs,
+	underline: asIs,
+	inverse: asIs,
+	strikethrough: asIs,
+	getFgAnsi: () => "",
+	getBgAnsi: () => "",
+	getColorMode: () => "truecolor",
+	getThinkingBorderColor: () => asIs,
+	getBashModeBorderColor: () => asIs,
+};
+
+// SAFETY: `Theme` keeps private fields, so only a real instance is assignable to
+// it. Every public member above is a no-op that returns its text unchanged.
+const theme = headlessTheme as Theme;
 
 /** Map pi's `ExtensionUIContext` onto the browser's dialogs and notices. */
 export const createUiContext = (host: UiHost): ExtensionUIContext => ({
@@ -171,8 +198,7 @@ export const createUiContext = (host: UiHost): ExtensionUIContext => ({
 		return undefined;
 	},
 	get theme() {
-		host.unsupported("theme");
-		return unsupportedTheme;
+		return theme;
 	},
 	getAllThemes() {
 		return [];

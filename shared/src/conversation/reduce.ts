@@ -11,7 +11,18 @@ import type { ServerFrame } from "../protocol/frames";
 
 import { reanchorNotices, reduceEvent, toolsFromMessages, withNotice } from "./events";
 import { isVisibleMessage } from "./state";
-import type { ConversationState, UiStatus, UiWidget } from "./state";
+import type { ConversationState, Notice, UiStatus, UiWidget } from "./state";
+
+/**
+ * An extension's `notify` severity decides the notice's appearance, so an `error`
+ * from an extension reads like an error instead of a status line. pi's default
+ * when an extension passes no type is `info`, which is an ordinary notice.
+ */
+const notifyKind = (severity: "info" | "warning" | "error" | undefined): Notice["kind"] => {
+	if (severity === "error") return "error";
+	if (severity === "warning") return "warning";
+	return "notice";
+};
 
 /** The five display-only extension methods. None of them waits for an answer. */
 const reduceDisplay = (
@@ -39,7 +50,7 @@ const reduceDisplay = (
 		case "setTitle":
 			return { ...state, title: frame.title };
 		case "notify":
-			return withNotice(state, "notice", frame.message);
+			return withNotice(state, notifyKind(frame.notifyType), frame.message);
 		case "set_editor_text":
 			return withNotice(
 				state,
