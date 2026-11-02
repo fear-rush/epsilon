@@ -102,6 +102,8 @@ type ComposerProps = {
 	empty: boolean;
 	/** Why pi refuses a branch action right now; undefined when it is possible. */
 	blocked: string | undefined;
+	/** pi refuses a prompt while it replaces the transcript with a summary. */
+	isCompacting: boolean;
 	/** Open the page's tree dialog, fork dialog and clone action. */
 	onTree?: () => void;
 	onFork?: () => void;
@@ -133,6 +135,7 @@ function ComposerImpl({
 	tree,
 	empty,
 	blocked,
+	isCompacting,
 	onTree,
 	onFork,
 	onClone,
@@ -340,6 +343,13 @@ function ComposerImpl({
 			setAttachments([]);
 			setNotice(undefined);
 			void runCommand(parsed, message);
+			return;
+		}
+		// pi refuses a prompt while compaction is in progress ("Cannot submit a prompt
+		// while compaction is in progress"), and its refusal arrives after the draft
+		// would already be gone. The text stays where the user typed it.
+		if (isCompacting) {
+			setNotice("pi refuses a prompt while it compacts. Your draft stays here until it finishes.");
 			return;
 		}
 		store.prompt(

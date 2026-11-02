@@ -122,6 +122,11 @@ Other facts worth having before embedding:
   `cacheWarmingStatus`, `setSessionName`, `navigateTree`, `exportToHtml`,
   `exportToJsonl`, `getAllTools` and the model and thinking setters. A socket feature
   uses one of these instead of inventing an RPC command.
+- `clearQueue()` **returns** the prompts it removed, as `{ steering, followUp }`, and
+  its doc comment names the reason: restoring them to the editor. `abort()` does not
+  clear the queue, so a host that wants the text back calls `clearQueue()` first. pi's
+  own editor joins the returned prompts with a blank line and puts them in front of
+  whatever is already typed.
 - `exportToHtml(outputPath?, options?)` and `exportToJsonl(outputPath?)` write a file
   and answer its path; neither hands back the bytes. `exportToHtml` refuses a session
   with nothing written yet (`Nothing to export yet - start a conversation first`, and
@@ -196,6 +201,32 @@ does not receive them as frames.
 tool also records a `bashExecution` message in the session, which reaches a reader
 only through the session's messages
 (see Traps).
+
+`bash_execution_update` carries the `id` a caller passed to `executeBash` and one
+`delta` per chunk, so a host that passes an id can show a command's output while it
+runs and tell two runs apart. Without an id the field is absent, which is what pi's
+own interactive mode does.
+
+`compaction_end` reports its own outcome and nothing else does: `reason`, a `result`
+carrying `summary`, `firstKeptEntryId`, `tokensBefore`, `estimatedTokensAfter`, the
+summarizer's `usage` and any `details`, plus `aborted`, `willRetry` and
+`errorMessage`. A successful compaction also appends a `compaction` entry, which is
+what a snapshot shows as a `compactionSummary` message.
+
+`entry_appended` is pi's append-only record, not a message stream. `custom_message`
+entries become messages (`getMessages()` projects them, with `display` as pi wrote
+it); a plain `custom` entry is bookkeeping and is drawn only by a renderer the
+extension registered for its `customType`
+(`session.extensionRunner.getEntryRenderer(customType)`). pi draws nothing for the
+rest, and neither does a faithful host.
+
+`tool_execution_start`, `tool_execution_update` and `tool_execution_end` carry
+`parentToolCallId` when another tool made the call (`ctx.executeTool()`, as a
+codemode script does), and the model-issued call's tool result carries the bounded
+record of them in `nestedCalls` (`{ calls, complete }`). The record keeps the call,
+its arguments up to pi's size limits, `status: "ok" | "error" | "unfinished"`,
+`durationMs` and pi's truncated error text; it keeps no results. A nested call is
+never a top-level row and is not a message of its own.
 
 ## Writers: what the SDK can and cannot save
 
@@ -542,6 +573,11 @@ Turborepo or the runtime.
   `models.json` and `mcp.json` with a comment- and trailing-comma-tolerant reader
   (`dist/utils/json.js`), so a strict rewrite silently deletes comments an operator
   relies on.
+- **`hideThinkingBlock` is a global setting with a writer.**
+  `SettingsManager.getHideThinkingBlock()` and `setHideThinkingBlock(hide)` read and
+  write `globalSettings.hideThinkingBlock` and save pi's own `settings.json`, so a
+  host that changes it from the browser needs no file code and a terminal sees the
+  same value.
 - **Installed packages are bound to one platform.** Native optional dependencies are
   resolved at install time. Install on the machine that runs them; config
   files are portable, dependency trees are not.

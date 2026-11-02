@@ -111,6 +111,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				tree={tree}
 				empty={empty}
 				blocked={blocked}
+				isCompacting={isCompacting}
 				onTree={openTree}
 				onFork={openFork}
 				onClone={cloneChat}
@@ -133,6 +134,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 			busy,
 			tree,
 			blocked,
+			isCompacting,
 			openTree,
 			openFork,
 			cloneChat,

@@ -66,3 +66,46 @@ describe("transcript", () => {
 		expect(notice.notice.text).toBe("Operation aborted");
 	});
 });
+
+/**
+ * pi records a `!cmd` as a `bashExecution` message carrying `cancelled`,
+ * `truncated` and the path of the full output. Its own card says so; a row that
+ * dropped them looked like a command that simply finished.
+ */
+describe("a shell row", () => {
+	const bashMessage = (
+		fields: Partial<Extract<ConversationMessage, { role: "bashExecution" }>>,
+	): Extract<ConversationMessage, { role: "bashExecution" }> => ({
+		role: "bashExecution",
+		command: "sleep 99",
+		output: "partial",
+		exitCode: undefined,
+		cancelled: false,
+		truncated: false,
+		timestamp: 5,
+		...fields,
+	});
+	const rowOf = (fields: Partial<Extract<ConversationMessage, { role: "bashExecution" }>>) => {
+		const rows = transcript({ ...emptyConversation, messages: [bashMessage(fields)] });
+		const row = rows.find((candidate) => candidate.kind === "tool");
+		if (row?.kind !== "tool") throw new Error("expected a tool row");
+		return row.run;
+	};
+
+	test("a cancelled command reads as cancelled, not as a success", () => {
+		const run = rowOf({ cancelled: true });
+		expect(run.status).toBe("error");
+		expect(run.note).toBe("(cancelled)");
+	});
+
+	test("a truncated command names the file with the rest", () => {
+		const run = rowOf({ truncated: true, fullOutputPath: "/tmp/epsilon-full.txt" });
+		expect(run.note).toBe("Output truncated. Full output: /tmp/epsilon-full.txt");
+	});
+
+	test("a failing exit code is the reason the row failed", () => {
+		const run = rowOf({ exitCode: 2 });
+		expect(run.status).toBe("error");
+		expect(run.note).toBe("(exit 2)");
+	});
+});

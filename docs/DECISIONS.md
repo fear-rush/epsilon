@@ -79,25 +79,60 @@ server (the two would drift, and the browser decides which surface a name has).
 The browser socket carries Epsilon's own commands and zod shapes, defined in `shared/`.
 Commands are the ones the page can send: a prompt, the queue behavior it joins a
 running turn with and the images it carries, the aborts (turn, retry, compaction,
-bash), bash itself, the model, thinking-level and coding-tool switches, manual
-compaction, the auto-compaction and auto-retry toggles, the queue clear, the move to
-an earlier message of the branch, and reload. `commandNameSchema` in
+bash), bash itself, the model, thinking-level, coding-tool and thinking-visibility
+switches, manual compaction, the auto-compaction and auto-retry toggles, the queue
+clear, the move to an earlier message of the branch, and reload. `commandNameSchema` in
 `shared/src/protocol/frames.ts` is the list. Each is answered by `command-result`
-naming the command. A frame change bumps `PROTOCOL_VERSION`, and a tab built for
-another version reloads.
+naming the command, and that frame also carries the prompts pi handed back when a
+command took them (`queue`). A frame change bumps `PROTOCOL_VERSION`, and a tab built
+for another version reloads.
 
 Why: with no RPC envelope under it, pi's RPC types would be a translation layer, and a
 change to pi's private types would become a change to Epsilon's public contract.
 `/reload` is a socket command, never a slash command the model sees.
 
 The `notice` frame carries what no command result can: `external-change` is the file
-written by another process, and `command` is a sentence a built-in command answered
-with instead of acting. Only the first offers a reload.
+written by another process, `command` is a sentence a built-in command answered with
+instead of acting, and `extension` is something only pi's terminal UI can draw (a
+custom entry with an extension's own renderer). Only the first offers a reload.
 
 Not: keeping pi's RPC types for compatibility (nothing speaks them). Request/response
 frames for reads (the engine exposes state synchronously, so a snapshot needs no round
 trip). Deep-importing pi's JSON event transform (blocked by the package `exports` map;
 the engine carries a small copy and names its source).
+
+## Run outcomes in the transcript
+
+The transcript reports what pi reported, not a simplified view of it:
+
+- A reply's blocks keep pi's `contentIndex` order, live and after a reload, so an
+  interleaved thinking block stays between the text it was written between.
+- A run is busy until `agent_settled`, not `agent_end`: pi still flushes queued bash
+  and custom messages after the latter, and a tool row left at `running` when the run
+  settles becomes an error with pi's reason.
+- A compaction says which of its three outcomes happened, from `compaction_end`
+  alone: how many tokens it replaced and what the summary billed, that it was
+  cancelled, or pi's own `errorMessage`. Retries name the attempt, the limit, the
+  delay and pi's reason.
+- A nested tool call is drawn inside the tool that made it, from the live
+  `parentToolCallId` events and, after a reload, pi's `nestedCalls` record on the
+  parent's result.
+- An extension's entry is drawn exactly where pi draws one: a `custom_message` with
+  `display`, or a `custom` entry whose `customType` has a registered entry renderer.
+  The second has no web component yet, so it gets a sentence saying so rather than a
+  row that would misrepresent pi.
+- A notice is anchored to how many messages the transcript held when it happened. A
+  snapshot that holds less (a compaction replaced history with a summary) moves it to
+  the rebuild point instead of letting it resurface later mid-conversation.
+- An abort or a Clear hands pi's queue back, so text the user typed during the run is
+  editable again instead of lost.
+
+Why: a user acts on these lines. "Compaction finished" for a failed compaction, or a
+cancelled turn that looks like an idle chat, is worse than no line at all.
+
+Not: replaying pi's terminal components (they draw in a terminal and are not part of
+the socket contract). A second transcript model (pi's messages and entries are the
+only source).
 
 ## UI contract
 

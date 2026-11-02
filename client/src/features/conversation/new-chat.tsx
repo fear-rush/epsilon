@@ -97,6 +97,7 @@ function DraftConversation({
 				tree={tree}
 				empty
 				blocked={branchBlocked(busy, isCompacting)}
+				isCompacting={isCompacting}
 				models={models}
 				model={model}
 				thinkingLevel={thinkingLevel}
