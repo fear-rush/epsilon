@@ -11,11 +11,20 @@
 import { z } from "zod";
 
 import { contentParts, imagesOf, textOf } from "./content";
-import type { ConversationMessage, ConversationState, Notice, ToolRun } from "./state";
+import type {
+	ConversationMessage,
+	ConversationState,
+	Notice,
+	StreamingTurn,
+	ToolRun,
+} from "./state";
+
+/** One block of a reply, in pi's own order, so interleaved thinking stays where it came. */
+type AssistantSegment = { kind: "text"; text: string } | { kind: "thinking"; text: string };
 
 export type TranscriptRow =
 	| { kind: "user"; key: string; text: string; images: { data: string; mimeType: string }[] }
-	| { kind: "assistant"; key: string; text: string; thinking: string; streaming: boolean }
+	| { kind: "assistant"; key: string; segments: AssistantSegment[]; streaming: boolean }
 	| { kind: "tool"; key: string; run: ToolRun }
 	| { kind: "summary"; key: string; label: string; text: string }
 	| { kind: "notice"; key: string; notice: Notice };
@@ -29,7 +38,7 @@ const userRows = new WeakMap<UserMessage, TranscriptRow>();
 const otherRows = new WeakMap<OtherMessage, TranscriptRow>();
 const noticeRows = new WeakMap<Notice, TranscriptRow>();
 const assistantTextRows = new WeakMap<AssistantMessage, TranscriptRow | undefined>();
-const assistantErrorRows = new WeakMap<AssistantMessage, TranscriptRow | undefined>();
+const assistantStopRows = new WeakMap<AssistantMessage, TranscriptRow | undefined>();
 const toolRowsByRun = new WeakMap<ToolRun, TranscriptRow>();
 /** A tool call with no run yet gets one placeholder row that outlives each frame. */
 const toolRowsByCall = new WeakMap<ToolCall, TranscriptRow>();
@@ -49,48 +58,63 @@ const userRow = (message: UserMessage, key: string): TranscriptRow => {
 	return row;
 };
 
-/** The assistant's prose, or nothing when the message carried only tool calls. */
+/**
+ * The blocks of a reply in pi's order. Empty blocks are dropped, never reordered:
+ * a reply that wrote text, thought, then wrote again keeps that order.
+ */
+const segmentsOf = (content: AssistantMessage["content"]): AssistantSegment[] =>
+	content.flatMap<AssistantSegment>((part) => {
+		if (part.type === "text" && part.text.trim() !== "") return [{ kind: "text", text: part.text }];
+		if (part.type === "thinking" && part.thinking.trim() !== "")
+			return [{ kind: "thinking", text: part.thinking }];
+		return [];
+	});
+
 const assistantTextRow = (message: AssistantMessage, index: number): TranscriptRow | undefined => {
 	if (assistantTextRows.has(message)) return assistantTextRows.get(message);
-	const text = message.content
-		.filter((part) => part.type === "text")
-		.map((part) => part.text)
-		.join("");
-	const thinking = message.content
-		.filter((part) => part.type === "thinking")
-		.map((part) => part.thinking)
-		.join("");
+	const segments = segmentsOf(message.content);
 	const row: TranscriptRow | undefined =
-		text.trim() !== "" || thinking.trim() !== ""
-			? { kind: "assistant", key: `a${index}`, text, thinking, streaming: false }
+		segments.length > 0
+			? { kind: "assistant", key: `a${index}`, segments, streaming: false }
 			: undefined;
 	assistantTextRows.set(message, row);
 	return row;
 };
 
 /**
- * pi records a failed provider call as an assistant message with no content and
- * `stopReason: "error"`. Nothing else carries that message, so without this row
- * a refused turn ends in silence (docs/ARCHITECTURE.md, Failure modes). Deriving
- * it from the message also makes it survive a reload and a reattach.
+ * pi records a failed or stopped turn on the assistant message itself: `stopReason`
+ * is `error` or `aborted`, and no separate event carries it. Nothing else would
+ * show it, so a refused turn would end in silence (docs/ARCHITECTURE.md, Failure
+ * modes). Deriving the row from the message also makes it survive a reload.
  */
-const assistantErrorRow = (message: AssistantMessage, index: number): TranscriptRow | undefined => {
-	if (assistantErrorRows.has(message)) return assistantErrorRows.get(message);
-	const row: TranscriptRow | undefined =
-		message.stopReason === "error"
-			? {
-					kind: "notice",
-					key: `a${index}-error`,
-					notice: {
-						id: index,
-						kind: "error",
-						text: `${message.provider}/${message.model}: ${message.errorMessage ?? "the request failed"}`,
-						afterMessages: 0,
-					},
-				}
-			: undefined;
-	assistantErrorRows.set(message, row);
+const assistantStopRow = (message: AssistantMessage, index: number): TranscriptRow | undefined => {
+	if (assistantStopRows.has(message)) return assistantStopRows.get(message);
+	const row = stopRowOf(message, index);
+	assistantStopRows.set(message, row);
 	return row;
+};
+
+const stopRowOf = (message: AssistantMessage, index: number): TranscriptRow | undefined => {
+	if (message.stopReason === "error") {
+		return {
+			kind: "notice",
+			key: `a${index}-error`,
+			notice: {
+				id: index,
+				kind: "error",
+				text: `${message.provider}/${message.model}: ${message.errorMessage ?? "the request failed"}`,
+				afterMessages: 0,
+			},
+		};
+	}
+	if (message.stopReason === "aborted") {
+		return {
+			kind: "notice",
+			key: `a${index}-aborted`,
+			notice: { id: index, kind: "notice", text: "Operation aborted", afterMessages: 0 },
+		};
+	}
+	return undefined;
 };
 
 const toolRow = (call: ToolCall, key: string, tools: ToolRun[]): TranscriptRow => {
@@ -128,8 +152,8 @@ const assistantRows = (
 	const rows: TranscriptRow[] = [];
 	const text = assistantTextRow(message, index);
 	if (text !== undefined) rows.push(text);
-	const error = assistantErrorRow(message, index);
-	if (error !== undefined) rows.push(error);
+	const stop = assistantStopRow(message, index);
+	if (stop !== undefined) rows.push(stop);
 	message.content
 		.filter((part) => part.type === "toolCall")
 		.forEach((call, callIndex) => rows.push(toolRow(call, `a${index}-t${callIndex}`, tools)));
@@ -224,20 +248,23 @@ export const transcript = (state: ConversationState): TranscriptRow[] => {
 		flushNotices(index + 1);
 	});
 
-	if (
-		state.streaming !== null &&
-		(state.streaming.text !== "" || state.streaming.thinking !== "")
-	) {
-		rows.push({
-			kind: "assistant",
-			key: "streaming",
-			text: state.streaming.text,
-			thinking: state.streaming.thinking,
-			streaming: true,
-		});
+	const segments = streamingSegments(state.streaming);
+	if (segments.length > 0) {
+		rows.push({ kind: "assistant", key: "streaming", segments, streaming: true });
 	}
 	return rows;
 };
+
+/** The blocks of a reply still arriving, in pi's order and without the empties. */
+const streamingSegments = (turn: StreamingTurn | null): AssistantSegment[] =>
+	turn === null
+		? []
+		: turn.blocks.flatMap<AssistantSegment>((block) => {
+				if (block === undefined) return [];
+				if (block.type === "text")
+					return block.text === "" ? [] : [{ kind: "text", text: block.text }];
+				return block.thinking === "" ? [] : [{ kind: "thinking", text: block.thinking }];
+			});
 
 /** Whether the last row is still being written to, for scroll behaviour. */
 export const isStreaming = (state: ConversationState): boolean => state.streaming !== null;

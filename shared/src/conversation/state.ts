@@ -48,13 +48,23 @@ export type ToolRun = {
 	images: ToolResultPart[];
 	/** `pending` means a tool call with no execution event: never blank, never a guess. */
 	status: "pending" | "running" | "ok" | "error";
+	/** Why the row has this status when the tool never said: a run that ended, for one. */
+	note?: string;
 	durationMs?: number;
 };
 
 /** Assistant text that has arrived but has no authoritative message yet. */
+export type StreamingBlock =
+	| { type: "text"; text: string }
+	| { type: "thinking"; thinking: string };
+
+/**
+ * One assistant content block arriving before `message_end`, at pi's own
+ * `contentIndex`. A tool call's index stays empty: its row is the tool card.
+ * Keeping the index is what lets text, thinking and text render in that order.
+ */
 export type StreamingTurn = {
-	text: string;
-	thinking: string;
+	blocks: (StreamingBlock | undefined)[];
 };
 
 export type Notice = {
@@ -85,8 +95,8 @@ export type ConversationState = {
 	title?: string;
 	/** pi's own session name, from `set_session_name` or the terminal. */
 	sessionName?: string;
-	/** A turn is in progress. `agent_start` and `agent_end` carry this; a live
-	 * engine that is merely idle does not. */
+	/** A turn is in progress. `agent_start` starts it and `agent_settled` ends it;
+	 * `agent_end` still has cleanup to do, so it does not. */
 	busy: boolean;
 	/** pi is replacing the transcript with a summary. */
 	isCompacting: boolean;

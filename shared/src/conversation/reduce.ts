@@ -9,7 +9,7 @@
  */
 import type { ServerFrame } from "../protocol/frames";
 
-import { reduceEvent, toolsFromMessages, withNotice } from "./events";
+import { reanchorNotices, reduceEvent, toolsFromMessages, withNotice } from "./events";
 import { isVisibleMessage } from "./state";
 import type { ConversationState, UiStatus, UiWidget } from "./state";
 
@@ -59,6 +59,9 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 			return {
 				...state,
 				messages,
+				// The snapshot may hold a shorter history than the notices were placed
+				// in, so their anchors move to where the history was rebuilt.
+				notices: reanchorNotices(state.notices, messages),
 				tools: toolsFromMessages(messages),
 				streaming: null,
 				// Attaching mid-run must show the run as live, not as idle until the next

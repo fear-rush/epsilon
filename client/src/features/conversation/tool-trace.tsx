@@ -123,13 +123,21 @@ export function ToolTrace({ run }: { run: ToolRun }) {
 		</TraceLine>
 	);
 
-	if (body === null) return <Trace>{line}</Trace>;
+	// A tool the run ended under has no result to show, only the reason it stopped.
+	const note =
+		run.note === undefined ? null : (
+			<p className="px-1 text-meta whitespace-pre-wrap text-muted-foreground">{run.note}</p>
+		);
+	if (body === null && note === null) return <Trace>{line}</Trace>;
 
 	return (
 		<Trace>
 			<TraceCollapsible>
 				<TraceCollapsibleTrigger>{line}</TraceCollapsibleTrigger>
-				<TraceCollapsibleContent>{body}</TraceCollapsibleContent>
+				<TraceCollapsibleContent>
+					{note}
+					{body}
+				</TraceCollapsibleContent>
 			</TraceCollapsible>
 		</Trace>
 	);

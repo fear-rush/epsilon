@@ -6,7 +6,14 @@
 import type { JsonAgentSessionEvent } from "../pi";
 
 import { contentParts, imagesOf, textOf } from "./content";
-import type { ConversationMessage, ConversationState, Notice, ToolRun } from "./state";
+import type {
+	ConversationMessage,
+	ConversationState,
+	Notice,
+	StreamingBlock,
+	StreamingTurn,
+	ToolRun,
+} from "./state";
 
 export const withNotice = (
 	state: ConversationState,
@@ -20,6 +27,22 @@ export const withNotice = (
 	],
 	nextNoticeId: state.nextNoticeId + 1,
 });
+
+/**
+ * A snapshot can hold a shorter transcript than the notices were anchored in: a
+ * compaction replaces history with a summary. A notice whose anchor no longer
+ * exists belongs where the history was rebuilt, or it would vanish and then
+ * resurface mid-conversation once new messages grew past the old count.
+ */
+export const reanchorNotices = (notices: Notice[], messages: ConversationMessage[]): Notice[] => {
+	if (notices.every((notice) => notice.afterMessages <= messages.length)) return notices;
+	// The summary a compaction left at the top is where its notices happened.
+	const summary = messages.findLastIndex((message) => message.role === "compactionSummary");
+	const rebuilt = summary < 0 ? messages.length : summary + 1;
+	return notices.map((notice) =>
+		notice.afterMessages > messages.length ? { ...notice, afterMessages: rebuilt } : notice,
+	);
+};
 
 const upsertTool = (tools: ToolRun[], toolCallId: string, update: Partial<ToolRun>): ToolRun[] => {
 	const index = tools.findIndex((tool) => tool.toolCallId === toolCallId);
@@ -92,6 +115,53 @@ export const toolsFromMessages = (messages: ConversationMessage[]): ToolRun[] =>
 	);
 };
 
+/**
+ * One streaming block, placed by pi's `contentIndex`. pi streams a whole reply as
+ * `*_start`, `*_delta` and `*_end` per block, so the index is the only thing that
+ * keeps text, thinking and a second text block in the order the model wrote them.
+ */
+const setBlock = (
+	streaming: StreamingTurn,
+	index: number,
+	block: StreamingBlock | undefined,
+): StreamingTurn => {
+	const blocks = [...streaming.blocks];
+	blocks[index] = block;
+	return { blocks };
+};
+
+/** Append to the block at `index`, creating it when this is its first delta. */
+const appendBlock = (
+	streaming: StreamingTurn,
+	index: number,
+	kind: StreamingBlock["type"],
+	delta: string,
+): StreamingTurn => {
+	const current = streaming.blocks[index];
+	if (current === undefined || current.type !== kind) {
+		const block: StreamingBlock =
+			kind === "text" ? { type: "text", text: delta } : { type: "thinking", thinking: delta };
+		return setBlock(streaming, index, block);
+	}
+	const block: StreamingBlock =
+		current.type === "text"
+			? { type: "text", text: current.text + delta }
+			: { type: "thinking", thinking: current.thinking + delta };
+	return setBlock(streaming, index, block);
+};
+
+/**
+ * pi settles a run even when a tool never reported an end, such as a stop between
+ * the call and its result. A row left at `running` would claim work is still
+ * happening, so the settle closes it and says why.
+ */
+const SETTLED_TOOL_NOTE = "Not executed: the run ended before this tool finished.";
+
+const settleTools = (tools: ToolRun[]): ToolRun[] =>
+	tools.map((tool) =>
+		tool.status === "running" ? { ...tool, status: "error", note: SETTLED_TOOL_NOTE } : tool,
+	);
+
 export const reduceEvent = (
 	state: ConversationState,
 	event: JsonAgentSessionEvent,
@@ -100,8 +170,15 @@ export const reduceEvent = (
 		case "agent_start":
 			return { ...state, busy: true };
 		case "agent_end":
+			// pi still has cleanup after this event; `agent_settled` is what ends the run.
+			return state;
 		case "agent_settled":
-			return { ...state, busy: false, streaming: null };
+			return {
+				...state,
+				busy: false,
+				streaming: null,
+				tools: settleTools(state.tools),
+			};
 		case "thinking_level_changed":
 			return { ...state, thinkingLevel: event.level };
 		case "queue_update":
@@ -113,23 +190,55 @@ export const reduceEvent = (
 			};
 		case "message_start":
 			if (event.message.role !== "assistant") return state;
-			return { ...state, streaming: { text: "", thinking: "" } };
+			return { ...state, streaming: { blocks: [] } };
 		case "message_update": {
 			const delta = event.assistantMessageEvent;
 			if (state.streaming === null) return state;
-			if (delta.type === "text_delta") {
-				return {
-					...state,
-					streaming: { ...state.streaming, text: state.streaming.text + delta.delta },
-				};
+			switch (delta.type) {
+				case "text_start":
+					return {
+						...state,
+						streaming: setBlock(state.streaming, delta.contentIndex, { type: "text", text: "" }),
+					};
+				case "text_delta":
+					return {
+						...state,
+						streaming: appendBlock(state.streaming, delta.contentIndex, "text", delta.delta),
+					};
+				case "text_end":
+					// The end carries the authoritative text for that block.
+					return {
+						...state,
+						streaming: setBlock(state.streaming, delta.contentIndex, {
+							type: "text",
+							text: delta.content,
+						}),
+					};
+				case "thinking_start":
+					return {
+						...state,
+						streaming: setBlock(state.streaming, delta.contentIndex, {
+							type: "thinking",
+							thinking: "",
+						}),
+					};
+				case "thinking_delta":
+					return {
+						...state,
+						streaming: appendBlock(state.streaming, delta.contentIndex, "thinking", delta.delta),
+					};
+				case "thinking_end":
+					return {
+						...state,
+						streaming: setBlock(state.streaming, delta.contentIndex, {
+							type: "thinking",
+							thinking: delta.content,
+						}),
+					};
+				default:
+					// A tool call's index stays empty: its row is the tool card.
+					return state;
 			}
-			if (delta.type === "thinking_delta") {
-				return {
-					...state,
-					streaming: { ...state.streaming, thinking: state.streaming.thinking + delta.delta },
-				};
-			}
-			return state;
 		}
 		case "message_end": {
 			if (event.message.role === "system") return state;

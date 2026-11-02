@@ -232,12 +232,15 @@ function Row({ row }: { row: TranscriptRow }) {
 			return (
 				<Message align="start">
 					<MessageContent>
-						{row.thinking !== "" && (
-							<p className="mb-2 text-meta whitespace-pre-wrap text-muted-foreground">
-								{row.thinking}
-							</p>
+						{row.segments.map((segment, index) =>
+							segment.kind === "thinking" ? (
+								<p key={index} className="mb-2 text-meta whitespace-pre-wrap text-muted-foreground">
+									{segment.text}
+								</p>
+							) : (
+								<Markdown key={index}>{segment.text}</Markdown>
+							),
 						)}
-						{row.text !== "" && <Markdown>{row.text}</Markdown>}
 						{row.streaming && (
 							<span className="animate-pulse text-muted-foreground motion-reduce:animate-none">
 								▍

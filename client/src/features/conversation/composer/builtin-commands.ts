@@ -51,11 +51,17 @@ type Handler = (
 
 /** The last reply's prose, which is what pi's `/copy` puts on the clipboard. */
 const lastAssistantText = (state: ConversationState): string | undefined => {
-	const replies = transcript(state).filter(
-		(row) => row.kind === "assistant" && row.text.trim() !== "",
+	const texts = transcript(state).flatMap((row) =>
+		row.kind === "assistant"
+			? [
+					row.segments
+						.filter((segment) => segment.kind === "text")
+						.map((segment) => segment.text)
+						.join(""),
+				]
+			: [],
 	);
-	const last = replies.at(-1);
-	return last?.kind === "assistant" ? last.text : undefined;
+	return texts.filter((text) => text.trim() !== "").at(-1);
 };
 
 /** `/export` reads pi's own rule: HTML unless the argument asks for JSONL. */

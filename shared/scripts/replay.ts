@@ -35,8 +35,10 @@ const rowText = (row: ReturnType<typeof transcript>[number]): string => {
 	switch (row.kind) {
 		case "user":
 			return row.text;
-		case "assistant":
-			return `${row.streaming ? "(streaming) " : ""}${row.text}`;
+		case "assistant": {
+			const text = row.segments.map((segment) => segment.text).join(" ");
+			return `${row.streaming ? "(streaming) " : ""}${text}`;
+		}
 		case "tool":
 			return `${row.run.toolName} [${row.run.status}] ${row.run.output.split("\n")[0] ?? ""}`;
 		case "summary":
