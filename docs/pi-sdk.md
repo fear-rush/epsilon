@@ -203,7 +203,9 @@ Other facts worth having before embedding:
   returns its text as `editorText`; the next prompt then starts a sibling branch.
   Any other entry becomes the leaf itself. Either way the switch refreshes
   `agent.messages` and restores the active tools before it resolves, and
-  `sessionManager.getBranch()` answers the new branch, root to leaf.
+  `sessionManager.getBranch()` answers the new branch, root to leaf. Its options also
+  take `summarize`, `customInstructions` and `replaceInstructions` for the branch it
+  leaves, and a `label` for the summary entry; the summary is a model call.
   `getUserMessagesForForking()` is not a branch list: it returns the user messages
   of every branch in the file.
 - `toJsonEvent` is the transformation between a live event and the JSON the reducer
@@ -289,6 +291,7 @@ never a top-level row and is not a message of its own.
 | Other settings             | `SettingsManager` setters (there is none for `defaultTools`, below)                                                                                                                                    |
 | Packages                   | `DefaultPackageManager.installAndPersist`, `removeAndPersist`, `listConfiguredPackages`, `update`, `checkForAvailableUpdates`; `SettingsManager.setPackages` and `setProjectPackages` for a filter     |
 | Project trust              | `ProjectTrustStore.set`                                                                                                                                                                                |
+| Tree labels                | `SessionManager.appendLabelChange(targetId, label)` writes one `label` entry; `undefined` clears it                                                                                                    |
 | Providers (`models.json`)  | **none.** `registerProvider()` is runtime-only; `ModelConfig` is read-only                                                                                                                             |
 | MCP servers (`mcp.json`)   | **none reachable.** `addMcpServerConfig`, `removeMcpServerConfig` and `loadMcpConfig` exist, but the package's `exports` map exposes only `.` and `./rpc-entry`, so they cannot be imported through it |
 | Skills                     | **files, plus the `skills` setting.** A skill is a directory with `SKILL.md`; `SettingsManager.setSkillPaths` and `setProjectSkillPaths` write the array of paths and `-path` overrides                |

@@ -119,6 +119,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 	} = useBranching({
 		store,
 		tree,
+		filterMode: snapshot.state.treeFilterMode,
 		empty,
 		project: where.kind === "project" ? where.path : undefined,
 		busy,

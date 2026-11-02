@@ -20,6 +20,7 @@ export type {
 	SnapshotState,
 	SnapshotTreeNode,
 	ThinkingLevel,
+	TreeFilterMode,
 } from "./protocol/frames";
 export {
 	PROMPT_IMAGE_BASE64_TOTAL_MAX,
@@ -41,6 +42,7 @@ export {
 	snapshotSchema,
 	snapshotStateSchema,
 	thinkingLevelSchema,
+	treeFilterModeSchema,
 } from "./protocol/frames";
 export { dialogAnswerSchema, dialogQuestionSchema, extensionDisplaySchema } from "./protocol/extui";
 export type { DialogAnswer, DialogQuestion, ExtensionDisplay } from "./protocol/extui";

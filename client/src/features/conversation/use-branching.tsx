@@ -8,7 +8,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
-import type { SnapshotTreeNode } from "shared";
+import type { SnapshotTreeNode, TreeFilterMode } from "shared";
 
 import { cloneSession } from "@/api/endpoints";
 import { sessionKeys } from "@/api/keys";
@@ -17,6 +17,7 @@ import { clearPendingDraft, setPendingDraft } from "./pending-draft";
 import type { ConversationStore } from "./store";
 import { ForkSessionDialog } from "./fork-dialog";
 import { SessionTreeDialog } from "./tree-dialog";
+import type { TreeMove } from "./tree-dialog";
 
 /**
  * A draft the tree handed back is read by a composer mounted on the next key, so
@@ -26,6 +27,7 @@ import { SessionTreeDialog } from "./tree-dialog";
 export function useBranching({
 	store,
 	tree,
+	filterMode,
 	empty,
 	project,
 	busy,
@@ -33,6 +35,8 @@ export function useBranching({
 }: {
 	store: ConversationStore;
 	tree: SnapshotTreeNode[];
+	/** pi's default tree filter, read from the engine's settings. */
+	filterMode: TreeFilterMode;
 	empty: boolean;
 	/** The folder a copied chat opens in, so the new session runs in the same place. */
 	project: string | undefined;
@@ -76,11 +80,11 @@ export function useBranching({
 	 * through a fresh composer, keyed by `composerKey`; another entry starts that
 	 * composer empty, as pi's `/tree` does.
 	 */
-	const move = (node: SnapshotTreeNode, summarize: boolean): void => {
+	const move = (node: SnapshotTreeNode, options: TreeMove): void => {
 		if (node.kind === "user") setPendingDraft(store.sessionId, node.text);
 		else clearPendingDraft(store.sessionId);
 		setComposerKey((key) => key + 1);
-		store.navigateTree(node.entryId, summarize);
+		store.navigateTree(node.entryId, options);
 		setTreeOpen(false);
 	};
 
@@ -90,8 +94,11 @@ export function useBranching({
 				open={treeOpen}
 				onOpenChange={setTreeOpen}
 				tree={tree}
+				filterMode={filterMode}
 				blocked={blocked}
 				onMove={move}
+				onFilterModeChange={(mode) => store.setTreeFilterMode(mode)}
+				onLabel={(entryId, label) => store.setLabel(entryId, label)}
 			/>
 			<ForkSessionDialog
 				open={forkOpen}

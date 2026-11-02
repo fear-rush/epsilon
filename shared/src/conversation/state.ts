@@ -14,6 +14,7 @@ import type {
 	SnapshotModel,
 	SnapshotTreeNode,
 	ThinkingLevel,
+	TreeFilterMode,
 } from "../protocol/frames";
 
 type EventMessage = Extract<JsonAgentSessionEvent, { type: "message_end" }>["message"];
@@ -180,6 +181,8 @@ export type ConversationState = {
 	queue: PromptQueue;
 	/** The session tree the picker draws, from the last snapshot. */
 	tree: SnapshotTreeNode[];
+	/** pi's default tree filter, from the last snapshot. */
+	treeFilterMode: TreeFilterMode;
 	nextNoticeId: number;
 };
 
@@ -222,5 +225,6 @@ export const emptyConversation: ConversationState = {
 	autoRetry: true,
 	queue: { steering: [], followUp: [] },
 	tree: [],
+	treeFilterMode: "default",
 	nextNoticeId: 0,
 };

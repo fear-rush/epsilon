@@ -232,25 +232,50 @@ const previewOf = (text: string): string => {
 	return line.length > PREVIEW_LENGTH ? `${line.slice(0, PREVIEW_LENGTH)}…` : line;
 };
 
-/** A point the picker can move to. Tool results and state entries have no row of their own. */
-const pickable = (entry: SessionEntry): boolean =>
-	(entry.type === "message" &&
-		(entry.message.role === "user" || entry.message.role === "assistant")) ||
+/** The entries that make up the chat's position; a bookkeeping entry is not one. */
+const positionEntry = (entry: SessionEntry): boolean =>
 	entry.type === "branch_summary" ||
-	entry.type === "compaction";
+	entry.type === "compaction" ||
+	(entry.type === "message" &&
+		(entry.message.role === "user" || entry.message.role === "assistant"));
+
+/** A preview for an entry the default tree hides and the `all` filter shows. */
+const bookkeepingText = (entry: SessionEntry): string | undefined => {
+	switch (entry.type) {
+		case "label":
+			return entry.label === undefined ? "Label removed" : `Label: ${entry.label}`;
+		case "context_edit":
+			return "Context edited";
+		case "custom":
+			return `Custom: ${entry.customType}`;
+		case "model_change":
+			return `Model: ${entry.provider}/${entry.modelId}`;
+		case "thinking_level_change":
+			return `Thinking: ${entry.thinkingLevel}`;
+		case "session_info":
+			return entry.name === undefined ? "Session name cleared" : `Renamed: ${entry.name}`;
+		default:
+			return undefined;
+	}
+};
 
 type TreeRow = Omit<SnapshotTreeNode, "children">;
 
-/** One row of the tree, or undefined when the entry is folded into its nearest ancestor. */
+/** One row of the tree, or undefined when pi keeps the entry out of it (usage). */
 const rowOf = (
 	node: SessionTreeNode,
 	activeIds: Set<string>,
 	currentId: string | undefined,
 ): TreeRow | undefined => {
 	const entry = node.entry;
-	let row: Pick<TreeRow, "entryId" | "kind" | "text"> | undefined;
+	let row: Pick<TreeRow, "entryId" | "kind" | "text" | "hasText"> | undefined;
 	if (entry.type === "message" && entry.message.role === "user") {
-		row = { entryId: entry.id, kind: "user", text: textOfContent(entry.message.content) };
+		row = {
+			entryId: entry.id,
+			kind: "user",
+			text: textOfContent(entry.message.content),
+			hasText: true,
+		};
 	} else if (entry.type === "message" && entry.message.role === "assistant") {
 		const content = entry.message.content;
 		const text = content.map((part) => (part.type === "text" ? part.text : "")).join("");
@@ -258,9 +283,15 @@ const rowOf = (
 			.map((part) => (part.type === "thinking" ? part.thinking : ""))
 			.join("");
 		const tools = content.flatMap((part) => (part.type === "toolCall" ? [part.name] : []));
+		const failed =
+			entry.message.errorMessage !== undefined ||
+			(entry.message.stopReason !== undefined &&
+				entry.message.stopReason !== "stop" &&
+				entry.message.stopReason !== "toolUse");
 		row = {
 			entryId: entry.id,
 			kind: "assistant",
+			hasText: text.trim() !== "" || failed,
 			text:
 				text.trim() !== ""
 					? previewOf(text)
@@ -271,7 +302,27 @@ const rowOf = (
 							: previewOf(entry.message.errorMessage ?? "No text"),
 		};
 	} else if (entry.type === "branch_summary" || entry.type === "compaction") {
-		row = { entryId: entry.id, kind: "summary", text: previewOf(entry.summary) };
+		row = {
+			entryId: entry.id,
+			kind: "summary",
+			text: previewOf(entry.summary),
+			hasText: true,
+		};
+	} else if (entry.type === "message" && entry.message.role === "toolResult") {
+		const output = entry.message.content
+			.map((part) => (part.type === "text" ? part.text : ""))
+			.join("");
+		row = {
+			entryId: entry.id,
+			kind: "tool",
+			text: previewOf(
+				output.trim() === "" ? entry.message.toolName : `${entry.message.toolName}: ${output}`,
+			),
+			hasText: true,
+		};
+	} else {
+		const text = bookkeepingText(entry);
+		if (text !== undefined) row = { entryId: entry.id, kind: "settings", text, hasText: true };
 	}
 	if (row === undefined) return undefined;
 	return {
@@ -306,7 +357,7 @@ const flattenTree = (
 const treeOf = (agent: AgentSession): SnapshotTreeNode[] => {
 	const branch = agent.sessionManager.getBranch();
 	const activeIds = new Set(branch.map((entry) => entry.id));
-	const currentId = [...branch].reverse().find(pickable)?.id;
+	const currentId = [...branch].reverse().find(positionEntry)?.id;
 	return flattenTree(agent.sessionManager.getTree(), activeIds, currentId);
 };
 
@@ -353,6 +404,7 @@ export const buildSnapshot = (
 				followUp: [...agent.getFollowUpMessages()],
 			},
 			tree: treeOf(agent),
+			treeFilterMode: agent.settingsManager.getTreeFilterMode(),
 		},
 		messages: agent.messages.filter(isVisibleMessage),
 		// The list the session carries, so the picker and `set_model` agree

@@ -76,11 +76,13 @@
 				"steering": [],
 				"followUp": []
 			},
+			"treeFilterMode": "default",
 			"tree": [
 				{
 					"entryId": "user-1",
 					"kind": "user",
 					"text": "Read file.txt and reply with its contents.",
+					"hasText": true,
 					"active": true,
 					"current": false,
 					"children": [
@@ -88,6 +90,7 @@
 							"entryId": "user-2",
 							"kind": "user",
 							"text": "Run bash 'echo s1-ok' and reply with its output.",
+							"hasText": true,
 							"active": true,
 							"current": true,
 							"children": []

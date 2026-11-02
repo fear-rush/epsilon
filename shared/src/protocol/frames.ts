@@ -15,7 +15,7 @@ import type { JsonAgentSessionEvent } from "../pi";
  * Bumped whenever a frame's shape changes. The client sends it in `hello` and
  * reloads on a mismatch instead of guessing.
  */
-export const PROTOCOL_VERSION = 23;
+export const PROTOCOL_VERSION = 24;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([
@@ -61,6 +61,10 @@ export const commandNameSchema = z.enum([
 	"abort_bash",
 	"clear_queue",
 	"navigate_tree",
+	/** Label a tree entry, or clear its label; pi writes a label entry to the session. */
+	"set_label",
+	/** pi's default tree filter, stored in settings.json as `treeFilterMode`. */
+	"set_tree_filter_mode",
 	/** pi's global display setting for thinking blocks; it writes settings.json itself. */
 	"set_hide_thinking",
 	"autocomplete",
@@ -76,6 +80,17 @@ export type CommandName = z.infer<typeof commandNameSchema>;
 const promptBehaviorSchema = z.enum(["steer", "followUp"]);
 
 export type PromptBehavior = z.infer<typeof promptBehaviorSchema>;
+
+/** pi's five tree filters, in the order its own selector cycles through them. */
+export const treeFilterModeSchema = z.enum([
+	"default",
+	"no-tools",
+	"user-only",
+	"labeled-only",
+	"all",
+]);
+
+export type TreeFilterMode = z.infer<typeof treeFilterModeSchema>;
 
 /*
  * What a prompt may carry besides its text. pi normalises prompt images itself
@@ -155,13 +170,25 @@ export const commandSchema = z.discriminatedUnion("type", [
 	 * Move the leaf to an entry of this session's tree, which may be on another
 	 * branch. A user message becomes the leaf's parent, so the next prompt starts a
 	 * sibling branch; pi hands its text back, and the composer already holds it.
-	 * `summarize` asks pi to condense the branch being left.
+	 * `summarize` asks pi to condense the branch being left. `customInstructions`
+	 * replaces or extends the summarizer's prompt, and `replaceInstructions` makes
+	 * it replace pi's default prompt rather than add to it.
 	 */
 	z.object({
 		type: z.literal("navigate_tree"),
 		entryId: z.string().min(1),
 		summarize: z.boolean().optional(),
+		customInstructions: z.string().optional(),
+		replaceInstructions: z.boolean().optional(),
 	}),
+	/** Label a tree entry, or clear its label with no `label`. */
+	z.object({
+		type: z.literal("set_label"),
+		entryId: z.string().min(1),
+		label: z.string().optional(),
+	}),
+	/** pi's global default for the tree's filter; the tree writes it like its settings page. */
+	z.object({ type: z.literal("set_tree_filter_mode"), mode: treeFilterModeSchema }),
 	/** Show or hide thinking blocks, which is pi's global `hideThinkingBlock` setting. */
 	z.object({ type: z.literal("set_hide_thinking"), enabled: z.boolean() }),
 	/**
@@ -345,9 +372,11 @@ export type PromptQueue = z.infer<typeof promptQueueSchema>;
  */
 export type SnapshotTreeNode = {
 	entryId: string;
-	kind: "user" | "assistant" | "summary";
+	kind: "user" | "assistant" | "summary" | "tool" | "settings";
 	/** Whole text for a user message, which goes back in the box; a one-line preview otherwise. */
 	text: string;
+	/** pi hides an assistant entry with no text unless it is the current leaf. */
+	hasText: boolean;
 	/** The label pi's tree carries on this entry, if any. */
 	label?: string;
 	/** This entry is on the active branch the transcript shows. */
@@ -360,8 +389,9 @@ export type SnapshotTreeNode = {
 const snapshotTreeNodeSchema: z.ZodType<SnapshotTreeNode> = z.lazy(() =>
 	z.object({
 		entryId: z.string(),
-		kind: z.enum(["user", "assistant", "summary"]),
+		kind: z.enum(["user", "assistant", "summary", "tool", "settings"]),
 		text: z.string(),
+		hasText: z.boolean(),
 		label: z.string().optional(),
 		active: z.boolean(),
 		current: z.boolean(),
@@ -394,6 +424,8 @@ export const snapshotStateSchema = z.object({
 	queue: promptQueueSchema,
 	/** The session tree the picker draws, from pi's own tree. */
 	tree: z.array(snapshotTreeNodeSchema),
+	/** pi's default tree filter, from `settings.json`. */
+	treeFilterMode: treeFilterModeSchema,
 });
 
 export type SnapshotState = z.infer<typeof snapshotStateSchema>;

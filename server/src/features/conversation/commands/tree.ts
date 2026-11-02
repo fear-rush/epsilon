@@ -16,6 +16,8 @@ export const navigateTree = async (
 	// message's text, so the snapshot says the rest.
 	const result = await target.agent.navigateTree(command.entryId, {
 		summarize: command.summarize === true,
+		customInstructions: command.customInstructions,
+		replaceInstructions: command.replaceInstructions,
 	});
 	if (result.cancelled) throw new Error("Navigation was cancelled");
 	target.resync();

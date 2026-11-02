@@ -120,6 +120,7 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				autoRetry: frame.snapshot.state.autoRetry,
 				queue: frame.snapshot.state.queue,
 				tree: frame.snapshot.state.tree,
+				treeFilterMode: frame.snapshot.state.treeFilterMode,
 				model:
 					current === undefined
 						? undefined

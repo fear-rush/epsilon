@@ -13,6 +13,7 @@ import type {
 	PromptQueue,
 	ServerFrame,
 	ThinkingLevel,
+	TreeFilterMode,
 } from "shared";
 import { emptyConversation, reduce, takeEditorRequest } from "shared";
 import type { ConversationState } from "shared";
@@ -256,8 +257,21 @@ export class ConversationStore {
 	 * prompt starts a sibling branch. The tab fills its own draft with the text; this
 	 * only moves the engine.
 	 */
-	navigateTree(entryId: string, summarize: boolean): void {
-		this.sendCommand({ type: "navigate_tree", entryId, summarize });
+	navigateTree(
+		entryId: string,
+		options: { summarize: boolean; customInstructions?: string; replaceInstructions?: boolean },
+	): void {
+		this.sendCommand({ type: "navigate_tree", entryId, ...options });
+	}
+
+	/** Label one entry of this chat's tree; an empty label clears it. */
+	setLabel(entryId: string, label: string | undefined): void {
+		this.sendCommand({ type: "set_label", entryId, label });
+	}
+
+	/** pi's default tree filter, which lives in settings.json and applies to every chat. */
+	setTreeFilterMode(mode: TreeFilterMode): void {
+		this.sendCommand({ type: "set_tree_filter_mode", mode });
 	}
 
 	/** pi's own writer changed the file outside Epsilon; rebuild the engine from disk. */

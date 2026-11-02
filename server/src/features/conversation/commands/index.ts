@@ -8,6 +8,7 @@ import type { Command } from "shared";
 import { runAutocomplete } from "./autocomplete";
 import { abortBash, runBash } from "./bash";
 import type { CommandTarget } from "./context";
+import { setLabel } from "./label";
 import { runPrompt } from "./prompt";
 import {
 	abort,
@@ -25,6 +26,7 @@ import {
 	setThinkingLevel,
 } from "./session-controls";
 import { navigateTree } from "./tree";
+import { setTreeFilterMode } from "./tree-filter";
 
 export type { CommandTarget } from "./context";
 
@@ -53,6 +55,8 @@ const HANDLERS: CommandHandlers = {
 	set_coding_tools: setCodingToolsEnabled,
 	set_hide_thinking: setHideThinking,
 	navigate_tree: navigateTree,
+	set_label: setLabel,
+	set_tree_filter_mode: setTreeFilterMode,
 	autocomplete: runAutocomplete,
 };
 

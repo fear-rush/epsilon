@@ -402,13 +402,22 @@ is Epsilon's own). A stored project list (a second truth beside pi's session fil
 
 pi's session file is a tree, and the session controls' Branch group offers its three
 ways to branch: the session tree (`/tree`), a fork at a user message (`/fork`) and a
-clone of the active branch (`/clone`). The tree lists the user messages, replies and summaries
-pi can move the leaf to, including branches the transcript no longer shows, and
-picking one calls `AgentSession.navigateTree`. A user message moves the leaf to its
-parent and hands its text back for the box; any other entry becomes the leaf and the
-chat continues after it. The next prompt starts a sibling branch, and the one it left
-stays in the session file. pi refuses the move while a run or a compaction is going,
-so the control is disabled with that reason.
+clone of the active branch (`/clone`). The tree lists every entry pi can move the leaf
+to, including branches the transcript no longer shows. Its filter is pi's own
+`treeFilterMode`: `default` hides bookkeeping rows and an empty assistant entry,
+`no-tools` also hides tool results, `user-only` and `labeled-only` narrow further, and
+`all` shows the rest. The mode is read from `settings.json` and written through pi's
+setter, so a terminal's tree reads the same default. Picking an entry calls
+`AgentSession.navigateTree`. A user message moves the leaf to its parent and hands its
+text back for the box; any other entry becomes the leaf and the chat continues after
+it. The next prompt starts a sibling branch, and the one it left stays in the session
+file. pi refuses the move while a run or a compaction is going, so the control is
+disabled with that reason.
+
+A label is pi's own `label` entry on the entry it marks: the dashboard writes it with
+`SessionManager.appendLabelChange`, the tree draws it, `labeled-only` filters to it,
+and a terminal's `/tree` shows the same label. Clearing it writes the same entry with
+no label.
 
 Why: moving the leaf is a command on the live engine, and the text coming back to the
 composer is what makes the new branch start from the message the operator picked
@@ -416,8 +425,9 @@ rather than a retyped copy of it. Listing the whole tree is what makes an abando
 branch reachable again.
 
 The picker can also ask pi to summarise the branch being left (`navigateTree`'s
-`summarize`). That is a model call in the middle of the navigation, so it is a checkbox
-that defaults to off, and the result is a summary message in the transcript.
+`summarize`, with `customInstructions` and `replaceInstructions` for the prompt). That
+is a model call in the middle of the navigation, so it is a checkbox that defaults to
+off, and the result is a summary message in the transcript.
 
 pi's `/tree`, `/fork` and `/clone` are terminal commands over the SDK, not extension
 commands, so `get_commands` does not carry them. Epsilon answers every name pi's editor
