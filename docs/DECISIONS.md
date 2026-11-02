@@ -530,22 +530,19 @@ about it.
 
 ## Templates
 
-Prompt templates are editable and themes are only listed. The page shows the scope's
-`prompts` path list and the templates pi resolved from it, with their source and whether
-pi loads them; add and remove write through `SettingsManager`'s prompt-template setters.
-The server refuses a path pi would skip instead: it must exist, be a folder or a `.md`
-file, and not name a target already listed. The same page lists the `themes` paths and
-the files pi resolved from them, and writes neither. A theme changes pi's terminal, the
-dashboard renders its own interface, and a theme path's effect would be invisible here:
-adding one is a terminal step, editing the `themes` array in `settings.json`.
+Prompt templates and themes have no settings page. pi reads both from its own folders,
+from the `prompts` and `themes` paths in `settings.json`, and from packages. A template
+already becomes a composer command, which the palette lists and `prompt()` expands, so
+the dashboard gives it the only surface it needs. The paths stay in `settings.json`:
+adding a folder is rare, and neither a path nor a theme has a result a settings page
+could show, because a theme only changes a terminal and Epsilon draws its own interface.
+Package-provided prompts and themes stay visible, and switchable, under Packages.
 
-Why: pi turns each prompt template into a composer command, which the dashboard shows as
-soon as an engine reloads, and a theme into colors only a terminal draws. Listing themes
-keeps a package's themes and a broken theme path visible; writing them would be a control
-whose result nobody can see, against the rule that a terminal-only setting is named
-rather than edited. Not: applying a theme to Epsilon, or parsing template frontmatter on
-the server. The parsed template only exists inside a live engine, and the list needs
-pi's file answer.
+Why: skills, MCP servers and packages each have an authoring workflow the dashboard
+improves. A prompt template is one markdown file the operator edits elsewhere, and a theme
+is terminal colors. A page that edits config with no visible effect is worse than naming
+the file. Not: a path editor, a theme picker, or a second list of templates beside the
+composer palette.
 
 ## Default extensions
 

@@ -40,8 +40,6 @@ import type {
 	SkillImportReport,
 	SkillInput,
 	SkillRoot,
-	TemplateList,
-	TemplatePathInput,
 } from "./types";
 import type { McpScope } from "shared";
 
@@ -682,37 +680,5 @@ export const updatePackage = async (
 	await api.POST("/api/settings/packages/update", {
 		params: scoped(project),
 		body: { source, scope },
-	});
-};
-
-export const fetchTemplates = async (
-	project: Project,
-	kind: TemplatePathInput["kind"],
-	scope: TemplatePathInput["scope"],
-	signal?: AbortSignal,
-): Promise<TemplateList> =>
-	body(
-		(
-			await api.GET("/api/settings/templates", {
-				params: { query: { kind, scope, project } },
-				signal,
-			})
-		).data,
-	);
-
-/** Adds one path to a scope's prompts or themes list; pi reloads what it loads from it. */
-export const addTemplatePath = async (
-	project: Project,
-	input: TemplatePathInput,
-): Promise<void> => {
-	await api.POST("/api/settings/templates/paths", { params: scoped(project), body: input });
-};
-
-export const removeTemplatePath = async (
-	project: Project,
-	input: TemplatePathInput,
-): Promise<void> => {
-	await api.DELETE("/api/settings/templates/paths", {
-		params: { query: { ...input, project } },
 	});
 };

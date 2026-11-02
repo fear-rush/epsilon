@@ -259,32 +259,3 @@ export const writePackageEntries = async (
 	else settings.setProjectPackages(entries);
 	await settings.flush();
 };
-
-/** One `prompts` or `themes` array, as written in the settings file that holds it. */
-export const readTemplatePaths = (
-	folder: string,
-	home: AgentHome,
-	scope: SettingsScope,
-	kind: "prompts" | "themes",
-): string[] => {
-	const settings = settingsManager(folder, home);
-	const stored = scope === "user" ? settings.getGlobalSettings() : settings.getProjectSettings();
-	return [...(stored[kind] ?? [])];
-};
-
-/**
- * Replaces the `prompts` array through pi's own setter and waits for the write. A
- * theme path is deliberately not written: a theme only changes a terminal, and the
- * dashboard cannot show the result (docs/DECISIONS.md, Templates).
- */
-export const writePromptTemplatePaths = async (
-	folder: string,
-	home: AgentHome,
-	scope: SettingsScope,
-	paths: string[],
-): Promise<void> => {
-	const settings = settingsManager(folder, home);
-	if (scope === "user") settings.setPromptTemplatePaths(paths);
-	else settings.setProjectPromptTemplatePaths(paths);
-	await settings.flush();
-};

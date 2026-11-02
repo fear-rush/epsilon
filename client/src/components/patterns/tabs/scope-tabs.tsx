@@ -21,11 +21,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FolderDialog, useRecentProjects } from "@/features/projects";
 import { useSettings, useSettingsProject } from "@/features/settings/queries";
 
-export type ScopedSection =
-	| "/settings/mcp"
-	| "/settings/skills"
-	| "/settings/packages"
-	| "/settings/templates";
+export type ScopedSection = "/settings/mcp" | "/settings/skills" | "/settings/packages";
 
 /** A Select value that cannot be a path, for the item that opens the folder dialog. */
 const OPEN_FOLDER = "\0open";

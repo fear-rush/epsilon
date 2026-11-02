@@ -6,7 +6,7 @@
  */
 import type { McpScope } from "shared";
 
-import type { SkillRoot, TemplatePathInput } from "./types";
+import type { SkillRoot } from "./types";
 
 /** Reads that depend on the Settings project carry it, so a switch is a new key. */
 export const settingsKeys = {
@@ -35,11 +35,6 @@ export const settingsKeys = {
 		[...settingsKeys.all, "package-resources", project, scope, source] as const,
 	skillFile: (project: string | undefined, root: SkillRoot, name: string, path: string) =>
 		[...settingsKeys.all, "skill-file", project, root, name, path] as const,
-	templates: (
-		project: string | undefined,
-		kind: TemplatePathInput["kind"],
-		scope: TemplatePathInput["scope"],
-	) => [...settingsKeys.all, "templates", project, kind, scope] as const,
 };
 
 /**

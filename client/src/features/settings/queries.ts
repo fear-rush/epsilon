@@ -3,7 +3,7 @@ import { useSearch } from "@tanstack/react-router";
 import { useCallback } from "react";
 import type { McpScope } from "shared";
 
-import type { PackageView, SkillRoot, TemplatePathInput } from "@/api/types";
+import type { PackageView, SkillRoot } from "@/api/types";
 
 import { packageUpdateKeys, providerLoginKeys, readinessKeys, settingsKeys } from "@/api/keys";
 import {
@@ -18,7 +18,6 @@ import {
 	fetchSkill,
 	fetchSkillBundleFile,
 	fetchSkillFiles,
-	fetchTemplates,
 } from "@/api/endpoints";
 
 /**
@@ -205,21 +204,3 @@ export const usePackageUpdatesRefresh = (): (() => void) => {
 		void queryClient.invalidateQueries({ queryKey: packageUpdateKeys.all });
 	}, [queryClient]);
 };
-
-/**
- * One scope's prompt templates or themes, as pi resolved them, next to the path
- * list that produced them. The keys are settings keys, so a list write re-reads it.
- */
-export const templatesQuery = (
-	project: string | undefined,
-	kind: TemplatePathInput["kind"],
-	scope: TemplatePathInput["scope"],
-) =>
-	queryOptions({
-		queryKey: settingsKeys.templates(project, kind, scope),
-		queryFn: ({ signal }) => fetchTemplates(project, kind, scope, signal),
-		staleTime: SETTINGS_STALE_MS,
-	});
-
-export const useTemplates = (kind: TemplatePathInput["kind"], scope: TemplatePathInput["scope"]) =>
-	useQuery(templatesQuery(useSettingsProject(), kind, scope));

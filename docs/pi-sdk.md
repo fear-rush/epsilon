@@ -283,17 +283,16 @@ never a top-level row and is not a message of its own.
 
 ## Writers: what the SDK can and cannot save
 
-| Thing                      | Writer                                                                                                                                                                                                                                                                                                                                                                             |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Default provider and model | `SettingsManager.setDefaultModelAndProvider`, then `flush()`                                                                                                                                                                                                                                                                                                                       |
-| Other settings             | `SettingsManager` setters (there is none for `defaultTools`, below)                                                                                                                                                                                                                                                                                                                |
-| Packages                   | `DefaultPackageManager.installAndPersist`, `removeAndPersist`, `listConfiguredPackages`, `update`, `checkForAvailableUpdates`; `SettingsManager.setPackages` and `setProjectPackages` for a filter                                                                                                                                                                                 |
-| Project trust              | `ProjectTrustStore.set`                                                                                                                                                                                                                                                                                                                                                            |
-| Providers (`models.json`)  | **none.** `registerProvider()` is runtime-only; `ModelConfig` is read-only                                                                                                                                                                                                                                                                                                         |
-| MCP servers (`mcp.json`)   | **none reachable.** `addMcpServerConfig`, `removeMcpServerConfig` and `loadMcpConfig` exist, but the package's `exports` map exposes only `.` and `./rpc-entry`, so they cannot be imported through it                                                                                                                                                                             |
-| Skills                     | **files, plus the `skills` setting.** A skill is a directory with `SKILL.md`; `SettingsManager.setSkillPaths` and `setProjectSkillPaths` write the array of paths and `-path` overrides                                                                                                                                                                                            |
-| Prompts and themes         | **files, plus the `prompts` and `themes` settings.** `SettingsManager.setPromptTemplatePaths` / `setProjectPromptTemplatePaths` and `setThemePaths` / `setProjectThemePaths` write the path arrays; `resolve()` lists the `.md` and `.json` files with `enabled`. `loadPromptTemplates` is not a root export, so parsed templates come only from a live engine's `promptTemplates` |
-| Credentials (`auth.json`)  | `ModelRuntime.login()` and `logout()` for a provider that declares a login method                                                                                                                                                                                                                                                                                                  |
+| Thing                      | Writer                                                                                                                                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Default provider and model | `SettingsManager.setDefaultModelAndProvider`, then `flush()`                                                                                                                                           |
+| Other settings             | `SettingsManager` setters (there is none for `defaultTools`, below)                                                                                                                                    |
+| Packages                   | `DefaultPackageManager.installAndPersist`, `removeAndPersist`, `listConfiguredPackages`, `update`, `checkForAvailableUpdates`; `SettingsManager.setPackages` and `setProjectPackages` for a filter     |
+| Project trust              | `ProjectTrustStore.set`                                                                                                                                                                                |
+| Providers (`models.json`)  | **none.** `registerProvider()` is runtime-only; `ModelConfig` is read-only                                                                                                                             |
+| MCP servers (`mcp.json`)   | **none reachable.** `addMcpServerConfig`, `removeMcpServerConfig` and `loadMcpConfig` exist, but the package's `exports` map exposes only `.` and `./rpc-entry`, so they cannot be imported through it |
+| Skills                     | **files, plus the `skills` setting.** A skill is a directory with `SKILL.md`; `SettingsManager.setSkillPaths` and `setProjectSkillPaths` write the array of paths and `-path` overrides                |
+| Credentials (`auth.json`)  | `ModelRuntime.login()` and `logout()` for a provider that declares a login method                                                                                                                      |
 
 `ModelRuntime.login(providerId, type, interaction)` drives a whole sign-in and
 persists through the credential store; `logout()` removes it. `type` is `"api_key"` or
@@ -405,8 +404,8 @@ setting adds a folder or a file, and a `-<file>` entry excludes one. pi's own pr
 and themes folders are discovered under the agent dir and a trusted project's `.pi`. A
 prompt template is named after its file without `.md`; its description is the
 frontmatter `description`, else the body's first line. A theme is a `.json` file and
-pi applies exactly one, which Epsilon never sets or points at; it lists the theme paths
-a terminal wrote.
+pi applies exactly one. The session's `promptTemplates` is what the palette lists, and
+`prompt()` expands `/name args` into the message it sends.
 
 ## API family paths
 

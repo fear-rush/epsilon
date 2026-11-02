@@ -889,41 +889,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/settings/templates": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** One scope's prompt templates or themes: every entry pi resolved with its source and whether it is enabled, and the path list that produced it */
-		get: operations["listTemplates"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/settings/templates/paths": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Add one path to the scope's prompt template list. The path must exist and be a folder or a .md file. A theme path is refused: a theme only changes a terminal */
-		post: operations["addTemplatePath"];
-		/** Remove one entry from the scope's prompt template list */
-		delete: operations["removeTemplatePath"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 }
 
 export interface components {
@@ -1792,22 +1757,6 @@ export interface components {
 			source: string;
 			scope: "user" | "project";
 			type: "npm" | "git";
-		};
-		TemplateList: {
-			paths: string[];
-			entries: ({
-				path: string;
-				name: string;
-				enabled: boolean;
-				origin: "top-level" | "package";
-				source: string;
-				dir: string;
-			})[];
-		};
-		TemplatePathInput: {
-			kind: "prompts" | "themes";
-			scope: "user" | "project";
-			path: string;
 		};
 	};
 }
@@ -4176,110 +4125,6 @@ interface operations {
 				content?: never;
 			};
 			/** The update failed */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Problem"];
-				};
-			};
-		};
-	};
-	/** One scope's prompt templates or themes: every entry pi resolved with its source and whether it is enabled, and the path list that produced it */
-	listTemplates: {
-		parameters: {
-			query: {
-				/** A trusted project folder. Absent means the agent home alone */
-				project?: string;
-				kind: "prompts" | "themes";
-				scope: "user" | "project";
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** The entries and the path list */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["TemplateList"];
-				};
-			};
-			/** The read failed */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Problem"];
-				};
-			};
-		};
-	};
-	/** Add one path to the scope's prompt template list. The path must exist and be a folder or a .md file. A theme path is refused: a theme only changes a terminal */
-	addTemplatePath: {
-		parameters: {
-			query?: {
-				/** A trusted project folder. Absent means the agent home alone */
-				project?: string;
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["TemplatePathInput"];
-			};
-		};
-		responses: {
-			/** The path is written, and live engines reloaded */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** The path was refused */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Problem"];
-				};
-			};
-		};
-	};
-	/** Remove one entry from the scope's prompt template list */
-	removeTemplatePath: {
-		parameters: {
-			query: {
-				/** A trusted project folder. Absent means the agent home alone */
-				project?: string;
-				kind: "prompts" | "themes";
-				scope: "user" | "project";
-				path: string;
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** The entry is removed, and live engines reloaded */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** The entry was not in the list */
 			400: {
 				headers: {
 					[name: string]: unknown;
