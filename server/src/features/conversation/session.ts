@@ -28,7 +28,8 @@ import type {
 } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
-import { globalSettings } from "../../platform/pi";
+import { EXTENSION_RESOURCE_SOURCE, globalSettings } from "../../platform/pi";
+import type { Skill } from "../../platform/pi";
 import type { McpLive } from "../mcp";
 import { mcpLiveOf } from "../mcp";
 import { runCommand } from "./commands";
@@ -254,6 +255,24 @@ export class LiveSession {
 		if (this.busy) return false;
 		await this.dispose();
 		return true;
+	}
+
+	/** The folder this engine runs in, which a settings read matches engines by. */
+	get folder(): string {
+		return this.cwd;
+	}
+
+	/**
+	 * Skills an extension added through `resources_discover`. They live in this
+	 * engine's resource loader and on no file resolver's list, so they exist exactly
+	 * as long as the engine is open.
+	 */
+	extensionSkills(): Skill[] {
+		const agent = this.host?.session;
+		if (agent === undefined) return [];
+		return agent.resourceLoader
+			.getSkills()
+			.skills.filter((skill) => skill.sourceInfo.source.startsWith(EXTENSION_RESOURCE_SOURCE));
 	}
 
 	/**

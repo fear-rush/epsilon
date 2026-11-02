@@ -85,6 +85,37 @@ const messagesAt = (diagnostics: ResourceDiagnostic[], filePath: string): string
 		.map((entry) => entry.message);
 
 /**
+ * Rows for the skills a live engine's extensions added. They exist only inside
+ * that engine, so a read with no engine sees the file inventory alone and says so.
+ */
+const extensionViews = async (
+	skills: readonly Skill[],
+	scope: SkillView["scope"],
+): Promise<SkillView[]> => {
+	const views: SkillView[] = [];
+	const seen = new Set<string>();
+	for (const skill of skills) {
+		if (seen.has(skill.filePath)) continue;
+		seen.add(skill.filePath);
+		views.push({
+			name: skill.name,
+			folder: basename(skill.baseDir),
+			description: skill.description,
+			filePath: skill.filePath,
+			dir: skill.baseDir,
+			origin: "extension",
+			scope,
+			editable: false,
+			modelInvocation: !skill.disableModelInvocation,
+			status: skill.disableModelInvocation ? "manual" : "active",
+			toggle: "none",
+			warnings: await fileWarnings(skill.filePath),
+		});
+	}
+	return views;
+};
+
+/**
  * Every skill pi knows for `folder` (the chats folder for the home alone, or a
  * trusted project), in pi's precedence order, then by name. `project` is the
  * project folder, or null when the home stands alone.
@@ -93,6 +124,7 @@ export const listSkills = async (
 	folder: string,
 	home: AgentHome,
 	project: string | null,
+	live: readonly Skill[] = [],
 ): Promise<SkillView[]> => {
 	const resources = await resolveSkillResources(folder, home);
 	const loaded = loadSkillFiles(
@@ -163,9 +195,14 @@ export const listSkills = async (
 			};
 		}),
 	);
-	return views
-		.filter((view): view is SkillView => view !== undefined)
-		.sort((left, right) => left.name.localeCompare(right.name));
+	const fromFiles = views.filter((view): view is SkillView => view !== undefined);
+	// A file answer wins over the same file reached through an extension path, because
+	// it knows the origin and the settings entry that controls it.
+	const known = new Set(fromFiles.map((view) => view.filePath));
+	const fromExtensions = await extensionViews(live, project === null ? "user" : "project");
+	return [...fromFiles, ...fromExtensions.filter((view) => !known.has(view.filePath))].sort(
+		(left, right) => left.name.localeCompare(right.name),
+	);
 };
 
 /**

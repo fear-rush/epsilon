@@ -482,8 +482,12 @@ not parse is shown, not rewritten. A save follows pi's load rules: a missing `na
 description holding markup all write unchanged, because pi loads them. Only the name
 pattern stays stricter than pi: pi loads a bad name with a warning, and a permanent
 write should not create one. A skill is addressed by its folder, so the list shows pi's
-name and links by the folder. Fields from other agents (Claude Code's `context`,
-`user-invocable` and the rest) are shown read-only with a notice that pi ignores them.
+name and links by the folder. A skill an extension adds through `resources_discover` is
+merged from the open engines in the scope and marked `extension`: read-only, with no
+switch and no editor, because it exists only while one of those engines is open. With
+none open the list is pi's file answer and the pane says it is from files.
+Fields from other agents (Claude Code's `context`, `user-invocable` and the rest) are
+shown read-only with a notice that pi ignores them.
 Turning one skill off is a `-<path>` entry in pi's `skills` setting; a skill folder of
 another agent (`~/.claude/skills`, `~/.codex/skills`) is used only when the operator
 links it, which adds the folder to the same setting.

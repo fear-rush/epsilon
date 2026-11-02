@@ -397,6 +397,11 @@ and `resource-loader.js` (1.4.0):
   package skill is filtered through that package's entry instead.
 - **Folders of other agents** (`~/.claude/skills`, `~/.codex/skills`) are not
   scanned. A plain path in the `skills` array adds the folder.
+- **Skills an extension adds at runtime** come from the `resources_discover` event,
+  which returns `skillPaths` (and `promptPaths` and `themePaths`). pi extends the live
+  resource loader with them, tagged `source: "extension:<file name>"` and
+  `scope: "temporary"`, so `agent.resourceLoader.getSkills()` lists them and
+  `resolve()` never does. They exist only inside a live engine.
 
 Prompt templates and themes are resources with the same shape: `resolve()` lists their
 files with `enabled` and their source metadata, a path in the `prompts` or `themes`

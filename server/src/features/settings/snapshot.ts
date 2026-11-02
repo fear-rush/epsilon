@@ -51,6 +51,8 @@ export const readSettings = async (
 	engines: SessionRegistry,
 ): Promise<SettingsSnapshot> => {
 	const project = folder === home.chatsDir ? null : projectStatus(home, folder);
+	// Extension-discovered skills exist only while an engine for this folder is open.
+	const live = engines.extensionSkills(folder);
 	const runtime = await modelRuntime(home);
 	const [providers, builtins, offers, mcp, mcpDisabled, skills, packages] = await Promise.all([
 		listProviders(home, runtime),
@@ -58,7 +60,7 @@ export const readSettings = async (
 		readModelsFrom(runtime, readEnabledModels(home)),
 		listMcpServers(home, folder),
 		isMcpTurnedOff(folder, home),
-		listSkills(folder, home, project === null ? null : folder),
+		listSkills(folder, home, project === null ? null : folder, live.skills),
 		listPackages(folder, home),
 	]);
 	return {
@@ -82,6 +84,7 @@ export const readSettings = async (
 		mcpLive: engines.mcpLive(mcp.servers.map((server) => server.name)),
 		mcpDisabled,
 		skills: project !== null && !project.trusted ? await untrustedSkills(folder) : skills,
+		skillsLive: live.engines > 0,
 		foreignSkills: listForeignSkills(folder, home, userHome, project === null ? null : folder),
 		packages,
 		ready: offers.models.length > 0,

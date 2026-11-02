@@ -11,11 +11,13 @@
  * projects).
  */
 import { mkdir } from "node:fs/promises";
+import { resolve } from "node:path";
 
 import type { Place } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { locateSession } from "../../platform/pi";
+import type { Skill } from "../../platform/pi";
 import type { McpLive } from "../mcp";
 import { aggregateMcpLive } from "../mcp";
 import { placeOf, trustedProjectFolder } from "../projects";
@@ -44,6 +46,9 @@ const NO_TAB: UiHost = {
 
 /** Where a session will run, resolved before its engine is built. */
 type Location = { cwd: string; file: string | undefined; place: Place };
+
+/** What the open engines in one folder added at runtime, and how many answered. */
+type ExtensionSkills = { engines: number; skills: Skill[] };
 
 /**
  * What a copy answers: the new session's id, or why pi made no copy. Only a refusal
@@ -94,6 +99,27 @@ export class SessionRegistry {
 			}
 		}
 		return aggregateMcpLive(states);
+	}
+
+	/**
+	 * The extension-discovered skills of the open engines in one folder. `engines`
+	 * counts the engines that answered, so a reader can tell "no extension added
+	 * one" from "nothing is running".
+	 */
+	extensionSkills(folder: string): ExtensionSkills {
+		const target = resolve(folder);
+		const skills: Skill[] = [];
+		let engines = 0;
+		for (const session of this.sessions.values()) {
+			if (!session.isOpen || resolve(session.folder) !== target) continue;
+			engines += 1;
+			try {
+				skills.push(...session.extensionSkills());
+			} catch {
+				// A session mid-reload answers on the next read; the settings panel must not fail.
+			}
+		}
+		return { engines, skills };
 	}
 
 	/** Every session this server holds an engine for, for the list badges. */

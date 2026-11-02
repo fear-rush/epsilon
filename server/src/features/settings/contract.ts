@@ -43,6 +43,8 @@ export const settingsSnapshotSchema = z
 		project: projectStatusSchema.nullable(),
 		/** Every skill pi sees for the home and the picked project, with why it is or is not active. */
 		skills: z.array(skillViewSchema),
+		/** True when an open engine runs in this scope, so extension-added skills could be read. */
+		skillsLive: z.boolean(),
 		/** Skills in Claude Code's and Codex's folders, which pi loads only once a folder is linked. */
 		foreignSkills: z.array(foreignSkillViewSchema),
 		packages: z.array(packageViewSchema),

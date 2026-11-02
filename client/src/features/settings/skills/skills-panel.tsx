@@ -53,6 +53,9 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 		visible,
 		inProject && project !== null ? { name: project.name, path: project.path } : undefined,
 	);
+	const readError = settings.data?.error;
+	// Without a live engine the list is files only: extension skills exist in no file.
+	const fileOnly = settings.data?.skillsLive === false;
 	const shown = groups.reduce((total, group) => total + group.skills.length, 0);
 	const nothing = shown === 0 && foreign.length === 0;
 
@@ -63,8 +66,16 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 			scope="/settings/skills"
 			error={settings.error}
 			notices={
-				settings.data?.error === undefined ? undefined : (
-					<Notice tone="error">{settings.data.error}</Notice>
+				readError === undefined && !fileOnly ? undefined : (
+					<>
+						{readError === undefined ? undefined : <Notice tone="error">{readError}</Notice>}
+						{fileOnly && (
+							<Notice tone="info">
+								Skills an extension adds appear only while an engine runs in this scope. This list
+								is from files.
+							</Notice>
+						)}
+					</>
 				)
 			}
 			query={query}

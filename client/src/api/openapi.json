@@ -524,6 +524,9 @@
 							"$ref": "#/components/schemas/SkillView"
 						}
 					},
+					"skillsLive": {
+						"type": "boolean"
+					},
 					"foreignSkills": {
 						"type": "array",
 						"items": {
@@ -558,6 +561,7 @@
 					"mcpDisabled",
 					"project",
 					"skills",
+					"skillsLive",
 					"foreignSkills",
 					"packages",
 					"ready"

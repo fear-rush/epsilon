@@ -1010,6 +1010,7 @@ export interface components {
 				[key: string]: unknown;
 			}) | null);
 			skills: components["schemas"]["SkillView"][];
+			skillsLive: boolean;
 			foreignSkills: components["schemas"]["ForeignSkillView"][];
 			packages: components["schemas"]["PackageView"][];
 			ready: boolean;

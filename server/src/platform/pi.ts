@@ -197,6 +197,12 @@ export const resolveAllResources = async (
 	home: AgentHome,
 ): Promise<ResolvedPaths> => packageManager(folder, home).resolve(async () => "skip");
 
+/**
+ * The `source` pi gives a resource path an extension added at runtime through
+ * `resources_discover`; the rest of the label is the extension's file name.
+ */
+export const EXTENSION_RESOURCE_SOURCE = "extension:";
+
 /** pi's own load of these skill files: parsed skills, warnings and name collisions. */
 export const loadSkillFiles = (
 	folder: string,
