@@ -49,7 +49,7 @@ const addTemplatePathRoute = createRoute({
 	tags: ["settings"],
 	operationId: "addTemplatePath",
 	description:
-		"Add one path to the scope's prompts or themes list. The path must exist and be a folder or a file of that kind",
+		"Add one path to the scope's prompt template list. The path must exist and be a folder or a .md file. A theme path is refused: a theme only changes a terminal",
 	request: {
 		query: settingsScopeQuerySchema,
 		body: {
@@ -68,7 +68,7 @@ const removeTemplatePathRoute = createRoute({
 	path: "/api/settings/templates/paths",
 	tags: ["settings"],
 	operationId: "removeTemplatePath",
-	description: "Remove one entry from the scope's prompts or themes list",
+	description: "Remove one entry from the scope's prompt template list",
 	request: {
 		query: settingsScopeQuerySchema.extend({
 			kind: templateKindSchema,

@@ -18,9 +18,10 @@ import { sourceLine, TEMPLATE_KIND } from "./template-kind";
 import { TemplatePathDialog } from "./template-path-dialog";
 
 /**
- * One kind's path list, then the entries pi resolved from it. A path is removed by
- * the exact text the list shows, so an override entry can be removed too. The
- * entries are pi's answer: a file it excludes shows as disabled rather than gone.
+ * One kind's path list, then the entries pi resolved from it. Prompt template
+ * paths are editable and a path is removed by the text the list shows. Theme paths
+ * are shown but not written: a theme only changes a terminal. The entries are pi's
+ * answer either way, so a file it excludes shows as disabled rather than gone.
  */
 export function TemplateCard({
 	kind,
@@ -34,6 +35,7 @@ export function TemplateCard({
 	const project = useSettingsProject();
 	const refresh = useSettingsRefresh();
 	const [adding, setAdding] = useState(false);
+	const editable = kind === "prompts";
 	const remove = useMutation({
 		mutationFn: (path: string) => removeTemplatePath(project, { kind, scope, path }),
 		onSuccess: () => refresh(),
@@ -49,31 +51,37 @@ export function TemplateCard({
 				{query.data.paths.length === 0 ? (
 					<p className="pad-row text-body text-muted-foreground">No path added.</p>
 				) : (
-					query.data.paths.map((path) => (
-						<Row key={path} title={path}>
-							<Tip label="Remove path">
-								<Button
-									variant="ghost"
-									size="icon-sm"
-									aria-label={`Remove ${path}`}
-									disabled={remove.isPending}
-									onClick={() => {
-										remove.reset();
-										remove.mutate(path);
-									}}
-								>
-									<Trash2Icon />
-								</Button>
-							</Tip>
-						</Row>
-					))
+					query.data.paths.map((path) =>
+						editable ? (
+							<Row key={path} title={path}>
+								<Tip label="Remove path">
+									<Button
+										variant="ghost"
+										size="icon-sm"
+										aria-label={`Remove ${path}`}
+										disabled={remove.isPending}
+										onClick={() => {
+											remove.reset();
+											remove.mutate(path);
+										}}
+									>
+										<Trash2Icon />
+									</Button>
+								</Tip>
+							</Row>
+						) : (
+							<Row key={path} title={path} />
+						),
+					)
 				)}
-				<div className="pad-row">
-					<Button type="button" variant="outline" onClick={() => setAdding(true)}>
-						<PlusIcon />
-						Add path
-					</Button>
-				</div>
+				{editable && (
+					<div className="pad-row">
+						<Button type="button" variant="outline" onClick={() => setAdding(true)}>
+							<PlusIcon />
+							Add path
+						</Button>
+					</div>
+				)}
 			</Section>
 			{remove.error !== null && (
 				<Notice tone="error" title="The path was not removed">
@@ -91,7 +99,7 @@ export function TemplateCard({
 					))
 				)}
 			</Section>
-			<TemplatePathDialog open={adding} onOpenChange={setAdding} kind={kind} scope={scope} />
+			{editable && <TemplatePathDialog open={adding} onOpenChange={setAdding} scope={scope} />}
 		</>
 	);
 }

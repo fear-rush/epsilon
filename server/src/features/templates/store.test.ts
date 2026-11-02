@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { agentHome } from "../../platform/agent-home";
-import { readTemplatePaths, writeTemplatePaths } from "../../platform/pi";
+import { readTemplatePaths, settingsManager, writePromptTemplatePaths } from "../../platform/pi";
 import { addTemplatePath, listTemplates, removeTemplatePath } from "./store";
 
 const realHome = process.env.HOME;
@@ -48,7 +48,7 @@ describe("prompt templates and themes", () => {
 
 		await expect(
 			addTemplatePath(home.chatsDir, home, { kind: "prompts", scope: "user", path: dir }),
-		).rejects.toThrow(/already in the prompts paths/);
+		).rejects.toThrow(/already in the prompt template paths/);
 
 		await removeTemplatePath(home.chatsDir, home, {
 			kind: "prompts",
@@ -67,7 +67,7 @@ describe("prompt templates and themes", () => {
 
 		// A prompt entry is the file pi resolved, so an override names the file.
 		const file = join(dir, "hello.md");
-		await writeTemplatePaths(home.chatsDir, home, "user", "prompts", [dir, `-${file}`]);
+		await writePromptTemplatePaths(home.chatsDir, home, "user", [dir, `-${file}`]);
 		const listed = await listTemplates(home.chatsDir, home, "prompts", "user");
 		expect(listed.paths).toEqual([dir, `-${file}`]);
 		expect(listed.entries.map((entry) => entry.enabled)).toEqual([false]);
@@ -107,15 +107,35 @@ describe("prompt templates and themes", () => {
 		await expect(
 			addTemplatePath(home.chatsDir, home, { kind: "prompts", scope: "user", path: theme }),
 		).rejects.toThrow(/folder or a .md file/);
-		await addTemplatePath(home.chatsDir, home, { kind: "themes", scope: "user", path: theme });
-		expect(readTemplatePaths(home.chatsDir, home, "user", "themes")).toEqual([theme]);
 
 		await expect(
 			removeTemplatePath(home.chatsDir, home, {
-				kind: "themes",
+				kind: "prompts",
 				scope: "user",
-				path: join(base, "other.json"),
+				path: join(base, "other.md"),
 			}),
-		).rejects.toThrow(/not in the themes paths/);
+		).rejects.toThrow(/not in the prompt template paths/);
+	});
+
+	test("lists a theme a terminal configured, and refuses to write a theme path", async () => {
+		const { home, base } = await fresh();
+		const dir = join(base, "themes");
+		await mkdir(dir);
+		await writeFile(join(dir, "paper.json"), "{}");
+		// A terminal writes the theme path; the dashboard only reads it.
+		const settings = settingsManager(home.chatsDir, home);
+		settings.setThemePaths([dir]);
+		await settings.flush();
+
+		const listed = await listTemplates(home.chatsDir, home, "themes", "user");
+		expect(listed.paths).toEqual([dir]);
+		expect(listed.entries.map((entry) => [entry.name, entry.enabled])).toEqual([["paper", true]]);
+
+		await expect(
+			addTemplatePath(home.chatsDir, home, { kind: "themes", scope: "user", path: dir }),
+		).rejects.toThrow(/only changes a terminal/);
+		await expect(
+			removeTemplatePath(home.chatsDir, home, { kind: "themes", scope: "user", path: dir }),
+		).rejects.toThrow(/only changes a terminal/);
 	});
 });

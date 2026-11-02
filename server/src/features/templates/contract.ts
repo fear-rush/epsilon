@@ -32,7 +32,9 @@ export const templateListSchema = z
 
 export type TemplateList = z.infer<typeof templateListSchema>;
 
-/** One path-list write. `path` is one entry as the list shows it, override mark included. */
+/** One path-list write. `path` is one entry as the list shows it, override mark included.
+ * Only `prompts` is written; a `themes` write is refused because a theme only changes a
+ * terminal. */
 export const templatePathInputSchema = z
 	.object({
 		kind: templateKindSchema,

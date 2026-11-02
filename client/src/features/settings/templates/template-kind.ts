@@ -13,13 +13,11 @@ export const TEMPLATE_KIND = {
 		fileHint: "A folder, or a .md file",
 	},
 	themes: {
-		addTitle: "Add a theme path",
 		pathsTitle: "Theme paths",
-		pathsNote: "A folder of .json themes, or one theme file. pi still reads its own themes folder.",
+		pathsNote:
+			"Where pi looks for themes. A theme only changes a terminal, so this list is edited in settings.json.",
 		entriesTitle: "Themes",
 		entriesNote: "Epsilon draws its own theme, so a theme here is listed, not applied.",
-		placeholder: "~/themes",
-		fileHint: "A folder, or a .json file",
 	},
 } as const;
 

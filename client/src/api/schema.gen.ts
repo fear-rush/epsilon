@@ -915,9 +915,9 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Add one path to the scope's prompts or themes list. The path must exist and be a folder or a file of that kind */
+		/** Add one path to the scope's prompt template list. The path must exist and be a folder or a .md file. A theme path is refused: a theme only changes a terminal */
 		post: operations["addTemplatePath"];
-		/** Remove one entry from the scope's prompts or themes list */
+		/** Remove one entry from the scope's prompt template list */
 		delete: operations["removeTemplatePath"];
 		options?: never;
 		head?: never;
@@ -4221,7 +4221,7 @@ interface operations {
 			};
 		};
 	};
-	/** Add one path to the scope's prompts or themes list. The path must exist and be a folder or a file of that kind */
+	/** Add one path to the scope's prompt template list. The path must exist and be a folder or a .md file. A theme path is refused: a theme only changes a terminal */
 	addTemplatePath: {
 		parameters: {
 			query?: {
@@ -4256,7 +4256,7 @@ interface operations {
 			};
 		};
 	};
-	/** Remove one entry from the scope's prompts or themes list */
+	/** Remove one entry from the scope's prompt template list */
 	removeTemplatePath: {
 		parameters: {
 			query: {

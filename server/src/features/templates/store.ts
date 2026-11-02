@@ -1,26 +1,31 @@
 /**
- * Prompt templates and themes: the entries pi resolves, and the `prompts` and
- * `themes` path lists that feed them. pi picks the files and says which are
- * enabled, so the inventory is pi's own answer; a write only edits the list in the
+ * Prompt templates and themes: the entries pi resolves, and the path list that
+ * feeds prompt templates. pi picks the files and says which are enabled, so the
+ * inventory is pi's own answer; a write only edits the `prompts` list in the
  * settings file that holds it, through pi's setter.
  *
- * A theme is listed, never applied: Epsilon draws its own interface and has no
- * theme picker (`docs/DECISIONS.md`).
+ * A theme is listed, never applied or configured: it changes pi's terminal and
+ * nothing in the dashboard can show the result, so the `themes` list is left to
+ * `settings.json` (`docs/DECISIONS.md`, Templates).
  */
 import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, extname, join, resolve } from "node:path";
 
 import type { AgentHome } from "../../platform/agent-home";
-import { readTemplatePaths, resolveAllResources, writeTemplatePaths } from "../../platform/pi";
+import {
+	readTemplatePaths,
+	resolveAllResources,
+	writePromptTemplatePaths,
+} from "../../platform/pi";
 import type { SettingsScope } from "../../platform/pi";
 import type { TemplateKind, TemplateList, TemplatePathInput } from "./contract";
 
-/** The suffix pi loads for each kind (`FILE_PATTERNS` in pi's package manager). */
-const SUFFIX: Record<TemplateKind, string> = { prompts: ".md", themes: ".json" };
+/** The suffix pi loads for a prompt template (`FILE_PATTERNS` in its package manager). */
+const PROMPT_SUFFIX = ".md";
 
-/** What one kind is called in a sentence. */
-const LABEL: Record<TemplateKind, string> = { prompts: "prompt template", themes: "theme" };
+/** Why a theme path is not written here, in the sentence the panel shows. */
+const THEME_ONLY = "A theme path only changes a terminal; edit the themes paths in settings.json.";
 
 /** The override marks pi accepts at the start of a path-list entry. */
 const MARK = /^[!+-]/;
@@ -63,39 +68,42 @@ export const listTemplates = async (
 };
 
 /**
- * Adds one path to the scope's list. The path must exist and be a folder, or a
- * file of the kind pi loads, so a list cannot gain an entry pi would ignore.
+ * Adds one path to the scope's prompt template list. The path must exist and be a
+ * folder or a `.md` file, so the list cannot gain an entry pi would skip. A theme
+ * path is refused: it only changes a terminal.
  */
 export const addTemplatePath = async (
 	folder: string,
 	home: AgentHome,
 	input: TemplatePathInput,
 ): Promise<void> => {
+	if (input.kind !== "prompts") throw new Error(THEME_ONLY);
 	const path = input.path.trim();
 	if (path === "") throw new Error("A path is required");
 	const target = entryPath(folder, home, input.scope, path);
 	if (!existsSync(target)) throw new Error(`${path} does not exist`);
-	if (statSync(target).isFile() && extname(target) !== SUFFIX[input.kind]) {
-		throw new Error(`A ${LABEL[input.kind]} path is a folder or a ${SUFFIX[input.kind]} file`);
+	if (statSync(target).isFile() && extname(target) !== PROMPT_SUFFIX) {
+		throw new Error(`A prompt template path is a folder or a ${PROMPT_SUFFIX} file`);
 	}
-	const paths = readTemplatePaths(folder, home, input.scope, input.kind);
+	const paths = readTemplatePaths(folder, home, input.scope, "prompts");
 	const already = paths.some(
 		(entry) => entryPath(folder, home, input.scope, entry.replace(MARK, "")) === target,
 	);
-	if (already) throw new Error(`${path} is already in the ${input.kind} paths`);
-	await writeTemplatePaths(folder, home, input.scope, input.kind, [...paths, path]);
+	if (already) throw new Error(`${path} is already in the prompt template paths`);
+	await writePromptTemplatePaths(folder, home, input.scope, [...paths, path]);
 };
 
-/** Removes one entry from the scope's list, by the exact text the list shows. */
+/** Removes one entry from the scope's prompt template list, by the text the list shows. */
 export const removeTemplatePath = async (
 	folder: string,
 	home: AgentHome,
 	input: TemplatePathInput,
 ): Promise<void> => {
-	const paths = readTemplatePaths(folder, home, input.scope, input.kind);
+	if (input.kind !== "prompts") throw new Error(THEME_ONLY);
+	const paths = readTemplatePaths(folder, home, input.scope, "prompts");
 	const next = paths.filter((entry) => entry !== input.path);
 	if (next.length === paths.length) {
-		throw new Error(`That path is not in the ${input.kind} paths`);
+		throw new Error("That path is not in the prompt template paths");
 	}
-	await writeTemplatePaths(folder, home, input.scope, input.kind, next);
+	await writePromptTemplatePaths(folder, home, input.scope, next);
 };

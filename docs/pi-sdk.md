@@ -405,7 +405,8 @@ setting adds a folder or a file, and a `-<file>` entry excludes one. pi's own pr
 and themes folders are discovered under the agent dir and a trusted project's `.pi`. A
 prompt template is named after its file without `.md`; its description is the
 frontmatter `description`, else the body's first line. A theme is a `.json` file and
-pi applies exactly one, which Epsilon never sets.
+pi applies exactly one, which Epsilon never sets or points at; it lists the theme paths
+a terminal wrote.
 
 ## API family paths
 

@@ -530,20 +530,22 @@ about it.
 
 ## Templates
 
-Prompt templates and themes are resources and get the same treatment: the page shows
-the scope's `prompts` or `themes` path list, and the entries pi resolved from it with
-their source and whether pi loads them. Add and remove write through
-`SettingsManager.setPromptTemplatePaths` / `setProjectPromptTemplatePaths` and the
-theme equivalents. The server refuses a path pi would skip instead: it must exist, be a
-folder or a file of the kind pi loads there, and not name a target already listed. A
-theme is listed and never applied, because Epsilon draws its own interface and has no
-theme picker.
+Prompt templates are editable and themes are only listed. The page shows the scope's
+`prompts` path list and the templates pi resolved from it, with their source and whether
+pi loads them; add and remove write through `SettingsManager`'s prompt-template setters.
+The server refuses a path pi would skip instead: it must exist, be a folder or a `.md`
+file, and not name a target already listed. The same page lists the `themes` paths and
+the files pi resolved from them, and writes neither. A theme changes pi's terminal, the
+dashboard renders its own interface, and a theme path's effect would be invisible here:
+adding one is a terminal step, editing the `themes` array in `settings.json`.
 
-Why: pi turns each prompt template into a composer command and each theme into one of
-its own interface files, so showing both is a read of pi's resolver, and the path list
-is the only part the panel can add. Not: applying a theme to Epsilon, or parsing
-template frontmatter on the server. The parsed template only exists inside a live
-engine, and the list needs pi's file answer.
+Why: pi turns each prompt template into a composer command, which the dashboard shows as
+soon as an engine reloads, and a theme into colors only a terminal draws. Listing themes
+keeps a package's themes and a broken theme path visible; writing them would be a control
+whose result nobody can see, against the rule that a terminal-only setting is named
+rather than edited. Not: applying a theme to Epsilon, or parsing template frontmatter on
+the server. The parsed template only exists inside a live engine, and the list needs
+pi's file answer.
 
 ## Default extensions
 

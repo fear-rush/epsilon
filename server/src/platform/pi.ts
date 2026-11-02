@@ -272,22 +272,19 @@ export const readTemplatePaths = (
 	return [...(stored[kind] ?? [])];
 };
 
-/** Replaces a `prompts` or `themes` array through pi's own setter and waits for the write. */
-export const writeTemplatePaths = async (
+/**
+ * Replaces the `prompts` array through pi's own setter and waits for the write. A
+ * theme path is deliberately not written: a theme only changes a terminal, and the
+ * dashboard cannot show the result (docs/DECISIONS.md, Templates).
+ */
+export const writePromptTemplatePaths = async (
 	folder: string,
 	home: AgentHome,
 	scope: SettingsScope,
-	kind: "prompts" | "themes",
 	paths: string[],
 ): Promise<void> => {
 	const settings = settingsManager(folder, home);
-	if (scope === "user") {
-		if (kind === "prompts") settings.setPromptTemplatePaths(paths);
-		else settings.setThemePaths(paths);
-	} else if (kind === "prompts") {
-		settings.setProjectPromptTemplatePaths(paths);
-	} else {
-		settings.setProjectThemePaths(paths);
-	}
+	if (scope === "user") settings.setPromptTemplatePaths(paths);
+	else settings.setProjectPromptTemplatePaths(paths);
 	await settings.flush();
 };

@@ -7462,7 +7462,7 @@
 					"settings"
 				],
 				"operationId": "addTemplatePath",
-				"description": "Add one path to the scope's prompts or themes list. The path must exist and be a folder or a file of that kind",
+				"description": "Add one path to the scope's prompt template list. The path must exist and be a folder or a .md file. A theme path is refused: a theme only changes a terminal",
 				"parameters": [
 					{
 						"schema": {
@@ -7507,7 +7507,7 @@
 					"settings"
 				],
 				"operationId": "removeTemplatePath",
-				"description": "Remove one entry from the scope's prompts or themes list",
+				"description": "Remove one entry from the scope's prompt template list",
 				"parameters": [
 					{
 						"schema": {

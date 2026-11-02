@@ -15,27 +15,26 @@ import { TEMPLATE_KIND } from "./template-kind";
 const FORM = "template-path-form";
 
 /**
- * Adds one path to a scope's prompts or themes list. The server checks that the
- * path exists and holds the kind pi loads, so a refusal is shown here instead of
- * writing an entry pi would skip.
+ * Adds one path to a scope's prompt template list. Only prompts are written: a
+ * theme changes a terminal, and the server refuses a theme path. The path is
+ * checked to exist and to hold what pi loads, so a refusal is shown here instead
+ * of writing an entry pi would skip.
  */
 export function TemplatePathDialog({
 	open,
 	onOpenChange,
-	kind,
 	scope,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	kind: TemplatePathInput["kind"];
 	scope: TemplatePathInput["scope"];
 }) {
 	const project = useSettingsProject();
 	const refresh = useSettingsRefresh();
 	const [path, setPath] = useState("");
-	const label = TEMPLATE_KIND[kind];
+	const label = TEMPLATE_KIND.prompts;
 	const add = useMutation({
-		mutationFn: (next: string) => addTemplatePath(project, { kind, scope, path: next }),
+		mutationFn: (next: string) => addTemplatePath(project, { kind: "prompts", scope, path: next }),
 		onSuccess: () => {
 			setPath("");
 			refresh();
