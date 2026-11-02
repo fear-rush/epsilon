@@ -1150,6 +1150,7 @@ export interface components {
 				registered: boolean;
 				attention?: components["schemas"]["McpAttention"];
 			})[];
+			resourceTools: string[];
 			codemode: boolean;
 			toolSearch: boolean;
 		};

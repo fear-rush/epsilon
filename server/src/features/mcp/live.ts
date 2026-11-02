@@ -40,6 +40,8 @@ export function mcpLiveOf(input: {
 	registered?: readonly string[];
 	/** The servers pi last reported a problem with, by name. */
 	attention?: ReadonlyMap<string, McpAttention>;
+	/** The resource tools this engine registered, by name. */
+	resourceTools?: readonly string[];
 }): McpLive {
 	const configured = new Map(input.names.map((name) => [mcpNamespaceOf(name), name]));
 	const byNamespace = new Map((input.registered ?? []).map((name) => [mcpNamespaceOf(name), name]));
@@ -73,6 +75,7 @@ export function mcpLiveOf(input: {
 			registered: entry.registered,
 			attention: entry.attention,
 		})),
+		resourceTools: (input.resourceTools ?? []).toSorted(),
 		codemode: input.active.includes("codemode"),
 		toolSearch: input.active.includes("tool_search"),
 	};
@@ -107,6 +110,7 @@ export function aggregateMcpLive(states: readonly McpLive[]): McpLive {
 				attention: entry.attention,
 			}))
 			.sort((left, right) => left.name.localeCompare(right.name)),
+		resourceTools: [...new Set(states.flatMap((state) => state.resourceTools))].toSorted(),
 		codemode: states.some((state) => state.codemode),
 		toolSearch: states.some((state) => state.toolSearch),
 	};

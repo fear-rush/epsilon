@@ -88,6 +88,7 @@ export {
 } from "./mcp/import";
 export type { ImportedEntry, ImportedServer, ImportedTarget, ParsedMcpPaste } from "./mcp/import";
 export {
+	MCP_RESOURCE_TOOL_NAMES,
 	effectiveToolExposure,
 	isToolReachable,
 	mcpToolAddress,

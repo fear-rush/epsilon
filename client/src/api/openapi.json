@@ -1124,6 +1124,12 @@
 							]
 						}
 					},
+					"resourceTools": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
 					"codemode": {
 						"type": "boolean"
 					},
@@ -1134,6 +1140,7 @@
 				"required": [
 					"sessions",
 					"servers",
+					"resourceTools",
 					"codemode",
 					"toolSearch"
 				]

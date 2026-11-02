@@ -366,6 +366,12 @@ export const mcpLiveSchema = z
 				attention: mcpAttentionSchema.optional(),
 			}),
 		),
+		/**
+		 * The resource tools pi registered, by name. pi registers them once for the
+		 * session when an enabled server offers resources, so their presence says
+		 * resources are reachable but never which server holds them.
+		 */
+		resourceTools: z.array(z.string()),
 		/** The reaching tools that are active in at least one live engine. */
 		codemode: z.boolean(),
 		toolSearch: z.boolean(),

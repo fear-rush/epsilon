@@ -57,7 +57,7 @@ export function McpTools({
 }) {
 	const server = live?.servers.find((entry) => entry.name === draft.name);
 	const tools = server?.tools;
-	const state = mcpServerState({ enabled, live, server });
+	const state = mcpServerState({ enabled, live, server, resources: live?.resourceTools ?? [] });
 	const [filter, setFilter] = useState("");
 	const rules = draft.toolExposure.map((row) => ({
 		pattern: row.pattern,

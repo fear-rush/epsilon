@@ -19,6 +19,8 @@ export const mcpServerState = (input: {
 	live: McpLive | undefined;
 	/** This server's row, when a live engine reported it. */
 	server: McpLiveServer | undefined;
+	/** The resource tools pi registered for the session, which reach a server's resources. */
+	resources: readonly string[];
 }): McpServerState => {
 	if (!input.enabled) {
 		return { text: "Turned off in this file, so pi does not connect it.", warning: false };
@@ -37,6 +39,14 @@ export const mcpServerState = (input: {
 	if ((input.live?.sessions ?? 0) === 0) {
 		return {
 			text: "No open session reads this server. What pi last said about it is in the log under Advanced.",
+			warning: false,
+		};
+	}
+	if (input.resources.length > 0) {
+		// pi registers these once for the session, so they reach resources without naming
+		// which server holds them, and a resources-only server gets no tool row at all.
+		return {
+			text: `No tool from this server yet. Resources reach the model through ${input.resources.join(", ")}, when this server offers any.`,
 			warning: false,
 		};
 	}

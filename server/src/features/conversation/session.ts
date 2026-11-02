@@ -27,7 +27,7 @@ import type {
 	Snapshot,
 	SnapshotModel,
 } from "shared";
-import { MCP_DEFAULT_EXPOSURE, mcpExposureSchema } from "shared";
+import { MCP_DEFAULT_EXPOSURE, MCP_RESOURCE_TOOL_NAMES, mcpExposureSchema } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { EXTENSION_RESOURCE_SOURCE, globalSettings } from "../../platform/pi";
@@ -296,16 +296,23 @@ export class LiveSession {
 	mcpLive(names: readonly string[]): McpLive {
 		const agent = this.host?.session;
 		if (agent === undefined)
-			return { sessions: 0, servers: [], codemode: false, toolSearch: false };
+			return { sessions: 0, servers: [], resourceTools: [], codemode: false, toolSearch: false };
 		const tools: {
 			namespace: string;
 			name: string;
 			exposure: McpExposure;
 			annotations?: ToolAnnotations;
 		}[] = [];
+		const resourceTools: string[] = [];
 		for (const tool of agent.getAllTools()) {
 			const namespace = tool.namespace?.name;
-			if (namespace === undefined || !namespace.startsWith("mcp__")) continue;
+			if (namespace === undefined || !namespace.startsWith("mcp__")) {
+				// The three resource tools carry no namespace; pi registers them for the session.
+				if (MCP_RESOURCE_TOOL_NAMES.some((name) => name === tool.name)) {
+					resourceTools.push(tool.name);
+				}
+				continue;
+			}
 			const exposure = mcpExposureSchema.safeParse(tool.exposure);
 			tools.push({
 				namespace,
@@ -320,6 +327,7 @@ export class LiveSession {
 			active: agent.getActiveToolNames(),
 			registered: this.mcpReport?.registered,
 			attention: this.mcpAttention,
+			resourceTools,
 		});
 	}
 

@@ -12,6 +12,17 @@ import { MCP_DEFAULT_EXPOSURE, mcpNamespaceOf } from "./rules";
 /** One `toolExposure` entry, in file order. */
 export type ToolRule = { pattern: string; exposure: McpExposure };
 
+/**
+ * pi's three resource tools (`core/mcp-servers.js` exports the same names). They are
+ * registered once for the session, with no server namespace, when at least one
+ * enabled server offers resources, so they name resources without naming a server.
+ */
+export const MCP_RESOURCE_TOOL_NAMES = [
+	"list_mcp_resources",
+	"list_mcp_resource_templates",
+	"read_mcp_resource",
+] as const;
+
 /** pi's provider tool-name limit: a longer registered name carries a hash suffix. */
 const MCP_TOOL_NAME_LIMIT = 64;
 

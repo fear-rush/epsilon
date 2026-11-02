@@ -575,6 +575,14 @@ the chosen home there once for that reason (AGENTS.md, Invariants 5), and a chec
 opens an engine on a scratch home sets it to that home, or pi loads the operator's
 `mcp.json` beside it.
 
+A server may offer resources instead of tools. `syncResourceTools()` registers
+`list_mcp_resources`, `list_mcp_resource_templates` and `read_mcp_resource` once for
+the session, with no server namespace, when at least one enabled server has resources
+and its exposure is not `hidden`; their `exposure` is the widest of those servers, and
+they are never registered at all otherwise. So the three names prove resources are
+reachable and say nothing about which server holds them, and a server that offers only
+resources registers no tool, so `getAllTools()` has no row for it.
+
 Connection state still reaches a host, but only as a notice. After the connections
 settle (`session_start`) and after a reconnect batch, `reportProblems()` in
 `dist/extensions/mcp/index.js` pushes one notice naming every server that needs

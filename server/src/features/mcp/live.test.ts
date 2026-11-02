@@ -22,6 +22,9 @@ const row = (name: string) => ({ name, key: name, exact: true, exposure: "direct
 /** What every listed server carries, so each expectation states only what it checks. */
 const quiet = { registered: false };
 
+/** What every live answer carries when nothing registered resource tools. */
+const noResources = { resourceTools: [] };
+
 describe("one live engine", () => {
 	test("tools are listed per server under the configured name, without the registered prefix", () => {
 		const live = mcpLiveOf({
@@ -35,6 +38,7 @@ describe("one live engine", () => {
 		});
 		expect(live).toEqual({
 			sessions: 1,
+			...noResources,
 			servers: [
 				{
 					name: "my-server",
@@ -149,10 +153,22 @@ describe("one live engine", () => {
 		]);
 	});
 
+	test("the resource tools pi registered for the session are named, sorted once", () => {
+		const live = mcpLiveOf({
+			names: [],
+			tools: [],
+			active: [],
+			resourceTools: ["read_mcp_resource", "list_mcp_resources"],
+		});
+
+		expect(live.resourceTools).toEqual(["list_mcp_resources", "read_mcp_resource"]);
+	});
+
 	test("a server with no tool registered is not reported, and nothing active stays false", () => {
 		expect(mcpLiveOf({ names: ["files"], tools: [], active: ["read"] })).toEqual({
 			sessions: 1,
 			servers: [],
+			...noResources,
 			codemode: false,
 			toolSearch: false,
 		});
@@ -179,6 +195,7 @@ describe("several live engines", () => {
 		]);
 		expect(live).toEqual({
 			sessions: 2,
+			...noResources,
 			servers: [
 				{ name: "docs", tools: [row("find")], ...quiet },
 				{ name: "files", tools: [row("read"), row("write")], ...quiet },
@@ -246,10 +263,25 @@ describe("several live engines", () => {
 		]);
 	});
 
+	test("resource tools are the union over the engines, named once", () => {
+		const live = aggregateMcpLive([
+			mcpLiveOf({ names: [], tools: [], active: [], resourceTools: ["list_mcp_resources"] }),
+			mcpLiveOf({
+				names: [],
+				tools: [],
+				active: [],
+				resourceTools: ["list_mcp_resources", "read_mcp_resource"],
+			}),
+		]);
+
+		expect(live.resourceTools).toEqual(["list_mcp_resources", "read_mcp_resource"]);
+	});
+
 	test("no live engine is zero sessions, not an empty answer", () => {
 		expect(aggregateMcpLive([])).toEqual({
 			sessions: 0,
 			servers: [],
+			...noResources,
 			codemode: false,
 			toolSearch: false,
 		});
