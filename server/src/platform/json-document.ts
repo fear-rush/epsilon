@@ -15,6 +15,8 @@ import { chmod, mkdir, readFile, realpath, rename, rm, stat, writeFile } from "n
 import { basename, dirname, join } from "node:path";
 import type { ZodType } from "zod";
 
+import { lenientJsonOf } from "./lenient-json";
+
 /** The most a file may hold before it is reported instead of parsed. */
 const MAX_BYTES = 1_000_000;
 
@@ -24,6 +26,8 @@ export type ProblemCause = "not-file" | "too-large" | "unreadable" | "not-json" 
 export type Wording = {
 	problem: (cause: ProblemCause, path: string) => string;
 	refusal: (path: string, problem: string) => string;
+	/** A lenient file the operator's comments would be lost from. */
+	comment?: (path: string, line: number) => string;
 };
 
 /**
@@ -34,6 +38,8 @@ export type Wording = {
 export type FilePolicy = "private" | "project";
 
 type Read<T> = { value: T; problem?: string };
+
+type Decoded<T> = Read<T> & { commentLine?: number };
 
 export type JsonDocument<T> = {
 	/** The file as it is. A problem means `value` is the empty shape. */
@@ -52,6 +58,8 @@ export type JsonDocumentOptions<T> = {
 	empty: () => T;
 	policy: FilePolicy;
 	wording: Wording;
+	/** pi reads this file with `stripJsonComments()`, so Epsilon must too. */
+	lenient?: boolean;
 };
 
 const locks = new Map<string, Promise<unknown>>();
@@ -102,7 +110,7 @@ export const jsonDocument = <T>(path: string, options: JsonDocumentOptions<T>): 
 		problem: wording.problem(cause, path),
 	});
 
-	const read = async (): Promise<Read<T>> => {
+	const decode = async (): Promise<Decoded<T>> => {
 		const info = await stat(path).catch(() => undefined);
 		// An absent file is not a problem: pi creates it on first use.
 		if (info === undefined) return { value: empty() };
@@ -110,23 +118,38 @@ export const jsonDocument = <T>(path: string, options: JsonDocumentOptions<T>): 
 		if (info.size > MAX_BYTES) return unusable("too-large");
 		let text: string;
 		try {
-			text = await readFile(path, "utf8");
+			text = stripBom(await readFile(path, "utf8"));
 		} catch {
 			return unusable("unreadable");
 		}
+		const lenient = options.lenient === true ? lenientJsonOf(text) : undefined;
 		let decoded: unknown;
 		try {
-			decoded = JSON.parse(stripBom(text));
+			decoded = JSON.parse(lenient?.text ?? text);
 		} catch {
 			return unusable("not-json");
 		}
 		const parsed = schema.safeParse(decoded);
-		return parsed.success ? { value: parsed.data } : unusable("wrong-shape");
+		return parsed.success
+			? { value: parsed.data, commentLine: lenient?.line }
+			: unusable("wrong-shape");
+	};
+
+	const read = async (): Promise<Read<T>> => {
+		const { value, problem } = await decode();
+		return { value, problem };
 	};
 
 	const update: JsonDocument<T>["update"] = (change) =>
 		locked(path, async () => {
-			const { value, problem } = await read();
+			const { value, problem, commentLine } = await decode();
+			// A lenient file reads, but a write would drop what only pi tolerates.
+			if (commentLine !== undefined) {
+				throw new Error(
+					wording.comment?.(path, commentLine) ??
+						`${basename(path)} has a comment on line ${commentLine}; remove it before writing here.`,
+				);
+			}
 			if (problem !== undefined) throw new Error(wording.refusal(path, problem));
 			const next = await change(value);
 			if (next === undefined) return;

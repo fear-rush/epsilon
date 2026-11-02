@@ -16,6 +16,8 @@ const wording: Wording = {
 	problem: (_cause, path) =>
 		`${basename(path)} cannot be read by this version of Settings. Fix it in a terminal, then reload.`,
 	refusal: (path) => `${basename(path)} is not valid for pi; fix or remove it before editing here.`,
+	comment: (path, line) =>
+		`${basename(path)} has a comment or a trailing comma on line ${line}. Remove it in a terminal first: writing here would drop it.`,
 };
 
 export const modelsDocument = (home: AgentHome): JsonDocument<ModelsFile> =>
@@ -24,6 +26,9 @@ export const modelsDocument = (home: AgentHome): JsonDocument<ModelsFile> =>
 		empty: () => ({}),
 		policy: "private",
 		wording,
+		// pi reads models.json with stripJsonComments(); settings.json and mcp.json
+		// are strict, so only this document opts in.
+		lenient: true,
 	});
 
 /** The provider entries, or none when the file is missing or unreadable. */

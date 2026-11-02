@@ -199,8 +199,11 @@ Settings configures the agent: provider endpoints and their models, the default
 model, MCP servers, skills and packages. Writes go through an exported pi writer where
 one exists (`SettingsManager`, `DefaultPackageManager`). Otherwise the dashboard parses
 the documented file with zod, merges it, keeps unknown keys, writes at mode 0600 under
-one in-process queue per path, and refuses a file it cannot parse. A provider key goes to
-the documented `apiKey` field of `models.json` and is never sent back to the browser.
+one in-process queue per path, and refuses a file it cannot parse. `models.json` is
+read the way pi reads it, with `//` comments and trailing commas, but a write against
+such a file is refused with the line number: the merge would silently drop them. A
+provider key goes to the documented `apiKey` field of `models.json` and is never sent
+back to the browser.
 Every settings write reloads the live engines. A pi-shipped provider keeps its catalog
 and is edited through `modelOverrides`; importing models is Epsilon's own bounded HTTP
 call, disabled where an API family has no shared list shape. The override dialog starts

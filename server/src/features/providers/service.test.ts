@@ -96,6 +96,33 @@ describe("provider catalog", () => {
 });
 
 describe("provider writes", () => {
+	test("reads a commented models.json and refuses to write over it", async () => {
+		const root = await home();
+		await writeFile(
+			root.modelsFile,
+			[
+				"{",
+				"  // a gateway the operator documented",
+				'  "providers": {',
+				'    "acme": {',
+				'      "name": "Acme",',
+				'      "baseUrl": "https://example.test/v1",',
+				'      "api": "openai-completions",',
+				'      "models": [{ "id": "m" },],',
+				"    },",
+				"  },",
+				"}",
+			].join("\n"),
+		);
+
+		// The `//` inside the base URL is a string, not a comment; pi reads it too.
+		const detail = await readProviderDetail(root, await modelRuntime(root), "acme");
+		expect(detail?.name).toBe("Acme");
+
+		await expect(writeProvider(root, { id: "acme", name: "Renamed" })).rejects.toThrow(/line 2/);
+		expect(await readFile(root.modelsFile, "utf8")).toContain("// a gateway");
+	});
+
 	test("every documented model field survives a round trip", async () => {
 		const root = await home();
 		const model: ProviderModelInput = {

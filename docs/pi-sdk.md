@@ -672,10 +672,9 @@ Turborepo or the runtime.
   model's override before the ordinary number, so a host that shows only the
   ordinary value is showing the wrong one. `models.json` `modelOverrides` accepts no `api` and
   no `baseUrl` (pi ignores both when present rather than refusing the file), and its
-  `cost` may be partial, field by field. And pi reads both
-  `models.json` and `mcp.json` with a comment- and trailing-comma-tolerant reader
-  (`dist/utils/json.js`), so a strict rewrite silently deletes comments an operator
-  relies on.
+  `cost` may be partial, field by field. pi reads `models.json` with a comment- and
+  trailing-comma-tolerant reader (`dist/utils/json.js`), so a strict rewrite deletes
+  comments an operator relies on; `settings.json` and `mcp.json` are parsed strictly.
 - **`hideThinkingBlock` is a global setting with a writer.**
   `SettingsManager.getHideThinkingBlock()` and `setHideThinkingBlock(hide)` read and
   write `globalSettings.hideThinkingBlock` and save pi's own `settings.json`, so a
