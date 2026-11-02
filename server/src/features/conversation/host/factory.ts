@@ -18,6 +18,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 
 import type { AgentHome } from "../../../platform/agent-home";
+import { decideProjectTrust } from "../../projects";
 import { builtinExtensions, setCodingTools } from "../engine";
 import type { McpReportSink } from "../extensions/mcp-observer";
 
@@ -49,16 +50,16 @@ export const openSessionManager = (
 		: SessionManager.open(file, undefined, cwd);
 
 /**
- * Trust is decided by the caller and passed before the services exist, because the
- * resource loader reads the folder's `.pi` the moment it is built. pi exposes no
- * resolver for the SDK to consult (docs/pi-sdk.md, Traps).
+ * Trust is decided before the services exist, because the resource loader reads the
+ * folder's `.pi` the moment it is built. `decideProjectTrust()` runs pi's chain; a
+ * build has no extensions loaded yet, so their `project_trust` step is left for the
+ * bootstrap pass that loads them.
  */
 export const createRuntimeFactory =
 	(options: RuntimeFactoryOptions): CreateAgentSessionRuntimeFactory =>
 	async ({ cwd, sessionManager, sessionStartEvent }): Promise<CreateAgentSessionRuntimeResult> => {
-		const settings = SettingsManager.create(cwd, options.home.dir, {
-			projectTrusted: !options.chat,
-		});
+		const projectTrusted = await decideProjectTrust({ cwd, home: options.home });
+		const settings = SettingsManager.create(cwd, options.home.dir, { projectTrusted });
 		const services = await createAgentSessionServices({
 			cwd,
 			agentDir: options.home.dir,

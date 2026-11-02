@@ -9,3 +9,4 @@ export {
 	settingsFolder,
 	trustedProjectFolder,
 } from "./service";
+export { decideProjectTrust } from "./trust";

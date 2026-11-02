@@ -27,6 +27,10 @@ import type { AgentHome } from "./agent-home";
 export type {
 	ModelRuntime,
 	PackageSource,
+	ProjectTrustContext,
+	ProjectTrustEvent,
+	ProjectTrustEventResult,
+	ProjectTrustHandler,
 	ProviderModelConfig,
 	ResolvedResource,
 	ResourceDiagnostic,
@@ -159,14 +163,18 @@ export const setSessionName = (file: string, cwd: string, name: string): void =>
 
 /*
  * Project trust, through pi's own store and its lock. `get` honours a decision
- * saved for a parent folder, the way pi's CLI does.
+ * saved for a parent folder, the way pi's CLI does, and `set` takes `null` to
+ * forget one.
  */
-export const isProjectTrusted = (home: AgentHome, cwd: string): boolean =>
-	new ProjectTrustStore(home.dir).get(cwd) === true;
+export const projectTrustStore = (home: AgentHome): ProjectTrustStore =>
+	new ProjectTrustStore(home.dir);
 
-export const trustProject = (home: AgentHome, cwd: string): void => {
-	new ProjectTrustStore(home.dir).set(cwd, true);
-};
+/**
+ * A settings manager in the state pi resolves trust from: the global settings are
+ * read, the project's are not, and `getDefaultProjectTrust()` is the home's value.
+ */
+export const untrustedSettings = (folder: string, home: AgentHome): SettingsManager =>
+	SettingsManager.create(folder, home.dir, { projectTrusted: false });
 
 /** Whether the folder holds anything pi only loads for a trusted project. */
 export const hasProjectResources = (cwd: string): boolean => hasTrustRequiringProjectResources(cwd);

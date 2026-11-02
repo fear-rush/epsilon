@@ -2,18 +2,19 @@
  * Opening a folder as a project. A path is the one thing the browser sends that
  * names the disk, so every route resolves it here first: absolute, real, a
  * directory, outside the agent home, and under `bun run dev` inside the sandbox's
- * `~`. Trust is pi's: read and written through its exported `ProjectTrustStore`
- * (docs/DECISIONS.md, Chats and projects).
+ * `~`. Trust is pi's chain (`trust.ts`), and its decisions come from and go to pi's
+ * `ProjectTrustStore` (docs/DECISIONS.md, Chats and projects).
  */
 import { mkdir, readdir, realpath, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 
 import type { AgentHome } from "../../platform/agent-home";
-import { hasProjectResources, isProjectTrusted, trustProject } from "../../platform/pi";
+import { hasProjectResources, projectTrustStore } from "../../platform/pi";
 import type { SettingsScope } from "../../platform/pi";
 import type { FolderListing, ProjectStatus } from "./contract";
 import { isInside, projectName } from "./domain";
+import { decideProjectTrust } from "./trust";
 
 /** A picker level stops here; a folder with more subfolders says so. */
 const MAX_FOLDERS = 500;
@@ -69,10 +70,10 @@ const resolveProjectFolder = async (home: AgentHome, raw: string): Promise<strin
 	return folder;
 };
 
-export const projectStatus = (home: AgentHome, path: string): ProjectStatus => ({
+export const projectStatus = async (home: AgentHome, path: string): Promise<ProjectStatus> => ({
 	path,
 	name: projectName(path),
-	trusted: isProjectTrusted(home, path),
+	trusted: await decideProjectTrust({ cwd: path, home }),
 	hasProjectResources: hasProjectResources(path),
 });
 
@@ -83,7 +84,7 @@ export const readProjectStatus = async (home: AgentHome, raw: string): Promise<P
 /** Trust one folder in pi's `trust.json`, through pi's store and its lock. */
 export const trustProjectFolder = async (home: AgentHome, raw: string): Promise<ProjectStatus> => {
 	const path = await resolveProjectFolder(home, raw);
-	trustProject(home, path);
+	projectTrustStore(home).set(path, true);
 	return projectStatus(home, path);
 };
 
@@ -94,7 +95,7 @@ export const trustProjectFolder = async (home: AgentHome, raw: string): Promise<
  */
 export const trustedProjectFolder = async (home: AgentHome, raw: string): Promise<string> => {
 	const path = await resolveProjectFolder(home, raw);
-	if (!isProjectTrusted(home, path)) throw new ProjectNotTrustedError(path);
+	if (!(await projectStatus(home, path)).trusted) throw new ProjectNotTrustedError(path);
 	return path;
 };
 

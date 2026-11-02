@@ -2,8 +2,9 @@
 import { z } from "@hono/zod-openapi";
 
 /**
- * A folder the operator opened. `trusted` is pi's own decision from `trust.json`,
- * honouring a parent folder; nothing runs in a folder until it is true.
+ * A folder the operator opened. `trusted` is pi's chain's answer (`trust.ts`): a
+ * folder with nothing pi gates is trusted outright, a saved parent decision counts,
+ * and `defaultProjectTrust` can decide. Nothing runs in a folder until it is true.
  */
 export const projectStatusSchema = z
 	.object({

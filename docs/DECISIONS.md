@@ -326,10 +326,13 @@ runs decides what it sees:
 Both carry a per-session tool switch; pi records the loadout in the transcript, so
 the choice survives a reopen. `read` stays on either way, because skills need it.
 
-Nothing runs in a project folder until pi's `ProjectTrustStore` says it is trusted.
-The page asks before it attaches, and the server refuses to build an engine or write
-project settings in an untrusted folder. The Trust button writes that store, which
-is the file `/trust` writes, so a terminal and the dashboard share decisions.
+Nothing runs in a project folder until pi trusts it. Trust is pi's chain, not a
+single saved flag: a folder with nothing pi gates is trusted with no record, then a
+saved `trust.json` decision (a parent's covers its subfolders), then the home's
+`defaultProjectTrust`. When that leaves the question open the page asks, and the
+server refuses to build an engine or write project settings in a folder pi does not
+trust. The Trust button writes the same store `/trust` writes, so a terminal and the
+dashboard share decisions.
 
 The list of projects is derived from the folders pi's session files record; nothing
 stores it. A folder opened but never used exists only in the page URL until its first

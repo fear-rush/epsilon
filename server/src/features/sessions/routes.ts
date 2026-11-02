@@ -204,7 +204,7 @@ export const sessionsRoutes = ({ home, engines }: Deps) =>
 	new OpenAPIHono()
 		.openapi(listSessionsRoute, async (c) => {
 			const pinned = await readPinned(home);
-			const list = groupSessions(home, await listAllSessions(), engines.live(), pinned.ids);
+			const list = await groupSessions(home, await listAllSessions(), engines.live(), pinned.ids);
 			return c.json(
 				pinned.problem === undefined ? list : { ...list, pinsProblem: pinned.problem },
 				200,

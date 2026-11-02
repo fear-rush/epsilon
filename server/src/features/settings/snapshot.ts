@@ -50,7 +50,7 @@ export const readSettings = async (
 	userHome: string,
 	engines: SessionRegistry,
 ): Promise<SettingsSnapshot> => {
-	const project = folder === home.chatsDir ? null : projectStatus(home, folder);
+	const project = folder === home.chatsDir ? null : await projectStatus(home, folder);
 	// Extension-discovered skills exist only while an engine for this folder is open.
 	const live = engines.extensionSkills(folder);
 	const runtime = await modelRuntime(home);

@@ -633,11 +633,26 @@ to a session that is already open.
 
 ## Project trust
 
-The CLI resolves trust before it loads project settings: `resolveProjectTrusted()`
-in `dist/core/project-trust.js` reads `trust.json`, then `defaultProjectTrust`
-("ask" by default), then asks. Extensions see the result through
-`ctx.isProjectTrusted()`, which returns `settingsManager.isProjectTrusted()`.
-`resolveProjectTrusted` is not exported.
+Trust is decided before project settings load, in this order
+(`resolveProjectTrusted()` in `dist/core/project-trust.js`):
+
+1. A folder with no trust-requiring resource is trusted, with no decision and no
+   record.
+2. The `project_trust` extension event: the first handler that answers `"yes"` or
+   `"no"` wins, `"undecided"` falls through to the next handler, and
+   `remember: true` writes the answer to `trust.json`. A handler that throws is
+   reported and does not decide.
+3. `trust.json`, through `ProjectTrustStore.get()`, which answers the closest saved
+   decision, so a trusted parent covers its subfolders.
+4. `defaultProjectTrust` from the home's settings: `"always"`, `"never"` or
+   `"ask"`.
+5. For `"ask"`, pi's own dialog, when it has a UI.
+
+`getDefaultProjectTrust()` reads the global settings only; a project's
+`.pi/settings.json` is not loaded until the folder is trusted. Extensions see the
+result through `ctx.isProjectTrusted()`, which returns
+`settingsManager.isProjectTrusted()`. `resolveProjectTrusted`, `emitProjectTrustEvent`,
+`getProjectTrustOptions` and `getProjectTrustParentPath` are private.
 
 An embedded engine does not run that resolution. `SettingsManager.create(cwd,
 agentDir)` starts at `projectTrusted = true` (`dist/core/settings-manager.js`), and
@@ -648,19 +663,27 @@ decides first.
 What the SDK exports for that decision:
 
 - `ProjectTrustStore(agentDir)`: `get(cwd)` answers the closest saved decision
-  (`true`, `false` or `null`), so a trusted parent covers its subfolders; `set(cwd,
-  decision)` writes `trust.json` under pi's own lock. It is the same file `/trust`
-  writes, so a terminal and the dashboard share decisions.
+  (`true`, `false` or `null`); `set(cwd, decision)` writes `trust.json` under pi's
+  own lock. It is the same file `/trust` writes, so a terminal and the dashboard
+  share decisions.
 - `hasTrustRequiringProjectResources(cwd)`: whether the folder holds anything pi
   gates (`.pi/settings.json`, `.pi/mcp.json`, `.pi/extensions|skills|prompts|themes`,
   `.pi/SYSTEM.md`, `.agents/skills` in the folder or a parent). Context files
   (`AGENTS.md`, `CLAUDE.md`) are never gated.
-- `SettingsManager.setProjectTrusted(trusted)`.
+- `SettingsManager.setProjectTrusted(trusted)` and
+  `getDefaultProjectTrust()`.
+- `createAgentSessionServices()` takes `resourceLoaderReloadOptions`, whose
+  `resolveProjectTrust` callback is pi's own two-pass load: the resource loader loads
+  the untrusted extension set first, calls back with the result, sets the decision
+  and reloads the resources for it.
 
-Epsilon asks before anything runs: a project folder is refused until
-`ProjectTrustStore.get()` is `true`, and the dashboard's Trust button calls
-`set(cwd, true)` ([DECISIONS.md](DECISIONS.md), Chats and projects).
-`defaultProjectTrust` is not consulted.
+Epsilon runs the chain in `server/src/features/projects/trust.ts`, over the store,
+`hasTrustRequiringProjectResources()`, `Extension.handlers` and the settings getter.
+The project page, every route that runs in a project, and the engine's
+`projectTrusted` argument use its answer. A live engine has no extension set loaded
+before that decision yet, so its answer comes from the store and the default. With
+no synchronous dialog, the `"ask"` step is not trusted: the page then shows its
+Trust gate ([DECISIONS.md](DECISIONS.md), Chats and projects).
 
 ## The CLI, for what an embedding host does not do
 
@@ -738,15 +761,17 @@ Turborepo or the runtime.
 - **The embedded engine trusts whatever folder it is given.** `SettingsManager.create`
   starts with `projectTrusted = true`, and nothing in `createAgentSession()` runs a
   trust decision, so `.pi/settings.json` and `.pi/mcp.json` load with an empty
-  `trust.json`. The host must decide before it builds an engine. The SDK exports only
-  `ProjectTrustStore`, `hasTrustRequiringProjectResources` and
-  `SettingsManager.setProjectTrusted` for this: `resolveProjectTrusted`,
-  `emitProjectTrustEvent`, `getProjectTrustOptions` and `getProjectTrustParentPath`
-  are private, and `DefaultResourceLoaderOptions` has no `resolveProjectTrust` field
-  to pass one through. A host that wants pi's real chain (no gated resource means
+  `trust.json`. The host must decide before it builds an engine. The SDK exports the
+  store, `hasTrustRequiringProjectResources` and `SettingsManager.setProjectTrusted`
+  for this; `resolveProjectTrusted`, `emitProjectTrustEvent`,
+  `getProjectTrustOptions` and `getProjectTrustParentPath` are private, and
+  `DefaultResourceLoaderOptions` has no trust field. The two-pass hook is on
+  `ResourceLoaderReloadOptions` instead: `createAgentSessionServices()` takes one as
+  `resourceLoaderReloadOptions`, loads the untrusted extension set, calls the
+  callback with it, sets the decision and reloads. `Extension.handlers` is public, so
+  the event can also be emitted directly. A host that wants pi's real chain (no gated resource means
   trusted, then the `project_trust` event, then the store, then `defaultProjectTrust`,
-  then ask) reproduces it over those public pieces; `Extension.handlers` is public, so
-  the event can be emitted without pi's helper.
+  then ask) reproduces it over those public pieces.
 - **A skill needs a reading tool.** The system prompt lists skills only when a
   `read`-type tool is declared (`dist/core/system-prompt.js`), because the model
   loads a skill by reading its `SKILL.md`. Turning off every built-in tool turns

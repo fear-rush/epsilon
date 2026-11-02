@@ -37,12 +37,12 @@ const byPinnedThenNewest = (a: SessionSummary, b: SessionSummary): number => {
 const newestActivity = (sessions: SessionSummary[]): string =>
 	sessions.reduce((latest, session) => (session.modified > latest ? session.modified : latest), "");
 
-export const groupSessions = (
+export const groupSessions = async (
 	home: AgentHome,
 	stored: StoredSession[],
 	live: Live[],
 	pinned: ReadonlySet<string>,
-): SessionList => {
+): Promise<SessionList> => {
 	const byId = new Map(live.map((session) => [session.id, session]));
 	const chats: SessionSummary[] = [];
 	const projects = new Map<string, SessionSummary[]>();
@@ -62,12 +62,14 @@ export const groupSessions = (
 	}
 	return {
 		chats: chats.sort(byPinnedThenNewest),
-		projects: [...projects]
-			.map(([path, sessions]) => ({
-				project: projectStatus(home, path),
-				sessions: sessions.sort(byPinnedThenNewest),
-			}))
-			.sort((a, b) => newestActivity(b.sessions).localeCompare(newestActivity(a.sessions))),
+		projects: (
+			await Promise.all(
+				[...projects].map(async ([path, sessions]) => ({
+					project: await projectStatus(home, path),
+					sessions: sessions.sort(byPinnedThenNewest),
+				})),
+			)
+		).sort((a, b) => newestActivity(b.sessions).localeCompare(newestActivity(a.sessions))),
 	};
 };
 

@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { gzipSync, zipSync } from "fflate";
 
 import { agentHome } from "../../platform/agent-home";
-import { settingsManager, trustProject } from "../../platform/pi";
+import { projectTrustStore, settingsManager } from "../../platform/pi";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { SKILLS_CLI_VERSION, runSkillsCli } from "./cli";
 import { skillImportRoutes } from "./routes";
@@ -320,7 +320,7 @@ describe("commit", () => {
 		).rejects.toThrow(/Pick a project/);
 		const project = join(dir, "project");
 		await mkdir(project);
-		trustProject(context.home, project);
+		projectTrustStore(context.home).set(project, true);
 		await commitImport({ ...context, project }, report.stageId, body({ target: "project" }));
 		expect(await readFile(join(project, ".agents", "skills", "a", "SKILL.md"), "utf8")).toContain(
 			"name: a",
