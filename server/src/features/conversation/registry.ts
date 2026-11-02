@@ -22,7 +22,7 @@ import { placeOf, trustedProjectFolder } from "../projects";
 import type { SessionHost } from "./host/host";
 import { withHost } from "./host/host";
 import { LiveSession } from "./session";
-import type { ExportedSession, ExportFormat } from "./session";
+import type { ExportedSession, ExportFormat } from "./commands/export";
 import type { UiHost } from "./ui-context";
 
 /**

@@ -1,31 +1,20 @@
 /**
  * One live engine session and the state the browser cannot rebuild by itself.
  * The transcript is pi's session file; the dialogs and display state live in
- * `dialogs.ts`, and the fan-out to tabs in `SessionFrames` below. A command is a method
- * call on the embedded `AgentSession` (docs/DECISIONS.md, Embedded engine); no process speaks to this one.
+ * `dialogs.ts`, the fan-out to tabs in `frames.ts`, and what a command does in
+ * `commands/`. A command is a method call on the embedded `AgentSession`
+ * (docs/DECISIONS.md, Embedded engine); no process speaks to this one.
  *
  * The engine is a `SessionHost`, one pi `AgentSessionRuntime`. A replacement moves
  * the chat to a new session id, so the id is read live and a tab is told which one
  * it moved to; every id the chat held keeps reaching this object through the
  * registry.
  */
-import { watch } from "node:fs";
-import type { FSWatcher } from "node:fs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
-import type {
-	AgentSession,
-	AgentSessionEvent,
-	PromptOptions,
-} from "@earendil-works/pi-coding-agent";
+import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import type {
 	Command,
 	DialogAnswer,
 	Place,
-	PromptBehavior,
-	PromptImage,
 	ProtocolErrorCode,
 	ServerFrame,
 	SnapshotModel,
@@ -35,56 +24,19 @@ import type { AgentHome } from "../../platform/agent-home";
 import { globalSettings } from "../../platform/pi";
 import type { McpLive } from "../mcp";
 import { mcpLiveOf } from "../mcp";
+import { runCommand } from "./commands";
+import type { CommandTarget } from "./commands/context";
+import { exportSession } from "./commands/export";
+import type { ExportedSession, ExportFormat } from "./commands/export";
 import { Dialogs } from "./dialogs";
 import type { AnswerOutcome, FrameSink } from "./dialogs";
-import { setCodingTools, toJsonEvent } from "./engine";
+import { toJsonEvent } from "./engine";
+import { SessionFrames } from "./frames";
 import { bindHost } from "./host/bindings";
 import { SessionHost } from "./host/host";
 import { buildSnapshot, readModelsFrom, shadowedCommandsOf } from "./snapshot";
-import { runBuiltin } from "./slash";
 import { UiBridge } from "./ui-context";
-
-/** A session with no tab keeps the last few frames worth showing on the next one. */
-const MAX_DEFERRED = 5;
-
-/**
- * The tabs watching one session. The session asks how many remain to decide its
- * idle lifetime, so this is the only place that counts them.
- */
-export class SessionFrames {
-	private readonly sinks = new Set<FrameSink>();
-	private readonly deferred: ServerFrame[] = [];
-
-	/** Called after every change, so the session can cancel or start its idle timer. */
-	constructor(private readonly changed: () => void) {}
-
-	get count(): number {
-		return this.sinks.size;
-	}
-
-	add(sink: FrameSink): void {
-		this.sinks.add(sink);
-		this.changed();
-	}
-
-	remove(sink: FrameSink): void {
-		this.sinks.delete(sink);
-		this.changed();
-	}
-
-	/** A frame nobody could receive yet; kept for the next subscriber. */
-	defer(frame: ServerFrame): void {
-		if (this.deferred.length < MAX_DEFERRED) this.deferred.push(frame);
-	}
-
-	takeDeferred(): ServerFrame[] {
-		return this.deferred.splice(0);
-	}
-
-	emit(frame: ServerFrame): void {
-		for (const sink of this.sinks) sink(frame);
-	}
-}
+import { FileWatcher } from "./watcher";
 
 /**
  * How long a session with no tab stays alive. A reload, a route change or a
@@ -96,28 +48,6 @@ const IDLE_DISPOSE_MS = 10_000;
 /** pi's model scope for this home; null means every model is offered. */
 const patternsOf = (home: AgentHome): string[] | null =>
 	globalSettings(home).getEnabledModels() ?? null;
-
-/** The two files pi writes a transcript as, and the type a browser saves each under. */
-export type ExportFormat = "html" | "jsonl";
-
-const EXPORT_FILE: Record<ExportFormat, { extension: string; mimeType: string }> = {
-	html: { extension: "html", mimeType: "text/html;charset=utf-8" },
-	jsonl: { extension: "jsonl", mimeType: "application/x-ndjson" },
-};
-
-/** What a browser saves: the bytes pi wrote, and the name to save them under. */
-export type ExportedSession = { filename: string; mimeType: string; text: string };
-
-/**
- * The stem of a download's name. The chat's own name when it has one, else its id,
- * with everything a file system or a browser would read as a path removed.
- */
-const exportStem = (name: string | undefined, sessionId: string): string => {
-	const cleaned = (name ?? "").replace(/[^\p{L}\p{N}._-]+/gu, "-").replace(/^[-.]+|[-.]+$/g, "");
-	// Count code points, so a truncation cannot cut a character in half.
-	const stem = [...cleaned].slice(0, 80).join("");
-	return stem === "" ? `session-${sessionId}` : stem;
-};
 
 export type LiveSessionOptions = {
 	sessionId: string;
@@ -153,11 +83,14 @@ export class LiveSession {
 	private file: string | undefined;
 	private readonly cwd: string;
 	private readonly chat: boolean;
-	private watcher: FSWatcher | undefined;
-	/** When this engine last wrote or produced an event, to tell its writes from another's. */
-	private lastOwnActivity = 0;
-	/** Set once a change is reported, so one write does not fill the transcript with rows. */
-	private driftSeen = false;
+	private readonly files = new FileWatcher(
+		() => this.host !== undefined && !this.busy,
+		() =>
+			this.notice(
+				"This chat's file changed outside Epsilon. Reload to read what is on disk now.",
+				"external-change",
+			),
+	);
 	/** Shadowed command names already reported, so a resync does not repeat itself. */
 	private readonly reportedShadowed = new Set<string>();
 
@@ -239,7 +172,7 @@ export class LiveSession {
 		this.subscribeTo(session);
 		this.currentId = host.id;
 		this.file = host.file;
-		this.driftSeen = false;
+		this.files.clearDrift();
 		this.watch();
 		this.reportShadowed();
 		if (host.id !== from) {
@@ -342,22 +275,7 @@ export class LiveSession {
 	 * engine, so nothing here disposes or releases it (docs/DECISIONS.md, Export).
 	 */
 	async export(format: ExportFormat): Promise<ExportedSession> {
-		const agent = this.engine;
-		const { extension, mimeType } = EXPORT_FILE[format];
-		const folder = await mkdtemp(join(tmpdir(), "epsilon-export-"));
-		const path = join(folder, `session.${extension}`);
-		try {
-			if (format === "html") await agent.exportToHtml(path);
-			else agent.exportToJsonl(path);
-			const text = await readFile(path, "utf8");
-			return {
-				filename: `${exportStem(agent.sessionName, this.sessionId)}.${extension}`,
-				mimeType,
-				text,
-			};
-		} finally {
-			await rm(folder, { recursive: true, force: true });
-		}
+		return exportSession(this.engine, this.sessionId, format);
 	}
 
 	/** Run one command and report it to every tab watching this session. */
@@ -365,7 +283,7 @@ export class LiveSession {
 		this.dispatching = true;
 		try {
 			await this.dispatch(command);
-			this.lastOwnActivity = Date.now();
+			this.files.markOwnActivity();
 			this.emit({
 				t: "command-result",
 				sessionId: this.sessionId,
@@ -390,7 +308,7 @@ export class LiveSession {
 
 	/** Drop the engine. A later attach rebuilds it from the session file. */
 	async dispose(): Promise<void> {
-		this.stopWatch();
+		this.files.stop();
 		const host = this.host;
 		if (host === undefined) return;
 		// Clear the reference first: cancelling dialogs asks the session to
@@ -436,50 +354,22 @@ export class LiveSession {
 		if (this.busy) throw new Error("Stop the run before reloading this chat.");
 		const host = this.host;
 		if (host === undefined) return;
-		this.stopWatch();
+		this.files.stop();
 		this.host = undefined;
 		this.unsubscribe?.();
 		this.unsubscribe = undefined;
-		this.driftSeen = false;
+		this.files.clearDrift();
 		await host.close();
 		await this.start();
 		this.resync();
 	}
 
-	/**
-	 * Another process writing this chat is invisible to pi, which reads the file
-	 * once. A change while nothing runs is reported once; the tab offers a reload.
-	 * Our own writes land during a run, which is why busy changes are ignored.
-	 */
+	/** Follow the file the live session writes, so an outside change is noticed. */
 	private watch(): void {
-		this.stopWatch();
 		const file = this.host?.file ?? this.file;
 		if (file === undefined) return;
 		this.file = file;
-		try {
-			this.watcher = watch(file, { persistent: false }, () => this.sawFileChange());
-		} catch {
-			// A session pi has not written yet has no file to watch; the first
-			// message creates it and the next attach watches it.
-			this.watcher = undefined;
-		}
-	}
-
-	private stopWatch(): void {
-		this.watcher?.close();
-		this.watcher = undefined;
-	}
-
-	private sawFileChange(): void {
-		if (this.host === undefined || this.busy || this.driftSeen) return;
-		// pi writes on every message and result, so a change within this window is
-		// this engine's own work, not another process's.
-		if (Date.now() - this.lastOwnActivity < 2_000) return;
-		this.driftSeen = true;
-		this.notice(
-			"This chat's file changed outside Epsilon. Reload to read what is on disk now.",
-			"external-change",
-		);
+		this.files.watch(file);
 	}
 
 	/**
@@ -520,116 +410,26 @@ export class LiveSession {
 	}
 
 	private async dispatch(command: Command): Promise<void> {
-		const agent = this.engine;
-		switch (command.type) {
-			case "prompt": {
-				// A built-in slash command is pi's editor's job in a terminal. Here the host
-				// is the editor, so it runs before the text can reach the model.
-				const handled = await runBuiltin(
-					{
-						host: this.liveHost,
-						home: this.home,
-						reload: () => this.reload(),
-						notice: (text) => this.notice(text, "command"),
-					},
-					command.text,
-				);
-				if (handled) {
-					this.resync();
-					return;
-				}
-				await this.prompt(command.text, command.behavior, command.images);
-				return;
-			}
-			case "abort":
-				this.dialogs.cancelAll();
-				await agent.abort();
-				return;
-			case "bash": {
-				// `executeBash` resolves when the command finishes, so report the running
-				// state first: that is what lets a tab offer `abort_bash` while it runs.
-				const running = agent.executeBash(command.command, undefined, {
-					excludeFromContext: command.excludeFromContext,
-				});
-				this.resync();
-				await running;
-				this.resync();
-				return;
-			}
-			case "abort_bash":
-				agent.abortBash();
-				this.resync();
-				return;
-			case "reload":
-				await this.reload();
-				return;
-			case "reload_session":
-				await this.reloadFromDisk();
-				return;
-			case "compact":
-				// pi aborts the running turn before it compacts, so a busy session takes
-				// this. A refusal (`Nothing to compact`) is pi's message to the tab.
-				await agent.compact(command.instructions);
-				this.resync();
-				return;
-			case "abort_compaction":
-				agent.abortCompaction();
-				this.resync();
-				return;
-			case "set_auto_compaction":
-				agent.setAutoCompactionEnabled(command.enabled);
-				this.resync();
-				return;
-			case "cancel_retry":
-				agent.abortRetry();
-				this.resync();
-				return;
-			case "set_auto_retry":
-				agent.setAutoRetryEnabled(command.enabled);
-				this.resync();
-				return;
-			case "clear_queue":
-				agent.clearQueue();
-				this.resync();
-				return;
-			case "set_model": {
-				// Resolve against the list the browser was offered, so a pick can never
-				// name a pair the engine will refuse.
-				const offered = this.models.some(
-					(candidate) =>
-						candidate.provider === command.provider && candidate.id === command.modelId,
-				);
-				const model = agent.modelRuntime.getModel(command.provider, command.modelId);
-				if (!offered || model === undefined) {
-					throw new Error(`Model not found: ${command.provider}/${command.modelId}`);
-				}
-				await agent.setModel(model);
-				this.resync();
-				return;
-			}
-			case "set_thinking_level": {
-				agent.setThinkingLevel(command.level);
-				this.resync();
-				return;
-			}
-			case "set_coding_tools": {
-				setCodingTools(agent, command.enabled);
-				this.resync();
-				return;
-			}
-			case "navigate_tree": {
-				// pi refuses while a run or a compaction is going, and that refusal is the
-				// tab's answer. A user message moves the leaf to its parent and hands its
-				// text back for the editor; any other entry becomes the leaf. The tab
-				// already holds a user message's text, so the snapshot says the rest.
-				const result = await agent.navigateTree(command.entryId, {
-					summarize: command.summarize === true,
-				});
-				if (result.cancelled) throw new Error("Navigation was cancelled");
-				this.resync();
-				return;
-			}
-		}
+		await runCommand(this.commandTarget(), command);
+	}
+
+	/**
+	 * What one command may touch. Built per command, so the engine and the model
+	 * list are the ones current when the tab's command ran.
+	 */
+	private commandTarget(): CommandTarget {
+		return {
+			agent: this.engine,
+			host: this.liveHost,
+			home: this.home,
+			models: this.models,
+			cancelDialogs: () => this.dialogs.cancelAll(),
+			notice: (text) => this.notice(text, "command"),
+			fail: (error) => this.fail(error),
+			resync: () => this.resync(),
+			reload: () => this.reload(),
+			reloadFromDisk: () => this.reloadFromDisk(),
+		};
 	}
 
 	/**
@@ -645,44 +445,6 @@ export class LiveSession {
 		// first time here.
 		this.reportShadowed();
 		this.resync();
-	}
-
-	/**
-	 * `prompt` resolves when the run finishes, but the browser only needs to know
-	 * that pi accepted it. The preflight hook gives that answer before streaming.
-	 * `behavior` is what lets a message join a run that is already going: pi refuses
-	 * a prompt with no queue behavior while streaming, and `steer` cannot carry an
-	 * extension command at all. An image travels as pi's `ImageContent`, which is
-	 * the shape the frame already carries; pi normalises it itself, so a prompt with
-	 * no images passes no image option at all.
-	 */
-	private prompt(
-		text: string,
-		behavior: PromptBehavior | undefined,
-		images: PromptImage[] | undefined,
-	): Promise<void> {
-		return new Promise((resolve, reject) => {
-			let accepted = false;
-			const options: PromptOptions = {
-				source: "interactive",
-				streamingBehavior: behavior,
-				preflightResult: () => {
-					accepted = true;
-					resolve();
-				},
-			};
-			if (images !== undefined) {
-				options.images = images.map((image) => ({
-					type: "image",
-					data: image.data,
-					mimeType: image.mimeType,
-				}));
-			}
-			void this.engine.prompt(text, options).catch((error) => {
-				if (accepted) this.fail(error instanceof Error ? error : new Error(String(error)));
-				else reject(error);
-			});
-		});
 	}
 
 	private get liveHost(): SessionHost {
@@ -709,7 +471,7 @@ export class LiveSession {
 	}
 
 	private receive(event: AgentSessionEvent): void {
-		this.lastOwnActivity = Date.now();
+		this.files.markOwnActivity();
 		if (event.type === "agent_settled") {
 			// Token totals, context usage and the queue all move with a run, so a
 			// settled engine re-reads the snapshot once instead of leaving the tab on
@@ -718,7 +480,7 @@ export class LiveSession {
 			this.scheduleIdle();
 			// pi writes the file on the first entry, so a new chat has nothing to
 			// watch until a run settles.
-			if (this.watcher === undefined) this.watch();
+			if (!this.files.watching) this.watch();
 			// A shutdown asked for during the run waited for this settle.
 			if (this.host?.shutdownRequested === true) this.closeIfSafe();
 		}
