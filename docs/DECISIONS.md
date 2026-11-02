@@ -138,8 +138,8 @@ only source).
 
 Epsilon renders the extension UI methods that are data (`select`, `confirm`, `input`,
 `editor`, `notify`, `setStatus`, `setWidget` as text, `setTitle`, `setEditorText`,
-`pasteToEditor`, `getEditorText`, the working and thinking labels, the tool expansion and
-`theme`), through `ExtensionUIContext`. A method that needs pi's terminal UI (`custom`,
+`pasteToEditor`, `getEditorText`, the working and thinking labels, the tool expansion,
+`addAutocompleteProvider` and `theme`), through `ExtensionUIContext`. A method that needs pi's terminal UI (`custom`,
 footer and header components, terminal input, the indicator's own animation frames)
 answers with a visible notice naming it, once. Silence is never an answer. A dialog's timeout and the extension's abort signal are enforced by the
 engine: the tab receives the time the question has left and counts down, and either

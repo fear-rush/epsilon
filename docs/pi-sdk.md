@@ -104,8 +104,8 @@ Other facts worth having before embedding:
     expansion is one session-wide boolean, `false` in pi's defaults, and
     `getToolsExpanded()` is synchronous, so it answers what was last set.
   - **terminal only**: `custom`, `onTerminalInput`, `setFooter`, `setHeader`,
-    `setEditorComponent`, `getEditorComponent`, and the theme trio `getAllThemes`,
-    `getTheme`, `setTheme`
+    `setEditorComponent`, `getEditorComponent`, `setWorkingIndicator`, and the theme
+    trio `getAllThemes`, `getTheme`, `setTheme`
     `custom` exists and takes a component factory, so a host with no terminal cannot
     render it. `theme` does not belong with the trio: it is a working `Theme` in every
     mode where a host supplies a uiContext, and an extension reads it without asking.
@@ -117,11 +117,12 @@ Other facts worth having before embedding:
     cannot copy, and `new Theme(...)` throws without pi's token tables. A host must
     therefore supply its own `Theme` value where every colour method returns its text
     unchanged. A host that returns a stub which throws kills whichever handler reads
-    it, and pi counts a failed `tool_call` handler as blocking the tool. Epsilon answers
-    the dialog group, the display and composer groups and the autocomplete chain,
-    reports the terminal group once, and returns silent defaults for
-    `getEditorComponent`, `getAllThemes` and `getTheme`
-    ([DECISIONS.md](DECISIONS.md), UI contract).
+    it, and pi counts a failed `tool_call` handler as blocking the tool. Of the 28
+    members (27 methods and `theme`), Epsilon answers 18: the dialog group, the display
+    and composer groups, the autocomplete chain and `theme`. It refuses 7 with one notice
+    each (`custom`, `onTerminalInput`, `setFooter`, `setHeader`, `setEditorComponent`,
+    `getEditorComponent`, `setWorkingIndicator`) and answers the theme trio with an empty
+    or failing result by design ([DECISIONS.md](DECISIONS.md), UI contract).
 - `mode` and `hasUI` answer different questions, and only one of them matters to an
   extension. `ExtensionMode` is `"tui" | "rpc" | "json" | "print"`: a presentation, not
   a transport, and its doc comment says to use `"tui"` as the guard for terminal-only UI.
