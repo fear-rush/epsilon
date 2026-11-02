@@ -59,7 +59,9 @@ Other facts worth having before embedding:
   passed as `session.bindExtensions({ mode, uiContext })`, and extensions read it
   as `ctx.mode`. The union is `"tui" | "rpc" | "json" | "print"`. Epsilon passes
   `"json"`: it is a headless host, and the only distinction extensions act on is
-  `mode === "tui"`.
+  `mode === "tui"`. The mode names a presentation, not a transport, and the
+  combination `"json"` **with** a `uiContext` is one pi never produces itself, so
+  `hasUI` (true here) is the field to branch on, not the mode.
 - `InputSource` is `"interactive" | "rpc" | "extension"`. A prompt typed by a person
   in the browser is `"interactive"`.
 - Adding to a run that is already going goes through `prompt`, never `steer`: while
@@ -73,18 +75,26 @@ Other facts worth having before embedding:
   compaction removed. `compact()` aborts the running turn before it compacts, and
   answers `Nothing to compact (session too small)` when it cannot.
 - A `uiContext` is required for dialogs; without one a `confirm` has nowhere to go.
-  `ExtensionUIContext` has 25 methods, in three groups:
+  `ExtensionUIContext` is 27 methods plus a `theme` property
+  (`dist/core/extensions/types.d.ts`):
   - **answer** a person: `select`, `confirm`, `input`, `editor`
   - **show** state: `notify`, `setStatus`, `setTitle`, `setWidget` (text lines or a
     TUI component), `setEditorText`, `pasteToEditor`, `getEditorText`
-  - **TUI only**: `custom`, `onTerminalInput`, `setWorkingMessage`,
-    `setWorkingVisible`, `setWorkingIndicator`, `setHiddenThinkingLabel`,
-    `setFooter`, `setHeader`, `getAllThemes`, `getTheme`, `setTheme`,
-    `getToolsExpanded`, `setToolsExpanded`, `addAutocompleteProvider`,
-    `setEditorComponent`, `getEditorComponent`
+  - **working and view state**: `setWorkingMessage`, `setWorkingVisible`,
+    `setWorkingIndicator`, `setHiddenThinkingLabel`, `getToolsExpanded`,
+    `setToolsExpanded`
+  - **terminal only**: `custom`, `onTerminalInput`, `setFooter`, `setHeader`,
+    `addAutocompleteProvider`, `setEditorComponent`, `getEditorComponent`, and the
+    theme trio `getAllThemes`, `getTheme`, `setTheme`
     `custom` exists and takes a component factory, so a host with no terminal cannot
-    render it. Epsilon answers the first group, maps the text half of the second,
-    and reports the rest once as unsupported
+    render it. `theme` does not belong with the trio: it is a working `Theme` in every
+    mode where a host supplies a uiContext, and pi's own headless host answers it with
+    its exported `theme` (`dist/index.d.ts` exports `Theme`, `theme`, `initTheme`).
+    A host that returns a stub which throws kills whichever handler reads it, and pi
+    counts a failed `tool_call` handler as blocking the tool. Epsilon answers the
+    dialog group and the display half of the state groups, reports the terminal group
+    once, and returns silent defaults for `getEditorText`, `getEditorComponent`,
+    `getAllThemes`, `getTheme` and `getToolsExpanded`
     ([DECISIONS.md](DECISIONS.md), UI contract).
 - `NewSessionOptions.id` creates a session with an exact id. `SessionManager` lists,
   opens, finds, creates and owns `getEntries()`, `getTree()` and `getSessionName()`;
@@ -96,8 +106,9 @@ Other facts worth having before embedding:
   where `services` come from `createAgentSessionServices({ cwd, agentDir, settingsManager,
   resourceLoaderOptions })`. The factory runs again for every replacement, with the
   effective cwd. Subscriptions belong to the session that was replaced, so a host passes
-  `setRebindSession()` to bind extensions and re-subscribe on the new one; `dispose()`
-  emits `session_shutdown` and disposes the session it holds. `fork(entryId)` copies the
+  `setRebindSession()` to bind extensions and re-subscribe on the new one; the
+  runtime's `dispose()` emits `session_shutdown` with reason `quit` and disposes the
+  session it holds. `fork(entryId)` copies the
   branch up to a user message, `fork(leafId, { position: "at" })` is the CLI's `/clone`,
   and both write a new session file under a fresh id — a fork before the first message
   makes an empty session that has no file yet. Epsilon uses the runtime for fork and
@@ -141,7 +152,9 @@ Other facts worth having before embedding:
   `id` and `toolName`. It is **not exported**. A host carries the transform itself
   (see Traps).
 - `session.dispose()` aborts work, invalidates extension contexts and removes
-  listeners. A host that forgets it leaks a running agent.
+  listeners. A host that forgets it leaks a running agent. It does **not** emit
+  `session_shutdown`; only the runtime's `dispose()` does (see Traps), so a host that
+  calls the plain one skips every extension cleanup registered on that event.
 - `session.reload()` re-reads resources without replacing the session. Epsilon
   exposes it as a socket command and calls it after every settings write.
 
@@ -180,7 +193,7 @@ only through the session's messages
 | Thing                      | Writer                                                                                                                                                                                                 |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Default provider and model | `SettingsManager.setDefaultModelAndProvider`, then `flush()`                                                                                                                                           |
-| Other settings             | `SettingsManager` setters                                                                                                                                                                              |
+| Other settings             | `SettingsManager` setters (there is none for `defaultTools`, below)                                                                                                                                    |
 | Packages                   | `DefaultPackageManager.installAndPersist`, `removeAndPersist`, `listConfiguredPackages`                                                                                                                |
 | Project trust              | `ProjectTrustStore.set`                                                                                                                                                                                |
 | Providers (`models.json`)  | **none.** `registerProvider()` is runtime-only; `ModelConfig` is read-only                                                                                                                             |
@@ -240,12 +253,15 @@ and `resource-loader.js` (1.4.0):
   without a description is not loaded, and pi reports why. A bad name only warns.
   `disable-model-invocation: true` keeps the skill out of the system prompt;
   `/skill:name` still runs it. Every other key is parsed and ignored.
-- **Where skills come from, in order:** packages, entries of the `skills` setting
-  (project, then user), `<project>/.pi/skills`, `.agents/skills` in the project and
-  each parent up to the git root (trusted projects only), `<agent home>/skills`, then
-  `~/.agents/skills`. The last one reads `process.env.HOME`, not a value Epsilon
-  passes. The first skill with a name wins; each loser gets a `collision`
-  diagnostic with the winner's and loser's paths.
+- **Where skills come from, and who wins:** pi's resolver carries a precedence rank
+  and a package skill ranks **last** (`resourcePrecedenceRank` in
+  `dist/core/package-manager.js`), so a project or user skill of the same name beats
+  it. The sources are entries of the `skills` setting (project, then user),
+  `<project>/.pi/skills`, `.agents/skills` in the project and each parent up to the
+  git root (trusted projects only), `<agent home>/skills`, then `~/.agents/skills`,
+  with packages at the bottom of the order. The `~/.agents/skills` path reads
+  `process.env.HOME`, not a value Epsilon passes. The first skill with a name wins;
+  each loser gets a `collision` diagnostic with the winner's and loser's paths.
 - **The inventory is pi's.** `DefaultPackageManager.resolve()` lists every skill file
   with `enabled` and where it came from; `loadSkills` and `loadSkillsFromDir` parse
   them. `resolve()` installs a missing package unless the `onMissing` callback
@@ -451,6 +467,11 @@ Turborepo or the runtime.
   is filled by `executeBash` (the composer's `!cmd` and extensions that call it).
   The bash tool runs under the run's abort signal, so a tool call is stopped by
   `abort()`, not `abortBash()`.
+- **`executeBash` does not emit `user_bash`.** The gate that can inspect, rewrite or
+  block a direct shell command is the caller's job (`dist/modes/rpc/rpc-mode.js` and
+  the TUI's bash handler run it), so a bare `AgentSession.executeBash()` skips every
+  `user_bash` handler. A handler answers `{ result }` or `{ operations }`, and the
+  operations object is passed back in as the command's runner.
 - **`toJsonEvent` is not exported.** `package.json` exports only `.` and
   `./rpc-entry`; `dist/modes/json-event.js` is private. The host carries its own
   copy of the transform in `server/src/features/conversation/engine.ts`.
@@ -462,9 +483,17 @@ Turborepo or the runtime.
   cannot answer. Servers an extension registers with `pi.registerMcpServer()` are
   only visible from inside an extension (`pi.getMcpServers()`), not from the files.
 - **The embedded engine trusts whatever folder it is given.** `SettingsManager.create`
-  starts with `projectTrusted = true` and the SDK never runs the CLI's
-  `resolveProjectTrusted()`, so `.pi/settings.json` and `.pi/mcp.json` load with an
-  empty `trust.json`. The host must check `ProjectTrustStore` before it builds one.
+  starts with `projectTrusted = true`, and nothing in `createAgentSession()` runs a
+  trust decision, so `.pi/settings.json` and `.pi/mcp.json` load with an empty
+  `trust.json`. The host must decide before it builds an engine. The SDK exports only
+  `ProjectTrustStore`, `hasTrustRequiringProjectResources` and
+  `SettingsManager.setProjectTrusted` for this: `resolveProjectTrusted`,
+  `emitProjectTrustEvent`, `getProjectTrustOptions` and `getProjectTrustParentPath`
+  are private, and `DefaultResourceLoaderOptions` has no `resolveProjectTrust` field
+  to pass one through. A host that wants pi's real chain (no gated resource means
+  trusted, then the `project_trust` event, then the store, then `defaultProjectTrust`,
+  then ask) reproduces it over those public pieces; `Extension.handlers` is public, so
+  the event can be emitted without pi's helper.
 - **A skill needs a reading tool.** The system prompt lists skills only when a
   `read`-type tool is declared (`dist/core/system-prompt.js`), because the model
   loads a skill by reading its `SKILL.md`. Turning off every built-in tool turns
@@ -479,6 +508,13 @@ Turborepo or the runtime.
 - **A permission `confirm` blocks the turn.** `ctx.ui.confirm` waits for the host's
   `ExtensionUIContext` with no timeout and no error. A host that never answers
   leaves the tool call hanging after `tool_execution_start`.
+- **`bindExtensions` without `commandContextActions` installs stubs that lie.**
+  `ExtensionRunner.bindCommandContext(undefined)` sets `newSession`, `fork`,
+  `switchSession` and `navigateTree` to `async () => ({ cancelled: false })` and
+  `reload` to a no-op, so an extension command drives a session replacement, reports
+  success, and nothing happens. A host that supplies a `uiContext` must supply these
+  too, plus `shutdownHandler` if `ctx.shutdown()` is to mean anything. The argument
+  shapes are in `dist/modes/rpc/rpc-mode.js`.
 - **A fresh session id writes no file.** The JSONL (and its project directory) is
   created on the first appended entry. A `model_change` before the first message
   lives only in memory and is lost on reload.
@@ -490,6 +526,13 @@ Turborepo or the runtime.
 - **A model list's `supported_endpoints` is a gateway hint.** A model that only
   accepts `/messages` or `/responses` needs that API on its own entry, and newer
   Claude models need adaptive thinking metadata. Import both per model.
+- **Configuration shapes with no exporter, and one without a setter.**
+  `SettingsManager` has `getDefaultTools()` and no `setDefaultTools`, so the
+  `defaultTools` array is a merge. `models.json` `modelOverrides` accepts no `api` and
+  no `baseUrl`, and its `cost` may be partial, field by field. And pi reads both
+  `models.json` and `mcp.json` with a comment- and trailing-comma-tolerant reader
+  (`dist/utils/json.js`), so a strict rewrite silently deletes comments an operator
+  relies on.
 - **Installed packages are bound to one platform.** Native optional dependencies are
   resolved at install time. Install on the machine that runs them; config
   files are portable, dependency trees are not.
