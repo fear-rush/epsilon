@@ -366,7 +366,13 @@ describe("provider writes", () => {
 		await writeFile(
 			root.modelsFile,
 			JSON.stringify({
-				providers: { gateway: { name: "Gateway", baseUrl: "https://example.test" } },
+				providers: {
+					gateway: {
+						name: "Gateway",
+						baseUrl: "https://example.test",
+						headers: { "x-gateway": "one" },
+					},
+				},
 			}),
 		);
 
@@ -385,7 +391,11 @@ describe("provider writes", () => {
 		// second one wrote back a file that did not hold the first.
 		await Promise.all(
 			Array.from({ length: 8 }, (_, index) =>
-				writeProvider(root, { id: `gateway-${index}`, name: `Gateway ${index}` }),
+				writeProvider(root, {
+					id: `gateway-${index}`,
+					name: `Gateway ${index}`,
+					headers: { "x-test": String(index) },
+				}),
 			),
 		);
 
@@ -398,13 +408,23 @@ describe("provider writes", () => {
 
 	test("a write and a removal racing on one file both apply", async () => {
 		const root = await home();
-		await writeProvider(root, { id: "old", name: "Old" });
+		await writeProvider(root, { id: "old", name: "Old", headers: { "x-test": "old" } });
 		await Promise.all([
-			writeProvider(root, { id: "new", name: "New" }),
+			writeProvider(root, { id: "new", name: "New", headers: { "x-test": "new" } }),
 			removeProvider(root, "old"),
 		]);
 
 		expect(Object.keys((await stored(root)).providers)).toEqual(["new"]);
+	});
+
+	test("refuses an entry that configures nothing, with pi's reason", async () => {
+		const root = await home();
+		await writeFile(root.modelsFile, JSON.stringify({ providers: {} }));
+
+		await expect(writeProvider(root, { id: "acme", name: "Acme" })).rejects.toThrow(
+			'Provider acme: must specify "baseUrl", "headers", "compat", "modelOverrides", or "models".',
+		);
+		expect((await stored(root)).providers).toEqual({});
 	});
 
 	test("refuses to write over a models.json it cannot parse", async () => {

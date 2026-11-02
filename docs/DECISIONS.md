@@ -252,7 +252,9 @@ removing a base-URL override from a built-in provider cannot sign the account ou
 provider pi ships needs no endpoint from the panel for that: pi supplies the endpoint,
 the API family and the catalog, and the credential supplies the auth, so those fields
 are an override there rather than part of adding it. A provider the operator defines
-has none of them and needs all of them.
+has none of them and needs all of them. An entry that configures nothing (a display
+name alone) is refused at save with pi's own sentence, because pi would compose it into
+an invalid provider and every auth check would then say so.
 
 Stays in the terminal, because pi exposes no host API for it: MCP sign-in and
 TUI-only toggles. The dashboard names that boundary and the documented terminal step

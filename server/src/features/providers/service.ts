@@ -250,8 +250,28 @@ export const writeProvider = (home: AgentHome, input: ProviderInput): Promise<vo
 		}
 
 		// Saving an untouched built-in must not create an empty entry.
-		if (Object.keys(next).length === 0) delete providers[input.id];
-		else providers[input.id] = next;
+		if (Object.keys(next).length === 0) {
+			delete providers[input.id];
+			return { ...file, providers };
+		}
+		// pi refuses an entry that configures nothing (`applyModelsJson`), and the
+		// refusal would make every auth check `invalid`. Refuse the save instead of
+		// writing the file, with pi's own sentence.
+		const configured =
+			(next.models?.length ?? 0) > 0 ||
+			next.baseUrl !== undefined ||
+			next.headers !== undefined ||
+			next.compat !== undefined ||
+			Object.keys(next.modelOverrides ?? {}).length > 0 ||
+			(next.apiKey !== undefined && next.apiKey !== "") ||
+			next.oauth !== undefined ||
+			next.authHeader !== undefined;
+		if (!configured) {
+			throw new Error(
+				`Provider ${input.id}: must specify "baseUrl", "headers", "compat", "modelOverrides", or "models".`,
+			);
+		}
+		providers[input.id] = next;
 		return { ...file, providers };
 	});
 
