@@ -15,19 +15,15 @@ import { parseSkillFile } from "./frontmatter";
 /** The longest `SKILL.md` Raw opens or writes. */
 const RAW_MAX_BYTES = 1024 * 1024;
 
-/** Why `text` cannot be the `SKILL.md` of the skill folder `name`, or undefined. */
-const rawSkillProblem = (text: string, name: string): string | undefined => {
+/** Why `text` cannot be a `SKILL.md`, or undefined. pi loads a file whose `name` is
+ * missing or differs from the folder, and a file with no body, so only the
+ * description decides here. */
+const rawSkillProblem = (text: string): string | undefined => {
 	if (Buffer.byteLength(text, "utf8") > RAW_MAX_BYTES) {
 		return `SKILL.md is larger than ${RAW_MAX_BYTES / 1024 / 1024} MB`;
 	}
 	const parsed = parseSkillFile(text);
 	if (!parsed.ok) return parsed.error;
-	const declared = textField.safeParse(parsed.file.fields.name).data;
-	if (declared !== name) {
-		return declared === undefined
-			? `The frontmatter needs name: ${name}`
-			: `The frontmatter name "${declared}" must match the folder name "${name}"`;
-	}
 	const description = skillDescriptionSchema.safeParse(
 		textField.safeParse(parsed.file.fields.description).data ?? "",
 	);
@@ -49,7 +45,7 @@ export const writeRawSkill = async (
 	linkRoots: readonly string[] = [],
 ): Promise<void> => {
 	const directory = await skillFolder(root, name, linkRoots);
-	const problem = rawSkillProblem(text, name);
+	const problem = rawSkillProblem(text);
 	if (problem !== undefined) throw new Error(`SKILL.md was not changed: ${problem}`);
 	await writeFile(join(directory, "SKILL.md"), text, "utf8");
 };

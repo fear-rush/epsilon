@@ -122,10 +122,12 @@ export const writeSkill = async (root: string, name: string, input: SkillInput):
 		document = parsed.file.document;
 	}
 	const changes: Parameters<typeof serializeSkillFile>[1] = {
-		name,
 		description: input.description,
 		"disable-model-invocation": input.modelInvocation ? undefined : true,
 	};
+	// A new skill is named after the folder it created. An existing file keeps the name
+	// it has, which pi allows to be absent or to differ from the folder.
+	if (existing === undefined) changes.name = name;
 	// An omitted field leaves the key alone; an empty one removes it.
 	if (input.license !== undefined) changes.license = input.license.trim() || undefined;
 	if (input.compatibility !== undefined) {

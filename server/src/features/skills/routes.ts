@@ -244,7 +244,7 @@ const writeRawRoute = createRoute({
 	tags: ["settings"],
 	operationId: "writeSkillRaw",
 	description:
-		"Replace SKILL.md with the given text, byte for byte. The frontmatter must parse, its name must equal the folder name, and its description must pass the description rules",
+		"Replace SKILL.md with the given text, byte for byte. The frontmatter must parse and its description must pass the description rules; the name may be absent or differ from the folder, as pi allows",
 	request: {
 		params: skillParams,
 		query: settingsScopeQuerySchema,

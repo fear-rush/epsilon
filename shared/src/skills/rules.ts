@@ -1,14 +1,16 @@
 /**
  * The skill rules the browser and the server both run. The name and description
- * limits are pi's own (`dist/core/skills.js`), which follow the Agent Skills spec;
- * pi only warns on a bad name, Epsilon refuses to write one.
+ * limits are pi's own (`dist/core/skills.js`), which follow the Agent Skills spec.
+ * pi only warns on a bad name, Epsilon refuses to write one. A description may hold
+ * any text: pi XML-escapes it into the system prompt.
  */
 import { z } from "zod";
 
 export const SKILL_NAME_MAX = 64;
 export const SKILL_DESCRIPTION_MAX = 1024;
 
-/** The directory name under a skills root, the frontmatter `name`, and the URL segment. */
+/** A directory name under a skills root, which is also the URL segment. pi allows the
+ * frontmatter `name` to differ from it; Epsilon still refuses that name here. */
 export const skillNameSchema = z
 	.string()
 	.min(1)
@@ -22,8 +24,7 @@ export const skillDescriptionSchema = z
 	.string()
 	.trim()
 	.min(1, "pi does not load a skill without a description")
-	.max(SKILL_DESCRIPTION_MAX, `At most ${SKILL_DESCRIPTION_MAX} characters`)
-	.refine((text) => !/<\/?[A-Za-z][^>]*>/.test(text), "No XML tags in the description");
+	.max(SKILL_DESCRIPTION_MAX, `At most ${SKILL_DESCRIPTION_MAX} characters`);
 
 /**
  * Who reads a frontmatter field. `pi` fields change what the agent does;

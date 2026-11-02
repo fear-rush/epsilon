@@ -73,6 +73,7 @@ describe("skill inventory", () => {
 		expect(by("nodesc")).toMatchObject({ status: "invalid", editable: true });
 		expect(by("nodesc")?.message).toContain("description is required");
 		const renamed = by("other");
+		expect(renamed?.folder).toBe("renamed");
 		expect(renamed?.warnings.join("\n")).toContain('differs from the folder "renamed"');
 		expect(renamed?.warnings.join("\n")).toContain("argument-hint");
 		expect(renamed?.warnings.join("\n")).toContain("$ARGUMENTS");

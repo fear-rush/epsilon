@@ -29,6 +29,27 @@ describe("user skills", () => {
 		expect(await readSkillFile(dir, "home", "probe")).toBeUndefined();
 	});
 
+	test("saves a description-only file and keeps a name that differs from the folder", async () => {
+		const dir = await root();
+		await mkdir(join(dir, "bare"), { recursive: true });
+		await writeFile(join(dir, "bare", "SKILL.md"), "---\ndescription: old\n---\n\nBody\n");
+		await writeSkill(dir, "bare", { description: "new", body: "", modelInvocation: true });
+		expect(await readFile(join(dir, "bare", "SKILL.md"), "utf8")).toBe(
+			"---\ndescription: new\n---\n",
+		);
+		const bare = await readSkillFile(dir, "home", "bare");
+		expect(bare?.description).toBe("new");
+		expect(bare?.body).toBe("");
+
+		await mkdir(join(dir, "named"), { recursive: true });
+		await writeFile(
+			join(dir, "named", "SKILL.md"),
+			"---\nname: other\ndescription: d\n---\nBody\n",
+		);
+		await writeSkill(dir, "named", { ...input, body: "Body" });
+		expect(await readFile(join(dir, "named", "SKILL.md"), "utf8")).toContain("name: other");
+	});
+
 	test("refuses a name that would leave the skills root", async () => {
 		const dir = await root();
 		const outside = join(dir, "..", `${join(dir).split("/").pop()}-outside`);

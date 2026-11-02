@@ -37,7 +37,10 @@ const skillToggleSchema = z.enum(["settings", "package", "none"]).openapi("Skill
 
 export const skillViewSchema = z
 	.object({
+		/** pi's name for the skill: its frontmatter `name`, else the folder name. */
 		name: z.string(),
+		/** The folder that holds it, which is how an editable skill's routes address it. */
+		folder: z.string(),
 		description: z.string(),
 		filePath: z.string(),
 		dir: z.string(),

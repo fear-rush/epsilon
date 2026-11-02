@@ -132,6 +132,7 @@ export const listSkills = async (
 			}
 			const root = rootOf(filePath, home, project);
 			const origin = originOf(resource, home, project);
+			const folderName = basename(dirname(filePath));
 			const status: SkillView["status"] = !resource.enabled
 				? "disabled"
 				: shadowedBy !== undefined
@@ -142,7 +143,8 @@ export const listSkills = async (
 							? "manual"
 							: "active";
 			return {
-				name: skill?.name ?? basename(dirname(filePath)),
+				name: skill?.name ?? folderName,
+				folder: folderName,
 				description: skill?.description ?? "",
 				filePath,
 				dir: dirname(filePath),
@@ -191,6 +193,7 @@ export const untrustedSkills = async (project: string): Promise<SkillView[]> => 
 							: undefined;
 						return {
 							name: entry.name,
+							folder: entry.name,
 							description: description ?? "",
 							filePath,
 							dir: join(dir, entry.name),

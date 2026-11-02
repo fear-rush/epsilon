@@ -25,16 +25,20 @@ describe("raw SKILL.md", () => {
 		expect(await readRawSkill(root, "probe")).toBe(GOOD);
 	});
 
+	test("writes a description-only file, markup included, byte for byte", async () => {
+		const root = await skillsRoot();
+		const text = "---\ndescription: use <b>this</b> & that\n---\n";
+		await writeRawSkill(root, "probe", text);
+		expect(await readRawSkill(root, "probe")).toBe(text);
+	});
+
 	test("refuses text that is not a skill file and leaves the file alone", async () => {
 		const root = await skillsRoot();
 		const before = await readRawSkill(root, "probe");
 		const bad: [string, RegExp][] = [
 			["no frontmatter", /---/],
 			["---\nname: probe\n  bad: [\n---\n", /valid YAML/],
-			["---\ndescription: x\n---\n", /needs name: probe/],
-			["---\nname: other\ndescription: x\n---\n", /must match the folder name "probe"/],
 			["---\nname: probe\n---\n", /description/],
-			["---\nname: probe\ndescription: has <b>tags</b>\n---\n", /XML/],
 		];
 		for (const [text, reason] of bad) {
 			await expect(writeRawSkill(root, "probe", text)).rejects.toThrow(reason);

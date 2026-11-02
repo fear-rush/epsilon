@@ -1158,6 +1158,9 @@
 					"name": {
 						"type": "string"
 					},
+					"folder": {
+						"type": "string"
+					},
 					"description": {
 						"type": "string"
 					},
@@ -1210,6 +1213,7 @@
 				},
 				"required": [
 					"name",
+					"folder",
 					"description",
 					"filePath",
 					"dir",
@@ -6273,7 +6277,7 @@
 					"settings"
 				],
 				"operationId": "writeSkillRaw",
-				"description": "Replace SKILL.md with the given text, byte for byte. The frontmatter must parse, its name must equal the folder name, and its description must pass the description rules",
+				"description": "Replace SKILL.md with the given text, byte for byte. The frontmatter must parse and its description must pass the description rules; the name may be absent or differ from the folder, as pi allows",
 				"parameters": [
 					{
 						"schema": {

@@ -15,9 +15,10 @@ export const skillSearchSchema = z.object({
 	file: z.string().min(1).optional().catch(undefined),
 });
 
-/** The identity a row and the route share. */
+/** The identity a row and the route share. Editable skills are addressed by their
+ * folder, because pi's `name` may differ from it. */
 export const skillKey = (skill: SkillView): string =>
-	skill.editable && skill.root !== undefined ? `${skill.root}\0${skill.name}` : skill.filePath;
+	skill.editable && skill.root !== undefined ? `${skill.root}\0${skill.folder}` : skill.filePath;
 
 /** The `search` of the link that opens a skill. */
 export const skillSearch = (skill: SkillView): z.infer<typeof skillSearchSchema> =>

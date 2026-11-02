@@ -72,7 +72,8 @@ export function SkillForm({
 	const projectPath = useSettingsProject();
 	const creating = detail === undefined;
 	const form = useDraftForm<SkillDraft, SkillField>({
-		initial: () => toDraft(detail),
+		// The name field shows pi's name; the route and every write use the folder.
+		initial: () => toDraft(detail, view?.name),
 		fields: skillFields,
 	});
 	const { draft, update, errors } = form;
@@ -82,7 +83,9 @@ export function SkillForm({
 	const [leaving, setLeaving] = useState<SkillTab | undefined>();
 
 	const taken = new Set(
-		(settings.data?.skills ?? []).filter((skill) => skill.root === root).map((skill) => skill.name),
+		(settings.data?.skills ?? [])
+			.filter((skill) => skill.root === root)
+			.map((skill) => skill.folder),
 	);
 
 	const save = useMutation({

@@ -97,9 +97,10 @@ describe("inspectCandidate errors", () => {
 		const result = inspectCandidate(input({ skillFile: "---\nname: [oops\n---\nBody\n" }));
 		expect(codes(result.errors)).toEqual(["frontmatter"]);
 	});
-	test("name is required", () => {
+	test("a missing name falls back to the folder", () => {
 		const result = inspectCandidate(input({ skillFile: "---\ndescription: d\n---\nBody\n" }));
-		expect(codes(result.errors)).toEqual(["name-missing"]);
+		expect(result.errors).toEqual([]);
+		expect(result.name).toBe("probe");
 	});
 	test("name must follow pi's rule", () => {
 		const result = inspectCandidate(
@@ -110,9 +111,10 @@ describe("inspectCandidate errors", () => {
 		);
 		expect(codes(result.errors)).toEqual(["name-invalid"]);
 	});
-	test("name must equal the folder name", () => {
+	test("a name may differ from the folder, as pi allows", () => {
 		const result = inspectCandidate(input({ dir: "skills/other" }));
-		expect(codes(result.errors)).toEqual(["name-folder"]);
+		expect(result.errors).toEqual([]);
+		expect(result.name).toBe("probe");
 	});
 	test("a root-level skill has no folder name to match", () => {
 		expect(inspectCandidate(input({ dir: "" })).errors).toEqual([]);
@@ -120,20 +122,23 @@ describe("inspectCandidate errors", () => {
 	test("description is required and limited", () => {
 		const missing = inspectCandidate(input({ skillFile: "---\nname: probe\n---\nBody\n" }));
 		expect(codes(missing.errors)).toEqual(["description"]);
-		const tags = inspectCandidate(
-			input({ skillFile: "---\nname: probe\ndescription: use <b>this</b>\n---\nBody\n" }),
-		);
-		expect(codes(tags.errors)).toEqual(["description"]);
 		const long = inspectCandidate(
 			input({ skillFile: `---\nname: probe\ndescription: ${"x".repeat(1100)}\n---\nBody\n` }),
 		);
 		expect(codes(long.errors)).toEqual(["description"]);
 	});
-	test("the body must not be empty", () => {
+	test("a description may hold markup, which pi escapes", () => {
+		const result = inspectCandidate(
+			input({ skillFile: "---\nname: probe\ndescription: use <b>this</b> & that\n---\nBody\n" }),
+		);
+		expect(result.errors).toEqual([]);
+		expect(result.description).toBe("use <b>this</b> & that");
+	});
+	test("the body may be empty", () => {
 		const result = inspectCandidate(
 			input({ skillFile: "---\nname: probe\ndescription: d\n---\n\n  \n" }),
 		);
-		expect(codes(result.errors)).toEqual(["body-empty"]);
+		expect(result.errors).toEqual([]);
 	});
 	test("links are refused", () => {
 		const result = inspectCandidate(input({ links: ["ref/passwd"] }));

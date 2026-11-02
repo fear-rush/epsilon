@@ -1,8 +1,9 @@
 /**
  * Pure rules of the import: which folders of a staged source are skills, and
  * whether each one is fit to install. Mirrors the `skills` CLI's discovery so a
- * source finds the same skills here as in a terminal; the checks are Epsilon's,
- * stricter than pi's own, because pi warns and loads while a write is permanent.
+ * source finds the same skills here as in a terminal. The checks follow pi's load
+ * rules, with one exception: pi loads a skill with a bad name and only warns, and a
+ * permanent install should not create one.
  */
 import {
 	SKILL_BODY_ADVISED_LINES,
@@ -17,7 +18,7 @@ import {
 import type { SkillIssue } from "shared";
 import { z } from "zod";
 
-import { parseSkillFile } from "../skills";
+import { parseSkillFile, textField } from "../skills";
 import type { Candidate } from "./contract";
 
 /** A file of a staged source, as the checks need to see it. */
@@ -153,36 +154,25 @@ export const inspectCandidate = (input: CandidateInput): Candidate => {
 			errors.push(issue("frontmatter", parsed.error, "SKILL.md"));
 		} else {
 			const { fields, body } = parsed.file;
-			const named = z.string().min(1).safeParse(fields.name);
-			if (!named.success) {
-				errors.push(issue("name-missing", "The frontmatter has no name", "SKILL.md"));
-			} else {
-				const rawName = named.data;
-				name = rawName;
-				const checked = skillNameSchema.safeParse(rawName);
+			// pi falls back to the folder name, and accepts a name that differs from it.
+			const declared = textField.safeParse(fields.name).data;
+			if (declared !== undefined && declared !== "") {
+				name = declared;
+				const checked = skillNameSchema.safeParse(name);
 				if (!checked.success) {
 					errors.push(
 						issue(
 							"name-invalid",
-							`The name "${rawName}": ${checked.error.issues[0]?.message}`,
+							`The name "${name}": ${checked.error.issues[0]?.message}`,
 							"SKILL.md",
 						),
 					);
 				}
-				if (folder !== undefined && rawName !== folder) {
-					errors.push(
-						issue(
-							"name-folder",
-							`The name "${rawName}" must equal the folder name "${folder}"`,
-							"SKILL.md",
-						),
-					);
-				}
-				if (/anthropic|claude/i.test(rawName)) {
+				if (/anthropic|claude/i.test(name)) {
 					warnings.push(
 						issue(
 							"name-reserved",
-							`"${rawName}" contains anthropic or claude; that matters only if the skill is uploaded to Claude`,
+							`"${name}" contains anthropic or claude; that matters only if the skill is uploaded to Claude`,
 						),
 					);
 				}
@@ -198,10 +188,6 @@ export const inspectCandidate = (input: CandidateInput): Candidate => {
 				const text = z.string().safeParse(fields.description);
 				if (text.success) description = text.data;
 			}
-			if (body.trim() === "")
-				errors.push(
-					issue("body-empty", "SKILL.md has no instructions below the frontmatter", "SKILL.md"),
-				);
 			if (fields["disable-model-invocation"] === true) modelInvocation = false;
 
 			const lines = body.split("\n").length;

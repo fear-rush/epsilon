@@ -273,8 +273,8 @@ An MCP server and a skill can also be edited raw. For an MCP server that is its 
 entry under `mcpServers` and nothing else; stored env values, header values and the
 OAuth client secret are shown as `"<stored>"`, and a `"<stored>"` left in place keeps the
 stored value on save. A save that does not parse writes nothing. A skill's raw view is
-its folder: `SKILL.md` with its frontmatter, written as typed once the name and
-description pass pi's rules, and every bundled file.
+its folder: `SKILL.md` with its frontmatter, written as typed once the description
+passes pi's rule, and every bundled file.
 
 Adding an MCP server can start from a registry: the official MCP registry, and GitHub's
 (`api.mcp.github.com`), which is looked up in the official one first. A registry entry has
@@ -473,7 +473,12 @@ whether a setting turns one off, its loader says which name won a collision and 
 file was refused. Each skill shows one status (automatic, manual only, off, shadowed,
 invalid, untrusted) and where it came from. A save rewrites only the fields the panel
 edits and keeps every other frontmatter key and comment; a file whose frontmatter does
-not parse is shown, not rewritten. Fields from other agents (Claude Code's `context`,
+not parse is shown, not rewritten. A save follows pi's load rules: a missing `name`
+(pi uses the folder name), a `name` that differs from the folder, an empty body, and a
+description holding markup all write unchanged, because pi loads them. Only the name
+pattern stays stricter than pi: pi loads a bad name with a warning, and a permanent
+write should not create one. A skill is addressed by its folder, so the list shows pi's
+name and links by the folder. Fields from other agents (Claude Code's `context`,
 `user-invocable` and the rest) are shown read-only with a notice that pi ignores them.
 Turning one skill off is a `-<path>` entry in pi's `skills` setting; a skill folder of
 another agent (`~/.claude/skills`, `~/.codex/skills`) is used only when the operator
@@ -488,8 +493,9 @@ agents' skills into the home.
 
 Installing skills is one path for every source: a picked folder, an archive, or a
 pasted `skills add` command is staged under the agent home, every skill in it is
-validated strictly, the operator reviews the report, and only then are the chosen
-skills moved into `<agent home>/skills` or a project's `.agents/skills`. A pasted
+checked against pi's load rules (a bad name is refused too, which pi would only warn
+about), the operator reviews the report, and only then are the chosen skills moved
+into `<agent home>/skills` or a project's `.agents/skills`. A pasted
 command runs the `skills` CLI at a pinned version as a short-lived child process, with
 telemetry off and the operator's `~` replaced by the sandbox's under `bun run dev`; it
 only fetches into the stage and never places anything itself. A repository pi can read

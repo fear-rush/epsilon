@@ -292,15 +292,25 @@ describe("commit", () => {
 	test("refuses a skill with errors, and a name that is not in the source", async () => {
 		const env = await scratch();
 		const report = await stageUpload(env.context, [
-			upload("bad/SKILL.md", "---\nname: other\ndescription: d\n---\nBody\n"),
+			upload("nodesc/SKILL.md", "---\nname: nodesc\n---\nBody\n"),
 		]);
 		await expect(
-			commitImport(env.context, report.stageId, body({ skills: ["other"] })),
-		).rejects.toThrow(/must equal the folder name/);
+			commitImport(env.context, report.stageId, body({ skills: ["nodesc"] })),
+		).rejects.toThrow(/cannot be imported/);
 		await expect(
 			commitImport(env.context, report.stageId, body({ skills: ["missing"] })),
 		).rejects.toThrow(/not one of the skills/);
 		expect(await readdir(env.home.skillsDir).catch(() => [])).toEqual([]);
+	});
+
+	test("installs under the declared name, not the folder it came in", async () => {
+		const env = await scratch();
+		const report = await stageUpload(env.context, [upload("folder/SKILL.md", SKILL("other"))]);
+		await commitImport(env.context, report.stageId, body({ skills: ["other"] }));
+		expect(await readdir(env.home.skillsDir)).toEqual(["other"]);
+		expect(await readFile(join(env.home.skillsDir, "other", "SKILL.md"), "utf8")).toContain(
+			"name: other",
+		);
 	});
 
 	test("a project target needs a project, and lands in .agents/skills", async () => {

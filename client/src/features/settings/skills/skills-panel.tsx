@@ -111,7 +111,7 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 								dimmed={isQuiet(skill)}
 								link={{
 									to: "/settings/skills/$name",
-									params: { name: skill.name },
+									params: { name: skill.folder },
 									search: skillSearch(skill),
 								}}
 							/>

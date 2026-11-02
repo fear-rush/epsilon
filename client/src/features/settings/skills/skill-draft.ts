@@ -20,8 +20,8 @@ export const skillFields: readonly SkillField[] = ["name", "description", "body"
 
 export type SkillErrors = Partial<Record<SkillField, string>>;
 
-export const toDraft = (detail: SkillFile | undefined): SkillDraft => ({
-	name: detail?.name ?? "",
+export const toDraft = (detail: SkillFile | undefined, name = detail?.name ?? ""): SkillDraft => ({
+	name,
 	description: detail?.description ?? "",
 	modelInvocation: detail?.modelInvocation ?? true,
 	// Only a new skill starts from the template; an existing empty body stays empty.

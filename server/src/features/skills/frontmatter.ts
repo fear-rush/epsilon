@@ -66,7 +66,8 @@ export const serializeSkillFile = (
 		else document.set(key, value);
 	}
 	const head = document.toString({ lineWidth: 0 }).trimEnd();
-	return `---\n${head}\n---\n\n${body.trim()}\n`;
+	const text = body.trim();
+	return text === "" ? `---\n${head}\n---\n` : `---\n${head}\n---\n\n${text}\n`;
 };
 
 /** A document for a new skill, with no fields yet. */

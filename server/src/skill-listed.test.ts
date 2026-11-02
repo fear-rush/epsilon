@@ -137,13 +137,22 @@ describe("listed skill files and raw SKILL.md routes", () => {
 		expect(await Bun.file(join(dir, "SKILL.md")).text()).toBe(text);
 		expect(await (await app.request(url)).json()).toEqual({ path: "SKILL.md", text });
 
-		const refused = await app.request(url, {
+		const renamed = await app.request(url, {
 			method: "PUT",
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify({ text: "---\nname: other\ndescription: x\n---\n" }),
 		});
+		expect(renamed.status).toBe(204);
+		expect(await Bun.file(join(dir, "SKILL.md")).text()).toContain("name: other");
+
+		const kept = await Bun.file(join(dir, "SKILL.md")).text();
+		const refused = await app.request(url, {
+			method: "PUT",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ text: "---\nname: probe\n---\n" }),
+		});
 		expect(refused.status).toBe(400);
-		expect((await refused.json()).message).toContain('must match the folder name "probe"');
-		expect(await Bun.file(join(dir, "SKILL.md")).text()).toBe(text);
+		expect((await refused.json()).message).toContain("description");
+		expect(await Bun.file(join(dir, "SKILL.md")).text()).toBe(kept);
 	});
 });

@@ -30,14 +30,14 @@ export function SkillEditor({
 function EditableSkill({ root, name }: { root: SkillRoot; name: string }) {
 	const query = useSkill(root, name);
 	const settings = useSettings();
-	const view = settings.data?.skills.find((skill) => skill.root === root && skill.name === name);
+	const view = settings.data?.skills.find((skill) => skill.root === root && skill.folder === name);
 	const { tab, rawPath, setTab, setRawPath, openRawFile } = useSkillPage();
 	const [version, setVersion] = useState(0);
 	const reload = () => {
 		void query.refetch().then(() => setVersion((current) => current + 1));
 	};
 	return (
-		<SkillReader query={query} title={name}>
+		<SkillReader query={query} title={view?.name ?? name}>
 			{(detail) => (
 				<SkillForm
 					key={`${detail.filePath}\0${version}`}

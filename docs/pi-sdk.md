@@ -368,9 +368,16 @@ What the dashboard relies on, read from `dist/core/skills.js`, `package-manager.
 and `resource-loader.js` (1.4.0):
 
 - **Fields pi honors:** `name`, `description` and `disable-model-invocation`. A skill
-  without a description is not loaded, and pi reports why. A bad name only warns.
-  `disable-model-invocation: true` keeps the skill out of the system prompt;
+  without a description is not loaded, and pi reports why. `name` is optional: without
+  it pi uses the folder name, and a declared name may differ from the folder with no
+  warning at all. A bad name only warns. The body is optional, so frontmatter alone
+  loads. `disable-model-invocation: true` keeps the skill out of the system prompt;
   `/skill:name` still runs it. Every other key is parsed and ignored.
+- **What Epsilon may write**, because pi loads it: a non-empty description of at most
+  1024 characters, any text in that description (pi XML-escapes `name`, `description`
+  and the path inside `<available_skills>`, so `<`, `>` and `&` are legal), a name
+  matching `^[a-z0-9-]+$` with no leading, trailing or double hyphen, and `SKILL.md` as
+  the file name. Epsilon refuses a bad name that pi would only warn about.
 - **Where skills come from, and who wins:** pi's resolver carries a precedence rank
   and a package skill ranks **last** (`resourcePrecedenceRank` in
   `dist/core/package-manager.js`), so a project or user skill of the same name beats
