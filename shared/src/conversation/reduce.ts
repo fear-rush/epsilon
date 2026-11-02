@@ -110,6 +110,7 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				codingTools: frame.snapshot.state.codingTools,
 				contextUsage: frame.snapshot.state.contextUsage,
 				stats: frame.snapshot.state.stats,
+				cacheWarming: frame.snapshot.state.cacheWarming,
 				isRetrying: frame.snapshot.state.isRetrying,
 				isBashRunning: frame.snapshot.state.isBashRunning,
 				// A snapshot is the engine's own read, so it also ends any run this tab

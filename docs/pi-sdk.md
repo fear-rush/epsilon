@@ -74,6 +74,12 @@ Other facts worth having before embedding:
   `getSessionStats()` sums every entry in the session file, including the history a
   compaction removed. `compact()` aborts the running turn before it compacts, and
   answers `Nothing to compact (session too small)` when it cannot.
+- `cacheWarmingStatus` is `undefined` until the warmer exists, then
+  `{ state: "inactive" | "scheduled" | "refreshing", reason?, nextWarmAt?, decision? }`.
+  No session event fires when it changes: the warmer runs on its own timer, so a host
+  that displays it needs its own refresh at `nextWarmAt`. `decision` is pi's price
+  model (warm cost, miss cost, continuation probability, expected savings); the rest
+  is what a panel needs to say when and why.
 - A `uiContext` is required for dialogs; without one a `confirm` has nowhere to go.
   `ExtensionUIContext` is 27 methods plus a `theme` property
   (`dist/core/extensions/types.d.ts`):

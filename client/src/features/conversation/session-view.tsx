@@ -67,6 +67,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 	const {
 		contextUsage,
 		stats,
+		cacheWarming,
 		isCompacting,
 		isRetrying,
 		isBashRunning,
@@ -126,7 +127,8 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				commands={commands}
 				codingTools={codingTools}
 				contextUsage={contextUsage}
-				cost={stats.cost}
+				stats={stats}
+				cacheWarming={cacheWarming}
 				inline={empty}
 				header={where.kind === "project" ? <ComposerPlace place={where} /> : undefined}
 				restoreDraft={snapshot.restoreDraft}
@@ -156,7 +158,8 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 			commands,
 			codingTools,
 			contextUsage,
-			stats.cost,
+			stats,
+			cacheWarming,
 			empty,
 			where,
 			snapshot.restoreDraft,

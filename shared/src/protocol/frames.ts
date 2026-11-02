@@ -15,7 +15,7 @@ import type { JsonAgentSessionEvent } from "../pi";
  * Bumped whenever a frame's shape changes. The client sends it in `hello` and
  * reloads on a mismatch instead of guessing.
  */
-export const PROTOCOL_VERSION = 22;
+export const PROTOCOL_VERSION = 23;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([
@@ -315,6 +315,20 @@ const sessionStatsSchema = z.object({
 
 export type SessionStats = z.infer<typeof sessionStatsSchema>;
 
+/**
+ * pi's cache warmer, which fires on its own timer: off, waiting for its next
+ * refresh, or refreshing now. `nextWarmAt` is an epoch millisecond, so a tab can
+ * say when without counting from a moment it did not observe.
+ */
+const cacheWarmingSchema = z.object({
+	state: z.enum(["inactive", "scheduled", "refreshing"]),
+	/** Why nothing is scheduled, when pi says. */
+	reason: z.string().optional(),
+	nextWarmAt: z.number().optional(),
+});
+
+export type CacheWarming = z.infer<typeof cacheWarmingSchema>;
+
 /** Prompts pi holds for a run that is already going, in pi's own order. */
 const promptQueueSchema = z.object({
 	steering: z.array(z.string()),
@@ -370,6 +384,8 @@ export const snapshotStateSchema = z.object({
 	codingTools: z.boolean(),
 	contextUsage: contextUsageSchema.optional(),
 	stats: sessionStatsSchema,
+	/** Absent until pi's warmer has a state for this session at all. */
+	cacheWarming: cacheWarmingSchema.optional(),
 	/** An automatic retry is waiting to run again after a failed request. */
 	isRetrying: z.boolean(),
 	isBashRunning: z.boolean(),

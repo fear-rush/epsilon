@@ -2,6 +2,7 @@
 export type {
 	AutocompleteItem,
 	AutocompleteReply,
+	CacheWarming,
 	ClientFrame,
 	Command,
 	CommandName,
@@ -140,7 +141,7 @@ export type {
 } from "./conversation/state";
 export { reduce, takeEditorRequest } from "./conversation/reduce";
 export { isStreaming, transcript } from "./conversation/selectors";
-export { costLabel, tokenLabel } from "./conversation/format";
+export { cacheHitRate, costLabel, tokenLabel } from "./conversation/format";
 export {
 	bashArgsSchema,
 	editArgsSchema,

@@ -75,6 +75,7 @@ function DraftConversation({
 		codingTools,
 		contextUsage,
 		stats,
+		cacheWarming,
 		editorRequest,
 		widgets,
 	} = snapshot.state;
@@ -112,7 +113,8 @@ function DraftConversation({
 				commands={commands}
 				codingTools={codingTools}
 				contextUsage={contextUsage}
-				cost={stats.cost}
+				stats={stats}
+				cacheWarming={cacheWarming}
 				inline
 				onSent={start}
 				header={
@@ -136,7 +138,8 @@ function DraftConversation({
 			commands,
 			codingTools,
 			contextUsage,
-			stats.cost,
+			stats,
+			cacheWarming,
 			editorRequest,
 			snapshot.suggestions,
 			onChangeProject,

@@ -16,3 +16,17 @@ export const costLabel = (cost: number): string => {
 	if (cost === 0) return "$0";
 	return cost < 0.01 ? `$${cost.toFixed(4)}` : `$${cost.toFixed(2)}`;
 };
+
+/**
+ * Share of the prompt that came from the provider's cache, or undefined when no
+ * prompt token has been counted yet. Cached reads and cache writes are part of the
+ * prompt, so both sit in the denominator; output tokens are not.
+ */
+export const cacheHitRate = (tokens: {
+	input: number;
+	cacheRead: number;
+	cacheWrite: number;
+}): number | undefined => {
+	const prompt = tokens.input + tokens.cacheRead + tokens.cacheWrite;
+	return prompt === 0 ? undefined : (tokens.cacheRead / prompt) * 100;
+};

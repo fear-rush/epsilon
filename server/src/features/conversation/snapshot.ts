@@ -15,6 +15,7 @@
  */
 import type {
 	AgentSession,
+	CacheWarmingStatus as PiCacheWarmingStatus,
 	ContextUsage as PiContextUsage,
 	ModelRuntime,
 	SessionEntry,
@@ -25,6 +26,7 @@ import type {
 import { resolveModelScopeWithDiagnostics } from "@earendil-works/pi-coding-agent";
 import { BUILTIN_COMMANDS, builtinCommand, isVisibleMessage } from "shared";
 import type {
+	CacheWarming,
 	ContextUsage,
 	Place,
 	Snapshot,
@@ -179,6 +181,18 @@ const contextUsageOf = (usage: PiContextUsage | undefined): ContextUsage | undef
 };
 
 /** pi's totals, narrowed to what the page shows; `cost` is in the provider's currency. */
+/**
+ * What pi's cache warmer is doing. The decision behind it (costs, probability,
+ * savings) stays out: the panel says when and why, not pi's price model.
+ */
+const cacheWarmingOf = (status: PiCacheWarmingStatus | undefined): CacheWarming | undefined => {
+	if (status === undefined) return undefined;
+	const view: CacheWarming = { state: status.state };
+	if (status.reason !== undefined) view.reason = status.reason;
+	if (status.nextWarmAt !== undefined) view.nextWarmAt = status.nextWarmAt;
+	return view;
+};
+
 const statsOf = (stats: PiSessionStats): SessionStats => ({
 	tokens: {
 		input: stats.tokens.input,
@@ -325,6 +339,7 @@ export const buildSnapshot = (
 			hideThinkingBlock: agent.settingsManager.getHideThinkingBlock(),
 			contextUsage: contextUsageOf(agent.getContextUsage()),
 			stats: statsOf(agent.getSessionStats()),
+			cacheWarming: cacheWarmingOf(agent.cacheWarmingStatus),
 			isRetrying: agent.isRetrying,
 			isBashRunning: agent.isBashRunning,
 			autoCompaction: agent.autoCompactionEnabled,

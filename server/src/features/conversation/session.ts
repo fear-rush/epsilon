@@ -23,6 +23,7 @@ import type {
 	PromptQueue,
 	ProtocolErrorCode,
 	ServerFrame,
+	Snapshot,
 	SnapshotModel,
 } from "shared";
 
@@ -53,6 +54,9 @@ import { FileWatcher } from "./watcher";
  * the session alive for as long as it needs.
  */
 const IDLE_DISPOSE_MS = 10_000;
+
+/** How late after pi's next cache warm to re-read the snapshot it just changed. */
+const CACHE_WARM_LAG_MS = 1_000;
 
 /** pi's model scope for this home; null means every model is offered. */
 const patternsOf = (home: AgentHome): string[] | null =>
@@ -112,6 +116,8 @@ export class LiveSession {
 	private readonly reportedShadowed = new Set<string>();
 	/** Settings files already reported as unloadable, so a replacement does not repeat it. */
 	private readonly reportedSettings = new Set<string>();
+	/** The one resync armed for pi's next cache warm, which has no session event. */
+	private warmTimer: ReturnType<typeof setTimeout> | undefined;
 
 	private constructor(options: LiveSessionOptions) {
 		const { sessionId, place, onEmpty, onReplaced, home } = options;
@@ -379,6 +385,8 @@ export class LiveSession {
 		this.host = undefined;
 		if (this.idleTimer !== undefined) clearTimeout(this.idleTimer);
 		this.idleTimer = undefined;
+		if (this.warmTimer !== undefined) clearTimeout(this.warmTimer);
+		this.warmTimer = undefined;
 		this.dialogs.cancelAll();
 		this.unsubscribe?.();
 		this.unsubscribe = undefined;
@@ -600,11 +608,29 @@ export class LiveSession {
 	}
 
 	private snapshotFrame(): ServerFrame {
-		return {
-			t: "snapshot",
-			sessionId: this.sessionId,
-			snapshot: buildSnapshot(this.engine, this.models, this.place),
-		};
+		const snapshot = buildSnapshot(this.engine, this.models, this.place);
+		this.armWarming(snapshot.state.cacheWarming);
+		return { t: "snapshot", sessionId: this.sessionId, snapshot };
+	}
+
+	/**
+	 * pi's warmer fires on its own timer, with no session event behind it. One resync
+	 * after the moment pi named keeps the displayed state from promising a warm that
+	 * has already happened; a time in the past is not re-armed, so this cannot loop.
+	 */
+	private armWarming(warming: Snapshot["state"]["cacheWarming"]): void {
+		if (this.warmTimer !== undefined) {
+			clearTimeout(this.warmTimer);
+			this.warmTimer = undefined;
+		}
+		if (this.frames.count === 0) return;
+		if (warming?.state !== "scheduled" || warming.nextWarmAt === undefined) return;
+		const delay = warming.nextWarmAt - Date.now() + CACHE_WARM_LAG_MS;
+		if (delay <= 0) return;
+		this.warmTimer = setTimeout(() => {
+			this.warmTimer = undefined;
+			this.resync();
+		}, delay);
 	}
 
 	/** Re-read the snapshot for everyone watching, after the engine changed. */
@@ -629,6 +655,8 @@ export class LiveSession {
 			this.idleTimer = undefined;
 			return;
 		}
+		if (this.warmTimer !== undefined) clearTimeout(this.warmTimer);
+		this.warmTimer = undefined;
 		this.scheduleIdle();
 	}
 

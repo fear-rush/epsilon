@@ -2,9 +2,11 @@
  * How full the context window is, from pi's `getContextUsage`. pi leaves the
  * reading unknown before the first response and right after a compaction, so an
  * unknown context is absent rather than a made-up 0%. The Tip carries the exact
- * numbers and what the session has cost so far.
+ * numbers: the window, the four token counts pi summed, the share served from the
+ * provider's cache, and what the session has cost so far.
  */
-import type { ContextUsage } from "shared";
+import { cacheHitRate } from "shared";
+import type { ContextUsage, SessionStats } from "shared";
 
 import { Tip } from "@/components/patterns/tip";
 import { InputGroupText } from "@/components/ui/input-group";
@@ -27,10 +29,23 @@ const percentLabel = (percent: number): string => {
 	return `${percent.toFixed(1).replace(/\.0$/, "")}%`;
 };
 
-export function ContextMeter({ usage, cost }: { usage: ContextUsage | undefined; cost: number }) {
+/** The token split pi summed over the session's whole history, in one sentence. */
+const tokensLabel = (tokens: SessionStats["tokens"]): string => {
+	const share = cacheHitRate(tokens);
+	const cached = share === undefined ? "no cache use yet" : `${percentLabel(share)} from cache`;
+	return `${grouped.format(tokens.input)} input, ${grouped.format(tokens.output)} output, ${grouped.format(tokens.cacheRead)} cache read, ${grouped.format(tokens.cacheWrite)} cache write, ${cached}`;
+};
+
+export function ContextMeter({
+	usage,
+	stats,
+}: {
+	usage: ContextUsage | undefined;
+	stats: SessionStats;
+}) {
 	if (usage === undefined) return null;
 	const percent = percentLabel(usage.percent);
-	const detail = `Context window: ${grouped.format(usage.tokens)} of ${grouped.format(usage.contextWindow)} tokens (${percent}). ${costLabel(cost)} spent in this session.`;
+	const detail = `Context window: ${grouped.format(usage.tokens)} of ${grouped.format(usage.contextWindow)} tokens (${percent}). Tokens: ${tokensLabel(stats.tokens)}. ${costLabel(stats.cost)} spent in this session.`;
 	return (
 		<Tip label={detail}>
 			<InputGroupText

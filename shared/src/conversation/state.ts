@@ -5,6 +5,7 @@
 import type { DialogQuestion, EditorWriteMode } from "../protocol/extui";
 import type { JsonAgentSessionEvent } from "../pi";
 import type {
+	CacheWarming,
 	ContextUsage,
 	Place,
 	PromptQueue,
@@ -165,6 +166,8 @@ export type ConversationState = {
 	contextUsage: ContextUsage | undefined;
 	/** What the session has spent over its whole history, from the last snapshot. */
 	stats: SessionStats;
+	/** pi's cache warmer state, absent until pi reports one. */
+	cacheWarming: CacheWarming | undefined;
 	/** An automatic retry is waiting to run again after a failed request. */
 	isRetrying: boolean;
 	isBashRunning: boolean;
@@ -211,6 +214,7 @@ export const emptyConversation: ConversationState = {
 	codingTools: false,
 	contextUsage: undefined,
 	stats: noStats,
+	cacheWarming: undefined,
 	isRetrying: false,
 	isBashRunning: false,
 	bash: null,

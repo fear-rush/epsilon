@@ -15,7 +15,7 @@ import type {
 } from "shared";
 
 import { shortcut } from "@/components/patterns/shortcut";
-import { costLabel } from "@/features/conversation/cost";
+import { cacheHitRate, costLabel, tokenLabel } from "@/features/conversation/cost";
 import { downloadExport } from "@/features/conversation/export-file";
 import type { ConversationStore } from "@/features/conversation/store";
 
@@ -149,7 +149,9 @@ const HANDLERS = {
 		const { state } = store.getSnapshot();
 		const name = state.sessionName === undefined ? "untitled" : `"${state.sessionName}"`;
 		const model = state.model === undefined ? "no model yet" : modelLabel(state.model);
-		const counted = `${state.stats.totalMessages} messages, ${state.stats.tokens.total.toLocaleString()} tokens, ${costLabel(state.stats.cost)} spent`;
+		const { tokens } = state.stats;
+		const share = cacheHitRate(tokens);
+		const counted = `${state.stats.totalMessages} messages, ${tokenLabel(tokens.total)} tokens (${tokenLabel(tokens.input)} input, ${tokenLabel(tokens.output)} output, ${tokenLabel(tokens.cacheRead)} cache read, ${tokenLabel(tokens.cacheWrite)} cache write${share === undefined ? "" : `, ${share.toFixed(0)}% from cache`}), ${costLabel(state.stats.cost)} spent`;
 		return `Chat ${name}: ${model}, ${counted}.`;
 	},
 	hotkeys: () =>

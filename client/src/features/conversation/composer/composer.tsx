@@ -12,10 +12,12 @@ import {
 } from "shared";
 import type {
 	AutocompleteReply,
+	CacheWarming,
 	ContextUsage,
 	EditorRequest,
 	ParsedBuiltinCommand,
 	PromptBehavior,
+	SessionStats,
 	SnapshotCommand,
 	SnapshotModel,
 	SnapshotTreeNode,
@@ -27,6 +29,7 @@ import type {
 import { shortcut } from "@/components/patterns/shortcut";
 import { Tip } from "@/components/patterns/tip";
 import { clearPendingDraft, pendingDraftOf } from "@/features/conversation/pending-draft";
+import { CacheWarmingState } from "@/features/conversation/composer/cache-warming";
 import type { ConversationStore } from "@/features/conversation/store";
 import {
 	InputGroup,
@@ -147,8 +150,10 @@ type ComposerProps = {
 	codingTools: boolean;
 	/** Absent while pi cannot read the context; the meter then shows nothing. */
 	contextUsage: ContextUsage | undefined;
-	/** What the session has spent, for the meter's Tip. */
-	cost: number;
+	/** What the session has counted, for the meter's Tip. */
+	stats: SessionStats;
+	/** pi's cache warmer, drawn beside the meter. */
+	cacheWarming: CacheWarming | undefined;
 	/** An empty session draws the box in the page, not docked under a transcript. */
 	inline?: boolean;
 	/** Drawn above the box, inside its column: where this conversation runs. */
@@ -182,7 +187,8 @@ function ComposerImpl({
 	commands,
 	codingTools,
 	contextUsage,
-	cost,
+	stats,
+	cacheWarming,
 	inline = false,
 	header,
 	onSent,
@@ -631,15 +637,16 @@ function ComposerImpl({
 						</InputGroupAddon>
 					</InputGroup>
 				</form>
-				{(notice !== undefined || contextUsage !== undefined) && (
+				{(notice !== undefined || contextUsage !== undefined || cacheWarming !== undefined) && (
 					<div className="flex items-start gap-2 px-1 pt-1">
 						{notice !== undefined && (
 							<p role="status" className="min-w-0 flex-1 text-meta text-muted-foreground">
 								{notice}
 							</p>
 						)}
-						<div className="ml-auto shrink-0">
-							<ContextMeter usage={contextUsage} cost={cost} />
+						<div className="ml-auto flex shrink-0 items-center gap-2">
+							<CacheWarmingState status={cacheWarming} />
+							<ContextMeter usage={contextUsage} stats={stats} />
 						</div>
 					</div>
 				)}
