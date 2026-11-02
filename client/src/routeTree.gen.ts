@@ -18,6 +18,7 @@ import { Route as SettingsMcpRouteRouteImport } from './routes/settings/mcp/rout
 import { Route as SettingsPackagesRouteRouteImport } from './routes/settings/packages/route'
 import { Route as SettingsProvidersRouteRouteImport } from './routes/settings/providers/route'
 import { Route as SettingsSkillsRouteRouteImport } from './routes/settings/skills/route'
+import { Route as SettingsTemplatesRouteImport } from './routes/settings/templates'
 import { Route as AppSessionsSessionIdRouteImport } from './routes/_app/sessions/$sessionId'
 import { Route as SettingsMcpIndexRouteImport } from './routes/settings/mcp/index'
 import { Route as SettingsPackagesIndexRouteImport } from './routes/settings/packages/index'
@@ -72,6 +73,11 @@ const SettingsProvidersRouteRoute = SettingsProvidersRouteRouteImport.update({
 const SettingsSkillsRouteRoute = SettingsSkillsRouteRouteImport.update({
   id: '/skills',
   path: '/skills',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
+const SettingsTemplatesRoute = SettingsTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
 const AppSessionsSessionIdRoute = AppSessionsSessionIdRouteImport.update({
@@ -140,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/settings/providers': typeof SettingsProvidersRouteRouteWithChildren
   '/settings/skills': typeof SettingsSkillsRouteRouteWithChildren
   '/settings/general': typeof SettingsGeneralRoute
+  '/settings/templates': typeof SettingsTemplatesRoute
   '/settings/': typeof SettingsIndexRoute
   '/sessions/$sessionId': typeof AppSessionsSessionIdRoute
   '/settings/providers/$providerId': typeof SettingsProvidersProviderIdRoute
@@ -155,6 +162,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/settings/general': typeof SettingsGeneralRoute
+  '/settings/templates': typeof SettingsTemplatesRoute
   '/': typeof AppIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/sessions/$sessionId': typeof AppSessionsSessionIdRoute
@@ -178,6 +186,7 @@ export interface FileRoutesById {
   '/settings/providers': typeof SettingsProvidersRouteRouteWithChildren
   '/settings/skills': typeof SettingsSkillsRouteRouteWithChildren
   '/settings/general': typeof SettingsGeneralRoute
+  '/settings/templates': typeof SettingsTemplatesRoute
   '/_app/': typeof AppIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/_app/sessions/$sessionId': typeof AppSessionsSessionIdRoute
@@ -202,6 +211,7 @@ export interface FileRouteTypes {
     | '/settings/providers'
     | '/settings/skills'
     | '/settings/general'
+    | '/settings/templates'
     | '/settings/'
     | '/sessions/$sessionId'
     | '/settings/providers/$providerId'
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/settings/general'
+    | '/settings/templates'
     | '/'
     | '/settings'
     | '/sessions/$sessionId'
@@ -239,6 +250,7 @@ export interface FileRouteTypes {
     | '/settings/providers'
     | '/settings/skills'
     | '/settings/general'
+    | '/settings/templates'
     | '/_app/'
     | '/settings/'
     | '/_app/sessions/$sessionId'
@@ -322,6 +334,13 @@ declare module '@tanstack/react-router' {
       path: '/skills'
       fullPath: '/settings/skills'
       preLoaderRoute: typeof SettingsSkillsRouteRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/templates': {
+      id: '/settings/templates'
+      path: '/templates'
+      fullPath: '/settings/templates'
+      preLoaderRoute: typeof SettingsTemplatesRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
     '/_app/sessions/$sessionId': {
@@ -485,6 +504,7 @@ interface SettingsRouteRouteChildren {
   SettingsProvidersRouteRoute: typeof SettingsProvidersRouteRouteWithChildren
   SettingsSkillsRouteRoute: typeof SettingsSkillsRouteRouteWithChildren
   SettingsGeneralRoute: typeof SettingsGeneralRoute
+  SettingsTemplatesRoute: typeof SettingsTemplatesRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
@@ -494,6 +514,7 @@ const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsProvidersRouteRoute: SettingsProvidersRouteRouteWithChildren,
   SettingsSkillsRouteRoute: SettingsSkillsRouteRouteWithChildren,
   SettingsGeneralRoute: SettingsGeneralRoute,
+  SettingsTemplatesRoute: SettingsTemplatesRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
 

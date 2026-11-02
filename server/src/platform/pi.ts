@@ -210,13 +210,13 @@ export const loadSkillFolder = (dir: string): LoadSkillsResult =>
 	loadSkillsFromDir({ dir, source: "path" });
 
 /** Which `settings.json` holds an entry: the home's, or the project's `.pi`. */
-export type SkillSettingsScope = "user" | "project";
+export type SettingsScope = "user" | "project";
 
 /** The `skills` array of one settings file, which holds paths and `-path` overrides. */
 export const readSkillEntries = (
 	folder: string,
 	home: AgentHome,
-	scope: SkillSettingsScope,
+	scope: SettingsScope,
 ): string[] => {
 	const settings = settingsManager(folder, home);
 	const stored = scope === "user" ? settings.getGlobalSettings() : settings.getProjectSettings();
@@ -227,7 +227,7 @@ export const readSkillEntries = (
 export const writeSkillEntries = async (
 	folder: string,
 	home: AgentHome,
-	scope: SkillSettingsScope,
+	scope: SettingsScope,
 	entries: string[],
 ): Promise<void> => {
 	const settings = settingsManager(folder, home);
@@ -240,7 +240,7 @@ export const writeSkillEntries = async (
 export const readPackageEntries = (
 	folder: string,
 	home: AgentHome,
-	scope: SkillSettingsScope,
+	scope: SettingsScope,
 ): PackageSource[] => {
 	const settings = settingsManager(folder, home);
 	const stored = scope === "user" ? settings.getGlobalSettings() : settings.getProjectSettings();
@@ -251,11 +251,43 @@ export const readPackageEntries = (
 export const writePackageEntries = async (
 	folder: string,
 	home: AgentHome,
-	scope: SkillSettingsScope,
+	scope: SettingsScope,
 	entries: PackageSource[],
 ): Promise<void> => {
 	const settings = settingsManager(folder, home);
 	if (scope === "user") settings.setPackages(entries);
 	else settings.setProjectPackages(entries);
+	await settings.flush();
+};
+
+/** One `prompts` or `themes` array, as written in the settings file that holds it. */
+export const readTemplatePaths = (
+	folder: string,
+	home: AgentHome,
+	scope: SettingsScope,
+	kind: "prompts" | "themes",
+): string[] => {
+	const settings = settingsManager(folder, home);
+	const stored = scope === "user" ? settings.getGlobalSettings() : settings.getProjectSettings();
+	return [...(stored[kind] ?? [])];
+};
+
+/** Replaces a `prompts` or `themes` array through pi's own setter and waits for the write. */
+export const writeTemplatePaths = async (
+	folder: string,
+	home: AgentHome,
+	scope: SettingsScope,
+	kind: "prompts" | "themes",
+	paths: string[],
+): Promise<void> => {
+	const settings = settingsManager(folder, home);
+	if (scope === "user") {
+		if (kind === "prompts") settings.setPromptTemplatePaths(paths);
+		else settings.setThemePaths(paths);
+	} else if (kind === "prompts") {
+		settings.setProjectPromptTemplatePaths(paths);
+	} else {
+		settings.setProjectThemePaths(paths);
+	}
 	await settings.flush();
 };

@@ -18,6 +18,7 @@ import { sessionsRoutes } from "./features/sessions/routes";
 import { settingsRoutes } from "./features/settings/routes";
 import { skillImportRoutes } from "./features/skill-import/routes";
 import { skillsRoutes } from "./features/skills/routes";
+import { templatesRoutes } from "./features/templates/routes";
 
 const healthRoute = createRoute({
 	method: "get",
@@ -79,5 +80,6 @@ export const mountRoutes = (deps: Deps, contractId: () => string) => {
 	app.route("/", skillImportRoutes(deps));
 	app.route("/", skillsRoutes(deps));
 	app.route("/", packagesRoutes(deps));
+	app.route("/", templatesRoutes(deps));
 	return app;
 };

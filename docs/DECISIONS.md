@@ -528,6 +528,23 @@ above a project, so one project on the operator's disk carried their configurati
 the sandbox, filed as project skills. Not: letting the sandbox open any folder and warning
 about it.
 
+## Templates
+
+Prompt templates and themes are resources and get the same treatment: the page shows
+the scope's `prompts` or `themes` path list, and the entries pi resolved from it with
+their source and whether pi loads them. Add and remove write through
+`SettingsManager.setPromptTemplatePaths` / `setProjectPromptTemplatePaths` and the
+theme equivalents. The server refuses a path pi would skip instead: it must exist, be a
+folder or a file of the kind pi loads there, and not name a target already listed. A
+theme is listed and never applied, because Epsilon draws its own interface and has no
+theme picker.
+
+Why: pi turns each prompt template into a composer command and each theme into one of
+its own interface files, so showing both is a read of pi's resolver, and the path list
+is the only part the panel can add. Not: applying a theme to Epsilon, or parsing
+template frontmatter on the server. The parsed template only exists inside a live
+engine, and the list needs pi's file answer.
+
 ## Default extensions
 
 Epsilon ships its own defaults (a permission guard, an ask-question flow) as code,

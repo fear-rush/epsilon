@@ -3845,6 +3845,87 @@
 					"scope",
 					"type"
 				]
+			},
+			"TemplateList": {
+				"type": "object",
+				"properties": {
+					"paths": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"entries": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"path": {
+									"type": "string"
+								},
+								"name": {
+									"type": "string"
+								},
+								"enabled": {
+									"type": "boolean"
+								},
+								"origin": {
+									"type": "string",
+									"enum": [
+										"top-level",
+										"package"
+									]
+								},
+								"source": {
+									"type": "string"
+								},
+								"dir": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"path",
+								"name",
+								"enabled",
+								"origin",
+								"source",
+								"dir"
+							]
+						}
+					}
+				},
+				"required": [
+					"paths",
+					"entries"
+				]
+			},
+			"TemplatePathInput": {
+				"type": "object",
+				"properties": {
+					"kind": {
+						"type": "string",
+						"enum": [
+							"prompts",
+							"themes"
+						]
+					},
+					"scope": {
+						"type": "string",
+						"enum": [
+							"user",
+							"project"
+						]
+					},
+					"path": {
+						"type": "string",
+						"minLength": 1
+					}
+				},
+				"required": [
+					"kind",
+					"scope",
+					"path"
+				]
 			}
 		},
 		"parameters": {}
@@ -7296,6 +7377,189 @@
 					},
 					"400": {
 						"description": "The update failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/templates": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "listTemplates",
+				"description": "One scope's prompt templates or themes: every entry pi resolved with its source and whether it is enabled, and the path list that produced it",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"enum": [
+								"prompts",
+								"themes"
+							]
+						},
+						"required": true,
+						"name": "kind",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"enum": [
+								"user",
+								"project"
+							]
+						},
+						"required": true,
+						"name": "scope",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The entries and the path list",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/TemplateList"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The read failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/templates/paths": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "addTemplatePath",
+				"description": "Add one path to the scope's prompts or themes list. The path must exist and be a folder or a file of that kind",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/TemplatePathInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The path is written, and live engines reloaded"
+					},
+					"400": {
+						"description": "The path was refused",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "removeTemplatePath",
+				"description": "Remove one entry from the scope's prompts or themes list",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"enum": [
+								"prompts",
+								"themes"
+							]
+						},
+						"required": true,
+						"name": "kind",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"enum": [
+								"user",
+								"project"
+							]
+						},
+						"required": true,
+						"name": "scope",
+						"in": "query"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						},
+						"required": true,
+						"name": "path",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "The entry is removed, and live engines reloaded"
+					},
+					"400": {
+						"description": "The entry was not in the list",
 						"content": {
 							"application/json": {
 								"schema": {
