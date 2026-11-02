@@ -21,7 +21,7 @@ import {
 	samplingByLevelSchema,
 	samplingParamsSchema,
 } from "./provider-model-form";
-import type { ModelForm } from "./provider-model-form";
+import type { ModelForm, ModelMode } from "./provider-model-form";
 
 const trim = (value: string): string => value.trim();
 
@@ -157,9 +157,11 @@ export const advancedFields: readonly ModelField[] = [
 	"headers",
 ];
 
-export function modelFieldErrors(form: ModelForm, endpoint = true): ModelFieldErrors {
+export function modelFieldErrors(form: ModelForm, mode: ModelMode): ModelFieldErrors {
+	const endpoint = mode === "model";
 	const filled = costFields.filter((field) => form[field].trim() !== "").length;
-	const allOrNone = filled === 0 || filled === costFields.length;
+	// A model entry carries all four rates or no cost; an override may name only some.
+	const allOrNone = mode === "override" || filled === 0 || filled === costFields.length;
 
 	const tokenCount = z
 		.string()
@@ -245,8 +247,9 @@ export function modelFieldErrors(form: ModelForm, endpoint = true): ModelFieldEr
 	const errors = fieldErrors(result, modelFields);
 	// An override dialog shows no base URL field, so a stored one must not block it.
 	if (!endpoint) delete errors.baseUrl;
-	// pi's cost needs its four rates before it can carry tiers.
-	if (form.costTiers.trim() !== "" && filled !== costFields.length) {
+	// pi's model cost needs its four rates before it can carry tiers; an override's
+	// partial cost may name tiers alone.
+	if (mode === "model" && form.costTiers.trim() !== "" && filled !== costFields.length) {
 		errors.costTiers = "Fill all four rates, or clear the tiers.";
 	}
 	return errors;

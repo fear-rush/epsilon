@@ -211,7 +211,9 @@ override never carries an API family or base URL either: pi ignores both there, 
 dialog offers neither and a stored pair stays in the file without affecting a test.
 A model's advanced fields (`inputLimits`, `promptCache`, the sampling parameters,
 `cost.tiers`) seed from pi's effective model, and a blank control is absent, so a save
-never writes a default the operator did not choose. A model's header values stay on
+never writes a default the operator did not choose. A model entry needs the four cost
+rates pi's definition requires; an override may name any subset, and the server merges
+a named rate over the stored one. A model's header values stay on
 the server like a provider's: the dialog edits the keys and replaces a value only
 when one is typed.
 

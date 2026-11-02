@@ -15,7 +15,7 @@ import type { AgentHome } from "../../platform/agent-home";
 import { mergeSecrets, setOrDelete } from "../../platform/patch";
 import { builtinRuntime, modelRuntime } from "../../platform/pi";
 import type { ModelRuntime } from "../../platform/pi";
-import { apiOf, baseUrlOf, fieldsOf, mergeModelFields } from "./models-file";
+import { apiOf, baseUrlOf, fieldsOf, mergeModelFields, overrideFieldsOf } from "./models-file";
 import type { ProviderEntry, StoredModel } from "./models-file";
 import { modelsDocument, readProvidersFile } from "./store";
 import type {
@@ -175,17 +175,19 @@ export const readProviderDetail = async (
 		},
 		models: (entry?.models ?? []).map(modelInputOf),
 		modelOverrides: Object.fromEntries(
-			Object.entries(overrides).map(([id, override]) => [id, fieldsOf(override)]),
+			Object.entries(overrides).map(([id, override]) => [id, overrideFieldsOf(override)]),
 		),
 		// The composed model, so the override dialog seeds from pi's effective values.
 		catalog: models.map((model) => ({ provider: providerId, id: model.id, ...fieldsOf(model) })),
 	};
 };
 
-const mergeModel = (model: ProviderModelInput, existing: StoredModel | undefined): StoredModel => ({
-	...mergeModelFields(existing ?? {}, model),
-	id: model.id,
-});
+const mergeModel = (model: ProviderModelInput, existing: StoredModel | undefined): StoredModel => {
+	const merged = mergeModelFields(existing ?? {}, model);
+	// SAFETY: `model` is a ProviderModelInput, so a cost it names has all four rates,
+	// and the stored schema for a `models` entry requires them too.
+	return { ...merged, id: model.id } as StoredModel;
+};
 
 /** Upsert one provider. Fields the caller omitted keep their stored value. */
 export const writeProvider = (home: AgentHome, input: ProviderInput): Promise<void> =>

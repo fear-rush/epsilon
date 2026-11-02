@@ -83,7 +83,9 @@ export type ReasoningForm = {
 
 export const defaultsFor = (level: ThinkingLevel): boolean => level !== "xhigh" && level !== "max";
 
-export const reasoningFormOf = (model: ProviderModelInput | undefined): ReasoningForm => {
+export const reasoningFormOf = (
+	model: Pick<ProviderModelInput, "thinkingLevelMap" | "compat"> | undefined,
+): ReasoningForm => {
 	const map = model?.thinkingLevelMap;
 	const row = (level: ThinkingLevel): LevelRow => {
 		const mapped = map?.[level];

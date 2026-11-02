@@ -77,6 +77,9 @@ const providerModelCostSchema = z
 	})
 	.openapi("ProviderModelCost");
 
+/** pi merges an override's cost per field, so any rate may be absent. */
+const modelOverrideCostSchema = providerModelCostSchema.partial().openapi("ModelOverrideCost");
+
 /** How a request may be shaped before it leaves the engine. */
 const modelInputLimitsSchema = z
 	.object({
@@ -139,7 +142,10 @@ const providerModelInputSchema = z
 export type ProviderModelInput = z.infer<typeof providerModelInputSchema>;
 
 /** `modelOverrides` changes fields of a model pi ships, without replacing it. */
-const modelOverrideSchema = providerModelInputSchema.omit({ id: true }).openapi("ModelOverride");
+const modelOverrideSchema = providerModelInputSchema
+	.omit({ id: true })
+	.extend({ cost: modelOverrideCostSchema.optional() })
+	.openapi("ModelOverride");
 
 export type ModelOverride = z.infer<typeof modelOverrideSchema>;
 
@@ -304,6 +310,15 @@ export type ProviderImportInput = z.infer<typeof providerImportInputSchema>;
  * saved entry, so a key, endpoint or model can be tried before Save writes it.
  * A blank apiKey or header value means "use the stored one".
  */
+/**
+ * The model the test route reads. An override can name a partial cost, and the
+ * probe fills the rates it does not name from the model the runtime composes.
+ */
+const providerTestModelSchema = providerModelInputSchema
+	.omit({ cost: true })
+	.extend({ cost: modelOverrideCostSchema.optional() })
+	.openapi("ProviderTestModel");
+
 const providerTestInputSchema = z
 	.object({
 		providerId: z.string().optional(),
@@ -319,7 +334,7 @@ const providerTestInputSchema = z
 		/** A reasoning level for the test; omitted sends no reasoning fields. */
 		level: thinkingLevelSchema.optional(),
 		/** The model to try. Without one, the provider's first model is used. */
-		model: providerModelInputSchema.optional(),
+		model: providerTestModelSchema.optional(),
 	})
 	.openapi("ProviderTestInput");
 

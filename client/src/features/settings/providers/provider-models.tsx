@@ -18,7 +18,8 @@ import { testInputOf } from "./provider-draft";
 import type { ProviderDraft } from "./provider-draft";
 import { ProviderImportDialog } from "./provider-import-dialog";
 import { ProviderModelDialog } from "./provider-model-dialog";
-import { overrideOf } from "./provider-model-form";
+import { completeModelOf, overrideOf } from "./provider-model-form";
+import type { ModelValue } from "./provider-model-form";
 import type { ModelOverride, ProviderDetail, ProviderModelInput } from "@/api/types";
 import { Badge } from "@/components/ui/badge";
 
@@ -63,7 +64,7 @@ export function ProviderModels({
 	const custom = !builtin || draft.customCatalog;
 	const catalog = detail?.catalog ?? [];
 	const count = custom ? draft.models.length : catalog.length;
-	const testDraftModel = (model: ProviderModelInput, level?: ThinkingLevel): Promise<string> =>
+	const testDraftModel = (model: ModelValue, level?: ThinkingLevel): Promise<string> =>
 		testProvider(testInputOf(draft, model, level));
 
 	const startAdd = () => {
@@ -166,17 +167,18 @@ export function ProviderModels({
 					lockId={editing.index !== undefined}
 					onTest={testDraftModel}
 					onSave={(model) => {
+						const complete = completeModelOf(model);
 						if (editing.index !== undefined) {
 							const next = [...draft.models];
-							next[editing.index] = model;
+							next[editing.index] = complete;
 							update({ models: next });
 							return;
 						}
 						if (!custom) {
-							update({ customCatalog: true, models: [model], modelOverrides: {} });
+							update({ customCatalog: true, models: [complete], modelOverrides: {} });
 							return;
 						}
-						update({ models: [...draft.models, model] });
+						update({ models: [...draft.models, complete] });
 					}}
 				/>
 			)}

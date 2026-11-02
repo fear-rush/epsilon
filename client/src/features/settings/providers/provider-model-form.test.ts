@@ -122,3 +122,15 @@ test("removing every header row clears the override's headers", () => {
 	);
 	expect(saved.headers).toEqual({});
 });
+
+test("an override can name one cost rate", () => {
+	const form = formOf(shipped);
+	const saved = overrideOf(
+		valueOf(
+			{ ...form, costInput: "1", costOutput: "", costCacheRead: "", costCacheWrite: "" },
+			shipped.api,
+		),
+		touchedBy(new Set(), { costInput: "1" }),
+	);
+	expect(saved.cost).toEqual({ input: 1 });
+});

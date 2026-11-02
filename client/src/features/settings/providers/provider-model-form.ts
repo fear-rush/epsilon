@@ -56,6 +56,12 @@ export type ModelForm = ReasoningForm & {
  */
 export type ModelField = Exclude<keyof ModelOverride, "api" | "baseUrl">;
 
+/** A model entry owns its four cost rates; an override may name only some. */
+export type ModelValue = Omit<ProviderModelInput, "cost"> & { cost?: ModelOverride["cost"] };
+
+/** Which dialog this is: a model entry, or an override of one pi ships. */
+export type ModelMode = "model" | "override";
+
 type InputLimits = NonNullable<ProviderModelInput["inputLimits"]>;
 type ImageLimits = NonNullable<InputLimits["images"]>;
 type ImageResize = NonNullable<ImageLimits["resize"]>;
@@ -204,7 +210,7 @@ const mergedByLevel = (
 const seedOf = (
 	model: ProviderModelInput | undefined,
 	override: ModelOverride | undefined,
-): ProviderModelInput | undefined => {
+): ModelValue | undefined => {
 	if (model === undefined) return undefined;
 	if (override === undefined) return model;
 	return {
@@ -222,7 +228,7 @@ const seedOf = (
 			model.samplingParamsByThinkingLevel,
 			override.samplingParamsByThinkingLevel,
 		),
-		cost: merged(model.cost, override.cost),
+		cost: merged<NonNullable<ModelOverride["cost"]>>(model.cost, override.cost),
 		headers: merged(model.headers, override.headers),
 	};
 };
@@ -277,24 +283,16 @@ const costTiersOf = (
 	return parsed.success && parsed.data.length > 0 ? parsed.data : undefined;
 };
 
-/** The four rates and their tiers are one value: a partial cost is not written. */
-const costOf = (form: ModelForm): ProviderModelInput["cost"] => {
-	const input = optionalCost(form.costInput);
-	const output = optionalCost(form.costOutput);
-	const cacheRead = optionalCost(form.costCacheRead);
-	const cacheWrite = optionalCost(form.costCacheWrite);
-	if (
-		input === undefined ||
-		output === undefined ||
-		cacheRead === undefined ||
-		cacheWrite === undefined
-	) {
-		return undefined;
-	}
+/** The rates and tiers the form names. An override may name only some rates. */
+const costOf = (form: ModelForm): ModelOverride["cost"] => {
+	const cost: NonNullable<ModelOverride["cost"]> = {};
+	withValue(cost, "input", optionalCost(form.costInput));
+	withValue(cost, "output", optionalCost(form.costOutput));
+	withValue(cost, "cacheRead", optionalCost(form.costCacheRead));
+	withValue(cost, "cacheWrite", optionalCost(form.costCacheWrite));
 	const tiers = costTiersOf(form.costTiers);
-	return tiers === undefined
-		? { input, output, cacheRead, cacheWrite }
-		: { input, output, cacheRead, cacheWrite, tiers };
+	if (tiers !== undefined) cost.tiers = tiers;
+	return Object.keys(cost).length > 0 ? cost : undefined;
 };
 
 /** The form a model opens with, seeded from pi's effective model and the draft override. */
@@ -313,10 +311,10 @@ export const formOf = (
 		maxTokens: seed?.maxTokens?.toString() ?? "",
 		reasoning: seed?.reasoning ?? false,
 		images: seed?.input?.includes("image") ?? false,
-		costInput: seed?.cost?.input.toString() ?? "",
-		costOutput: seed?.cost?.output.toString() ?? "",
-		costCacheRead: seed?.cost?.cacheRead.toString() ?? "",
-		costCacheWrite: seed?.cost?.cacheWrite.toString() ?? "",
+		costInput: seed?.cost?.input?.toString() ?? "",
+		costOutput: seed?.cost?.output?.toString() ?? "",
+		costCacheRead: seed?.cost?.cacheRead?.toString() ?? "",
+		costCacheWrite: seed?.cost?.cacheWrite?.toString() ?? "",
 		costTiers: jsonText(seed?.cost?.tiers),
 		headerRows: rowsOf(seed?.headers),
 		maxRequestBytes: seed?.inputLimits?.maxRequestBytes?.toString() ?? "",
@@ -334,11 +332,8 @@ export const formOf = (
 	};
 };
 
-/** The form as a complete model. Save and Test share it, so they cannot drift. */
-export const valueOf = (
-	form: ModelForm,
-	providerApi: ProviderApi | undefined,
-): ProviderModelInput => {
+/** The form as the dialog's value. A model entry is validated before it is saved. */
+export const valueOf = (form: ModelForm, providerApi: ProviderApi | undefined): ModelValue => {
 	const api = parseProviderApi(form.api);
 	return {
 		id: form.id.trim(),
@@ -360,6 +355,15 @@ export const valueOf = (
 	};
 };
 
+/**
+ * The value as a model entry, after the dialog validated it. pi's model definition
+ * needs all four rates, and `modelFieldErrors` enforces that for this mode.
+ */
+export const completeModelOf = (model: ModelValue): ProviderModelInput => {
+	// SAFETY: a model entry cannot pass the dialog's validation with a partial cost.
+	return model as ProviderModelInput;
+};
+
 /** The fields an edit touched, keeping the earlier ones. */
 export const touchedBy = (
 	current: ReadonlySet<ModelField>,
@@ -377,10 +381,7 @@ export const touchedBy = (
  * A touched field with no value is left out, so pi keeps what it had; clearing a
  * stored override is the row's own "clear override" action.
  */
-export const overrideOf = (
-	model: ProviderModelInput,
-	touched: ReadonlySet<ModelField>,
-): ModelOverride => {
+export const overrideOf = (model: ModelValue, touched: ReadonlySet<ModelField>): ModelOverride => {
 	const override: ModelOverride = {};
 	if (touched.has("name") && model.name !== undefined) override.name = model.name;
 	if (touched.has("reasoning") && model.reasoning !== undefined) {

@@ -93,7 +93,7 @@ export const inputOf = (draft: ProviderDraft, builtin: boolean): ProviderInput =
 /** The draft in the shape the test route reads, with one model to try. */
 export const testInputOf = (
 	draft: ProviderDraft,
-	model: ProviderModelInput | undefined,
+	model: ProviderTestInput["model"],
 	level?: ProviderTestInput["level"],
 ): ProviderTestInput => ({
 	providerId: draft.id.trim() || undefined,

@@ -1258,7 +1258,14 @@ export interface components {
 			};
 			contextWindow?: number;
 			maxTokens?: number;
-			cost?: components["schemas"]["ProviderModelCost"];
+			cost?: components["schemas"]["ModelOverrideCost"];
+		};
+		ModelOverrideCost: {
+			input?: number;
+			output?: number;
+			cacheRead?: number;
+			cacheWrite?: number;
+			tiers?: components["schemas"]["ProviderModelCostTier"][];
 		};
 		ProviderCatalogModel: components["schemas"]["ProviderModelInput"] & ({
 			provider: string;
@@ -1287,7 +1294,35 @@ export interface components {
 			compat?: components["schemas"]["ReasoningCompat"];
 			authHeader?: boolean;
 			level?: "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
-			model?: components["schemas"]["ProviderModelInput"];
+			model?: components["schemas"]["ProviderTestModel"];
+		};
+		ProviderTestModel: {
+			id: string;
+			name?: string;
+			api?: "openai-completions" | "openai-responses" | "anthropic-messages" | "google-generative-ai";
+			baseUrl?: string;
+			reasoning?: boolean;
+			thinkingLevelMap?: components["schemas"]["ThinkingLevelMap"];
+			compat?: components["schemas"]["ReasoningCompat"];
+			input?: ("text" | "image")[];
+			inputLimits?: components["schemas"]["ModelInputLimits"];
+			promptCache?: components["schemas"]["ModelPromptCache"];
+			samplingParams?: components["schemas"]["SamplingParams"];
+			samplingParamsByThinkingLevel?: {
+				off?: components["schemas"]["SamplingParams"];
+				minimal?: components["schemas"]["SamplingParams"];
+				low?: components["schemas"]["SamplingParams"];
+				medium?: components["schemas"]["SamplingParams"];
+				high?: components["schemas"]["SamplingParams"];
+				xhigh?: components["schemas"]["SamplingParams"];
+				max?: components["schemas"]["SamplingParams"];
+			};
+			headers?: {
+				[key: string]: string;
+			};
+			contextWindow?: number;
+			maxTokens?: number;
+			cost?: components["schemas"]["ModelOverrideCost"];
 		};
 		ProviderLoginSnapshot: {
 			providerId: string;

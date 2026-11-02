@@ -7,7 +7,12 @@ import { z } from "zod";
 import { parseProviderApi } from "shared";
 
 import { mergeSecrets, setOrDelete } from "../../platform/patch";
-import type { ModelOverride, ReasoningCompat, ThinkingLevelMap } from "./contract";
+import type {
+	ModelOverride,
+	ProviderModelInput,
+	ReasoningCompat,
+	ThinkingLevelMap,
+} from "./contract";
 import { reasoningCompatSchema, thinkingLevelMapSchema } from "./contract";
 
 const storedCostTierSchema = z.looseObject({
@@ -25,6 +30,9 @@ const storedCostSchema = z.looseObject({
 	cacheWrite: z.number(),
 	tiers: z.array(storedCostTierSchema).optional(),
 });
+
+/** pi merges an override's cost per field, so the file may hold only some rates. */
+const storedPartialCostSchema = storedCostSchema.partial();
 
 /** Nested blocks are loose too: a key this version does not model survives a write. */
 const storedInputLimitsSchema = z.looseObject({
@@ -81,6 +89,10 @@ const storedModelSchema = z.looseObject({
 	cost: storedCostSchema.optional(),
 });
 
+const storedOverrideSchema = storedModelSchema
+	.omit({ id: true })
+	.extend({ cost: storedPartialCostSchema.optional() });
+
 const providerEntrySchema = z.looseObject({
 	name: z.string().optional(),
 	baseUrl: z.string().optional(),
@@ -91,7 +103,7 @@ const providerEntrySchema = z.looseObject({
 	authHeader: z.boolean().optional(),
 	oauth: z.literal("radius").optional(),
 	models: z.array(storedModelSchema).optional(),
-	modelOverrides: z.record(z.string(), storedModelSchema.omit({ id: true })).optional(),
+	modelOverrides: z.record(z.string(), storedOverrideSchema).optional(),
 });
 
 export const modelsFileSchema = z.looseObject({
@@ -101,6 +113,9 @@ export const modelsFileSchema = z.looseObject({
 export type ModelsFile = z.infer<typeof modelsFileSchema>;
 export type ProviderEntry = z.infer<typeof providerEntrySchema>;
 export type StoredModel = z.infer<typeof storedModelSchema>;
+
+/** The complete cost a model definition needs. */
+type CompleteCost = NonNullable<ProviderModelInput["cost"]>;
 
 /** The editable fields, without the loose index signature Omit would keep. */
 export type StoredFields = {
@@ -125,8 +140,8 @@ export type StoredFields = {
 export const apiOf = (entry: { api?: string } | undefined): ModelOverride["api"] =>
 	parseProviderApi(entry?.api ?? "");
 
-/** The editable fields of a stored model, in the shape the panel reads. */
-export const fieldsOf = (model: StoredFields): ModelOverride => ({
+/** Everything both a model entry and an override carry, except the cost. */
+const sharedFieldsOf = (model: StoredFields): Omit<ModelOverride, "cost"> => ({
 	name: model.name,
 	api: parseProviderApi(model.api ?? ""),
 	baseUrl: model.baseUrl,
@@ -147,6 +162,19 @@ export const fieldsOf = (model: StoredFields): ModelOverride => ({
 			: Object.fromEntries(Object.keys(model.headers).map((key) => [key, ""])),
 	contextWindow: model.contextWindow,
 	maxTokens: model.maxTokens,
+});
+
+/** The editable fields of a model entry or a catalog model, whose cost is complete. */
+export const fieldsOf = (
+	model: StoredFields & { cost?: CompleteCost },
+): Omit<ProviderModelInput, "id"> => ({
+	...sharedFieldsOf(model),
+	cost: model.cost,
+});
+
+/** The editable fields of an override, whose cost may name only some rates. */
+export const overrideFieldsOf = (model: StoredFields): ModelOverride => ({
+	...sharedFieldsOf(model),
 	cost: model.cost,
 });
 
@@ -211,7 +239,23 @@ export const mergeModelFields = (
 	);
 	writeField(next, "contextWindow", input.contextWindow, policy, true);
 	writeField(next, "maxTokens", input.maxTokens, policy, true);
-	writeField(next, "cost", input.cost, policy, true);
+	// pi merges an override's cost per field. A model entry's cost is a complete
+	// record, so an omitted one is unset and a named one replaces the stored cost.
+	if (input.cost === undefined) {
+		if (policy === "unset") delete next.cost;
+	} else if (policy === "unset" || stored.cost === undefined) {
+		next.cost = input.cost;
+	} else {
+		const cost: NonNullable<ModelOverride["cost"]> = {
+			input: input.cost.input ?? stored.cost.input,
+			output: input.cost.output ?? stored.cost.output,
+			cacheRead: input.cost.cacheRead ?? stored.cost.cacheRead,
+			cacheWrite: input.cost.cacheWrite ?? stored.cost.cacheWrite,
+		};
+		const tiers = input.cost.tiers ?? stored.cost.tiers;
+		if (tiers !== undefined) cost.tiers = tiers;
+		next.cost = cost;
+	}
 	// A header value never comes back to the browser, so a blank one keeps the stored
 	// value and a key left out of the record is removed.
 	if (input.headers === undefined) {

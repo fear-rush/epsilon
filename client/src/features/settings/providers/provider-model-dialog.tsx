@@ -24,7 +24,7 @@ import { ModelCostFields } from "./provider-model-cost";
 import { ModelAdvancedFields } from "./provider-model-advanced";
 import { ModelReasoningFields } from "./provider-reasoning-fields";
 import { formOf, touchedBy, valueOf } from "./provider-model-form";
-import type { ModelField, ModelForm } from "./provider-model-form";
+import type { ModelField, ModelForm, ModelValue } from "./provider-model-form";
 import { TestLevelSelect } from "./test-level-select";
 import { useDialogMotion } from "@/hooks/use-dialog-motion";
 import { keepUntouched } from "@/components/patterns/form/use-draft-form";
@@ -54,8 +54,8 @@ export function ProviderModelDialog({
 	override?: ModelOverride;
 	providerApi: ProviderApi | undefined;
 	lockId: boolean;
-	onSave: (model: ProviderModelInput, touched: ReadonlySet<ModelField>) => void;
-	onTest: (model: ProviderModelInput, level?: ThinkingLevel) => Promise<string>;
+	onSave: (model: ModelValue, touched: ReadonlySet<ModelField>) => void;
+	onTest: (model: ModelValue, level?: ThinkingLevel) => Promise<string>;
 }) {
 	const [form, setForm] = useState<ModelForm>(() => formOf(model, override));
 	const [touched, setTouched] = useState<ReadonlySet<ModelField>>(() => new Set());
@@ -66,7 +66,7 @@ export function ProviderModelDialog({
 	const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | undefined>();
 	const endpoint = mode === "model";
 	const validate = () => {
-		const found: ModelFieldErrors = modelFieldErrors(form, endpoint);
+		const found: ModelFieldErrors = modelFieldErrors(form, mode);
 		const headers = form.headerRows.some(
 			(row) => row.key.trim() === "" || (row.value.trim() === "" && !row.stored),
 		);

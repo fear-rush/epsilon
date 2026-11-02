@@ -1883,7 +1883,30 @@
 						"exclusiveMinimum": 0
 					},
 					"cost": {
-						"$ref": "#/components/schemas/ProviderModelCost"
+						"$ref": "#/components/schemas/ModelOverrideCost"
+					}
+				}
+			},
+			"ModelOverrideCost": {
+				"type": "object",
+				"properties": {
+					"input": {
+						"type": "number"
+					},
+					"output": {
+						"type": "number"
+					},
+					"cacheRead": {
+						"type": "number"
+					},
+					"cacheWrite": {
+						"type": "number"
+					},
+					"tiers": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ProviderModelCostTier"
+						}
 					}
 				}
 			},
@@ -2018,9 +2041,108 @@
 						]
 					},
 					"model": {
-						"$ref": "#/components/schemas/ProviderModelInput"
+						"$ref": "#/components/schemas/ProviderTestModel"
 					}
 				}
+			},
+			"ProviderTestModel": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"minLength": 1
+					},
+					"name": {
+						"type": "string"
+					},
+					"api": {
+						"type": "string",
+						"enum": [
+							"openai-completions",
+							"openai-responses",
+							"anthropic-messages",
+							"google-generative-ai"
+						]
+					},
+					"baseUrl": {
+						"type": "string",
+						"format": "uri"
+					},
+					"reasoning": {
+						"type": "boolean"
+					},
+					"thinkingLevelMap": {
+						"$ref": "#/components/schemas/ThinkingLevelMap"
+					},
+					"compat": {
+						"$ref": "#/components/schemas/ReasoningCompat"
+					},
+					"input": {
+						"type": "array",
+						"items": {
+							"type": "string",
+							"enum": [
+								"text",
+								"image"
+							]
+						}
+					},
+					"inputLimits": {
+						"$ref": "#/components/schemas/ModelInputLimits"
+					},
+					"promptCache": {
+						"$ref": "#/components/schemas/ModelPromptCache"
+					},
+					"samplingParams": {
+						"$ref": "#/components/schemas/SamplingParams"
+					},
+					"samplingParamsByThinkingLevel": {
+						"type": "object",
+						"properties": {
+							"off": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"minimal": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"low": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"medium": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"high": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"xhigh": {
+								"$ref": "#/components/schemas/SamplingParams"
+							},
+							"max": {
+								"$ref": "#/components/schemas/SamplingParams"
+							}
+						}
+					},
+					"headers": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						}
+					},
+					"contextWindow": {
+						"type": "integer",
+						"exclusiveMinimum": 0
+					},
+					"maxTokens": {
+						"type": "integer",
+						"exclusiveMinimum": 0
+					},
+					"cost": {
+						"$ref": "#/components/schemas/ModelOverrideCost"
+					}
+				},
+				"required": [
+					"id"
+				]
 			},
 			"ProviderLoginSnapshot": {
 				"type": "object",

@@ -230,7 +230,27 @@ const probe = async (target: Target, key: string, keyless: boolean): Promise<Pro
 	}
 };
 
-const ZERO_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+type CatalogModel = NonNullable<ReturnType<ModelRuntime["getModel"]>>;
+
+/**
+ * A test model can name a partial cost (an override may). pi's model config needs
+ * all four rates, so the rates it leaves out come from the runtime model.
+ */
+const completeCost = (
+	requested: ProviderTestInput["model"],
+	catalog: CatalogModel | undefined,
+): CatalogModel["cost"] => {
+	const cost = requested?.cost;
+	const complete: CatalogModel["cost"] = {
+		input: cost?.input ?? catalog?.cost.input ?? 0,
+		output: cost?.output ?? catalog?.cost.output ?? 0,
+		cacheRead: cost?.cacheRead ?? catalog?.cost.cacheRead ?? 0,
+		cacheWrite: cost?.cacheWrite ?? catalog?.cost.cacheWrite ?? 0,
+	};
+	const tiers = cost?.tiers ?? catalog?.cost.tiers;
+	if (tiers !== undefined) complete.tiers = tiers;
+	return complete;
+};
 
 const clip = (text: string, limit = 60): string => {
 	const flat = text.replace(/\s+/gu, " ").trim();
@@ -287,7 +307,7 @@ export const testProviderForHome = async (
 		api,
 		reasoning: requested?.reasoning ?? runtimeModel?.reasoning ?? false,
 		input: requested?.input ?? runtimeModel?.input ?? ["text"],
-		cost: requested?.cost ?? runtimeModel?.cost ?? ZERO_COST,
+		cost: completeCost(requested, runtimeModel),
 		contextWindow: requested?.contextWindow ?? runtimeModel?.contextWindow ?? 128_000,
 		maxTokens: requested?.maxTokens ?? runtimeModel?.maxTokens ?? 16_384,
 	};

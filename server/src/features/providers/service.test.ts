@@ -183,6 +183,30 @@ describe("provider writes", () => {
 		expect(detail?.modelOverrides["gpt-5"]?.headers).toEqual({ "x-override": "" });
 	});
 
+	test("a partial override cost survives a save and merges per field", async () => {
+		const root = await home();
+		await writeFile(
+			root.modelsFile,
+			JSON.stringify({
+				providers: { openai: { modelOverrides: { "gpt-5": { cost: { input: 1 } } } } },
+			}),
+		);
+
+		await writeProvider(root, { id: "openai", modelOverrides: { "gpt-5": { maxTokens: 1000 } } });
+		const entry = () => stored(root).then((file) => file.providers.openai.modelOverrides["gpt-5"]);
+		expect(await entry()).toEqual({ cost: { input: 1 }, maxTokens: 1000 });
+
+		// A named rate merges over the stored partial entry; the unnamed ones stay out.
+		await writeProvider(root, {
+			id: "openai",
+			modelOverrides: { "gpt-5": { cost: { output: 5 } } },
+		});
+		expect(await entry()).toEqual({ cost: { input: 1, output: 5 }, maxTokens: 1000 });
+
+		const detail = await readProviderDetail(root, await modelRuntime(root), "openai");
+		expect(detail?.modelOverrides["gpt-5"]?.cost).toEqual({ input: 1, output: 5 });
+	});
+
 	test("a provider's auth header and radius OAuth survive a round trip", async () => {
 		const root = await home();
 		await writeProvider(root, {
