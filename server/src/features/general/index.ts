@@ -4,4 +4,10 @@
  */
 export { readDefaultModel, readAgentLimits, readEnabledModels } from "./store";
 export { readSettingViews } from "./settings";
-export { agentLimitsSchema, defaultModelSchema, settingViewSchema } from "./contract";
+export { writeSetting } from "./write";
+export {
+	agentLimitsSchema,
+	defaultModelSchema,
+	settingViewSchema,
+	settingWriteSchema,
+} from "./contract";

@@ -48,6 +48,7 @@ const FAILURES = new Map([
 	["POST /api/projects/trust", "The folder was not trusted"],
 	["GET /api/projects/folders", "The folder list did not load"],
 	["GET /api/settings", "Settings did not load"],
+	["PATCH /api/settings", "The setting was not saved"],
 	["GET /api/readiness", "Readiness did not load"],
 	["GET /api/settings/providers/{id}", "The provider did not load"],
 	["POST /api/settings/providers/models", "The models did not load"],

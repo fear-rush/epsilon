@@ -45,6 +45,16 @@ export type AgentLimits = z.infer<typeof agentLimitsSchema>;
  */
 const settingScopeSchema = z.enum(["project", "global", "default"]).openapi("SettingScope");
 
+/** Every value pi stores in `settings.json`, which is JSON's own shapes. */
+const settingValueSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+	z.null(),
+	z.array(z.string()),
+	z.record(z.string(), z.unknown()),
+]);
+
 /**
  * One `settings.json` key as the panel needs it. A value is always one of JSON's
  * own shapes, which is what pi stored; the client narrows it per control.
@@ -54,14 +64,7 @@ export const settingViewSchema = z
 		/** pi's own key path in `settings.json`, such as "compaction.reserveTokens". */
 		key: z.string(),
 		/** What pi resolves, or null when pi refused the value; `error` then says why. */
-		value: z.union([
-			z.string(),
-			z.number(),
-			z.boolean(),
-			z.null(),
-			z.array(z.string()),
-			z.record(z.string(), z.unknown()),
-		]),
+		value: settingValueSchema,
 		scope: settingScopeSchema,
 		/** The browser cannot apply it; the panel lists it read-only with the reason. */
 		terminalOnly: z.boolean(),
@@ -72,3 +75,17 @@ export const settingViewSchema = z
 
 export type SettingScope = z.infer<typeof settingScopeSchema>;
 export type SettingView = z.infer<typeof settingViewSchema>;
+
+/**
+ * The one setting a PATCH changes. The key decides the value's real type, which
+ * the server checks per key before pi's setter sees it; the wire shape stays JSON
+ * so the client can write any row with one call.
+ */
+export const settingWriteSchema = z
+	.object({
+		/** pi's key path, one the panel writes through a `SettingsManager` setter. */
+		key: z.string().min(1),
+		/** The new value, in the shape the read reports for that key. */
+		value: settingValueSchema,
+	})
+	.openapi("SettingWriteInput");

@@ -648,7 +648,9 @@ Turborepo or the runtime.
   either is kept by pi and does nothing. `getCompactionReserveTokens()`,
   `getCompactionKeepRecentTokens()` and `getHttpIdleTimeoutMs()` throw on a value pi
   refuses, so a host that reads many keys catches per key: one hand-edited number
-  would otherwise fail every read of the file.
+  would otherwise fail every read of the file. `getWarnings()` returns only the keys
+  a file writes, so an absent `anthropicExtraUsage` means pi's default of `true`
+  rather than `false`, and `setWarnings()` replaces the whole object.
 - **Installed packages are bound to one platform.** Native optional dependencies are
   resolved at install time. Install on the machine that runs them; config
   files are portable, dependency trees are not.

@@ -1,23 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
-import { CheckIcon, ChevronDownIcon } from "lucide-react";
-import { useState } from "react";
 import { modelKey } from "shared";
-import type { SnapshotModel } from "shared";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-} from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { setDefaultModel } from "@/api/endpoints";
 import { useSettings, useSettingsRefresh } from "@/features/settings/queries";
 import { AgentLimitsForm } from "./agent-limits";
+import { ModelPicker } from "./model-picker";
+import { SettingsForm } from "./settings-form";
 import { DetailPage } from "@/components/patterns/pane/detail-page";
 import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
@@ -28,26 +17,9 @@ import { Section } from "@/components/patterns/section/section";
 import type { SettingsSnapshot } from "@/api/types";
 
 /**
- * General: whether Epsilon can run a turn, where its home is, and which
- * model a new session starts on.
+ * General: whether Epsilon can run a turn, where its home is, which model a new
+ * session starts on, and every setting the dashboard can change.
  */
-
-const labelOf = (model: SnapshotModel) => `${model.provider}: ${model.name}`;
-
-/** What the search matches and what the list scrolls to when it opens. */
-const itemValueOf = (model: SnapshotModel) => `${labelOf(model)} ${model.id}`;
-
-/** One group per provider, in the order the models already sorted into. */
-const groupsOf = (models: readonly SnapshotModel[]): [string, SnapshotModel[]][] => {
-	const groups = new Map<string, SnapshotModel[]>();
-	for (const model of models) {
-		const group = groups.get(model.provider);
-		if (group === undefined) groups.set(model.provider, [model]);
-		else group.push(model);
-	}
-	return [...groups];
-};
-
 export function SettingsGeneral() {
 	const query = useSettings();
 	return (
@@ -99,7 +71,8 @@ function GeneralBody({ snapshot }: { snapshot: SettingsSnapshot }) {
 					title="Default model"
 					description={current === null ? "No default set." : undefined}
 				>
-					<DefaultModelPicker
+					<ModelPicker
+						id="default-model"
 						models={models}
 						selected={selected}
 						disabled={defaults.isPending || models.length === 0}
@@ -111,6 +84,7 @@ function GeneralBody({ snapshot }: { snapshot: SettingsSnapshot }) {
 			{snapshot.agent !== null && (
 				<AgentLimitsForm limits={snapshot.agent} scope={snapshot.modelScope} />
 			)}
+			<SettingsForm snapshot={snapshot} />
 			{defaults.error !== null && <Notice tone="error">{defaults.error.message}</Notice>}
 		</div>
 	);
@@ -142,74 +116,5 @@ function RefusedSettings({
 			</ul>
 			{limitsHidden && <p>Fix the value in settings.json to set these limits here.</p>}
 		</Notice>
-	);
-}
-
-/**
- * 600 models is a search problem, not a list problem: the dropdown is a
- * `Command` in a `Popover`, so the search field filters by provider, name or id,
- * and the popup is as wide as the row instead of as wide as the button.
- */
-function DefaultModelPicker({
-	models,
-	selected,
-	disabled,
-	onPick,
-}: {
-	models: readonly SnapshotModel[];
-	selected: string;
-	disabled: boolean;
-	onPick: (model: SnapshotModel) => void;
-}) {
-	const [open, setOpen] = useState(false);
-	const current = models.find((model) => modelKey(model) === selected);
-
-	return (
-		<Popover open={open} onOpenChange={setOpen}>
-			<PopoverTrigger
-				disabled={disabled}
-				render={
-					<Button
-						id="default-model"
-						aria-label="Default model"
-						variant="outline"
-						className="w-full justify-between font-normal"
-					/>
-				}
-			>
-				<span className="truncate">
-					{current === undefined ? "Choose a model…" : labelOf(current)}
-				</span>
-				<ChevronDownIcon data-icon="inline-end" className="opacity-60" />
-			</PopoverTrigger>
-			<PopoverContent align="start" className="w-(--anchor-width) p-0">
-				<Command defaultValue={current === undefined ? undefined : itemValueOf(current)}>
-					<CommandInput placeholder="Search models…" />
-					<CommandList>
-						<CommandEmpty>No model matches.</CommandEmpty>
-						{groupsOf(models).map(([provider, entries]) => (
-							<CommandGroup key={provider} heading={provider}>
-								{entries.map((model) => {
-									const value = modelKey(model);
-									return (
-										<CommandItem
-											key={value}
-											value={itemValueOf(model)}
-											onSelect={() => {
-												onPick(model);
-												setOpen(false);
-											}}
-										>
-											<span className="truncate">{model.name}</span>
-											{value === selected && <CheckIcon className="ml-auto" />}
-										</CommandItem>
-									);
-								})}
-							</CommandGroup>
-						))}
-					</CommandList>
-				</Command>
-			</PopoverContent>
-		</Popover>
 	);
 }

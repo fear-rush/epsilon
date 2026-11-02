@@ -250,7 +250,8 @@ export interface paths {
 		delete?: never;
 		options?: never;
 		head?: never;
-		patch?: never;
+		/** Write one setting through pi's own setter, then reload every live engine; keys without a setter are refused here */
+		patch: operations["writeSetting"];
 		trace?: never;
 	};
 	"/api/settings/agent-limits": {
@@ -1138,6 +1139,12 @@ export interface components {
 			source: string;
 			scope: "user" | "project";
 			installedPath?: string;
+		};
+		SettingWriteInput: {
+			key: string;
+			value: string | number | boolean | null | (string[]) | ({
+				[key: string]: unknown;
+			});
 		};
 		ProviderDetail: {
 			id: string;
@@ -2168,6 +2175,38 @@ interface operations {
 				};
 			};
 			/** The project is not a trusted folder */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Write one setting through pi's own setter, then reload every live engine; keys without a setter are refused here */
+	writeSetting: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["SettingWriteInput"];
+			};
+		};
+		responses: {
+			/** pi's settings.json now holds this value */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The panel does not write that key, or the value is not one pi accepts */
 			400: {
 				headers: {
 					[name: string]: unknown;

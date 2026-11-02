@@ -211,6 +211,13 @@ A key pi reads from the home alone never reports the project as its layer. A val
 refuses is that key's error on screen; it never fails the page, and the panel does not
 present a limit pi would not use.
 
+One setting is one request: the page validates the value against that key's own
+schema, writes it through the matching `SettingsManager` setter, flushes, and reloads
+the live engines. A key with no setter is refused by that route rather than merged
+into it; the merged keys keep their own writer. A project's value wins over the
+home's, so the panel shows it read-only instead of letting a write appear to do
+nothing.
+
 Signing in with an account is the dashboard's too, because `ModelRuntime.login()` is a
 host API: the panel starts the flow, relays the questions and links pi reports, and
 cancels it. It never writes `auth.json` itself; a credential changes only through

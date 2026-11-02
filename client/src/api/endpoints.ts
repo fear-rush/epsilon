@@ -30,6 +30,7 @@ import type {
 	Readiness,
 	SessionList,
 	SettingsSnapshot,
+	SettingWriteInput,
 	SkillBundleList,
 	SkillDocument,
 	SkillFile,
@@ -242,6 +243,11 @@ export const setAgentLimits = async (limits: SettingsSnapshot["agent"]): Promise
 
 export const setDefaultModel = async (model: DefaultModel): Promise<void> => {
 	await api.PUT("/api/settings/default-model", { body: model });
+};
+
+/** One setting through pi's own setter; the server reloads every live engine. */
+export const saveSetting = async (setting: SettingWriteInput): Promise<void> => {
+	await api.PATCH("/api/settings", { body: setting });
 };
 
 export const saveMcpServer = async (project: Project, input: McpServerInput): Promise<void> => {

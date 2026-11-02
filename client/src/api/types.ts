@@ -46,6 +46,7 @@ export type Readiness = Schemas["Readiness"];
 export type SessionList = Schemas["SessionList"];
 export type SessionSummary = Schemas["SessionSummary"];
 export type SettingsSnapshot = Schemas["SettingsSnapshot"];
+export type SettingWriteInput = Schemas["SettingWriteInput"];
 export type ForeignSkillView = Schemas["ForeignSkillView"];
 export type SkillBundleList = Schemas["SkillBundleList"];
 export type SkillDocument = Schemas["SkillDocument"];

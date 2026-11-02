@@ -1,7 +1,7 @@
 /**
- * The settings page reads `settings.json` one key at a time, so a value pi refuses
- * is that key's error instead of a failed page. These checks build real homes (and
- * one trusted project) and read the route the browser reads.
+ * The settings routes: one read with a row per key, and one write per key through
+ * pi's own setter. These checks build real homes (and one trusted project) and use
+ * the route the browser uses, then read pi's answer back.
  */
 import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
@@ -11,6 +11,8 @@ import { z } from "zod";
 
 import { createApp } from "../../app";
 import { agentHome } from "../../platform/agent-home";
+import { globalSettings } from "../../platform/pi";
+import { settingWriteSchema } from "../general";
 import { SessionRegistry } from "../conversation";
 
 /** What the test writes to `settings.json`; any JSON object is a settings file. */
@@ -34,7 +36,8 @@ const appOn = async (settings?: SettingsFile) => {
 	if (settings !== undefined) {
 		await writeFile(join(home.dir, "settings.json"), JSON.stringify(settings));
 	}
-	return createApp({ home, userHome: home.dir, engines: new SessionRegistry(home) });
+	const app = createApp({ home, userHome: home.dir, engines: new SessionRegistry(home) });
+	return { app, home };
 };
 
 const settingsOf = async (app: ReturnType<typeof createApp>, project?: string): Promise<Body> => {
@@ -52,7 +55,7 @@ const rowOf = (body: Body, key: string): z.infer<typeof rowSchema> => {
 };
 
 test("a refused number is that key's error, not a failed page", async () => {
-	const app = await appOn({ compaction: { reserveTokens: "lots" } });
+	const { app } = await appOn({ compaction: { reserveTokens: "lots" } });
 	const body = await settingsOf(app);
 	expect(body.agent).toBeNull();
 	const row = rowOf(body, "compaction.reserveTokens");
@@ -64,7 +67,7 @@ test("a refused number is that key's error, not a failed page", async () => {
 });
 
 test("a key names the layer that supplies it, or pi's default", async () => {
-	const app = await appOn({ steeringMode: "all", theme: "dark" });
+	const { app } = await appOn({ steeringMode: "all", theme: "dark" });
 	const body = await settingsOf(app);
 	expect(rowOf(body, "steeringMode")).toMatchObject({ value: "all", scope: "global" });
 	expect(rowOf(body, "followUpMode")).toMatchObject({
@@ -108,4 +111,57 @@ test("a project's settings file is reported as the project layer", async () => {
 		scope: "project",
 	});
 	expect(rowOf(body, "followUpMode")).toMatchObject({ scope: "default" });
+});
+
+/** A write through the route the browser uses. */
+const write = (app: ReturnType<typeof createApp>, body: z.infer<typeof settingWriteSchema>) =>
+	app.request("/api/settings", {
+		method: "PATCH",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify(body),
+	});
+
+test("a written value lands in the file pi reads, and the read names its layer", async () => {
+	const { app, home } = await appOn({});
+	expect((await write(app, { key: "steeringMode", value: "all" })).status).toBe(204);
+	// pi's own reader is the proof: a fresh manager sees the written value.
+	expect(globalSettings(home).getSteeringMode()).toBe("all");
+	expect(rowOf(await settingsOf(app), "steeringMode")).toMatchObject({
+		value: "all",
+		scope: "global",
+	});
+});
+
+test("a nested key writes its own branch and keeps the others", async () => {
+	const { app, home } = await appOn({ images: { autoResize: true }, theme: "dark" });
+	expect((await write(app, { key: "images.blockImages", value: true })).status).toBe(204);
+	const settings = globalSettings(home);
+	expect(settings.getBlockImages()).toBe(true);
+	expect(settings.getImageAutoResize()).toBe(true);
+	expect(settings.getThemeSetting()).toBe("dark");
+});
+
+test("a per-model thinking override is added and removed", async () => {
+	const { app, home } = await appOn({});
+	const override = { provider: "anthropic", modelId: "claude-sonnet", level: "high" };
+	expect((await write(app, { key: "modelThinkingLevels", value: override })).status).toBe(204);
+	expect(globalSettings(home).getModelThinkingLevel("anthropic", "claude-sonnet")).toBe("high");
+	expect(
+		(await write(app, { key: "modelThinkingLevels", value: { ...override, level: null } })).status,
+	).toBe(204);
+	expect(globalSettings(home).getModelThinkingLevel("anthropic", "claude-sonnet")).toBeUndefined();
+});
+
+test("a key without a setter, or a value pi cannot take, is refused", async () => {
+	const { app } = await appOn({});
+	const unsettable = await write(app, { key: "compaction.reserveTokens", value: 1000 });
+	expect(unsettable.status).toBe(400);
+	expect(await unsettable.json()).toMatchObject({
+		message: expect.stringContaining("compaction.reserveTokens"),
+	});
+	const wrongType = await write(app, { key: "steeringMode", value: 5 });
+	expect(wrongType.status).toBe(400);
+	expect(await wrongType.json()).toMatchObject({
+		message: "steeringMode cannot take that value.",
+	});
 });

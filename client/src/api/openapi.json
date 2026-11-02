@@ -1324,6 +1324,45 @@
 					"scope"
 				]
 			},
+			"SettingWriteInput": {
+				"type": "object",
+				"properties": {
+					"key": {
+						"type": "string",
+						"minLength": 1
+					},
+					"value": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "number"
+							},
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							},
+							{
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							},
+							{
+								"type": "object",
+								"additionalProperties": {}
+							}
+						]
+					}
+				},
+				"required": [
+					"key",
+					"value"
+				]
+			},
 			"ProviderDetail": {
 				"type": "object",
 				"properties": {
@@ -4095,6 +4134,38 @@
 					},
 					"400": {
 						"description": "The project is not a trusted folder",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			},
+			"patch": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "writeSetting",
+				"description": "Write one setting through pi's own setter, then reload every live engine; keys without a setter are refused here",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SettingWriteInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "pi's settings.json now holds this value"
+					},
+					"400": {
+						"description": "The panel does not write that key, or the value is not one pi accepts",
 						"content": {
 							"application/json": {
 								"schema": {
