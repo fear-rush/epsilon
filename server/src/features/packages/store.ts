@@ -3,13 +3,24 @@
  * the install and the settings write are exported, so the panel calls them
  * instead of copying `pi install` (docs/pi-sdk.md). pi's `local` flag is the
  * project scope, `pi install -l`.
+ *
+ * A resource switch is a filter in the package's own settings entry, written the
+ * way `pi config` writes one: `-<rel>` for off, and `+<rel>` for on when the entry
+ * is a project delta over a parent (`autoload: false`). A plain entry has nothing
+ * to add back, so turning a resource on removes the pattern.
  */
 
+import { basename, dirname, extname, isAbsolute, relative, resolve } from "node:path";
+import { z } from "zod";
 import type { AgentHome } from "../../platform/agent-home";
-import { packageManager, resolveAllResources } from "../../platform/pi";
-import type { ResolvedResource } from "../../platform/pi";
-import { basename, dirname, extname, isAbsolute, resolve } from "node:path";
-import type { PackageResources, PackageScope, PackageView } from "./contract";
+import {
+	packageManager,
+	readPackageEntries,
+	resolveAllResources,
+	writePackageEntries,
+} from "../../platform/pi";
+import type { PackageSource, ResolvedResource } from "../../platform/pi";
+import type { PackageResourceInput, PackageResources, PackageScope, PackageView } from "./contract";
 
 export const listPackages = (folder: string, home: AgentHome): PackageView[] =>
 	packageManager(folder, home)
@@ -67,18 +78,27 @@ export const removePackage = async (
 const nameOf = (path: string): string =>
 	basename(path) === "SKILL.md" ? basename(dirname(path)) : basename(path, extname(path));
 
-/**
- * What one declared package provides, grouped from pi's resolver by the source in
- * each resource's metadata. Reading never installs a missing package.
- */
-export const packageResources = async (
+/** The four kinds of resource a package entry can filter, in pi's order. */
+const RESOURCE_TYPES = ["extensions", "skills", "prompts", "themes"] as const;
+
+type ResourceType = (typeof RESOURCE_TYPES)[number];
+
+/** One resource pi resolved, with the package root a filter pattern is relative to. */
+type PackageResource = {
+	path: string;
+	name: string;
+	enabled: boolean;
+	baseDir: string;
+};
+
+const resolvedPackageResources = async (
 	folder: string,
 	home: AgentHome,
 	source: string,
 	scope: PackageScope,
-): Promise<PackageResources> => {
+): Promise<Record<ResourceType, PackageResource[]>> => {
 	const resolved = await resolveAllResources(folder, home);
-	const pick = (list: ResolvedResource[]) =>
+	const pick = (list: ResolvedResource[]): PackageResource[] =>
 		list
 			.filter(
 				(entry) =>
@@ -90,6 +110,7 @@ export const packageResources = async (
 				path: entry.path,
 				name: nameOf(entry.path),
 				enabled: entry.enabled,
+				baseDir: entry.metadata.baseDir ?? dirname(entry.path),
 			}));
 	return {
 		extensions: pick(resolved.extensions),
@@ -97,4 +118,104 @@ export const packageResources = async (
 		prompts: pick(resolved.prompts),
 		themes: pick(resolved.themes),
 	};
+};
+
+const toView = ({ path, name, enabled }: PackageResource): PackageResources["skills"][number] => ({
+	path,
+	name,
+	enabled,
+});
+
+/**
+ * What one declared package provides, grouped from pi's resolver by the source in
+ * each resource's metadata. Reading never installs a missing package.
+ */
+export const packageResources = async (
+	folder: string,
+	home: AgentHome,
+	source: string,
+	scope: PackageScope,
+): Promise<PackageResources> => {
+	const found = await resolvedPackageResources(folder, home, source, scope);
+	return {
+		extensions: found.extensions.map(toView),
+		skills: found.skills.map(toView),
+		prompts: found.prompts.map(toView),
+		themes: found.themes.map(toView),
+	};
+};
+
+/** The object form of a package entry, which can carry filters and `autoload`. */
+type PackageEntry = Exclude<PackageSource, string>;
+
+/**
+ * One stored package entry, as pi documents it: a source, an optional `autoload`
+ * and one filter array per resource kind. The object is loose, so a key pi does not
+ * document survives a switch.
+ */
+const packageEntryObjectSchema = z.looseObject({
+	source: z.string().min(1),
+	autoload: z.boolean().optional(),
+	extensions: z.array(z.string()).optional(),
+	skills: z.array(z.string()).optional(),
+	prompts: z.array(z.string()).optional(),
+	themes: z.array(z.string()).optional(),
+});
+
+/** The `source` of a stored entry; an entry that is neither form is refused. */
+const sourceOf = (entry: PackageSource): string => {
+	const bare = z.string().safeParse(entry);
+	if (bare.success) return bare.data;
+	const named = packageEntryObjectSchema.safeParse(entry);
+	if (!named.success) {
+		throw new Error(
+			`A package entry is not a source string or an object with one: ${named.error.issues[0]?.message}`,
+		);
+	}
+	return named.data.source;
+};
+
+/** The path a filter entry names, without its `-`, `+` or `!` mark. */
+const filterTarget = (entry: string): string =>
+	entry.startsWith("-") || entry.startsWith("+") || entry.startsWith("!") ? entry.slice(1) : entry;
+
+/**
+ * Turns one package resource on or off in the settings file that declares the
+ * package. The filter is the resource's path relative to the package root, which
+ * is what pi matches. A project entry with `autoload: false` loads nothing by
+ * itself, so turning a resource on there has to name it with `+`.
+ */
+export const setPackageResource = async (
+	folder: string,
+	home: AgentHome,
+	input: PackageResourceInput,
+): Promise<void> => {
+	const found = await resolvedPackageResources(folder, home, input.source, input.scope);
+	const resource = found[input.type].find((entry) => entry.path === input.path);
+	if (resource === undefined) throw new Error("This package does not provide that resource");
+
+	const entries = readPackageEntries(folder, home, input.scope);
+	const index = entries.findIndex((entry) => sourceOf(entry) === input.source);
+	const current = entries[index];
+	if (current === undefined) throw new Error("No declared package matched that source");
+	// A string entry gains a filter object; an object keeps its other keys, `autoload: false`
+	// included, so a delta over a parent package stays a delta.
+	const object = packageEntryObjectSchema.safeParse(current);
+	const stored: PackageEntry = object.success ? { ...object.data } : { source: sourceOf(current) };
+	const pattern = relative(resource.baseDir, resource.path);
+	const kept = (stored[input.type] ?? []).filter((entry) => filterTarget(entry) !== pattern);
+	const patterns = input.enabled
+		? stored.autoload === false
+			? [...kept, `+${pattern}`]
+			: kept
+		: [...kept, `-${pattern}`];
+	stored[input.type] = patterns.length > 0 ? patterns : undefined;
+
+	const filtered = RESOURCE_TYPES.some((key) => stored[key] !== undefined);
+	if (filtered) entries[index] = stored;
+	// Without a filter a delta has nothing left to differ by, so it goes away and the
+	// package inherits its parent again; a plain entry loses its object form.
+	else if (stored.autoload === false) entries.splice(index, 1);
+	else entries[index] = stored.source;
+	await writePackageEntries(folder, home, input.scope, entries);
 };

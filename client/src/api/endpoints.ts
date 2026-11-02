@@ -16,6 +16,7 @@ import type {
 	McpRegistrySource,
 	McpServerDetail,
 	McpServerInput,
+	PackageResourceInput,
 	PackageResources,
 	PackageView,
 	ProviderDetail,
@@ -652,3 +653,11 @@ export const fetchPackageResources = async (
 			})
 		).data,
 	);
+
+/** Turns one resource of a package on or off through that package's own filter. */
+export const setPackageResource = async (
+	project: Project,
+	input: PackageResourceInput,
+): Promise<void> => {
+	await api.PUT("/api/settings/packages/resource", { params: scoped(project), body: input });
+};

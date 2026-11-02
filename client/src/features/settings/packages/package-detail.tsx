@@ -98,7 +98,7 @@ export function PackageDetail({ scope, source }: { scope: PackageView["scope"]; 
 			) : resources.error !== null ? (
 				<StatusView {...errorView(resources.error)} />
 			) : (
-				<PackageProvides resources={resources.data} />
+				<PackageProvides resources={resources.data} source={source} scope={scope} />
 			)}
 			<DeleteDialog
 				open={removing}

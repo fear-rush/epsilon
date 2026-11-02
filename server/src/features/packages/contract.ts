@@ -29,6 +29,25 @@ const resourceSchema = z.object({
 	enabled: z.boolean(),
 });
 
+/** The four resource kinds pi's package filter names. */
+const packageResourceTypeSchema = z.enum(["extensions", "skills", "prompts", "themes"]);
+
+/**
+ * One switch on one package resource. The path is checked against what pi resolved
+ * for that package, so the panel cannot write a filter for a file that is not there.
+ */
+export const packageResourceInputSchema = z
+	.object({
+		source: z.string().min(1),
+		scope: packageScopeSchema,
+		type: packageResourceTypeSchema,
+		path: z.string().min(1),
+		enabled: z.boolean(),
+	})
+	.openapi("PackageResourceInput");
+
+export type PackageResourceInput = z.infer<typeof packageResourceInputSchema>;
+
 export const packageResourcesSchema = z
 	.object({
 		extensions: z.array(resourceSchema),

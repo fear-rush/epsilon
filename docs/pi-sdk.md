@@ -287,7 +287,7 @@ never a top-level row and is not a message of its own.
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Default provider and model | `SettingsManager.setDefaultModelAndProvider`, then `flush()`                                                                                                                                           |
 | Other settings             | `SettingsManager` setters (there is none for `defaultTools`, below)                                                                                                                                    |
-| Packages                   | `DefaultPackageManager.installAndPersist`, `removeAndPersist`, `listConfiguredPackages`                                                                                                                |
+| Packages                   | `DefaultPackageManager.installAndPersist`, `removeAndPersist`, `listConfiguredPackages`; `SettingsManager.setPackages` and `setProjectPackages` for a filter                                           |
 | Project trust              | `ProjectTrustStore.set`                                                                                                                                                                                |
 | Providers (`models.json`)  | **none.** `registerProvider()` is runtime-only; `ModelConfig` is read-only                                                                                                                             |
 | MCP servers (`mcp.json`)   | **none reachable.** `addMcpServerConfig`, `removeMcpServerConfig` and `loadMcpConfig` exist, but the package's `exports` map exposes only `.` and `./rpc-entry`, so they cannot be imported through it |
@@ -478,6 +478,14 @@ Skills also load from `<cwd>/.pi/skills`, `<cwd>/.agents/skills`, `~/.agents/ski
 and installed packages.
 Packages are declared in `settings.json` and installed with
 `pi install npm:@scope/pkg`, `pi install git:host/repo` or `pi install ./path`.
+An entry is a source string or an object with `source`, an optional `autoload`, and
+optional `extensions`, `skills`, `prompts` and `themes` arrays. A filter pattern is
+a path relative to the package root: `-rel` forces it off, `+rel` forces it on,
+`!rel` excludes what a glob includes, and a plain entry includes it. An empty array
+disables that whole kind. `autoload: false` makes the entry a delta over the package
+of the same source in the other scope, so only the named files load; `pi config`
+removes the entry when its last filter goes, which restores the parent. A project
+entry without `autoload: false` replaces a global entry of the same package.
 MCP servers come from `mcp.json` and a project's `.pi/mcp.json`. The project file
 is read only in a trusted project (see Project trust); a project entry
 there replaces a global entry of the same name, and one without `command`, `url`

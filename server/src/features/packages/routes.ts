@@ -3,9 +3,13 @@ import type { Deps } from "../../deps";
 import type { AgentHome } from "../../platform/agent-home";
 import { configWrite, errorContent, failure, toError } from "../../platform/http";
 import { settingsFolder, settingsScopeQuerySchema } from "../projects";
-import { packageResourcesSchema, packageSourceSchema as sourceSchema } from "./contract";
+import {
+	packageResourcesSchema,
+	packageResourceInputSchema,
+	packageSourceSchema as sourceSchema,
+} from "./contract";
 import type { PackageScope } from "./contract";
-import { installPackage, packageResources, removePackage } from "./store";
+import { installPackage, packageResources, removePackage, setPackageResource } from "./store";
 
 const installPackageRoute = createRoute({
 	method: "post",
@@ -59,6 +63,26 @@ const folderFor = (home: AgentHome, project: string | undefined, scope: PackageS
 	return settingsFolder(home, project);
 };
 
+const setPackageResourceRoute = createRoute({
+	method: "put",
+	path: "/api/settings/packages/resource",
+	tags: ["settings"],
+	operationId: "setPackageResource",
+	description:
+		"Turn one of a package's resources on or off by writing a filter into the package's own settings entry, the way pi config does",
+	request: {
+		query: settingsScopeQuerySchema,
+		body: {
+			required: true,
+			content: { "application/json": { schema: packageResourceInputSchema } },
+		},
+	},
+	responses: {
+		204: { description: "The filter is written, and live engines reloaded" },
+		400: { description: "The resource could not be switched", content: errorContent },
+	},
+});
+
 export const packagesRoutes = ({ home, engines }: Deps) =>
 	new OpenAPIHono()
 		.openapi(installPackageRoute, (c) => {
@@ -76,6 +100,13 @@ export const packagesRoutes = ({ home, engines }: Deps) =>
 			} catch (error) {
 				return failure(c, toError(error, "The package could not be read"), 400);
 			}
+		})
+		.openapi(setPackageResourceRoute, (c) => {
+			const input = c.req.valid("json");
+			const { project } = c.req.valid("query");
+			return configWrite(c, engines, async () =>
+				setPackageResource(await folderFor(home, project, input.scope), home, input),
+			);
 		})
 		.openapi(removePackageRoute, (c) => {
 			const { source, scope, project } = c.req.valid("query");

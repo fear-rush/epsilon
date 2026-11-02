@@ -3765,6 +3765,45 @@
 					"prompts",
 					"themes"
 				]
+			},
+			"PackageResourceInput": {
+				"type": "object",
+				"properties": {
+					"source": {
+						"type": "string",
+						"minLength": 1
+					},
+					"scope": {
+						"type": "string",
+						"enum": [
+							"user",
+							"project"
+						]
+					},
+					"type": {
+						"type": "string",
+						"enum": [
+							"extensions",
+							"skills",
+							"prompts",
+							"themes"
+						]
+					},
+					"path": {
+						"type": "string",
+						"minLength": 1
+					},
+					"enabled": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"source",
+					"scope",
+					"type",
+					"path",
+					"enabled"
+				]
 			}
 		},
 		"parameters": {}
@@ -7061,6 +7100,53 @@
 					},
 					"400": {
 						"description": "The read failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/packages/resource": {
+			"put": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "setPackageResource",
+				"description": "Turn one of a package's resources on or off by writing a filter into the package's own settings entry, the way pi config does",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/PackageResourceInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The filter is written, and live engines reloaded"
+					},
+					"400": {
+						"description": "The resource could not be switched",
 						"content": {
 							"application/json": {
 								"schema": {

@@ -16,6 +16,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import type {
 	LoadSkillsResult,
+	PackageSource,
 	ResolvedPaths,
 	ResolvedResource,
 	SessionInfo,
@@ -25,6 +26,7 @@ import type { AgentHome } from "./agent-home";
 
 export type {
 	ModelRuntime,
+	PackageSource,
 	ProviderModelConfig,
 	ResolvedResource,
 	ResourceDiagnostic,
@@ -231,5 +233,29 @@ export const writeSkillEntries = async (
 	const settings = settingsManager(folder, home);
 	if (scope === "user") settings.setSkillPaths(entries);
 	else settings.setProjectSkillPaths(entries);
+	await settings.flush();
+};
+
+/** The `packages` array of one settings file, which holds sources and their filters. */
+export const readPackageEntries = (
+	folder: string,
+	home: AgentHome,
+	scope: SkillSettingsScope,
+): PackageSource[] => {
+	const settings = settingsManager(folder, home);
+	const stored = scope === "user" ? settings.getGlobalSettings() : settings.getProjectSettings();
+	return [...(stored.packages ?? [])];
+};
+
+/** Replaces the `packages` array through pi's setter and waits for the write. */
+export const writePackageEntries = async (
+	folder: string,
+	home: AgentHome,
+	scope: SkillSettingsScope,
+	entries: PackageSource[],
+): Promise<void> => {
+	const settings = settingsManager(folder, home);
+	if (scope === "user") settings.setPackages(entries);
+	else settings.setProjectPackages(entries);
 	await settings.flush();
 };

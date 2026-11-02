@@ -337,7 +337,9 @@ own data. Not: writing pins into a session transcript or keeping them in server 
 MCP servers, skills and packages each open on a Global | Project tab, the split pi
 makes between the home and a project's `.pi`. The tab decides what Add writes and
 names the file; a project tab also lists the global entries it inherits, and
-switching an inherited MCP server there writes an override in the project file. The
+switching an inherited MCP server there writes an override in the project file. A
+package's page switches its resources one by one; the switch is a filter in the
+package entry of the file the tab names, so the package itself stays installed. The
 project is in the Settings URL, so a project's menu in the sidebar links straight to
 it.
 

@@ -28,6 +28,7 @@ export type McpServerInput = Schemas["McpServerInput"];
 export type McpServerView = Schemas["McpServerView"];
 export type FolderListing = Schemas["FolderListing"];
 export type ModelOverride = Schemas["ModelOverride"];
+export type PackageResourceInput = Schemas["PackageResourceInput"];
 export type PackageResources = Schemas["PackageResources"];
 export type PackageView = Schemas["PackageView"];
 export type ProjectSessions = Schemas["ProjectSessions"];

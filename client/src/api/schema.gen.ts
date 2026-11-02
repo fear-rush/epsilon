@@ -838,6 +838,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/settings/packages/resource": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Turn one of a package's resources on or off by writing a filter into the package's own settings entry, the way pi config does */
+		put: operations["setPackageResource"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 }
 
 export interface components {
@@ -1691,6 +1708,13 @@ export interface components {
 				name: string;
 				enabled: boolean;
 			})[];
+		};
+		PackageResourceInput: {
+			source: string;
+			scope: "user" | "project";
+			type: "extensions" | "skills" | "prompts" | "themes";
+			path: string;
+			enabled: boolean;
 		};
 	};
 }
@@ -3953,6 +3977,41 @@ interface operations {
 				};
 			};
 			/** The read failed */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Turn one of a package's resources on or off by writing a filter into the package's own settings entry, the way pi config does */
+	setPackageResource: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["PackageResourceInput"];
+			};
+		};
+		responses: {
+			/** The filter is written, and live engines reloaded */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The resource could not be switched */
 			400: {
 				headers: {
 					[name: string]: unknown;
