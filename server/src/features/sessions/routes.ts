@@ -204,7 +204,12 @@ export const sessionsRoutes = ({ home, engines }: Deps) =>
 	new OpenAPIHono()
 		.openapi(listSessionsRoute, async (c) => {
 			const pinned = await readPinned(home);
-			const list = await groupSessions(home, await listAllSessions(), engines.live(), pinned.ids);
+			const list = await groupSessions(
+				home,
+				await listAllSessions(home),
+				engines.live(),
+				pinned.ids,
+			);
 			return c.json(
 				pinned.problem === undefined ? list : { ...list, pinsProblem: pinned.problem },
 				200,
@@ -264,7 +269,7 @@ export const sessionsRoutes = ({ home, engines }: Deps) =>
 			const { id } = c.req.valid("param");
 			const { name } = c.req.valid("json");
 			const live = engines.find(id);
-			const outcome = await renameSession(id, name, live?.rename.bind(live));
+			const outcome = await renameSession(home, id, name, live?.rename.bind(live));
 			if (outcome.ok) return c.json(outcome.value, 200);
 			return c.json({ code: outcome.code, message: outcome.message }, 404);
 		})

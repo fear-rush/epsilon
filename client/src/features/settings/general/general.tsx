@@ -88,6 +88,19 @@ function GeneralBody({ snapshot }: { snapshot: SettingsSnapshot }) {
 				</Row>
 				<Row
 					stacked
+					title="Sessions"
+					description={
+						snapshot.sessions.source === null
+							? "pi's default layout: one folder per project under this root."
+							: `Set in ${snapshot.sessions.source}.`
+					}
+				>
+					<code className="w-full rounded-md bg-muted pad-item text-code break-all">
+						{snapshot.sessions.dir}
+					</code>
+				</Row>
+				<Row
+					stacked
 					title="Default model"
 					description={current === null ? "No default set." : undefined}
 				>

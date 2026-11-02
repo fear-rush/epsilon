@@ -1064,6 +1064,10 @@ export interface components {
 			project: components["schemas"]["ProjectStatus"] & (({
 				[key: string]: unknown;
 			}) | null);
+			sessions: {
+				dir: string;
+				source: string | null;
+			};
 			skills: components["schemas"]["SkillView"][];
 			skillsLive: boolean;
 			skillPaths: string[];

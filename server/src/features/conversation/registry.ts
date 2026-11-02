@@ -180,7 +180,10 @@ export class SessionRegistry {
 	 * nor pi's list has this session.
 	 */
 	async export(sessionId: string, format: ExportFormat): Promise<ExportedSession | undefined> {
-		if (this.find(sessionId) === undefined && (await locateSession(sessionId)) === undefined) {
+		if (
+			this.find(sessionId) === undefined &&
+			(await locateSession(sessionId, this.home)) === undefined
+		) {
 			return undefined;
 		}
 		const session = await this.ensure(sessionId);
@@ -233,7 +236,7 @@ export class SessionRegistry {
 	}
 
 	private async locate(sessionId: string, place: Place | undefined): Promise<Location> {
-		const located = await locateSession(sessionId);
+		const located = await locateSession(sessionId, this.home);
 		if (located !== undefined) return this.locationOf(located);
 		if (place === undefined) throw new Error("The agent home has no such session.");
 		const cwd = place.kind === "project" ? place.path : this.home.chatsDir;
@@ -273,7 +276,7 @@ export class SessionRegistry {
 		sessionId: string,
 		replace: (host: SessionHost) => Promise<string>,
 	): Promise<CopyOutcome> {
-		const located = await locateSession(sessionId);
+		const located = await locateSession(sessionId, this.home);
 		if (located === undefined) return { ok: false, reason: "session-not-found" };
 		if (!(await this.closeIfIdle(sessionId))) return { ok: false, reason: "session-running" };
 		try {

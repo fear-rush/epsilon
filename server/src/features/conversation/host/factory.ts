@@ -18,7 +18,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 
 import type { AgentHome } from "../../../platform/agent-home";
-import { hasProjectResources } from "../../../platform/pi";
+import { hasProjectResources, sessionDirOf } from "../../../platform/pi";
 import { decideProjectTrust, trustExtensions } from "../../projects";
 import { builtinExtensions, setCodingTools } from "../engine";
 import type { McpReportSink } from "../extensions/mcp-observer";
@@ -39,18 +39,22 @@ export type RuntimeFactoryOptions = {
 };
 
 /**
- * An existing session opens from the file the registry located. A fresh id, which
- * the browser mints for "New chat", creates pi's session with that exact id; pi
- * writes the file on the first message.
+ * An existing session opens from the file the registry located, in the directory pi
+ * resolves for its folder; a fresh id, which the browser mints for "New chat",
+ * creates pi's session with that exact id and directory. pi writes the file on the
+ * first message.
  */
 export const openSessionManager = (
 	cwd: string,
 	sessionId: string,
 	file: string | undefined,
-): SessionManager =>
-	file === undefined
-		? SessionManager.create(cwd, undefined, { id: sessionId })
-		: SessionManager.open(file, undefined, cwd);
+	home: AgentHome,
+): SessionManager => {
+	const sessionDir = sessionDirOf(cwd, home);
+	return file === undefined
+		? SessionManager.create(cwd, sessionDir, { id: sessionId })
+		: SessionManager.open(file, sessionDir, cwd);
+};
 
 /**
  * Trust is decided before the services load the folder. A folder with nothing pi

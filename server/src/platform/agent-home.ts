@@ -18,6 +18,8 @@ export type AgentHome = {
 	/** The previous `mcp.log`, kept until the next rotation overwrites it. */
 	readonly mcpLogRotatedFile: string;
 	readonly skillsDir: string;
+	/** pi's default sessions root; the `sessionDir` setting can point elsewhere. */
+	readonly sessionsDir: string;
 	/** Epsilon's pinned chat ids. pi has no pin concept, so this file is ours. */
 	readonly pinsFile: string;
 	/**
@@ -53,6 +55,7 @@ export const agentHome = (dir: string, options: AgentHomeOptions = {}): AgentHom
 	mcpLogFile: join(dir, "mcp.log"),
 	mcpLogRotatedFile: join(dir, "mcp.log.1"),
 	skillsDir: join(dir, "skills"),
+	sessionsDir: join(dir, "sessions"),
 	pinsFile: join(dir, "pinned-sessions.json"),
 	chatsDir: join(dir, "chats"),
 });

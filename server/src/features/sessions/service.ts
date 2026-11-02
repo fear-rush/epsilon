@@ -13,7 +13,13 @@ import type { AgentHome } from "../../platform/agent-home";
 import { forkSession, listAllSessions, locateSession, setSessionName } from "../../platform/pi";
 import type { StoredSession } from "../../platform/pi";
 import type { CopyOutcome } from "../conversation";
-import { ProjectNotTrustedError, placeOf, projectStatus, trustedProjectFolder } from "../projects";
+import {
+	ProjectNotTrustedError,
+	isInside,
+	placeOf,
+	projectStatus,
+	trustedProjectFolder,
+} from "../projects";
 import type {
 	ExportedSession,
 	ExportFormat,
@@ -99,7 +105,7 @@ export const deleteSession = async (
 	id: string,
 	closeIfIdle: (id: string) => Promise<boolean>,
 ): Promise<SessionOutcome<null>> => {
-	const located = await locateSession(id);
+	const located = await locateSession(id, home);
 	if (located === undefined) return notFound;
 	if (!(await closeIfIdle(id))) return running;
 	await rm(located.file, { force: true });
@@ -117,7 +123,7 @@ export const removeProject = async (
 	path: string,
 	closeIfIdle: (id: string) => Promise<boolean>,
 ): Promise<SessionOutcome<{ removed: number }>> => {
-	const sessions = (await listAllSessions()).filter((session) => {
+	const sessions = (await listAllSessions(home)).filter((session) => {
 		const place = placeOf(session.cwd, home.chatsDir);
 		return place.kind === "project" && place.path === path;
 	});
@@ -141,14 +147,17 @@ export const removeProject = async (
 	}
 	const folders = new Set<string>();
 	for (const session of sessions) {
-		const located = await locateSession(session.id);
+		const located = await locateSession(session.id, home);
 		if (located === undefined) continue;
 		await rm(located.file, { force: true });
 		folders.add(dirname(located.file));
 		await forgetPin(home, session.id);
 	}
-	// pi keeps one folder per project under `sessions/`; drop it once it is empty.
-	for (const folder of folders) await rmdir(folder).catch(() => undefined);
+	// pi keeps one folder per project under `sessions/`; drop it once it is empty. A
+	// custom `sessionDir` belongs to the operator, so it is left where it is.
+	for (const folder of folders) {
+		if (isInside(folder, home.sessionsDir)) await rmdir(folder).catch(() => undefined);
+	}
 	return { ok: true, value: { removed: sessions.length } };
 };
 
@@ -166,7 +175,7 @@ export const moveSessionToProject = async (
 	isRunning: boolean,
 ): Promise<SessionOutcome<{ id: string }>> => {
 	if (isRunning) return running;
-	const located = await locateSession(id);
+	const located = await locateSession(id, home);
 	if (located === undefined) return notFound;
 	let folder: string;
 	try {
@@ -179,7 +188,7 @@ export const moveSessionToProject = async (
 		};
 	}
 	if (located.cwd === folder) return { ok: true, value: { id } };
-	const moved = forkSession(located.file, folder);
+	const moved = forkSession(located.file, folder, home);
 	await rm(located.file, { force: true });
 	return { ok: true, value: { id: moved } };
 };
@@ -189,12 +198,13 @@ export const moveSessionToProject = async (
  * name to the file. The caller polls the list, and the engine resyncs its snapshot.
  */
 export const renameSession = async (
+	home: AgentHome,
 	id: string,
 	name: string,
 	renameLive: ((name: string) => boolean) | undefined,
 ): Promise<SessionOutcome<{ id: string; name: string }>> => {
 	if (renameLive?.(name) === true) return { ok: true, value: { id, name } };
-	const located = await locateSession(id);
+	const located = await locateSession(id, home);
 	if (located === undefined) return notFound;
 	setSessionName(located.file, located.cwd, name);
 	return { ok: true, value: { id, name } };
@@ -246,7 +256,7 @@ export const pinSession = async (
 	id: string,
 	pinned: boolean,
 ): Promise<SessionOutcome<null>> => {
-	const located = await locateSession(id);
+	const located = await locateSession(id, home);
 	if (located === undefined) return notFound;
 	await writePinned(home, id, pinned);
 	return { ok: true, value: null };

@@ -41,6 +41,12 @@ export const settingsSnapshotSchema = z
 		mcpDisabled: z.boolean(),
 		/** The project whose `.pi` this snapshot reads beside the home, or null for the home alone. */
 		project: projectStatusSchema.nullable(),
+		/** Where this folder's sessions are written and listed, and what chose the place. */
+		sessions: z.object({
+			dir: z.string(),
+			/** The settings file that set `dir`, or null for pi's default layout. */
+			source: z.string().nullable(),
+		}),
 		/** Every skill pi sees for the home and the picked project, with why it is or is not active. */
 		skills: z.array(skillViewSchema),
 		/** True when an open engine runs in this scope, so extension-added skills could be read. */

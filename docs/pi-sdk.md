@@ -494,6 +494,14 @@ characters the provider returned.
 | `sessions/`     | pi      | One JSONL per session, under `--<encoded cwd>--/`                          |
 | `chats/`        | Epsilon | The empty folder every chat runs in; it never holds a `.pi`                |
 
+`sessionDir` in `settings.json` moves the session files. pi reads the merged
+setting, including a project's `.pi/settings.json` before trust, and resolves a
+relative value from the working directory. `SessionManager.create()` and `open()`
+take the directory as their second argument, `list(cwd, sessionDir)` and
+`listAll(sessionDir)` read it, and a custom directory makes `list()` filter to that
+folder's own sessions. `open()` uses the directory for `/new` and `/branch`, and
+derives it from the file's parent when none is given.
+
 Skills also load from `<cwd>/.pi/skills`, `<cwd>/.agents/skills`, `~/.agents/skills`
 and installed packages.
 Packages are declared in `settings.json` and installed with
@@ -788,8 +796,9 @@ Turborepo or the runtime.
   session restores it. A change before the first message lives only in memory,
   like a `model_change` (below).
 - **`SessionManager.findById(cwd)` creates a directory.** It goes through
-  `getDefaultSessionDir`, which `mkdir`s `sessions/--<cwd>--`. Look an id up through
-  `SessionManager.listAll()` when the folder is not known yet.
+  `getDefaultSessionDir`, which `mkdir`s `sessions/--<cwd>--` even when `sessionDir`
+  names another place. Look an id up through `SessionManager.listAll(sessionDir)` or
+  the catalog when the folder is not known yet.
 - **A permission `confirm` blocks the turn.** `ctx.ui.confirm` waits for the host's
   `ExtensionUIContext` with no timeout and no error. A host that never answers
   leaves the tool call hanging after `tool_execution_start`.

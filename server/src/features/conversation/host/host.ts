@@ -89,7 +89,12 @@ export class SessionHost {
 		const runtime = await createAgentSessionRuntime(tracked, {
 			cwd: options.cwd,
 			agentDir: options.home.dir,
-			sessionManager: openSessionManager(options.cwd, options.sessionId, options.file),
+			sessionManager: openSessionManager(
+				options.cwd,
+				options.sessionId,
+				options.file,
+				options.home,
+			),
 		});
 		return new SessionHost(runtime, reason);
 	}

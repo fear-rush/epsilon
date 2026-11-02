@@ -4,6 +4,8 @@
  * `features/conversation/`; the rest of the server imports these names, so an
  * upgrade has one place to check.
  */
+import { resolve } from "node:path";
+
 import {
 	DefaultPackageManager,
 	ModelRuntime,
@@ -132,11 +134,47 @@ const summaryOf = (session: SessionInfo): StoredSession => ({
 });
 
 /**
+ * pi's `sessionDir` for one folder, resolved the way pi resolves it: `~` is
+ * expanded by pi, and a relative path comes from the folder. Undefined means pi's
+ * default layout under the agent home.
+ */
+export const sessionDirOf = (cwd: string, home: AgentHome): string | undefined => {
+	const dir = SettingsManager.create(cwd, home.dir).getSessionDir();
+	return dir === undefined ? undefined : resolve(cwd, dir);
+};
+
+/**
  * Every session pi recorded in this home, from every folder, in pi's order.
  * Grouping and the newest-first sort are the caller's.
  */
-export const listAllSessions = async (): Promise<StoredSession[]> =>
-	(await SessionManager.listAll()).map(summaryOf);
+const allSessionInfos = async (home: AgentHome): Promise<SessionInfo[]> => {
+	// pi reads a project's `sessionDir` before trust so it can find the sessions it
+	// wrote there; a host that skipped it would list a different set.
+	const homeDir = sessionDirOf(home.chatsDir, home);
+	const infos =
+		homeDir === undefined ? await SessionManager.listAll() : await SessionManager.listAll(homeDir);
+	const listedDirs = new Set(homeDir === undefined ? [] : [homeDir]);
+	const seen = new Set(infos.map((session) => session.id));
+	const cwds = new Set(infos.map((session) => session.cwd));
+	// A project can name its own directory. Its sessions are only discoverable from a
+	// cwd the current list already holds, so one that has never written elsewhere
+	// cannot be found from the files alone.
+	for (const cwd of cwds) {
+		const dir = sessionDirOf(cwd, home);
+		if (dir === undefined || listedDirs.has(dir)) continue;
+		listedDirs.add(dir);
+		for (const session of await SessionManager.listAll(dir)) {
+			if (seen.has(session.id)) continue;
+			seen.add(session.id);
+			infos.push(session);
+			cwds.add(session.cwd);
+		}
+	}
+	return infos;
+};
+
+export const listAllSessions = async (home: AgentHome): Promise<StoredSession[]> =>
+	(await allSessionInfos(home)).map(summaryOf);
 
 /**
  * The file and folder of one id, or undefined when the home has no such session.
@@ -145,8 +183,9 @@ export const listAllSessions = async (): Promise<StoredSession[]> =>
  */
 export const locateSession = async (
 	id: string,
+	home: AgentHome,
 ): Promise<{ file: string; cwd: string } | undefined> => {
-	const session = (await SessionManager.listAll()).find((candidate) => candidate.id === id);
+	const session = (await allSessionInfos(home)).find((candidate) => candidate.id === id);
 	return session === undefined ? undefined : { file: session.path, cwd: session.cwd };
 };
 
@@ -154,8 +193,8 @@ export const locateSession = async (
  * A new session in `targetCwd` holding the whole history of `sourceFile`. pi
  * writes the file at once and records the source as its parent. Answers the new id.
  */
-export const forkSession = (sourceFile: string, targetCwd: string): string =>
-	SessionManager.forkFrom(sourceFile, targetCwd).getSessionId();
+export const forkSession = (sourceFile: string, targetCwd: string, home: AgentHome): string =>
+	SessionManager.forkFrom(sourceFile, targetCwd, sessionDirOf(targetCwd, home)).getSessionId();
 
 /** Append a display name to a session file that no live engine holds. */
 export const setSessionName = (file: string, cwd: string, name: string): void => {

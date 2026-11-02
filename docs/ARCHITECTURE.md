@@ -76,7 +76,10 @@ sides run. REST shapes live in server `contract.ts`.
 - pi's files in the agent home: transcripts, settings, credentials, models, MCP,
   packages, project trust. Project MCP, skills, packages and overrides live in
   `<project>/.pi`. The session files name their folder, which is how chats and
-  projects are told apart and how the project list is derived.
+  projects are told apart and how the project list is derived. They live under
+  `<home>/sessions/` unless `sessionDir` names another place; that setting is read
+  from the home or a project's `.pi/settings.json` before trust, and a relative
+  value resolves from the folder.
 - Epsilon's own files in the agent home: `pinned-sessions.json`, the pinned chat
   ids. A chat's display name is pi's own session-name entry, not a second file.
 - Live engines in the server's registry. An engine is a pi `AgentSessionRuntime`, so

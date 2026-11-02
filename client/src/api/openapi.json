@@ -539,6 +539,24 @@
 							}
 						]
 					},
+					"sessions": {
+						"type": "object",
+						"properties": {
+							"dir": {
+								"type": "string"
+							},
+							"source": {
+								"type": [
+									"string",
+									"null"
+								]
+							}
+						},
+						"required": [
+							"dir",
+							"source"
+						]
+					},
 					"skills": {
 						"type": "array",
 						"items": {
@@ -587,6 +605,7 @@
 					"mcpLive",
 					"mcpDisabled",
 					"project",
+					"sessions",
 					"skills",
 					"skillsLive",
 					"skillPaths",

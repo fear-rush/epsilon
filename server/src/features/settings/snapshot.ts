@@ -4,8 +4,10 @@
  * made in a terminal shows up on the next open.
  */
 
+import { join, resolve } from "node:path";
+
 import type { AgentHome } from "../../platform/agent-home";
-import { modelRuntime } from "../../platform/pi";
+import { modelRuntime, settingsManager } from "../../platform/pi";
 import { readModelsFrom } from "../conversation";
 import type { SessionRegistry } from "../conversation";
 import {
@@ -41,6 +43,27 @@ const problemText = async (
 };
 
 /**
+ * Where the selected folder's sessions are read and written. pi resolves
+ * `sessionDir` from the merged settings and a relative value from the folder, so the
+ * panel shows the same place pi will use instead of the raw setting.
+ */
+const sessionsOf = (folder: string, home: AgentHome): SettingsSnapshot["sessions"] => {
+	const settings = settingsManager(folder, home);
+	const dir = settings.getSessionDir();
+	const project = settings.getProjectSettings().sessionDir;
+	const global = settings.getGlobalSettings().sessionDir;
+	return {
+		dir: dir === undefined ? home.sessionsDir : resolve(folder, dir),
+		source:
+			project !== undefined
+				? join(folder, ".pi", "settings.json")
+				: global !== undefined
+					? join(home.dir, "settings.json")
+					: null,
+	};
+};
+
+/**
  * `folder` is the picked project, or the chats folder for the home alone (see
  * `settingsFolder`). Project rows appear only when a project is picked.
  */
@@ -67,6 +90,7 @@ export const readSettings = async (
 		home: home.dir,
 		defaultModel: readDefaultModel(home),
 		project,
+		sessions: sessionsOf(folder, home),
 		providers,
 		builtins,
 		// The panel's picker offers every model; the scope is reported beside it, so
