@@ -377,6 +377,39 @@ describe("what a session can reach", () => {
 	});
 });
 
+describe("one bad top-level key", () => {
+	test("is reported once and the servers of that file still load", async () => {
+		const { home, projectDir } = await scratch();
+		await writeFile(
+			home.mcpFile,
+			JSON.stringify({
+				autoEnableCodemode: "yes",
+				mcpServers: { files: { command: "npx", exposure: "direct" } },
+			}),
+		);
+
+		const listing = await listMcpServers(home, projectDir);
+
+		expect(listing.servers).toMatchObject([{ name: "files", kind: "server" }]);
+		expect(listing.error).toContain("autoEnableCodemode must be a boolean");
+		// pi ignores the value, so the switch is not half-read into a truthy answer.
+		expect(listing.reach.autoEnableCodemode).toEqual({});
+		expect(await readMcpServer(home, projectDir, "global", "files")).toMatchObject({
+			kind: "server",
+		});
+	});
+
+	test("a document that is not an object still hides its servers, as pi does", async () => {
+		const { home, projectDir } = await scratch();
+		await writeFile(home.mcpFile, JSON.stringify(["files"]));
+
+		const listing = await listMcpServers(home, projectDir);
+
+		expect(listing.servers).toEqual([]);
+		expect(listing.error).toContain("is not an object with an");
+	});
+});
+
 describe("defaultTools and the reaching tools", () => {
 	const seedCodemodeServer = async () => {
 		const { home, projectDir } = await scratch();

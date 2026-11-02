@@ -16,11 +16,13 @@
  * keeps the value written because it replaces the global entry's.
  */
 import { join } from "node:path";
+import { z } from "zod";
 
 import type { McpExposure, McpOAuth, McpOAuthJson, McpScope } from "shared";
 import { mcpOAuthJsonSchema, mcpOAuthSchema, mcpToolExposureSchema, oauthProblem } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
+import { projectMcpFile } from "../../platform/agent-home";
 import { mergeSecrets, setDefined, setOrDelete } from "../../platform/patch";
 import { packageManager, settingsManager } from "../../platform/pi";
 import { writeDefaultTool } from "../general";
@@ -170,11 +172,18 @@ async function loadEntries(home: AgentHome, projectDir: string): Promise<FileRea
 	const problems: string[] = [];
 	if (globalDocument.problem !== undefined) problems.push(globalDocument.problem);
 	if (projectDocument.problem !== undefined) problems.push(projectDocument.problem);
+	// Per key, as pi does: a value that is not a boolean is reported and ignored, and
+	// the servers in that file still load.
 	const autoEnableCodemode: McpReach["autoEnableCodemode"] = {};
-	const globalAuto = globalDocument.value.autoEnableCodemode;
-	const projectAuto = projectDocument.value.autoEnableCodemode;
-	if (globalAuto !== undefined) autoEnableCodemode.global = globalAuto;
-	if (projectAuto !== undefined) autoEnableCodemode.project = projectAuto;
+	for (const [scope, path, value] of [
+		["global", home.mcpFile, globalDocument.value.autoEnableCodemode],
+		["project", projectMcpFile(projectDir), projectDocument.value.autoEnableCodemode],
+	] as const) {
+		if (value === undefined) continue;
+		const enabled = z.boolean().safeParse(value);
+		if (enabled.success) autoEnableCodemode[scope] = enabled.data;
+		else problems.push(`${path}: autoEnableCodemode must be a boolean`);
+	}
 	return {
 		entries: entriesOf(
 			globalDocument.value.mcpServers ?? {},

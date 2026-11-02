@@ -34,9 +34,12 @@ const oauthSchema = mcpOAuthSchema;
 /** A `/login` provider whose token an HTTP server may send instead of using OAuth. */
 const authSchema = z.looseObject({ provider: z.string().min(1) });
 
+/** The transport an entry names, as pi's validator reads it. */
+const entryTypeSchema = z.enum(["stdio", "http", "streamable-http", "sse"]);
+
 /** One server entry of either transport. Unknown keys are kept by `looseObject`. */
 const mcpEntrySchema = z.looseObject({
-	type: z.enum(["stdio", "http", "streamable-http", "sse"]).optional(),
+	type: entryTypeSchema.optional(),
 	command: z.string().optional(),
 	args: z.array(z.string()).optional(),
 	env: z.record(z.string(), z.string()).optional(),
@@ -202,13 +205,38 @@ export const projectEntryProblem = (entry: McpEntry): string | undefined =>
 		? "auth is only allowed in the global mcp.json."
 		: undefined;
 
+/**
+ * The keys pi's validator never looks at, for the transport the entry uses: it
+ * checks `args`, `env` and `cwd` only for a stdio entry and `headers`, `oauth` and
+ * `auth` only for an HTTP one (`validateMcpServerConfig()` in
+ * `dist/core/mcp-servers.js`). A value the transport ignores cannot make the entry
+ * invalid here either, since pi would load it.
+ */
+const ignoredKeysOf = (raw: McpRawObject): readonly string[] => {
+	const url = z.string().safeParse(raw.url);
+	const command = z.string().safeParse(raw.command);
+	const type = entryTypeSchema.safeParse(raw.type);
+	const kind = type.success ? type.data : undefined;
+	if (url.success && (kind === undefined || kind === "http" || kind === "streamable-http")) {
+		return ["command", "args", "env", "cwd"];
+	}
+	if (command.success && (kind === undefined || kind === "stdio")) {
+		return ["headers", "oauth", "auth"];
+	}
+	return [];
+};
+
 /** Parse one `mcpServers` value the way pi reads it, and say what it is. */
 export function readMcpEntry(name: string, value: McpRawEntry): McpEntryRead {
 	const object = rawEntrySchema.safeParse(value);
 	if (!object.success) {
 		return { kind: "invalid", problem: "pi skips an entry that is not an object." };
 	}
-	const parsed = mcpEntrySchema.safeParse(object.data);
+	const ignored = ignoredKeysOf(object.data);
+	const checked = Object.fromEntries(
+		Object.entries(object.data).filter(([key]) => !ignored.includes(key)),
+	);
+	const parsed = mcpEntrySchema.safeParse(checked);
 	if (!parsed.success) return { kind: "invalid", problem: issueText(parsed.error) };
 	const entry = parsed.data;
 	if (!definesServer(entry)) {

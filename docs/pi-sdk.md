@@ -520,6 +520,16 @@ or `type` only overrides its `enabled`, `exposure` and `toolExposure`. A project
 entry cannot set `auth`. `pi mcp add` writes user-level servers unless `-l` is
 given.
 
+`mcp.json` is parsed with a strict `JSON.parse`, unlike `models.json`: a comment or a
+trailing comma makes the whole file unreadable to pi, so a host that read it leniently
+would list servers pi never loads. `readConfigFile()` judges a top-level key on its own
+and keeps going — a non-boolean `autoEnableCodemode` is one error and the servers in
+that file still load — while an unreadable file or a non-object `mcpServers` yields
+nothing from it. A server entry is checked by `validateMcpServerConfig()`, which looks
+at `args`, `env` and `cwd` only for a stdio entry and `headers`, `oauth` and `auth` only
+for an HTTP one; the keys the entry's transport does not use are never inspected and
+stay in the file.
+
 `updateMcpServerConfig()` writes `enabled: true` by deleting the key and
 `exposure: "codemode"` likewise; an override keeps both written because it
 replaces the global entry's values. `timeout` is in **seconds**. Those functions

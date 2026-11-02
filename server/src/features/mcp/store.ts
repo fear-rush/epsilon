@@ -16,9 +16,14 @@ import { projectMcpFile } from "../../platform/agent-home";
 import { jsonDocument } from "../../platform/json-document";
 import type { JsonDocument, ProblemCause, Wording } from "../../platform/json-document";
 
-/** The JSON a file holds, decoded at the read boundary and kept as it was. */
+/**
+ * The JSON a file holds, decoded at the read boundary and kept as it was. A
+ * top-level key is held as JSON and judged on its own: pi reports a value it cannot
+ * use and still loads every server in the file (`readConfigFile()` in
+ * `dist/extensions/mcp/config.js`), so one bad key must not hide them here either.
+ */
 const mcpFileSchema = z.looseObject({
-	autoEnableCodemode: z.boolean().optional(),
+	autoEnableCodemode: z.json().optional(),
 	mcpServers: z.record(z.string(), z.json()).optional(),
 });
 

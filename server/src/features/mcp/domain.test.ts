@@ -305,6 +305,35 @@ describe("pi's validator rules", () => {
 	});
 });
 
+describe("a key the entry's transport does not use", () => {
+	// pi checks args, env and cwd only for a stdio entry, and headers, oauth and auth
+	// only for an HTTP one; the rest it never looks at.
+	const ignored: [string, Raw][] = [
+		["a wrong-typed args on an HTTP entry", { url: "https://x.test/mcp", args: "--flag" }],
+		["a wrong-typed env on an HTTP entry", { url: "https://x.test/mcp", env: "TOKEN=1" }],
+		["a wrong-typed cwd on an HTTP entry", { url: "https://x.test/mcp", cwd: 5 }],
+		["a wrong-typed command on an HTTP entry", { url: "https://x.test/mcp", command: 7 }],
+		["a wrong-typed headers on a stdio entry", { command: "npx", headers: "x" }],
+		["an oauth string on a stdio entry", { command: "npx", oauth: "later" }],
+	];
+	test.each(ignored)("%s still loads", (_label, entry) => {
+		expect(resolve({ docs: entry }, {})[0]).toMatchObject({ kind: "server" });
+	});
+
+	const checked: [string, Raw, string][] = [
+		["args", { command: "npx", args: "--flag" }, "args"],
+		["env", { command: "npx", env: "TOKEN=1" }, "env"],
+		["cwd", { command: "npx", cwd: 5 }, "cwd"],
+		["headers", { url: "https://x.test/mcp", headers: "x" }, "headers"],
+	];
+	test.each(checked)(
+		"a wrong-typed %s on the transport that uses it is still refused",
+		(_label, entry, key) => {
+			expect(problemOf(resolve({ docs: entry }, {})[0])).toContain(key);
+		},
+	);
+});
+
 describe("the raw target of an entry pi skips", () => {
 	test("keeps what has the right type and leaves out what does not", () => {
 		const target = readTarget({
