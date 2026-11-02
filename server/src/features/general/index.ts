@@ -3,6 +3,11 @@
  * and the per-key read and write of `settings.json` the settings page is built on.
  */
 export { readDefaultModel, readEnabledModels } from "./store";
-export { readSettingViews } from "./settings";
+export { readSettingViews, readSettingsProblems } from "./settings";
 export { writeSetting } from "./write";
-export { defaultModelSchema, settingViewSchema, settingWriteSchema } from "./contract";
+export {
+	defaultModelSchema,
+	settingViewSchema,
+	settingWriteSchema,
+	settingsProblemSchema,
+} from "./contract";

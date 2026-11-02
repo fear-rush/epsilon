@@ -17,6 +17,7 @@ import type {
 
 import type { AgentHome } from "../../../platform/agent-home";
 import { createRuntimeFactory, openSessionManager } from "./factory";
+import type { SettingsProblem } from "./factory";
 import { bindHost } from "./bindings";
 import type { McpReportSink } from "../extensions/mcp-observer";
 import type { UiHost } from "../ui-context";
@@ -46,6 +47,8 @@ export type HostOptions = {
 	chat: boolean;
 	/** Where the MCP observer reports; absent for a copy, which has no panel. */
 	onMcpReport?: McpReportSink;
+	/** Where a settings file pi could not load is reported. */
+	onSettingsReport?: (problems: SettingsProblem[]) => void;
 };
 
 export class SessionHost {
@@ -74,6 +77,7 @@ export class SessionHost {
 			home: options.home,
 			chat: options.chat,
 			onMcpReport: options.onMcpReport,
+			onSettingsReport: options.onSettingsReport,
 		});
 		const tracked: CreateAgentSessionRuntimeFactory = async (input) => {
 			reason.current = input.sessionStartEvent?.reason ?? "startup";

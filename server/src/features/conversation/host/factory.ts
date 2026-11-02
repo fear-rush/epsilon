@@ -21,12 +21,17 @@ import type { AgentHome } from "../../../platform/agent-home";
 import { builtinExtensions, setCodingTools } from "../engine";
 import type { McpReportSink } from "../extensions/mcp-observer";
 
+/** One settings file pi could not load, with pi's own error for it. */
+export type SettingsProblem = ReturnType<SettingsManager["drainErrors"]>[number];
+
 export type RuntimeFactoryOptions = {
 	home: AgentHome;
 	/** A chat's folder holds no `.pi`, so only a project's folder can be trusted. */
 	chat: boolean;
 	/** Where the MCP observer reports; absent for a copy, which has no panel. */
 	onMcpReport?: McpReportSink;
+	/** Where a settings file pi could not load is reported; absent for a copy. */
+	onSettingsReport?: (problems: SettingsProblem[]) => void;
 };
 
 /**
@@ -51,14 +56,19 @@ export const openSessionManager = (
 export const createRuntimeFactory =
 	(options: RuntimeFactoryOptions): CreateAgentSessionRuntimeFactory =>
 	async ({ cwd, sessionManager, sessionStartEvent }): Promise<CreateAgentSessionRuntimeResult> => {
+		const settings = SettingsManager.create(cwd, options.home.dir, {
+			projectTrusted: !options.chat,
+		});
 		const services = await createAgentSessionServices({
 			cwd,
 			agentDir: options.home.dir,
-			settingsManager: SettingsManager.create(cwd, options.home.dir, {
-				projectTrusted: !options.chat,
-			}),
+			settingsManager: settings,
 			resourceLoaderOptions: { extensionFactories: builtinExtensions(options.onMcpReport) },
 		});
+		// pi records a file it could not load and falls back to its defaults; the host
+		// says so once instead of presenting the fallback as the operator's choice.
+		const problems = settings.drainErrors();
+		if (problems.length > 0) options.onSettingsReport?.(problems);
 		const created = await createAgentSessionFromServices({
 			services,
 			sessionManager,

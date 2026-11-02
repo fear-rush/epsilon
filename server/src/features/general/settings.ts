@@ -13,7 +13,7 @@
 import type { AgentHome } from "../../platform/agent-home";
 import { globalSettings, settingsManager } from "../../platform/pi";
 import type { SettingsManager } from "../../platform/pi";
-import type { SettingScope, SettingView } from "./contract";
+import type { SettingScope, SettingView, SettingsProblem } from "./contract";
 
 /** One layer of pi's settings, as its manager loaded it from a file. */
 type SettingsLayer = ReturnType<SettingsManager["getGlobalSettings"]>;
@@ -342,6 +342,20 @@ export const readSettingViews = (home: AgentHome, folder: string | null): Settin
 			terminalOnly: row.terminalOnly === true,
 		};
 		if (value.error !== undefined) view.error = value.error;
+		return view;
+	});
+};
+
+/**
+ * The settings files pi itself could not load. A load error means pi ignored that
+ * layer, so its values are missing rather than overridden; the panel says which
+ * file and why instead of presenting pi's fallback as a fact.
+ */
+export const readSettingsProblems = (home: AgentHome, folder: string | null): SettingsProblem[] => {
+	const settings = folder === null ? globalSettings(home) : settingsManager(folder, home);
+	return settings.drainErrors().map((problem) => {
+		const view: SettingsProblem = { scope: problem.scope, message: problem.error.message };
+		if (problem.path !== undefined) view.path = problem.path;
 		return view;
 	});
 };

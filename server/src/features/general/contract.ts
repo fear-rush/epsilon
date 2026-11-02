@@ -62,3 +62,19 @@ export const settingWriteSchema = z
 		value: settingValueSchema,
 	})
 	.openapi("SettingWriteInput");
+
+/**
+ * A settings file pi could not load. pi records the error and ignores that file,
+ * so every value it holds is absent rather than wrong; the panel names the file so
+ * a default is never mistaken for the operator's choice.
+ */
+export const settingsProblemSchema = z
+	.object({
+		scope: z.enum(["global", "project"]),
+		path: z.string().optional(),
+		/** pi's own sentence for what failed. */
+		message: z.string(),
+	})
+	.openapi("SettingsProblem");
+
+export type SettingsProblem = z.infer<typeof settingsProblemSchema>;

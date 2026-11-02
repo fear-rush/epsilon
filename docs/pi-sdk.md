@@ -657,6 +657,13 @@ Turborepo or the runtime.
   would otherwise fail every read of the file. `getWarnings()` returns only the keys
   a file writes, so an absent `anthropicExtraUsage` means pi's default of `true`
   rather than `false`, and `setWarnings()` replaces the whole object.
+- **`drainErrors()` is the only signal that a settings file failed to load.**
+  `SettingsManager.create()` records the error and carries on with `{}`, so every
+  getter then answers with pi's defaults and nothing reads as wrong. `save()`
+  returns without writing while the global file's load failed
+  (`globalSettingsLoadError`), so a host that does not drain the errors reports a
+  successful write that changed nothing. Drain once after creation, once before a
+  write, and surface the file's path with pi's message.
 - **Installed packages are bound to one platform.** Native optional dependencies are
   resolved at install time. Install on the machine that runs them; config
   files are portable, dependency trees are not.

@@ -42,6 +42,7 @@ import { suggestionsFor } from "./commands/autocomplete";
 import type { McpObserverReport } from "./extensions/mcp-observer";
 import { bindHost } from "./host/bindings";
 import { SessionHost } from "./host/host";
+import type { SettingsProblem } from "./host/factory";
 import { buildSnapshot, readModelsFrom, shadowedCommandsOf } from "./snapshot";
 import { UiBridge } from "./ui-context";
 import { FileWatcher } from "./watcher";
@@ -109,6 +110,8 @@ export class LiveSession {
 	);
 	/** Shadowed command names already reported, so a resync does not repeat itself. */
 	private readonly reportedShadowed = new Set<string>();
+	/** Settings files already reported as unloadable, so a replacement does not repeat it. */
+	private readonly reportedSettings = new Set<string>();
 
 	private constructor(options: LiveSessionOptions) {
 		const { sessionId, place, onEmpty, onReplaced, home } = options;
@@ -160,6 +163,7 @@ export class LiveSession {
 			onMcpReport: (report) => {
 				this.mcpReport = report;
 			},
+			onSettingsReport: (problems) => this.reportSettings(problems),
 		});
 		this.host = host;
 		await this.wire(host);
@@ -449,11 +453,27 @@ export class LiveSession {
 	}
 
 	/**
+	 * pi records a settings file it could not load and ignores it. The same file is
+	 * read again on every replacement, so the sentence is reported once per chat.
+	 */
+	private reportSettings(problems: SettingsProblem[]): void {
+		for (const problem of problems) {
+			const text = `${problem.path ?? "settings.json"} could not be loaded, so pi ignored it: ${problem.error.message}`;
+			if (this.reportedSettings.has(text)) continue;
+			this.reportedSettings.add(text);
+			this.notice(text, "settings");
+		}
+	}
+
+	/**
 	 * One sentence for the transcript, with the kind that decides what the row offers.
 	 * A command can run before any tab is watching (the shadowing report is one), so a
 	 * sentence nobody could receive waits for the next subscriber, as a failure does.
 	 */
-	private notice(text: string, kind: "external-change" | "command" | "extension"): void {
+	private notice(
+		text: string,
+		kind: "external-change" | "command" | "extension" | "settings",
+	): void {
 		const frame: ServerFrame = { t: "notice", sessionId: this.sessionId, kind, text };
 		if (this.frames.count === 0) this.frames.defer(frame);
 		else this.frames.emit(frame);

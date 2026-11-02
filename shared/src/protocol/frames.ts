@@ -15,7 +15,7 @@ import type { JsonAgentSessionEvent } from "../pi";
  * Bumped whenever a frame's shape changes. The client sends it in `hello` and
  * reloads on a mismatch instead of guessing.
  */
-export const PROTOCOL_VERSION = 21;
+export const PROTOCOL_VERSION = 22;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([
@@ -408,14 +408,15 @@ export const serverFrameSchema = z.discriminatedUnion("t", [
 	z.object({ t: z.literal("dialog-closed"), sessionId: z.string(), id: z.string() }),
 	z.object({ t: z.literal("ui"), sessionId: z.string(), request: extensionDisplaySchema }),
 	/**
-	 * A change the tab could not have made: another process wrote this chat's file, or
-	 * a built-in command was answered with a sentence instead of an action. `kind`
-	 * names what the row is about, so a new kind is a protocol change.
+	 * A change the tab could not have made: another process wrote this chat's file, a
+	 * built-in command was answered with a sentence instead of an action, or pi could
+	 * not load a settings file. `kind` names what the row is about, so a new kind is
+	 * a protocol change.
 	 */
 	z.object({
 		t: z.literal("notice"),
 		sessionId: z.string(),
-		kind: z.enum(["external-change", "command", "extension"]),
+		kind: z.enum(["external-change", "command", "extension", "settings"]),
 		text: z.string(),
 	}),
 	z.object({

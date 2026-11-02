@@ -92,6 +92,13 @@ export const writeSetting = async (
 	value: SettingView["value"],
 ): Promise<void> => {
 	const settings = globalSettings(home);
+	// pi's manager records a file it could not load and then ignores every setter's
+	// save, so a write would report success and change nothing.
+	const unreadable = settings.drainErrors();
+	if (unreadable.length > 0) {
+		const files = unreadable.map((problem) => problem.path ?? `${problem.scope} settings`);
+		throw new Error(`Nothing was written: pi could not load ${files.join(", ")}.`);
+	}
 	switch (key) {
 		// The turn.
 		case "steeringMode":

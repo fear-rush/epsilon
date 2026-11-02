@@ -431,6 +431,12 @@
 							"$ref": "#/components/schemas/SettingView"
 						}
 					},
+					"settingsProblems": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/SettingsProblem"
+						}
+					},
 					"modelScope": {
 						"type": "object",
 						"properties": {
@@ -530,6 +536,7 @@
 					"home",
 					"defaultModel",
 					"settings",
+					"settingsProblems",
 					"modelScope",
 					"providers",
 					"builtins",
@@ -618,6 +625,28 @@
 					"project",
 					"global",
 					"default"
+				]
+			},
+			"SettingsProblem": {
+				"type": "object",
+				"properties": {
+					"scope": {
+						"type": "string",
+						"enum": [
+							"global",
+							"project"
+						]
+					},
+					"path": {
+						"type": "string"
+					},
+					"message": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"scope",
+					"message"
 				]
 			},
 			"ProviderView": {

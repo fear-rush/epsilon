@@ -8,7 +8,12 @@ import type { AgentHome } from "../../platform/agent-home";
 import { modelRuntime } from "../../platform/pi";
 import { readModelsFrom } from "../conversation";
 import type { SessionRegistry } from "../conversation";
-import { readDefaultModel, readEnabledModels, readSettingViews } from "../general";
+import {
+	readDefaultModel,
+	readEnabledModels,
+	readSettingViews,
+	readSettingsProblems,
+} from "../general";
 import { isMcpTurnedOff, listMcpServers } from "../mcp";
 import { listPackages } from "../packages";
 import { projectStatus } from "../projects";
@@ -66,6 +71,7 @@ export const readSettings = async (
 		// an operator can see what it matches without the list going blank.
 		models: offers.models,
 		settings: readSettingViews(home, project === null ? null : folder),
+		settingsProblems: readSettingsProblems(home, project === null ? null : folder),
 		modelScope: offers.scope ?? {
 			matched: offers.models.length,
 			available: offers.models.length,

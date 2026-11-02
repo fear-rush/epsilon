@@ -34,6 +34,26 @@ export function SettingsGeneral() {
 	);
 }
 
+/**
+ * pi records a settings file it could not load and ignores it. The page names the
+ * file next to the home it belongs to, so pi's fallback is never mistaken for the
+ * operator's choice.
+ */
+function SettingsProblems({ snapshot }: { snapshot: SettingsSnapshot }) {
+	return (
+		<Notice tone="error" title="pi could not load a settings file">
+			<ul className="grid gap-1">
+				{snapshot.settingsProblems.map((problem) => (
+					<li key={`${problem.scope}:${problem.path ?? ""}`}>
+						<code>{problem.path ?? `${problem.scope} settings`}</code>: {problem.message}
+					</li>
+				))}
+			</ul>
+			<p>pi ignores that file until it parses.</p>
+		</Notice>
+	);
+}
+
 function GeneralBody({ snapshot }: { snapshot: SettingsSnapshot }) {
 	const refresh = useSettingsRefresh();
 	const defaults = useMutation({ mutationFn: setDefaultModel, onSuccess: refresh });
@@ -47,6 +67,7 @@ function GeneralBody({ snapshot }: { snapshot: SettingsSnapshot }) {
 	return (
 		<div className="grid gap-section">
 			{snapshot.error !== undefined && <Notice tone="error">{snapshot.error}</Notice>}
+			{snapshot.settingsProblems.length > 0 && <SettingsProblems snapshot={snapshot} />}
 			<Section title="App">
 				<Row
 					title="Status"

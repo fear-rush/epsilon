@@ -27,7 +27,12 @@ const rowSchema = z.object({
 	error: z.string().optional(),
 });
 
-const bodySchema = z.object({ settings: z.array(rowSchema) });
+const bodySchema = z.object({
+	settings: z.array(rowSchema),
+	settingsProblems: z.array(
+		z.object({ scope: z.string(), path: z.string().optional(), message: z.string() }),
+	),
+});
 type Body = z.infer<typeof bodySchema>;
 
 const appOn = async (settings?: SettingsFile) => {
@@ -240,4 +245,29 @@ test("the model scope is written through its setter", async () => {
 	expect(globalSettings(home).getEnabledModels()).toEqual(["openai/*"]);
 	expect((await write(app, { key: "enabledModels", value: null })).status).toBe(204);
 	expect(globalSettings(home).getEnabledModels()).toBeUndefined();
+});
+
+test("a settings file pi cannot load is named, and the read falls back to defaults", async () => {
+	const { app, home } = await appOn();
+	await writeFile(join(home.dir, "settings.json"), JSON.stringify("not an object"));
+	const body = await settingsOf(app);
+	expect(body.settingsProblems).toHaveLength(1);
+	expect(body.settingsProblems[0]?.path).toMatch(/settings\.json$/u);
+	expect(body.settingsProblems[0]?.message).not.toBe("");
+	// pi ignored the file, so its keys are absent rather than the operator's.
+	expect(rowOf(body, "steeringMode")).toMatchObject({ scope: "default" });
+});
+
+test("a write is refused while pi cannot load the settings file", async () => {
+	const { app, home } = await appOn();
+	const path = join(home.dir, "settings.json");
+	const broken = JSON.stringify("not an object");
+	await writeFile(path, broken);
+	const response = await write(app, { key: "steeringMode", value: "all" });
+	expect(response.status).toBe(400);
+	expect(await response.json()).toMatchObject({
+		message: expect.stringContaining("Nothing was written"),
+	});
+	// The file it could not read is exactly as it was.
+	expect(await readFile(path, "utf8")).toBe(broken);
 });

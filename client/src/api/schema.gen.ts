@@ -940,6 +940,7 @@ export interface components {
 			home: string;
 			defaultModel: components["schemas"]["DefaultModel"];
 			settings: components["schemas"]["SettingView"][];
+			settingsProblems: components["schemas"]["SettingsProblem"][];
 			modelScope: {
 				matched: number;
 				available: number;
@@ -975,6 +976,11 @@ export interface components {
 			error?: string;
 		};
 		SettingScope: "project" | "global" | "default";
+		SettingsProblem: {
+			scope: "global" | "project";
+			path?: string;
+			message: string;
+		};
 		ProviderView: {
 			id: string;
 			name: string;
