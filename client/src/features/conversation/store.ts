@@ -9,6 +9,7 @@ import type {
 	Place,
 	PromptBehavior,
 	PromptImage,
+	PromptQueue,
 	ServerFrame,
 	ThinkingLevel,
 } from "shared";
@@ -36,6 +37,11 @@ export type ConversationSnapshot = {
 	 * it. The id it was replaced from keeps reaching the same chat.
 	 */
 	replacedTo: string | undefined;
+	/**
+	 * Prompts an abort or a Clear took back from pi, waiting for the composer to put
+	 * them in its draft. pi's queue has no per-item removal, so this is all of them.
+	 */
+	restoreDraft: string | undefined;
 	state: ConversationState;
 };
 
@@ -45,6 +51,16 @@ const startErrorOf = (frame: ServerFrame): string | undefined =>
 	(frame.code === "AGENT_START_FAILED" || frame.code === "PROJECT_NOT_TRUSTED")
 		? frame.message
 		: undefined;
+
+/**
+ * pi's own rule for a queue it hands back: every prompt, in order, with a blank line
+ * between them (its `restoreQueuedMessagesToEditor`).
+ */
+const queueText = (queue: PromptQueue | undefined): string | undefined => {
+	if (queue === undefined) return undefined;
+	const held = [...queue.steering, ...queue.followUp];
+	return held.length === 0 ? undefined : held.join("\n\n");
+};
 
 export class ConversationStore {
 	private snapshot: ConversationSnapshot;
@@ -65,6 +81,7 @@ export class ConversationStore {
 			startError: undefined,
 			bashCommand: undefined,
 			replacedTo: undefined,
+			restoreDraft: undefined,
 			state: emptyConversation,
 		};
 		this.stopStatus = link.onStatus((status) => this.update({ status }));
@@ -79,14 +96,17 @@ export class ConversationStore {
 			const bashSettled =
 				(frame.t === "snapshot" && !frame.snapshot.state.isBashRunning) ||
 				(frame.t === "command-result" && frame.command === "bash");
-			this.update({
+			const restored = frame.t === "command-result" ? queueText(frame.queue) : undefined;
+			const change: Partial<ConversationSnapshot> = {
 				state,
 				bashCommand: bashSettled ? undefined : this.snapshot.bashCommand,
 				replacedTo: frame.t === "session-replaced" ? frame.toId : this.snapshot.replacedTo,
 				loaded: this.snapshot.loaded || frame.t === "snapshot",
 				startError:
 					startErrorOf(frame) ?? (frame.t === "snapshot" ? undefined : this.snapshot.startError),
-			});
+			};
+			if (restored !== undefined) change.restoreDraft = restored;
+			this.update(change);
 		});
 	}
 
@@ -172,6 +192,11 @@ export class ConversationStore {
 
 	abort(): void {
 		this.sendCommand({ type: "abort" });
+	}
+
+	/** The composer took the restored prompts into its draft, so they are not offered twice. */
+	clearRestoreDraft(): void {
+		this.update({ restoreDraft: undefined });
 	}
 
 	/** Re-read extensions, skills and packages without replacing the session. */

@@ -15,7 +15,7 @@ import type { JsonAgentSessionEvent } from "../pi";
  * Bumped whenever a frame's shape changes. The client sends it in `hello` and
  * reloads on a mismatch instead of guessing.
  */
-export const PROTOCOL_VERSION = 16;
+export const PROTOCOL_VERSION = 17;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([
@@ -386,6 +386,8 @@ export const serverFrameSchema = z.discriminatedUnion("t", [
 		command: commandNameSchema,
 		ok: z.boolean(),
 		error: z.string().optional(),
+		/** Prompts pi still held, when the command took them back instead of running them. */
+		queue: promptQueueSchema.optional(),
 	}),
 	/**
 	 * pi replaced the session under this chat: `/new`, a fork, a switch or a reload

@@ -15,6 +15,7 @@ import type {
 	Command,
 	DialogAnswer,
 	Place,
+	PromptQueue,
 	ProtocolErrorCode,
 	ServerFrame,
 	SnapshotModel,
@@ -76,6 +77,8 @@ export class LiveSession {
 	private unsubscribe: (() => void) | undefined;
 	/** True while a command runs, so a shutdown it asked for waits for it to finish. */
 	private dispatching = false;
+	/** Prompts this command took back from pi, for the tab that sent it. */
+	private returnedQueue: PromptQueue | undefined;
 	/** The models the picker offers, refreshed when the engine's providers change. */
 	private models: SnapshotModel[] = [];
 	private idleTimer: ReturnType<typeof setTimeout> | undefined;
@@ -281,6 +284,7 @@ export class LiveSession {
 	/** Run one command and report it to every tab watching this session. */
 	async run(command: Command): Promise<void> {
 		this.dispatching = true;
+		this.returnedQueue = undefined;
 		try {
 			await this.dispatch(command);
 			this.files.markOwnActivity();
@@ -289,6 +293,7 @@ export class LiveSession {
 				sessionId: this.sessionId,
 				command: command.type,
 				ok: true,
+				queue: this.returnedQueue,
 			});
 		} catch (error) {
 			this.emit({
@@ -427,6 +432,9 @@ export class LiveSession {
 			notice: (text) => this.notice(text, "command"),
 			fail: (error) => this.fail(error),
 			resync: () => this.resync(),
+			returnQueue: (queue) => {
+				this.returnedQueue = queue;
+			},
 			reload: () => this.reload(),
 			reloadFromDisk: () => this.reloadFromDisk(),
 		};

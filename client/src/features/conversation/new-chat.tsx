@@ -102,6 +102,7 @@ function DraftConversation({
 				thinkingLevel={thinkingLevel}
 				availableThinkingLevels={availableThinkingLevels}
 				statuses={statuses}
+				restoreDraft={undefined}
 				commands={commands}
 				codingTools={codingTools}
 				contextUsage={contextUsage}

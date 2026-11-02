@@ -9,6 +9,9 @@ import { setCodingTools } from "../engine";
 import type { CommandTarget } from "./context";
 
 export const abort = async (target: CommandTarget): Promise<void> => {
+	// pi's `clearQueue` is documented for this: take the prompts back before aborting.
+	const queue = target.agent.clearQueue();
+	if (queue.steering.length > 0 || queue.followUp.length > 0) target.returnQueue(queue);
 	target.cancelDialogs();
 	await target.agent.abort();
 };
@@ -58,7 +61,8 @@ export const setAutoRetry = (
 };
 
 export const clearQueue = (target: CommandTarget): void => {
-	target.agent.clearQueue();
+	const queue = target.agent.clearQueue();
+	if (queue.steering.length > 0 || queue.followUp.length > 0) target.returnQueue(queue);
 	target.resync();
 };
 

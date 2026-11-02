@@ -123,6 +123,8 @@ type ComposerProps = {
 	header?: ReactNode;
 	/** A draft was sent, so the page can make this session its URL. */
 	onSent?: () => void;
+	/** Prompts an abort or a Clear took back from pi, for the draft. */
+	restoreDraft: string | undefined;
 };
 
 function ComposerImpl({
@@ -146,6 +148,7 @@ function ComposerImpl({
 	inline = false,
 	header,
 	onSent,
+	restoreDraft,
 }: ComposerProps) {
 	const [draft, setDraft] = useState(() => pendingDraftOf(store.sessionId));
 	/** The highlighted command, and the draft it was dismissed at. */
@@ -167,6 +170,17 @@ function ComposerImpl({
 	useEffect(() => {
 		clearPendingDraft(store.sessionId);
 	}, [store.sessionId]);
+
+	/** Set once a restored queue has been appended, so a re-render cannot add it twice. */
+	const restoredRef = useRef<string | undefined>(undefined);
+	useEffect(() => {
+		if (restoreDraft === undefined || restoredRef.current === restoreDraft) return;
+		restoredRef.current = restoreDraft;
+		setDraft((current) =>
+			[restoreDraft, current].filter((text) => text.trim() !== "").join("\n\n"),
+		);
+		store.clearRestoreDraft();
+	}, [restoreDraft, store]);
 
 	const query = commandQuery(draft);
 	const matches =

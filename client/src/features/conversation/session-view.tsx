@@ -125,6 +125,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				cost={stats.cost}
 				inline={empty}
 				header={where.kind === "project" ? <ComposerPlace place={where} /> : undefined}
+				restoreDraft={snapshot.restoreDraft}
 			/>
 		),
 		[
@@ -147,6 +148,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 			stats.cost,
 			empty,
 			where,
+			snapshot.restoreDraft,
 		],
 	);
 
