@@ -121,6 +121,15 @@ Other facts worth having before embedding:
     the dialog group and the display half of the state groups, reports the terminal
     group once, and returns silent defaults for `getEditorComponent`, `getAllThemes`
     and `getTheme` ([DECISIONS.md](DECISIONS.md), UI contract).
+- `mode` and `hasUI` answer different questions, and only one of them matters to an
+  extension. `ExtensionMode` is `"tui" | "rpc" | "json" | "print"`: a presentation, not
+  a transport, and its doc comment says to use `"tui"` as the guard for terminal-only UI.
+  `hasUI` is the field for dialog-capable UI, and pi computes it from the uiContext
+  itself (`runner.hasUI()` is `uiContext !== noOpUIContext`), so any host that supplies
+  one has `hasUI: true` whatever the mode says. Epsilon therefore keeps `"json"` and
+  still supplies a full uiContext: a combination pi's own modes never produce, and the
+  one that makes an extension's dialogs work in a browser. Its `mode` is honest about
+  the presentation and its `hasUI` is honest about the dialogs.
 - `NewSessionOptions.id` creates a session with an exact id. `SessionManager` lists,
   opens, finds, creates and owns `getEntries()`, `getTree()` and `getSessionName()`;
   `AgentSessionRuntime` owns `newSession`, `switchSession`, `fork` and

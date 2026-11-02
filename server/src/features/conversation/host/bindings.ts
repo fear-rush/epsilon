@@ -22,8 +22,9 @@ import type { UiHost } from "../ui-context";
 const bindSession = async (session: AgentSession, host: SessionHost, ui: UiHost): Promise<void> => {
 	await session.bindExtensions({
 		uiContext: createUiContext(ui),
-		// "json" is pi's name for a headless host that reads events, which is what
-		// this server is. Extensions guard terminal-only UI with `mode === "tui"`.
+		// "json" is the presentation pi names for a headless host, and it stays that even
+		// though a browser answers dialogs. docs/pi-sdk.md says why, and that `hasUI` is
+		// the field extensions branch on.
 		mode: "json",
 		commandContextActions: {
 			waitForIdle: () => session.waitForIdle(),
