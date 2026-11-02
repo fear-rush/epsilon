@@ -53,9 +53,11 @@ describe("built-in commands", () => {
 			expect(await runBuiltin(context, "/share")).toBe(true);
 			expect(notices.at(-1) ?? "").toContain("pi /share");
 
-			// An extension command, a template and a path are all still prompts.
+			// An extension command, a template, a path and a skill entry are all still prompts.
+			// A skill command reaches pi even when `enableSkillCommands` keeps it out of the palette.
 			expect(await runBuiltin(context, "/permission auto")).toBe(false);
 			expect(await runBuiltin(context, "/tmp/notes.md")).toBe(false);
+			expect(await runBuiltin(context, "/skill:probe")).toBe(false);
 			expect(host.session.messages).toHaveLength(0);
 		} finally {
 			await host.close();

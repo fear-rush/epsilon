@@ -373,6 +373,10 @@ and `resource-loader.js` (1.4.0):
   warning at all. A bad name only warns. The body is optional, so frontmatter alone
   loads. `disable-model-invocation: true` keeps the skill out of the system prompt;
   `/skill:name` still runs it. Every other key is parsed and ignored.
+- **`enableSkillCommands: false`** removes the `/skill:name` entries from the editor's
+  autocomplete and changes nothing else: `prompt()` still expands a typed `/skill:name`.
+  pi's setting is read when the engine starts, so a running chat keeps its old palette
+  until it reloads.
 - **What Epsilon may write**, because pi loads it: a non-empty description of at most
   1024 characters, any text in that description (pi XML-escapes `name`, `description`
   and the path inside `<available_skills>`, so `<`, `>` and `&` are legal), a name

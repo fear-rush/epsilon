@@ -142,12 +142,16 @@ const commandsOf = (agent: AgentSession): SnapshotCommand[] => {
 		if (builtinCommand(template.name) !== undefined) continue;
 		commands.push({ name: template.name, description: template.description, source: "prompt" });
 	}
-	for (const skill of agent.resourceLoader.getSkills().skills) {
-		commands.push({
-			name: `skill:${skill.name}`,
-			description: skill.description,
-			source: "skill",
-		});
+	// pi's setting only hides the entries; `prompt()` still expands a typed
+	// `/skill:name`, so manual entry keeps working with the palette off.
+	if (agent.settingsManager.getEnableSkillCommands()) {
+		for (const skill of agent.resourceLoader.getSkills().skills) {
+			commands.push({
+				name: `skill:${skill.name}`,
+				description: skill.description,
+				source: "skill",
+			});
+		}
 	}
 	return commands;
 };

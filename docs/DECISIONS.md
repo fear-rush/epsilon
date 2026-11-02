@@ -486,6 +486,9 @@ name and links by the folder. A skill an extension adds through `resources_disco
 merged from the open engines in the scope and marked `extension`: read-only, with no
 switch and no editor, because it exists only while one of those engines is open. With
 none open the list is pi's file answer and the pane says it is from files.
+The composer palette lists the `/skill:` rows only while pi's `enableSkillCommands` is
+on. Typing one still runs it either way, because pi's expansion does not consult the
+setting; the palette follows the switch, not a rule of its own.
 Fields from other agents (Claude Code's `context`, `user-invocable` and the rest) are
 shown read-only with a notice that pi ignores them.
 Turning one skill off is a `-<path>` entry in pi's `skills` setting; a skill folder of
