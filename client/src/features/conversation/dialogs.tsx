@@ -1,11 +1,34 @@
 import type { DialogAnswer, DialogQuestion } from "shared";
 import { useDialogMotion } from "@/hooks/use-dialog-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DialogFrame } from "@/components/patterns/dialog/dialog-frame";
+
+/**
+ * The seconds a timed question has left. The frame carries the time remaining when
+ * it was sent, so this counts from the moment the tab received it; pi's own dialogs
+ * count down, and an extension that sets a timeout expects the operator to see it.
+ */
+function useCountdown(question: DialogQuestion): number | undefined {
+	const [receivedAt] = useState(() => Date.now());
+	const [now, setNow] = useState(receivedAt);
+	useEffect(() => {
+		if (question.timeoutMs === undefined) return;
+		const ticker = setInterval(() => setNow(Date.now()), 1000);
+		return () => clearInterval(ticker);
+	}, [question.timeoutMs]);
+	if (question.timeoutMs === undefined) return undefined;
+	return Math.max(0, Math.ceil((receivedAt + question.timeoutMs - now) / 1000));
+}
+
+/** The countdown in a footer, when the question has a deadline at all. */
+function Countdown({ seconds }: { seconds: number | undefined }) {
+	if (seconds === undefined) return null;
+	return <span className="text-meta text-muted-foreground sm:mr-auto">Closes in {seconds}s</span>;
+}
 
 /** A blocking `confirm`: the agent cannot continue until this is answered. */
 
@@ -19,6 +42,7 @@ export function ConfirmDialog({
 	onAnswer: (answer: DialogAnswer) => void;
 }) {
 	const dialog = useDialogMotion();
+	const remaining = useCountdown(question);
 	// The answer is sent after the exit plays, so the dialog the store removes on the
 	// server's reply is already gone from the screen.
 	const answer = (confirmed: boolean) =>
@@ -34,6 +58,7 @@ export function ConfirmDialog({
 			title={question.title}
 			footer={
 				<>
+					<Countdown seconds={remaining} />
 					<Button variant="outline" onClick={() => answer(false)}>
 						No
 					</Button>
@@ -69,6 +94,7 @@ export function QuestionDialog({
 	onAnswer: (answer: DialogAnswer) => void;
 }) {
 	const dialog = useDialogMotion();
+	const remaining = useCountdown(question);
 	const [text, setText] = useState(question.method === "editor" ? (question.prefill ?? "") : "");
 	// The answer carries the method it belongs to, so the server can refuse one that
 	// was meant for another kind of question. It is sent after the exit plays.
@@ -90,6 +116,7 @@ export function QuestionDialog({
 			title={question.title}
 			footer={
 				<>
+					<Countdown seconds={remaining} />
 					<Button variant="destructive" onClick={cancel}>
 						Cancel
 					</Button>

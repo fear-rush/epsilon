@@ -5,27 +5,39 @@
  */
 import { z } from "zod";
 
+/**
+ * A dialog can expire. The tab receives the time the question has **left**, not the
+ * span it was asked for, so a tab that attaches late counts down from the truth.
+ */
+const dialogTiming = {
+	timeoutMs: z.number().int().nonnegative().optional(),
+};
+
 /** A request that blocks the agent until the browser answers it. */
 export const dialogQuestionSchema = z.discriminatedUnion("method", [
 	z.object({
+		...dialogTiming,
 		id: z.string(),
 		method: z.literal("select"),
 		title: z.string(),
 		options: z.array(z.string()),
 	}),
 	z.object({
+		...dialogTiming,
 		id: z.string(),
 		method: z.literal("confirm"),
 		title: z.string(),
 		message: z.string(),
 	}),
 	z.object({
+		...dialogTiming,
 		id: z.string(),
 		method: z.literal("input"),
 		title: z.string(),
 		placeholder: z.string().optional(),
 	}),
 	z.object({
+		...dialogTiming,
 		id: z.string(),
 		method: z.literal("editor"),
 		title: z.string(),

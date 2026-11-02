@@ -49,4 +49,61 @@ describe("extension dialogs", () => {
 		expect(dialogs.needsInput).toBe(false);
 		expect(frames.filter((frame) => frame.t === "dialog-closed")).toHaveLength(2);
 	});
+
+	test("a timeout answers with the method's default and closes the tab's copy", async () => {
+		const { dialogs, frames } = make();
+		const pending = dialogs.ask(
+			{ id: "q1", method: "confirm", title: "Allow?", message: "rm -rf" },
+			{ timeoutMs: 20 },
+		);
+
+		expect(await pending).toEqual({ id: "q1", method: "cancel" });
+		expect(dialogs.needsInput).toBe(false);
+		expect(frames.map((frame) => frame.t)).toEqual(["dialog", "dialog-closed"]);
+	});
+
+	test("a late tab counts down from the deadline, not the original span", async () => {
+		const { dialogs, frames } = make();
+		void dialogs.ask({ id: "q1", method: "input", title: "Name?" }, { timeoutMs: 200 });
+		await new Promise((resolve) => setTimeout(resolve, 40));
+
+		const replayed: ServerFrame[] = [];
+		dialogs.replay((frame) => replayed.push(frame));
+		dialogs.cancelAll();
+
+		const first = frames[0];
+		const second = replayed[0];
+		if (first?.t !== "dialog" || second?.t !== "dialog") throw new Error("expected dialogs");
+		expect(first.request.timeoutMs).toBeLessThanOrEqual(200);
+		expect(second.request.timeoutMs).toBeLessThan(200);
+	});
+
+	test("a signal that already aborted asks nothing", async () => {
+		const { dialogs, frames } = make();
+		const controller = new AbortController();
+		controller.abort();
+
+		const pending = dialogs.ask(
+			{ id: "q1", method: "input", title: "Name?" },
+			{ signal: controller.signal },
+		);
+
+		expect(await pending).toEqual({ id: "q1", method: "cancel" });
+		expect(frames).toEqual([]);
+	});
+
+	test("an aborting signal resolves the dialog and closes it", async () => {
+		const { dialogs, frames } = make();
+		const controller = new AbortController();
+		const pending = dialogs.ask(
+			{ id: "q1", method: "select", title: "Pick", options: ["x"] },
+			{ signal: controller.signal },
+		);
+
+		controller.abort();
+
+		expect(await pending).toEqual({ id: "q1", method: "cancel" });
+		expect(dialogs.needsInput).toBe(false);
+		expect(frames.map((frame) => frame.t)).toEqual(["dialog", "dialog-closed"]);
+	});
 });

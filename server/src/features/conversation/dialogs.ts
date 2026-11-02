@@ -5,11 +5,23 @@
  */
 import type { DialogAnswer, DialogQuestion, ExtensionDisplay, ServerFrame } from "shared";
 
+/** What pi asked for alongside a question: a deadline, and a way to withdraw it. */
+export type AskOptions = {
+	/** Close the dialog after this long, as pi's own timed dialogs do. */
+	timeoutMs?: number;
+	/** pi's `signal`: the extension or its caller no longer wants an answer. */
+	signal?: AbortSignal;
+};
+
 /** One unanswered dialog, with the resolver the browser's answer settles. */
 type PendingDialog = {
 	question: DialogQuestion;
 	resolve: (answer: DialogAnswer) => void;
 	timer: ReturnType<typeof setTimeout> | undefined;
+	/** When the question expires, so a tab that attaches late counts from the same point. */
+	deadline: number | undefined;
+	signal: AbortSignal | undefined;
+	onAbort: (() => void) | undefined;
 };
 
 /** Whether an answer settled a dialog, or why it did not. */
@@ -54,19 +66,62 @@ export class Dialogs {
 		return this.pending.size > 0;
 	}
 
-	ask = (question: DialogQuestion, timeoutMs?: number): Promise<DialogAnswer> =>
+	ask = (question: DialogQuestion, options: AskOptions = {}): Promise<DialogAnswer> =>
 		new Promise<DialogAnswer>((resolve) => {
-			const cancel = () => {
-				this.pending.delete(question.id);
+			// pi resolves an already-aborted dialog with its default and asks nothing.
+			if (options.signal?.aborted === true) {
 				resolve({ id: question.id, method: "cancel" });
-				this.emit({ t: "dialog-closed", sessionId: this.sessionId(), id: question.id });
-				this.onChange();
+				return;
+			}
+			const pending: PendingDialog = {
+				question,
+				resolve,
+				timer: undefined,
+				deadline: options.timeoutMs === undefined ? undefined : Date.now() + options.timeoutMs,
+				signal: options.signal,
+				onAbort: undefined,
 			};
-			const timer = timeoutMs === undefined ? undefined : setTimeout(cancel, timeoutMs);
-			this.pending.set(question.id, { question, resolve, timer });
-			this.emit({ t: "dialog", sessionId: this.sessionId(), request: question });
+			pending.onAbort = () => this.dismiss(pending);
+			if (options.timeoutMs !== undefined) {
+				pending.timer = setTimeout(() => this.dismiss(pending), options.timeoutMs);
+			}
+			options.signal?.addEventListener("abort", pending.onAbort, { once: true });
+			this.pending.set(question.id, pending);
+			this.emit({
+				t: "dialog",
+				sessionId: this.sessionId(),
+				request: this.frameQuestion(pending),
+			});
 			this.onChange();
 		});
+
+	/**
+	 * Close a dialog nobody answered: its timeout fired, or the extension aborted the
+	 * signal. The tab is told, so the dialog does not stay on screen waiting.
+	 */
+	private dismiss(pending: PendingDialog): void {
+		if (this.pending.get(pending.question.id) !== pending) return;
+		this.forget(pending);
+		pending.resolve({ id: pending.question.id, method: "cancel" });
+		this.emit({ t: "dialog-closed", sessionId: this.sessionId(), id: pending.question.id });
+		this.onChange();
+	}
+
+	/** Drop what a pending question holds: its timer and its abort listener. */
+	private forget(pending: PendingDialog): void {
+		this.pending.delete(pending.question.id);
+		if (pending.timer !== undefined) clearTimeout(pending.timer);
+		if (pending.signal !== undefined && pending.onAbort !== undefined) {
+			pending.signal.removeEventListener("abort", pending.onAbort);
+		}
+	}
+
+	/** The question a tab receives, carrying the time it has left. */
+	private frameQuestion(pending: PendingDialog): DialogQuestion {
+		if (pending.deadline === undefined) return pending.question;
+		const remaining = Math.max(0, pending.deadline - Date.now());
+		return { ...pending.question, timeoutMs: remaining };
+	}
 
 	/**
 	 * Answer one dialog. The first answer wins, and an answer only settles the
@@ -77,8 +132,7 @@ export class Dialogs {
 		const pending = this.pending.get(answer.id);
 		if (pending === undefined) return "stale";
 		if (answer.method !== "cancel" && answer.method !== pending.question.method) return "mismatch";
-		this.pending.delete(answer.id);
-		if (pending.timer !== undefined) clearTimeout(pending.timer);
+		this.forget(pending);
 		pending.resolve(answer);
 		this.emit({ t: "dialog-closed", sessionId: this.sessionId(), id: answer.id });
 		this.onChange();
@@ -88,21 +142,18 @@ export class Dialogs {
 	/** Close every dialog as cancelled. An abort must not leave one hanging. */
 	cancelAll(): void {
 		if (this.pending.size === 0) return;
-		for (const id of this.pending.keys()) {
-			const pending = this.pending.get(id);
-			if (pending === undefined) continue;
-			if (pending.timer !== undefined) clearTimeout(pending.timer);
-			pending.resolve({ id, method: "cancel" });
-			this.emit({ t: "dialog-closed", sessionId: this.sessionId(), id });
+		for (const pending of [...this.pending.values()]) {
+			this.forget(pending);
+			pending.resolve({ id: pending.question.id, method: "cancel" });
+			this.emit({ t: "dialog-closed", sessionId: this.sessionId(), id: pending.question.id });
 		}
-		this.pending.clear();
 		this.onChange();
 	}
 
 	/** Give a late subscriber the unanswered dialogs and the keyed display state. */
 	replay(sink: FrameSink): void {
 		for (const pending of this.pending.values()) {
-			sink({ t: "dialog", sessionId: this.sessionId(), request: pending.question });
+			sink({ t: "dialog", sessionId: this.sessionId(), request: this.frameQuestion(pending) });
 		}
 		for (const request of this.displayState.values()) {
 			sink({ t: "ui", sessionId: this.sessionId(), request });

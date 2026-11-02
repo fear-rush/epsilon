@@ -17,11 +17,11 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import type { DialogAnswer, DialogQuestion, ExtensionDisplay, ProtocolErrorCode } from "shared";
 
-import type { Dialogs } from "./dialogs";
+import type { AskOptions, Dialogs } from "./dialogs";
 
 /** What the engine needs from the session that owns the browser sockets. */
 export type UiHost = {
-	ask: (question: DialogQuestion, timeoutMs?: number) => Promise<DialogAnswer>;
+	ask: (question: DialogQuestion, options?: AskOptions) => Promise<DialogAnswer>;
 	display: (request: ExtensionDisplay) => void;
 	/** A method that needs pi's TUI. The host shows one notice per method. */
 	unsupported: (method: string) => void;
@@ -105,24 +105,26 @@ export const createUiContext = (host: UiHost): ExtensionUIContext => ({
 	async select(title, options, opts) {
 		const answer = await host.ask(
 			{ id: crypto.randomUUID(), method: "select", title, options },
-			opts?.timeout,
+			{ timeoutMs: opts?.timeout, signal: opts?.signal },
 		);
 		return answerValue(answer);
 	},
 	async confirm(title, message, opts) {
 		const answer = await host.ask(
 			{ id: crypto.randomUUID(), method: "confirm", title, message },
-			opts?.timeout,
+			{ timeoutMs: opts?.timeout, signal: opts?.signal },
 		);
 		return answerConfirmed(answer);
 	},
 	async input(title, placeholder, opts) {
 		const answer = await host.ask(
 			{ id: crypto.randomUUID(), method: "input", title, placeholder },
-			opts?.timeout,
+			{ timeoutMs: opts?.timeout, signal: opts?.signal },
 		);
 		return answerValue(answer);
 	},
+	// pi 1.4.0's `editor` takes no `ExtensionUIDialogOptions`, so an extension cannot
+	// time it out or withdraw it; the dialog waits for a person.
 	async editor(title, prefill) {
 		const answer = await host.ask({ id: crypto.randomUUID(), method: "editor", title, prefill });
 		return answerValue(answer);

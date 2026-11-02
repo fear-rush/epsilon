@@ -77,7 +77,13 @@ Other facts worth having before embedding:
 - A `uiContext` is required for dialogs; without one a `confirm` has nowhere to go.
   `ExtensionUIContext` is 27 methods plus a `theme` property
   (`dist/core/extensions/types.d.ts`):
-  - **answer** a person: `select`, `confirm`, `input`, `editor`
+  - **answer** a person: `select`, `confirm`, `input`, `editor`. The first three take
+    `ExtensionUIDialogOptions { signal?, timeout? }`; `editor(title, prefill)` takes no
+    options in 1.4.0, and no `EditorDialogOptions` exists. pi's RPC host resolves a
+    dialog whose signal is already aborted with the method's default and sends no
+    request at all, and on an abort or timeout it resolves the default without telling
+    the host, so a dialog already drawn stays on screen unless the host closes it. The
+    MCP extension's sign-in passes `{ signal }` to `ctx.ui.input`.
   - **show** state: `notify`, `setStatus`, `setTitle`, `setWidget` (text lines or a
     TUI component), `setEditorText`, `pasteToEditor`, `getEditorText`. `notify`'s
     optional second argument is `info | warning | error`, and pi sends no type when an

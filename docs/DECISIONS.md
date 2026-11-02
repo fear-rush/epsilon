@@ -140,7 +140,9 @@ Epsilon renders the extension UI methods that are data (`select`, `confirm`, `in
 `editor`, `notify`, `setStatus`, `setWidget` as text, `setTitle`, `theme`), through
 `ExtensionUIContext`. A method that needs pi's terminal UI (`custom`, footer and header
 components, terminal input) answers with a visible notice naming it, once. Silence is
-never an answer. Dialog timeouts are enforced by the engine.
+never an answer. A dialog's timeout and the extension's abort signal are enforced by the
+engine: the tab receives the time the question has left and counts down, and either
+ending closes the dialog there, so nothing waits for a click that will not come.
 
 `ctx.ui.theme` answers with a value whose colour methods return their text unchanged.
 pi does not export the theme it uses itself, and an extension reads `theme` without
