@@ -2,6 +2,11 @@
  * One model entry. The common fields stay visible; the compatibility overrides
  * are below them, because a model can override its provider's API and base URL
  * (useful when one gateway exposes several families).
+ *
+ * For an override the seed is pi's effective model, and Save reports only the
+ * fields the operator touched, so pi's own values are never pinned. An override
+ * has no API or base URL either: pi ignores both there, so those controls exist
+ * only for a model entry.
  */
 import { useState } from "react";
 import { parseProviderApi } from "shared";
@@ -17,60 +22,22 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/c
 import { Spinner } from "@/components/ui/spinner";
 import { ModelCostFields } from "./provider-model-cost";
 import { ModelReasoningFields } from "./provider-reasoning-fields";
-import { reasoningFormOf, reasoningOf } from "./reasoning";
+import { formOf, touchedBy, valueOf } from "./provider-model-form";
+import type { ModelField, ModelForm } from "./provider-model-form";
 import { TestLevelSelect } from "./test-level-select";
-import type { ReasoningForm } from "./reasoning";
 import { useDialogMotion } from "@/hooks/use-dialog-motion";
 import { keepUntouched } from "@/components/patterns/form/use-draft-form";
 import { modelFieldErrors, modelFields } from "./provider-validation";
 import type { ModelFieldErrors } from "./provider-validation";
 import type { ProviderModelInput } from "@/api/types";
-
-const optionalNumber = (value: string): number | undefined => {
-	const parsed = Number(value);
-	return value.trim() !== "" && Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-};
-
-const optionalCost = (value: string): number | undefined => {
-	const parsed = Number(value);
-	return value.trim() !== "" && Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
-};
-
-type ModelForm = ReasoningForm & {
-	id: string;
-	name: string;
-	api: string;
-	baseUrl: string;
-	contextWindow: string;
-	maxTokens: string;
-	reasoning: boolean;
-	images: boolean;
-	costInput: string;
-	costOutput: string;
-	costCacheRead: string;
-	costCacheWrite: string;
-};
-
-const formOf = (model: ProviderModelInput | undefined): ModelForm => ({
-	id: model?.id ?? "",
-	name: model?.name ?? "",
-	api: model?.api ?? "",
-	baseUrl: model?.baseUrl ?? "",
-	contextWindow: model?.contextWindow?.toString() ?? "",
-	maxTokens: model?.maxTokens?.toString() ?? "",
-	reasoning: model?.reasoning ?? false,
-	images: model?.input?.includes("image") ?? false,
-	costInput: model?.cost?.input.toString() ?? "",
-	costOutput: model?.cost?.output.toString() ?? "",
-	costCacheRead: model?.cost?.cacheRead.toString() ?? "",
-	costCacheWrite: model?.cost?.cacheWrite.toString() ?? "",
-	...reasoningFormOf(model),
-});
+import type { ModelOverride } from "@/api/types";
 
 export function ProviderModelDialog({
 	onClose,
 	title,
+	mode,
 	model,
+	override,
 	providerApi,
 	lockId,
 	onSave,
@@ -79,56 +46,34 @@ export function ProviderModelDialog({
 	/** Runs once the dialog finished closing, which is when its mount can drop it. */
 	onClose: () => void;
 	title: string;
+	/** A model entry owns its API and base URL; an override does not. */
+	mode: "model" | "override";
 	model: ProviderModelInput | undefined;
+	/** The stored override, when this dialog edits one instead of a model entry. */
+	override?: ModelOverride;
 	providerApi: ProviderApi | undefined;
 	lockId: boolean;
-	onSave: (model: ProviderModelInput) => void;
+	onSave: (model: ProviderModelInput, touched: ReadonlySet<ModelField>) => void;
 	onTest: (model: ProviderModelInput, level?: ThinkingLevel) => Promise<string>;
 }) {
-	const [form, setForm] = useState<ModelForm>(() => formOf(model));
+	const [form, setForm] = useState<ModelForm>(() => formOf(model, override));
+	const [touched, setTouched] = useState<ReadonlySet<ModelField>>(() => new Set());
 	const [errors, setErrors] = useState<ModelFieldErrors>({});
 	const [testing, setTesting] = useState(false);
 	const [testLevel, setTestLevel] = useState("none");
 	const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | undefined>();
+	const endpoint = mode === "model";
+	const validate = () => modelFieldErrors(form, endpoint);
 	const update = (patch: Partial<ModelForm>) => {
 		setForm((current) => ({ ...current, ...patch }));
+		setTouched((current) => touchedBy(current, patch));
 		setTestResult(undefined);
 		setErrors((current) => keepUntouched(current, modelFields, Object.keys(patch)));
 	};
 	const api = parseProviderApi(form.api);
-	const cost =
-		optionalCost(form.costInput) !== undefined &&
-		optionalCost(form.costOutput) !== undefined &&
-		optionalCost(form.costCacheRead) !== undefined &&
-		optionalCost(form.costCacheWrite) !== undefined &&
-		form.costInput.trim() !== "" &&
-		form.costOutput.trim() !== "" &&
-		form.costCacheRead.trim() !== "" &&
-		form.costCacheWrite.trim() !== ""
-			? {
-					input: optionalCost(form.costInput) ?? 0,
-					output: optionalCost(form.costOutput) ?? 0,
-					cacheRead: optionalCost(form.costCacheRead) ?? 0,
-					cacheWrite: optionalCost(form.costCacheWrite) ?? 0,
-				}
-			: undefined;
-
-	/** The form as the saved model, shared by Save and Test so they cannot drift. */
-	const valueOf = (): ProviderModelInput => ({
-		id: form.id.trim(),
-		name: form.name.trim() || undefined,
-		api,
-		baseUrl: form.baseUrl.trim() || undefined,
-		reasoning: form.reasoning,
-		input: form.images ? ["text", "image"] : undefined,
-		contextWindow: optionalNumber(form.contextWindow),
-		maxTokens: optionalNumber(form.maxTokens),
-		cost,
-		...reasoningOf(form, api ?? providerApi),
-	});
 
 	const runTest = async () => {
-		const found = modelFieldErrors(form);
+		const found = validate();
 		setErrors(found);
 		if (Object.keys(found).length > 0) return;
 		setTesting(true);
@@ -136,7 +81,7 @@ export function ProviderModelDialog({
 		try {
 			const parsed = thinkingLevelSchema.safeParse(testLevel);
 			const level = form.reasoning && parsed.success ? parsed.data : undefined;
-			setTestResult({ ok: true, message: await onTest(valueOf(), level) });
+			setTestResult({ ok: true, message: await onTest(valueOf(form, providerApi), level) });
 		} catch (error) {
 			setTestResult({
 				ok: false,
@@ -193,10 +138,10 @@ export function ProviderModelDialog({
 				onSubmit={(event) => {
 					event.preventDefault();
 					if (!dialog.open) return;
-					const found = modelFieldErrors(form);
+					const found = validate();
 					setErrors(found);
 					if (Object.keys(found).length > 0) return;
-					onSave(valueOf());
+					onSave(valueOf(form, providerApi), touched);
 					close();
 				}}
 			>
@@ -266,7 +211,14 @@ export function ProviderModelDialog({
 				{form.reasoning && (
 					<ModelReasoningFields form={form} api={api ?? providerApi} update={update} />
 				)}
-				<ModelCostFields form={form} errors={errors} update={update} />
+				{override !== undefined &&
+					(override.api !== undefined || override.baseUrl !== undefined) && (
+						<Notice tone="info">
+							pi ignores an API family or base URL stored in a model override, so the provider's
+							apply; Epsilon keeps the stored values.
+						</Notice>
+					)}
+				<ModelCostFields form={form} errors={errors} update={update} endpoint={endpoint} />
 
 				{testResult !== undefined && (
 					<Notice tone={testResult.ok ? "success" : "error"}>{testResult.message}</Notice>

@@ -1143,7 +1143,7 @@ export interface components {
 			modelOverrides: {
 				[key: string]: components["schemas"]["ModelOverride"];
 			};
-			catalog: components["schemas"]["SnapshotModel"][];
+			catalog: components["schemas"]["ProviderCatalogModel"][];
 		};
 		ProviderStored: {
 			name?: string;
@@ -1200,6 +1200,9 @@ export interface components {
 			maxTokens?: number;
 			cost?: components["schemas"]["ProviderModelCost"];
 		};
+		ProviderCatalogModel: components["schemas"]["ProviderModelInput"] & ({
+			provider: string;
+		});
 		ProviderImportResult: {
 			models: components["schemas"]["ProviderModelInput"][];
 		};

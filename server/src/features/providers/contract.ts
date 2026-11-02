@@ -90,6 +90,15 @@ const modelOverrideSchema = providerModelInputSchema.omit({ id: true }).openapi(
 
 export type ModelOverride = z.infer<typeof modelOverrideSchema>;
 
+/**
+ * One model of a provider's effective catalog. It carries every field an override
+ * can change, so the dialog seeds from pi's value instead of an empty one, and the
+ * operator sees what the engine actually uses.
+ */
+const providerCatalogModelSchema = providerModelInputSchema
+	.extend({ provider: z.string() })
+	.openapi("ProviderCatalogModel");
+
 const providerInputSchema = z
 	.object({
 		/** Also the key under `providers` in models.json. */
@@ -199,8 +208,8 @@ const providerDetailSchema = z
 		/** Models declared in models.json, which replace a built-in catalog. */
 		models: z.array(providerModelInputSchema),
 		modelOverrides: z.record(z.string(), modelOverrideSchema),
-		/** Every model the runtime exposes right now, for the left list. */
-		catalog: z.array(catalogModelSchema),
+		/** Every model the runtime exposes right now, with the fields an override seeds from. */
+		catalog: z.array(providerCatalogModelSchema),
 	})
 	.openapi("ProviderDetail");
 

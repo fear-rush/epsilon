@@ -1,7 +1,8 @@
 /**
- * Cost and the per-model API and base URL. Below the common fields because a
- * model can override its provider's family and endpoint (one gateway, several
- * families), not because every model needs them.
+ * Cost and, for a model entry only, the per-model API and base URL. Below the
+ * common fields because a model can override its provider's family and endpoint
+ * (one gateway, several families), not because every model needs them. pi's
+ * override schema has neither field, so an override dialog shows cost alone.
  */
 
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -24,13 +25,16 @@ export function ModelCostFields({
 	form,
 	errors,
 	update,
+	endpoint,
 }: {
 	form: CostForm;
 	errors: ModelFieldErrors;
 	update: (patch: Partial<CostForm>) => void;
+	/** Whether the API family and base URL are a model entry's to set. */
+	endpoint: boolean;
 }) {
 	return (
-		<CollapsibleSection title="Cost and compatibility">
+		<CollapsibleSection title={endpoint ? "Cost and compatibility" : "Cost"}>
 			<FieldGroup className="gap-field">
 				<FieldGroup className="grid gap-field sm:grid-cols-2">
 					<Field data-invalid={errors.costInput !== undefined}>
@@ -78,22 +82,30 @@ export function ModelCostFields({
 						<FieldError>{errors.costCacheWrite}</FieldError>
 					</Field>
 				</FieldGroup>
-				<Field>
-					<FieldLabel htmlFor="model-api">Model API</FieldLabel>
-					<ProviderApiSelect id="model-api" value={form.api} onChange={(api) => update({ api })} />
-					<FieldDescription>Overrides the provider's API for this model</FieldDescription>
-				</Field>
-				<Field data-invalid={errors.baseUrl !== undefined}>
-					<FieldLabel htmlFor="model-base-url">Model base URL</FieldLabel>
-					<Input
-						id="model-base-url"
-						value={form.baseUrl}
-						aria-invalid={errors.baseUrl !== undefined}
-						onChange={(event) => update({ baseUrl: event.target.value })}
-					/>
-					<FieldDescription>Overrides the provider's base URL</FieldDescription>
-					<FieldError>{errors.baseUrl}</FieldError>
-				</Field>
+				{endpoint && (
+					<>
+						<Field>
+							<FieldLabel htmlFor="model-api">Model API</FieldLabel>
+							<ProviderApiSelect
+								id="model-api"
+								value={form.api}
+								onChange={(api) => update({ api })}
+							/>
+							<FieldDescription>Overrides the provider's API for this model</FieldDescription>
+						</Field>
+						<Field data-invalid={errors.baseUrl !== undefined}>
+							<FieldLabel htmlFor="model-base-url">Model base URL</FieldLabel>
+							<Input
+								id="model-base-url"
+								value={form.baseUrl}
+								aria-invalid={errors.baseUrl !== undefined}
+								onChange={(event) => update({ baseUrl: event.target.value })}
+							/>
+							<FieldDescription>Overrides the provider's base URL</FieldDescription>
+							<FieldError>{errors.baseUrl}</FieldError>
+						</Field>
+					</>
+				)}
 			</FieldGroup>
 		</CollapsibleSection>
 	);

@@ -9,12 +9,90 @@ import { join } from "node:path";
 
 import { agentHome } from "../../platform/agent-home";
 import type { AgentHome } from "../../platform/agent-home";
-import { removeProvider, writeProvider } from "./service";
+import { modelRuntime } from "../../platform/pi";
+import { readProviderDetail, removeProvider, writeProvider } from "./service";
 
 const home = async (): Promise<AgentHome> =>
 	agentHome(await mkdtemp(join(tmpdir(), "epsilon-models-")));
 
 const stored = async (root: AgentHome) => JSON.parse(await readFile(root.modelsFile, "utf8"));
+
+describe("provider catalog", () => {
+	test("a detail carries the fields an override seeds from", async () => {
+		const root = await home();
+		const runtime = await modelRuntime(root);
+		const shipped = runtime.getModels("openai").find((model) => model.reasoning === true);
+		if (shipped === undefined) throw new Error("pi ships no reasoning model for openai");
+
+		const detail = await readProviderDetail(root, runtime, "openai");
+		const seeded = detail?.catalog.find((model) => model.id === shipped.id);
+		// The dialog starts from pi's values, so a field the operator does not edit
+		// is shown as `true` here instead of as an empty `false`.
+		expect(seeded).toMatchObject({
+			provider: "openai",
+			id: shipped.id,
+			reasoning: true,
+			thinkingLevelMap: shipped.thinkingLevelMap,
+		});
+	});
+
+	test("an override that names one field leaves pi's reasoning on", async () => {
+		const root = await home();
+		const shipped = (await modelRuntime(root))
+			.getModels("openai")
+			.find((model) => model.reasoning === true);
+		if (shipped === undefined) throw new Error("pi ships no reasoning model for openai");
+
+		// What the dialog sends after the operator edits only the token limit.
+		await writeProvider(root, {
+			id: "openai",
+			modelOverrides: { [shipped.id]: { maxTokens: 64_000 } },
+		});
+
+		const entry = (await stored(root)).providers.openai;
+		expect(entry.modelOverrides[shipped.id]).toEqual({ maxTokens: 64_000 });
+		const composed = (await modelRuntime(root))
+			.getModels("openai")
+			.find((model) => model.id === shipped.id);
+		expect(composed?.reasoning).toBe(true);
+		expect(composed?.maxTokens).toBe(64_000);
+	});
+
+	test("a partial override keeps the fields it did not name", async () => {
+		const root = await home();
+		await writeFile(
+			root.modelsFile,
+			JSON.stringify({
+				providers: {
+					openai: {
+						modelOverrides: {
+							"gpt-5": {
+								name: "Chosen",
+								reasoning: true,
+								thinkingLevelMap: { high: "high" },
+								// pi ignores these two in an override; Epsilon keeps the file's copy.
+								api: "anthropic-messages",
+								baseUrl: "https://legacy.test",
+								maxTokens: 1000,
+							},
+						},
+					},
+				},
+			}),
+		);
+
+		await writeProvider(root, { id: "openai", modelOverrides: { "gpt-5": { maxTokens: 2000 } } });
+
+		expect((await stored(root)).providers.openai.modelOverrides["gpt-5"]).toEqual({
+			name: "Chosen",
+			reasoning: true,
+			thinkingLevelMap: { high: "high" },
+			api: "anthropic-messages",
+			baseUrl: "https://legacy.test",
+			maxTokens: 2000,
+		});
+	});
+});
 
 describe("provider writes", () => {
 	test("keeps unknown keys on the entry, its models and its overrides", async () => {

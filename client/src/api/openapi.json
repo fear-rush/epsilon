@@ -1407,7 +1407,7 @@
 					"catalog": {
 						"type": "array",
 						"items": {
-							"$ref": "#/components/schemas/SnapshotModel"
+							"$ref": "#/components/schemas/ProviderCatalogModel"
 						}
 					}
 				},
@@ -1701,6 +1701,24 @@
 						"$ref": "#/components/schemas/ProviderModelCost"
 					}
 				}
+			},
+			"ProviderCatalogModel": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/ProviderModelInput"
+					},
+					{
+						"type": "object",
+						"properties": {
+							"provider": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"provider"
+						]
+					}
+				]
 			},
 			"ProviderImportResult": {
 				"type": "object",

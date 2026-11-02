@@ -203,7 +203,12 @@ one in-process queue per path, and refuses a file it cannot parse. A provider ke
 the documented `apiKey` field of `models.json` and is never sent back to the browser.
 Every settings write reloads the live engines. A pi-shipped provider keeps its catalog
 and is edited through `modelOverrides`; importing models is Epsilon's own bounded HTTP
-call, disabled where an API family has no shared list shape.
+call, disabled where an API family has no shared list shape. The override dialog starts
+from pi's effective model and writes only the fields the operator changed, because pi
+merges an override field by field: a field written with pi's own value would pin it, and
+a written `reasoning: false` would turn thinking off on a model that supports it. An
+override never carries an API family or base URL either: pi ignores both there, so the
+dialog offers neither and a stored pair stays in the file without affecting a test.
 
 The settings page reads every key once rather than per control: pi's effective value,
 the layer that supplies it (the project's `.pi/settings.json`, the home's

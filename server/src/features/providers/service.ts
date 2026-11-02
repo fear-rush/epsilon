@@ -175,7 +175,8 @@ export const readProviderDetail = async (
 		modelOverrides: Object.fromEntries(
 			Object.entries(overrides).map(([id, override]) => [id, fieldsOf(override)]),
 		),
-		catalog: models.map((model) => ({ provider: providerId, id: model.id, name: model.name })),
+		// The composed model, so the override dialog seeds from pi's effective values.
+		catalog: models.map((model) => ({ provider: providerId, id: model.id, ...fieldsOf(model) })),
 	};
 };
 
@@ -210,8 +211,8 @@ export const writeProvider = (home: AgentHome, input: ProviderInput): Promise<vo
 			);
 		}
 		if (input.modelOverrides !== undefined) {
-			// The form sends every override it shows, so an omitted id is removed. A
-			// field inside an override it cannot see keeps the stored value.
+			// The form sends only the fields the operator touched, so an omitted field
+			// keeps the stored value. An id the form no longer shows is removed.
 			const stored = next.modelOverrides ?? {};
 			setOrDelete(
 				next,
@@ -219,7 +220,7 @@ export const writeProvider = (home: AgentHome, input: ProviderInput): Promise<vo
 				Object.fromEntries(
 					Object.entries(input.modelOverrides).map(([id, override]) => [
 						id,
-						mergeModelFields(stored[id] ?? {}, override),
+						mergeModelFields(stored[id] ?? {}, override, "keep"),
 					]),
 				),
 			);

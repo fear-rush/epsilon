@@ -8,6 +8,7 @@
 		"build": "bun run routes:generate && tsc -b && vite build",
 		"preview": "vite preview",
 		"type-check": "bun run routes:generate && tsc -b --noEmit",
+		"test": "bun test",
 		"routes:generate": "bun run --bun tsr generate"
 	},
 	"dependencies": {

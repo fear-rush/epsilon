@@ -18,6 +18,7 @@ import { testInputOf } from "./provider-draft";
 import type { ProviderDraft } from "./provider-draft";
 import { ProviderImportDialog } from "./provider-import-dialog";
 import { ProviderModelDialog } from "./provider-model-dialog";
+import { overrideOf } from "./provider-model-form";
 import type { ModelOverride, ProviderDetail, ProviderModelInput } from "@/api/types";
 import { Badge } from "@/components/ui/badge";
 
@@ -35,19 +36,6 @@ import { Badge } from "@/components/ui/badge";
 
 type EditTarget = { model: ProviderModelInput | undefined; index: number | undefined };
 
-const overrideOf = (model: ProviderModelInput): ModelOverride => ({
-	name: model.name,
-	api: model.api,
-	baseUrl: model.baseUrl,
-	reasoning: model.reasoning,
-	thinkingLevelMap: model.thinkingLevelMap,
-	compat: model.compat,
-	input: model.input,
-	contextWindow: model.contextWindow,
-	maxTokens: model.maxTokens,
-	cost: model.cost,
-});
-
 export function ProviderModels({
 	draft,
 	detail,
@@ -63,7 +51,9 @@ export function ProviderModels({
 	update: (patch: Partial<ProviderDraft>) => void;
 }) {
 	const [editing, setEditing] = useState<EditTarget | undefined>(undefined);
-	const [overriding, setOverriding] = useState<ProviderModelInput | undefined>(undefined);
+	const [overriding, setOverriding] = useState<
+		{ model: ProviderModelInput; override: ModelOverride | undefined } | undefined
+	>(undefined);
 	const [importOpen, setImportOpen] = useState(false);
 	const [replacing, setReplacing] = useState<"add" | "import" | undefined>(undefined);
 	const shownReplacing = useLastDefined(replacing);
@@ -153,9 +143,7 @@ export function ProviderModels({
 							<CatalogModelRows
 								catalog={catalog}
 								overrides={draft.modelOverrides}
-								onEdit={(model, override) =>
-									setOverriding({ id: model.id, name: model.name, ...override })
-								}
+								onEdit={(model, override) => setOverriding({ model, override })}
 								onClear={(model) => {
 									const next = { ...draft.modelOverrides };
 									delete next[model.id];
@@ -172,6 +160,7 @@ export function ProviderModels({
 					key={`${editing.index ?? "new"}-${editing.model?.id ?? ""}`}
 					onClose={() => setEditing(undefined)}
 					title={editing.index === undefined ? "Add a model" : "Edit model"}
+					mode="model"
 					model={editing.model}
 					providerApi={api}
 					lockId={editing.index !== undefined}
@@ -194,18 +183,27 @@ export function ProviderModels({
 
 			{overriding !== undefined && (
 				<ProviderModelDialog
-					key={`override-${overriding.id}`}
+					key={`override-${overriding.model.id}`}
 					onClose={() => setOverriding(undefined)}
-					title={`Override ${overriding.name ?? overriding.id}`}
-					model={overriding}
+					title={`Override ${overriding.model.name ?? overriding.model.id}`}
+					mode="override"
+					model={overriding.model}
+					override={overriding.override}
 					providerApi={api}
 					lockId
 					onTest={testDraftModel}
-					onSave={(model) =>
+					onSave={(model, touched) => {
+						const override = overrideOf(model, touched);
+						// Opening an override and changing nothing must not add a no-op entry.
+						if (Object.keys(override).length === 0) return;
 						update({
-							modelOverrides: { ...draft.modelOverrides, [model.id]: overrideOf(model) },
-						})
-					}
+							// The write keeps fields the payload omits, so the draft does too.
+							modelOverrides: {
+								...draft.modelOverrides,
+								[model.id]: { ...draft.modelOverrides[model.id], ...override },
+							},
+						});
+					}}
 				/>
 			)}
 

@@ -6,7 +6,7 @@
 import { z } from "zod";
 import { parseProviderApi } from "shared";
 
-import { setDefined, setOrDelete } from "../../platform/patch";
+import { setOrDelete } from "../../platform/patch";
 import type { ModelOverride, ReasoningCompat, ThinkingLevelMap } from "./contract";
 import { reasoningCompatSchema, thinkingLevelMapSchema } from "./contract";
 
@@ -90,22 +90,51 @@ export const baseUrlOf = (
 ): string | undefined => entry?.baseUrl ?? provider?.baseUrl;
 
 /**
- * Apply the fields the form owns to one model record. A model is a complete
- * record: a field the dialog left empty is unset, not kept. Unknown keys already
- * on `stored` survive the merge. `input` and the numbers are set whenever they are
+ * What an omitted field means. A model entry is a complete record, so an omitted
+ * field is unset. An override is a patch, so an omitted field keeps what the file
+ * already had: the dialog only sends the fields the operator touched.
+ */
+type MergePolicy = "unset" | "keep";
+
+/**
+ * Apply one field. `emptyIsValue` marks the fields where `[]`, `{}` or `""` is a
+ * real answer rather than an emptied control.
+ */
+const writeField = <Key extends keyof StoredFields>(
+	next: StoredFields,
+	key: Key,
+	value: StoredFields[Key] | undefined,
+	policy: MergePolicy,
+	emptyIsValue: boolean,
+): void => {
+	if (value === undefined) {
+		if (policy === "unset") delete next[key];
+		return;
+	}
+	if (emptyIsValue) next[key] = value;
+	else setOrDelete(next, key, value);
+};
+
+/**
+ * Apply the fields the payload owns to one model record. Unknown keys already on
+ * `stored` survive the merge. `input` and the numbers are set whenever they are
  * given: an empty list is an answer, and `0` is a value.
  */
-export const mergeModelFields = (stored: StoredFields, input: ModelOverride): StoredFields => {
+export const mergeModelFields = (
+	stored: StoredFields,
+	input: ModelOverride,
+	policy: MergePolicy = "unset",
+): StoredFields => {
 	const next: StoredFields = { ...stored };
-	setOrDelete(next, "name", input.name);
-	setDefined(next, "api", input.api);
-	setOrDelete(next, "baseUrl", input.baseUrl);
-	setDefined(next, "reasoning", input.reasoning);
-	setOrDelete(next, "thinkingLevelMap", input.thinkingLevelMap);
-	setOrDelete(next, "compat", input.compat);
-	setDefined(next, "input", input.input);
-	setDefined(next, "contextWindow", input.contextWindow);
-	setDefined(next, "maxTokens", input.maxTokens);
-	setDefined(next, "cost", input.cost);
+	writeField(next, "name", input.name, policy, false);
+	writeField(next, "api", input.api, policy, true);
+	writeField(next, "baseUrl", input.baseUrl, policy, false);
+	writeField(next, "reasoning", input.reasoning, policy, true);
+	writeField(next, "thinkingLevelMap", input.thinkingLevelMap, policy, false);
+	writeField(next, "compat", input.compat, policy, false);
+	writeField(next, "input", input.input, policy, true);
+	writeField(next, "contextWindow", input.contextWindow, policy, true);
+	writeField(next, "maxTokens", input.maxTokens, policy, true);
+	writeField(next, "cost", input.cost, policy, true);
 	return next;
 };

@@ -4,6 +4,9 @@
  * must fill, that a URL has to be absolute, that a model's token and cost
  * numbers are numbers, and that a cost is all four values or none.
  *
+ * `endpoint` is false for an override, which has no API family or base URL, so a
+ * stored value in either must not block a save.
+ *
  * A blank optional field is valid, and `inputOf` leaves it out of the payload
  * rather than storing an empty string. Only the fields that fail come back, so
  * the caller can put each message under its own control.
@@ -107,7 +110,7 @@ const costFields: readonly ModelField[] = [
 
 export type ModelFormValues = Record<ModelField, string>;
 
-export function modelFieldErrors(form: ModelFormValues): ModelFieldErrors {
+export function modelFieldErrors(form: ModelFormValues, endpoint = true): ModelFieldErrors {
 	const filled = costFields.filter((field) => form[field].trim() !== "").length;
 	const allOrNone = filled === 0 || filled === costFields.length;
 
@@ -140,7 +143,10 @@ export function modelFieldErrors(form: ModelFormValues): ModelFieldErrors {
 		})
 		.safeParse(form);
 
-	return fieldErrors(result, modelFields);
+	const errors = fieldErrors(result, modelFields);
+	// An override dialog shows no base URL field, so a stored one must not block it.
+	if (!endpoint) delete errors.baseUrl;
+	return errors;
 }
 
 /** The first message per field, which is what a single control can show. */

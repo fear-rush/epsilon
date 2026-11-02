@@ -335,7 +335,9 @@ every unknown key in both objects. A model
 needs only `id`; `input` defaults to `["text"]`, `contextWindow` to 128000 and
 `maxTokens` to 16384. `cost` is optional, and when present its four fields are
 required. A `modelOverrides` object merges field by field for object fields such as
-`cost`; every other field replaces the model's value.
+`cost`; every other field replaces the model's value. `ModelRuntime.getModels()`
+returns the composed model, with the stored override already applied, so the panel
+seeds its dialog from the runtime's answer rather than from the file.
 
 ## Skills
 
@@ -643,7 +645,8 @@ Turborepo or the runtime.
   `branchSummary.skipPrompt`. `getCompactionReserveTokens(model)` resolves the
   model's override before the ordinary number, so a host that shows only the
   ordinary value is showing the wrong one. `models.json` `modelOverrides` accepts no `api` and
-  no `baseUrl`, and its `cost` may be partial, field by field. And pi reads both
+  no `baseUrl` (pi ignores both when present rather than refusing the file), and its
+  `cost` may be partial, field by field. And pi reads both
   `models.json` and `mcp.json` with a comment- and trailing-comma-tolerant reader
   (`dist/utils/json.js`), so a strict rewrite silently deletes comments an operator
   relies on.
