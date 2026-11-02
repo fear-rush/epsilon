@@ -30,7 +30,8 @@ const isCleared = (request: ExtensionDisplay): boolean =>
 export type FrameSink = (frame: ServerFrame) => void;
 
 export class Dialogs {
-	private readonly sessionId: string;
+	/** Read live: a replacement changes the id every frame must carry. */
+	private readonly sessionId: () => string;
 	private readonly emit: (frame: ServerFrame) => void;
 	/** Called whenever the pending set changes, so the session can re-time its idle. */
 	private readonly onChange: () => void;
@@ -43,7 +44,7 @@ export class Dialogs {
 	/** Methods that need pi's TUI, already reported, so a loop cannot spam. */
 	private readonly reported = new Set<string>();
 
-	constructor(sessionId: string, emit: (frame: ServerFrame) => void, onChange: () => void) {
+	constructor(sessionId: () => string, emit: (frame: ServerFrame) => void, onChange: () => void) {
 		this.sessionId = sessionId;
 		this.emit = emit;
 		this.onChange = onChange;
@@ -58,12 +59,12 @@ export class Dialogs {
 			const cancel = () => {
 				this.pending.delete(question.id);
 				resolve({ id: question.id, method: "cancel" });
-				this.emit({ t: "dialog-closed", sessionId: this.sessionId, id: question.id });
+				this.emit({ t: "dialog-closed", sessionId: this.sessionId(), id: question.id });
 				this.onChange();
 			};
 			const timer = timeoutMs === undefined ? undefined : setTimeout(cancel, timeoutMs);
 			this.pending.set(question.id, { question, resolve, timer });
-			this.emit({ t: "dialog", sessionId: this.sessionId, request: question });
+			this.emit({ t: "dialog", sessionId: this.sessionId(), request: question });
 			this.onChange();
 		});
 
@@ -79,7 +80,7 @@ export class Dialogs {
 		this.pending.delete(answer.id);
 		if (pending.timer !== undefined) clearTimeout(pending.timer);
 		pending.resolve(answer);
-		this.emit({ t: "dialog-closed", sessionId: this.sessionId, id: answer.id });
+		this.emit({ t: "dialog-closed", sessionId: this.sessionId(), id: answer.id });
 		this.onChange();
 		return "answered";
 	}
@@ -92,7 +93,7 @@ export class Dialogs {
 			if (pending === undefined) continue;
 			if (pending.timer !== undefined) clearTimeout(pending.timer);
 			pending.resolve({ id, method: "cancel" });
-			this.emit({ t: "dialog-closed", sessionId: this.sessionId, id });
+			this.emit({ t: "dialog-closed", sessionId: this.sessionId(), id });
 		}
 		this.pending.clear();
 		this.onChange();
@@ -101,10 +102,10 @@ export class Dialogs {
 	/** Give a late subscriber the unanswered dialogs and the keyed display state. */
 	replay(sink: FrameSink): void {
 		for (const pending of this.pending.values()) {
-			sink({ t: "dialog", sessionId: this.sessionId, request: pending.question });
+			sink({ t: "dialog", sessionId: this.sessionId(), request: pending.question });
 		}
 		for (const request of this.displayState.values()) {
-			sink({ t: "ui", sessionId: this.sessionId, request });
+			sink({ t: "ui", sessionId: this.sessionId(), request });
 		}
 	}
 
@@ -115,7 +116,7 @@ export class Dialogs {
 			if (isCleared(request)) this.displayState.delete(key);
 			else this.displayState.set(key, request);
 		}
-		this.emit({ t: "ui", sessionId: this.sessionId, request });
+		this.emit({ t: "ui", sessionId: this.sessionId(), request });
 	};
 
 	/** Say once that a TUI-only method has no browser equivalent. */

@@ -79,8 +79,10 @@ sides run. REST shapes live in server `contract.ts`.
   projects are told apart and how the project list is derived.
 - Epsilon's own files in the agent home: `pinned-sessions.json`, the pinned chat
   ids. A chat's display name is pi's own session-name entry, not a second file.
-- Live engines in the server's registry. An engine is disposed ten seconds after its
-  last detach unless it is running, compacting or waiting on a dialog, so a closed
+- Live engines in the server's registry. An engine is a pi `AgentSessionRuntime`, so
+  a replacement (`/new`, a switch, a fork) is pi's own operation and the registry and
+  the page follow the session id it moved to. An engine is disposed ten seconds after
+  its last detach unless it is running, compacting or waiting on a dialog, so a closed
   tab does not stop a run and a reload sees a pending dialog again.
 - The browser holds view state only: scroll, drafts, open panels, the folder of a
   project chat that has no file yet, the project Settings shows, and the skill page's

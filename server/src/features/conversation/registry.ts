@@ -12,7 +12,6 @@
  */
 import { mkdir } from "node:fs/promises";
 
-import type { AgentSessionRuntime } from "@earendil-works/pi-coding-agent";
 import type { Place } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
@@ -20,9 +19,24 @@ import { locateSession } from "../../platform/pi";
 import type { McpLive } from "../mcp";
 import { aggregateMcpLive } from "../mcp";
 import { placeOf, trustedProjectFolder } from "../projects";
-import { withRuntime } from "./runtime";
+import type { SessionHost } from "./host/host";
+import { withHost } from "./host/host";
 import { LiveSession } from "./session";
 import type { ExportedSession, ExportFormat } from "./session";
+import type { UiHost } from "./ui-context";
+
+/**
+ * What a copy's extensions get: no tab is attached while the copy runs, so a
+ * question is answered as the cancelled dialog a closed tab answers with, and the
+ * display requests are dropped. The runtime is thrown away at the end of the copy;
+ * the new session shows its own notices once the page opens it.
+ */
+const NO_TAB: UiHost = {
+	ask: async (question) => ({ id: question.id, method: "cancel" }),
+	display: () => undefined,
+	unsupported: () => undefined,
+	fail: () => undefined,
+};
 
 /** Where a session will run, resolved before its engine is built. */
 type Location = { cwd: string; file: string | undefined; place: Place };
@@ -40,7 +54,14 @@ export type CopyOutcome =
 
 export class SessionRegistry {
 	private readonly home: AgentHome;
+	/** The id a chat has now → its live session. */
 	private readonly sessions = new Map<string, LiveSession>();
+	/**
+	 * Every id a chat has held → the same session. A replacement changes the id a
+	 * tab is holding, so a stale tab asks for an old one and must reach the live
+	 * chat instead of opening a second writer on the same file.
+	 */
+	private readonly aliases = new Map<string, LiveSession>();
 	private readonly loading = new Map<string, Promise<LiveSession>>();
 
 	constructor(home: AgentHome) {
@@ -48,7 +69,7 @@ export class SessionRegistry {
 	}
 
 	find(sessionId: string): LiveSession | undefined {
-		const session = this.sessions.get(sessionId);
+		const session = this.aliases.get(sessionId);
 		return session?.isOpen === true ? session : undefined;
 	}
 
@@ -100,8 +121,10 @@ export class SessionRegistry {
 	 * Drop an idle engine so its file can change underneath. Answers false while
 	 * the session is still working; a session with no engine is already closed.
 	 */
-	closeIfIdle(sessionId: string): boolean {
-		return this.sessions.get(sessionId)?.closeIfIdle() ?? true;
+	async closeIfIdle(sessionId: string): Promise<boolean> {
+		const session = this.aliases.get(sessionId);
+		if (session === undefined) return true;
+		return session.closeIfIdle();
 	}
 
 	/**
@@ -128,10 +151,10 @@ export class SessionRegistry {
 	 * original file is left as it was. The new id is what the page opens next.
 	 */
 	async fork(sessionId: string, entryId: string): Promise<CopyOutcome> {
-		return this.copy(sessionId, async (runtime) => {
-			const result = await runtime.fork(entryId);
+		return this.copy(sessionId, async (host) => {
+			const result = await host.replace((runtime) => runtime.fork(entryId));
 			if (result.cancelled) throw new Error("An extension cancelled the fork.");
-			return runtime.session.sessionId;
+			return host.id;
 		});
 	}
 
@@ -140,12 +163,12 @@ export class SessionRegistry {
 	 * pi's `fork` at the current entry (`{ position: "at" }`).
 	 */
 	async clone(sessionId: string): Promise<CopyOutcome> {
-		return this.copy(sessionId, async (runtime) => {
-			const leaf = runtime.session.sessionManager.getLeafId();
+		return this.copy(sessionId, async (host) => {
+			const leaf = host.session.sessionManager.getLeafId();
 			if (leaf === null) throw new Error("This chat has no message to clone yet.");
-			const result = await runtime.fork(leaf, { position: "at" });
+			const result = await host.replace((runtime) => runtime.fork(leaf, { position: "at" }));
 			if (result.cancelled) throw new Error("An extension cancelled the clone.");
-			return runtime.session.sessionId;
+			return host.id;
 		});
 	}
 
@@ -156,9 +179,11 @@ export class SessionRegistry {
 		}
 	}
 
-	disposeAll(): void {
-		for (const session of [...this.sessions.values()]) session.dispose();
+	async disposeAll(): Promise<void> {
+		const closing = [...this.sessions.values()].map((session) => session.dispose());
 		this.sessions.clear();
+		this.aliases.clear();
+		await Promise.all(closing);
 	}
 
 	private async locate(sessionId: string, place: Place | undefined): Promise<Location> {
@@ -200,11 +225,11 @@ export class SessionRegistry {
 	 */
 	private async copy(
 		sessionId: string,
-		replace: (runtime: AgentSessionRuntime) => Promise<string>,
+		replace: (host: SessionHost) => Promise<string>,
 	): Promise<CopyOutcome> {
 		const located = await locateSession(sessionId);
 		if (located === undefined) return { ok: false, reason: "session-not-found" };
-		if (!this.closeIfIdle(sessionId)) return { ok: false, reason: "session-running" };
+		if (!(await this.closeIfIdle(sessionId))) return { ok: false, reason: "session-running" };
 		try {
 			const location = await this.locationOf(located);
 			if (location.file === undefined) {
@@ -214,13 +239,15 @@ export class SessionRegistry {
 					message: "This chat has no session file yet. Send a message before copying it.",
 				};
 			}
-			const id = await withRuntime(
+			const id = await withHost(
 				{
 					home: this.home,
 					cwd: location.cwd,
 					chat: location.place.kind === "chat",
+					sessionId,
 					file: location.file,
 				},
+				NO_TAB,
 				replace,
 			);
 			return { ok: true, id };
@@ -239,10 +266,31 @@ export class SessionRegistry {
 			sessionId,
 			...location,
 			home: this.home,
-			// The session disposed itself after the idle grace; drop the reference.
-			onEmpty: () => this.sessions.delete(sessionId),
+			// The session disposed itself after the idle grace; drop every id it held.
+			onEmpty: () => this.forget(sessionId),
+			onReplaced: (from, to) => this.rekey(from, to),
 		});
-		this.sessions.set(sessionId, session);
+		this.sessions.set(session.sessionId, session);
+		this.aliases.set(sessionId, session);
+		this.aliases.set(session.sessionId, session);
 		return session;
+	}
+
+	/** A replacement moved one chat to a new id: both ids reach it from now on. */
+	private rekey(from: string, to: string): void {
+		const session = this.aliases.get(from) ?? this.sessions.get(from);
+		if (session === undefined) return;
+		this.sessions.delete(from);
+		this.sessions.set(to, session);
+		this.aliases.set(from, session);
+		this.aliases.set(to, session);
+	}
+
+	/** Drop every id a closed chat held, however it was reached. */
+	private forget(sessionId: string): void {
+		const session = this.aliases.get(sessionId);
+		if (session === undefined) return;
+		for (const [id, owner] of this.aliases) if (owner === session) this.aliases.delete(id);
+		this.sessions.delete(session.sessionId);
 	}
 }

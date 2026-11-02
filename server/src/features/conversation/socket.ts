@@ -170,7 +170,15 @@ const watch = (
 	socket.data.wanted.add(sessionId);
 	const attaching = socket.data.attaching.get(sessionId);
 	if (attaching !== undefined) return attaching;
-	if (socket.data.unsubscribes.has(sessionId)) return Promise.resolve(engines.find(sessionId));
+	if (socket.data.unsubscribes.has(sessionId)) {
+		const live = engines.find(sessionId);
+		if (live !== undefined) return Promise.resolve(live);
+		// The engine closed under this tab: an extension asked for shutdown, or the
+		// registry dropped it. The subscription is dead, so attach again rather than
+		// drop the tab's next command on the floor.
+		unwatch(socket, sessionId);
+		socket.data.wanted.add(sessionId);
+	}
 	const task = open(engines, socket, sessionId, place).finally(() => {
 		socket.data.attaching.delete(sessionId);
 	});

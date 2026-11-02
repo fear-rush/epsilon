@@ -15,7 +15,7 @@ import type { JsonAgentSessionEvent } from "../pi";
  * Bumped whenever a frame's shape changes. The client sends it in `hello` and
  * reloads on a mismatch instead of guessing.
  */
-export const PROTOCOL_VERSION = 13;
+export const PROTOCOL_VERSION = 14;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([
@@ -377,6 +377,18 @@ export const serverFrameSchema = z.discriminatedUnion("t", [
 		command: commandNameSchema,
 		ok: z.boolean(),
 		error: z.string().optional(),
+	}),
+	/**
+	 * pi replaced the session under this chat: `/new`, a fork, a switch or a reload
+	 * gave it a new id. The frame names the id the tab is watching, so it reaches
+	 * the store that asked, and that id keeps reaching the same chat afterwards.
+	 */
+	z.object({
+		t: z.literal("session-replaced"),
+		sessionId: z.string(),
+		fromId: z.string(),
+		toId: z.string(),
+		reason: z.enum(["startup", "reload", "new", "resume", "fork"]),
 	}),
 	z.object({
 		t: z.literal("error"),

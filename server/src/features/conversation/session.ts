@@ -3,6 +3,11 @@
  * The transcript is pi's session file; the dialogs and display state live in
  * `dialogs.ts`, and the fan-out to tabs in `SessionFrames` below. A command is a method
  * call on the embedded `AgentSession` (docs/DECISIONS.md, Embedded engine); no process speaks to this one.
+ *
+ * The engine is a `SessionHost`, one pi `AgentSessionRuntime`. A replacement moves
+ * the chat to a new session id, so the id is read live and a tab is told which one
+ * it moved to; every id the chat held keeps reaching this object through the
+ * registry.
  */
 import { watch } from "node:fs";
 import type { FSWatcher } from "node:fs";
@@ -32,7 +37,9 @@ import type { McpLive } from "../mcp";
 import { mcpLiveOf } from "../mcp";
 import { Dialogs } from "./dialogs";
 import type { AnswerOutcome, FrameSink } from "./dialogs";
-import { createEngine, setCodingTools, toJsonEvent } from "./engine";
+import { setCodingTools, toJsonEvent } from "./engine";
+import { bindHost } from "./host/bindings";
+import { SessionHost } from "./host/host";
 import { buildSnapshot, readModelsFrom } from "./snapshot";
 import { UiBridge } from "./ui-context";
 
@@ -120,18 +127,24 @@ export type LiveSessionOptions = {
 	home: AgentHome;
 	/** Called once this session has disposed itself, so the registry drops it. */
 	onEmpty: () => void;
+	/** Called after a replacement that changed the id, so the registry re-keys. */
+	onReplaced: (from: string, to: string) => void;
 };
 
 export class LiveSession {
-	readonly sessionId: string;
 	readonly place: Place;
 	private readonly onEmpty: () => void;
+	private readonly onReplaced: (from: string, to: string) => void;
 	private readonly home: AgentHome;
 	private readonly frames: SessionFrames;
 	private readonly dialogs: Dialogs;
 	private readonly bridge: UiBridge;
-	private agent: AgentSession | undefined;
+	private host: SessionHost | undefined;
+	/** The id pi has for this chat now; a replacement changes it. */
+	private currentId: string;
 	private unsubscribe: (() => void) | undefined;
+	/** True while a command runs, so a shutdown it asked for waits for it to finish. */
+	private dispatching = false;
 	/** The models the picker offers, refreshed when the engine's providers change. */
 	private models: SnapshotModel[] = [];
 	private idleTimer: ReturnType<typeof setTimeout> | undefined;
@@ -146,17 +159,18 @@ export class LiveSession {
 	private driftSeen = false;
 
 	private constructor(options: LiveSessionOptions) {
-		const { sessionId, place, onEmpty, home } = options;
-		this.sessionId = sessionId;
+		const { sessionId, place, onEmpty, onReplaced, home } = options;
+		this.currentId = sessionId;
 		this.place = place;
 		this.onEmpty = onEmpty;
+		this.onReplaced = onReplaced;
 		this.home = home;
 		this.cwd = options.cwd;
 		this.file = options.file;
 		this.chat = place.kind === "chat";
 		this.frames = new SessionFrames(() => this.onFrameCount());
 		this.dialogs = new Dialogs(
-			sessionId,
+			() => this.currentId,
 			(frame) => this.frames.emit(frame),
 			() => this.scheduleIdle(),
 		);
@@ -173,24 +187,88 @@ export class LiveSession {
 		return session;
 	}
 
-	/** Build the engine, bind its events and start watching the file it writes. */
+	/**
+	 * Stable for the chat's life in a terminal's sense, but a replacement changes it;
+	 * the registry keeps every id this chat has held pointing here.
+	 */
+	get sessionId(): string {
+		return this.currentId;
+	}
+
+	/** Build the runtime, bind its extensions, and follow the file it writes. */
 	private async start(): Promise<void> {
-		const agent = await createEngine({
-			sessionId: this.sessionId,
+		const host = await SessionHost.open({
+			home: this.home,
 			cwd: this.cwd,
+			sessionId: this.currentId,
 			file: this.file,
 			chat: this.chat,
-			home: this.home,
-			ui: this.bridge.host,
 		});
-		this.agent = agent;
-		this.unsubscribe = agent.subscribe((event) => this.receive(event));
-		this.models = (await readModelsFrom(agent.modelRuntime, patternsOf(this.home))).scoped;
+		this.host = host;
+		await this.wire(host);
+	}
+
+	/**
+	 * Bind one host: the extensions first, so every replacement binds the new session
+	 * before this owner re-subscribes to it, then the observations this session keeps.
+	 */
+	private async wire(host: SessionHost): Promise<void> {
+		await bindHost(host, this.bridge.host);
+		host.onSwap((session) => this.rebound(session));
+		host.onReplaced(({ from, to }) => this.onReplaced(from, to));
+		host.onShutdownRequested(() => this.extensionShutdown());
+		this.subscribeTo(host.session);
+		this.currentId = host.id;
+		this.file = host.file;
+		this.models = (await readModelsFrom(host.session.modelRuntime, patternsOf(this.home))).scoped;
 		this.watch();
 	}
 
+	/**
+	 * pi swapped the session under this host. Subscriptions and the watcher belong to
+	 * the session that went; a new id is what the tab has to follow.
+	 */
+	private rebound(session: AgentSession): void {
+		const host = this.host;
+		if (host === undefined) return;
+		const from = this.currentId;
+		this.subscribeTo(session);
+		this.currentId = host.id;
+		this.file = host.file;
+		this.driftSeen = false;
+		this.watch();
+		if (host.id !== from) {
+			this.emit({
+				t: "session-replaced",
+				sessionId: from,
+				fromId: from,
+				toId: host.id,
+				reason: host.startReason,
+			});
+		}
+		this.resync();
+		// The same catalog serves every session in this home, so the picker keeps its
+		// list while the auth-checked read runs; the swap itself must not wait for it.
+		void this.refreshModels(session);
+	}
+
+	private async refreshModels(session: AgentSession): Promise<void> {
+		try {
+			this.models = (await readModelsFrom(session.modelRuntime, patternsOf(this.home))).scoped;
+			this.resync();
+		} catch (error) {
+			this.fail(error instanceof Error ? error : new Error(String(error)));
+		}
+	}
+
+	/** Replace the event subscription; the old session's listener is gone with it. */
+	private subscribeTo(session: AgentSession): void {
+		this.unsubscribe?.();
+		this.unsubscribe = session.subscribe((event) => this.receive(event));
+	}
+
 	get isOpen(): boolean {
-		return this.agent !== undefined;
+		return this.host !== undefined;
 	}
 
 	get needsInput(): boolean {
@@ -200,11 +278,12 @@ export class LiveSession {
 	/**
 	 * Drop the engine now if nothing would be lost: no run, no compaction, no
 	 * question waiting. Answers whether it is gone, so a move or a delete can
-	 * refuse a session that is still working.
+	 * refuse a session that is still working. Awaits the close, because the caller
+	 * may delete or re-read the file the engine holds.
 	 */
-	closeIfIdle(): boolean {
+	async closeIfIdle(): Promise<boolean> {
 		if (this.busy) return false;
-		this.dispose();
+		await this.dispose();
 		return true;
 	}
 
@@ -214,7 +293,7 @@ export class LiveSession {
 	 * `sessions` is the only answer for "is anything connected yet".
 	 */
 	mcpLive(names: readonly string[]): McpLive {
-		const agent = this.agent;
+		const agent = this.host?.session;
 		if (agent === undefined)
 			return { sessions: 0, servers: [], codemode: false, toolSearch: false };
 		const tools: { namespace: string; name: string }[] = [];
@@ -246,7 +325,7 @@ export class LiveSession {
 
 	/** Rename through the live engine, so every tab watching gets the new snapshot. */
 	rename(name: string): boolean {
-		const agent = this.agent;
+		const agent = this.host?.session;
 		if (agent === undefined) return false;
 		agent.setSessionName(name);
 		return true;
@@ -278,6 +357,7 @@ export class LiveSession {
 
 	/** Run one command and report it to every tab watching this session. */
 	async run(command: Command): Promise<void> {
+		this.dispatching = true;
 		try {
 			await this.dispatch(command);
 			this.lastOwnActivity = Date.now();
@@ -295,23 +375,51 @@ export class LiveSession {
 				ok: false,
 				error: error instanceof Error ? error.message : String(error),
 			});
+		} finally {
+			this.dispatching = false;
+			// An extension command can ask for shutdown; close only once it is done,
+			// the way pi's own modes defer it.
+			if (this.host?.shutdownRequested === true) this.closeIfSafe();
 		}
 	}
 
 	/** Drop the engine. A later attach rebuilds it from the session file. */
-	dispose(): void {
+	async dispose(): Promise<void> {
 		this.stopWatch();
-		const agent = this.agent;
-		if (agent === undefined) return;
+		const host = this.host;
+		if (host === undefined) return;
 		// Clear the reference first: cancelling dialogs asks the session to
 		// re-time itself, and a session with no engine must not schedule anything.
-		this.agent = undefined;
+		this.host = undefined;
 		if (this.idleTimer !== undefined) clearTimeout(this.idleTimer);
 		this.idleTimer = undefined;
 		this.dialogs.cancelAll();
 		this.unsubscribe?.();
-		agent.dispose();
+		this.unsubscribe = undefined;
+		// The runtime's dispose is the one teardown that emits `session_shutdown`;
+		// a plain `session.dispose()` would leave MCP transports connected.
+		await host.close();
 		this.onEmpty();
+	}
+
+	/**
+	 * An extension called `ctx.shutdown()`. pi names no extension, so the notice
+	 * cannot either; the chat closes and the server keeps serving.
+	 */
+	private extensionShutdown(): void {
+		this.dialogs.display({
+			method: "notify",
+			message:
+				"An extension asked to close this chat, so its engine is closing. Every other chat keeps running; the next message reopens this one from its file.",
+			notifyType: "warning",
+		});
+		this.closeIfSafe();
+	}
+
+	/** Close now unless a run, a question or the command that asked is still going. */
+	private closeIfSafe(): void {
+		if (this.busy || this.dispatching || this.host === undefined) return;
+		void this.dispose();
 	}
 
 	/**
@@ -321,14 +429,14 @@ export class LiveSession {
 	 */
 	async reloadFromDisk(): Promise<void> {
 		if (this.busy) throw new Error("Stop the run before reloading this chat.");
-		const agent = this.agent;
-		if (agent === undefined) return;
+		const host = this.host;
+		if (host === undefined) return;
 		this.stopWatch();
-		this.agent = undefined;
+		this.host = undefined;
 		this.unsubscribe?.();
-		agent.dispose();
 		this.unsubscribe = undefined;
 		this.driftSeen = false;
+		await host.close();
 		await this.start();
 		this.resync();
 	}
@@ -340,7 +448,7 @@ export class LiveSession {
 	 */
 	private watch(): void {
 		this.stopWatch();
-		const file = this.file ?? this.agent?.sessionFile;
+		const file = this.host?.file ?? this.file;
 		if (file === undefined) return;
 		this.file = file;
 		try {
@@ -358,7 +466,7 @@ export class LiveSession {
 	}
 
 	private sawFileChange(): void {
-		if (this.agent === undefined || this.busy || this.driftSeen) return;
+		if (this.host === undefined || this.busy || this.driftSeen) return;
 		// pi writes on every message and result, so a change within this window is
 		// this engine's own work, not another process's.
 		if (Date.now() - this.lastOwnActivity < 2_000) return;
@@ -528,8 +636,9 @@ export class LiveSession {
 	}
 
 	private get engine(): AgentSession {
-		if (this.agent === undefined) throw new Error("This session has no live engine");
-		return this.agent;
+		const host = this.host;
+		if (host === undefined) throw new Error("This session has no live engine");
+		return host.session;
 	}
 
 	private fail(error: Error, code: ProtocolErrorCode = "AGENT_FAILED"): void {
@@ -556,6 +665,8 @@ export class LiveSession {
 			// pi writes the file on the first entry, so a new chat has nothing to
 			// watch until a run settles.
 			if (this.watcher === undefined) this.watch();
+			// A shutdown asked for during the run waited for this settle.
+			if (this.host?.shutdownRequested === true) this.closeIfSafe();
 		}
 		try {
 			this.emit({ t: "event", sessionId: this.sessionId, event: toJsonEvent(event) });
@@ -584,12 +695,10 @@ export class LiveSession {
 
 	/** Keep an unwatched session while it runs, waits for an answer, retries or compacts. */
 	private get busy(): boolean {
+		const agent = this.host?.session;
 		return (
-			this.agent !== undefined &&
-			(this.agent.isStreaming ||
-				this.agent.isCompacting ||
-				this.agent.isRetrying ||
-				this.dialogs.needsInput)
+			agent !== undefined &&
+			(agent.isStreaming || agent.isCompacting || agent.isRetrying || this.dialogs.needsInput)
 		);
 	}
 
@@ -604,9 +713,9 @@ export class LiveSession {
 	}
 
 	private scheduleIdle(): void {
-		if (this.agent === undefined || this.frames.count > 0 || this.busy) return;
+		if (this.host === undefined || this.frames.count > 0 || this.busy) return;
 		if (this.idleTimer !== undefined) return;
-		this.idleTimer = setTimeout(() => this.dispose(), IDLE_DISPOSE_MS);
+		this.idleTimer = setTimeout(() => void this.dispose(), IDLE_DISPOSE_MS);
 	}
 
 	private emit(frame: ServerFrame): void {

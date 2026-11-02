@@ -81,10 +81,10 @@ const server = Bun.serve<ChatState>({
 
 console.log(`epsilon on http://${HOST}:${server.port} (socket ${SOCKET_PATH}, home ${home.dir})`);
 
-const shutdown = (): void => {
-	engines.disposeAll();
+const shutdown = async (): Promise<void> => {
+	await engines.disposeAll();
 	server.stop(true);
 };
 
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+process.on("SIGINT", () => void shutdown());
+process.on("SIGTERM", () => void shutdown());

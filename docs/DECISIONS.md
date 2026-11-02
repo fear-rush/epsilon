@@ -6,23 +6,48 @@ heading.
 
 ## Embedded engine
 
-The server runs pi's engine in its own process through the SDK: one `AgentSession` per
-open session id, created with the working directory and the agent home. Epsilon does
-not spawn `pi`, does not use pi's RPC mode and does not speak its envelope.
+The server runs pi's engine in its own process through the SDK: one
+`AgentSessionRuntime` per open chat, created with the working directory and the agent
+home. Epsilon does not spawn `pi`, does not use pi's RPC mode and does not speak its
+envelope.
 
 Why: Epsilon ships its own default extensions, and the SDK is the only surface that can
-load inline extensions, arbitrate names (`replaceable`), reload resources and navigate
-the session tree. An idle engine is disposed and recreated on the next attach.
+load inline extensions, arbitrate names (`replaceable`), reload resources, navigate
+the session tree and replace the session it holds. A runtime is what pi gives a host
+that needs a replacement: `newSession`, `switchSession` and `fork` are the controls an
+extension command context drives, and only the runtime's `dispose()` emits
+`session_shutdown`, so a chat that closes releases its MCP transports. An idle engine
+is disposed and recreated on the next attach.
 
 Cost accepted: an engine or extension bug takes every live session down with the server
-(session files survive), and all sessions share one heap.
+(session files survive), and all sessions share one heap. A session id can change under
+a tab, because a replacement is a new session: the registry keeps every id a chat has
+held, and the page follows the one it has now.
 
 Not: an RPC child process (no inline extensions, no arbitration, no reload). A worker
 thread (the engine's services and MCP clients do not cross the boundary without
-rewriting a frontend). Two engines side by side (two vocabularies in one UI). A second
+rewriting a frontend). Two engines side by side (two vocabularies in one UI). A bare
+`AgentSession` with no runtime around it (its `dispose()` skips `session_shutdown`, so
+every extension cleanup registered on that event is skipped too). A second
 MCP client from `@earendil-works/pi-mcp`, which is importable on its own: it would open
 a second connection, and a second stdio process, for every server, without the MCP
 extension's config resolution, exposure, OAuth or permission hooks.
+
+## Extension shutdown
+
+`ctx.shutdown()` ends the chat that called it, not the server. The engine is closed
+(runtime teardown, so extensions see `session_shutdown` with reason `quit`), the calling
+tab is told in a notice, and every other chat keeps working. The transcript stays
+readable and the next message reopens the session from its file.
+
+Why: pi hands the host a request to shut down and says nothing about its scope. In a
+terminal that request ends the process, which here would take every other chat with it.
+
+Cost accepted: the notice cannot name the extension, because pi's `shutdownHandler`
+receives no extension identity. It says an extension asked.
+
+Not: exiting the server. Ignoring the call, which is what an unbound handler does:
+the extension's own cleanup would then never run.
 
 ## Socket vocabulary
 
@@ -244,15 +269,15 @@ Forking a chat at a message and cloning it at the position it is at each produce
 session under a new id**, and the REST route answers that id so the page navigates to it. The
 fork picker lists every user message in the session tree, not only the active branch, and the
 picked text is handed to the new chat's composer: pi's `/fork` puts it back in the editor,
-and Epsilon opens a new session id instead of rebinding the current one. A copy runs on an
-`AgentSessionRuntime` built for that request alone and disposed in `finally`:
-pi's `fork` replaces the session a runtime holds, so a copy cannot borrow the live engine. The
-transient runtime is wired like the engine (same settings manager, same resource loader with
-the CLI's built-ins and Epsilon's defaults, same UI bridge, with no tab behind it), so an
-extension sees the same start and shutdown pair it would in a live engine and a copy pays
-one MCP connect and disconnect for it. The source session's engine is closed first, so one
-writer reads the file, and a chat that is still working refuses the copy instead of being
-stopped.
+and Epsilon opens a new session id instead of rebinding the current one. A copy runs on a
+`SessionHost` built for that request alone and closed in `finally`, from the same runtime
+factory a live chat uses: pi's `fork` replaces the session a runtime holds, so a copy
+cannot borrow the live engine. It is wired like a live chat (same settings manager, same
+resource loader with the CLI's built-ins and Epsilon's defaults, same UI bridge, with no
+tab behind it), so an extension sees the same start and shutdown pair it would in a live
+engine and a copy pays one MCP connect and disconnect for it. The source session's engine
+is closed first, so one writer reads the file, and a chat that is still working refuses
+the copy instead of being stopped.
 
 Why: a copy exists so two chats continue separately, and the original file is left exactly
 as it was. A new id is the one thing the route, the socket attach and a sidebar row can all

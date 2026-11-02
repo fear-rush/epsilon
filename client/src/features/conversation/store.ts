@@ -31,6 +31,11 @@ export type ConversationSnapshot = {
 	 * name here, and the row omits it rather than guessing.
 	 */
 	bashCommand: string | undefined;
+	/**
+	 * The id pi moved this chat to (`/new`, a fork, a switch), so the page can follow
+	 * it. The id it was replaced from keeps reaching the same chat.
+	 */
+	replacedTo: string | undefined;
 	state: ConversationState;
 };
 
@@ -59,6 +64,7 @@ export class ConversationStore {
 			loaded: false,
 			startError: undefined,
 			bashCommand: undefined,
+			replacedTo: undefined,
 			state: emptyConversation,
 		};
 		this.stopStatus = link.onStatus((status) => this.update({ status }));
@@ -76,6 +82,7 @@ export class ConversationStore {
 			this.update({
 				state,
 				bashCommand: bashSettled ? undefined : this.snapshot.bashCommand,
+				replacedTo: frame.t === "session-replaced" ? frame.toId : this.snapshot.replacedTo,
 				loaded: this.snapshot.loaded || frame.t === "snapshot",
 				startError:
 					startErrorOf(frame) ?? (frame.t === "snapshot" ? undefined : this.snapshot.startError),

@@ -4,11 +4,14 @@
  * same transcript and the same live engine. A project session passes through the
  * trust gate first, so nothing attaches to a folder that is not trusted.
  */
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { transcript } from "shared";
 import type { DialogQuestion, Place } from "shared";
 
 import { ConfirmDialog, QuestionDialog } from "@/features/conversation/dialogs";
+import { sessionKeys } from "@/api/keys";
 import { Transcript } from "@/features/conversation/transcript";
 import { Composer } from "@/features/conversation/composer/composer";
 import { useConversation } from "@/features/conversation/use-conversation";
@@ -38,6 +41,26 @@ export function SessionView({ sessionId, project }: { sessionId: string; project
 
 function Conversation({ sessionId, place }: { sessionId: string; place: Place }) {
 	const { store, snapshot } = useConversation(sessionId, place);
+	const navigate = useNavigate();
+	const queryClient = useQueryClient();
+	const project = place.kind === "project" ? place.path : undefined;
+	/**
+	 * pi can replace the session under this chat (`/new`, a fork, a switch), and the
+	 * chat continues on a new id. Follow it. The old id still reaches the same chat
+	 * server-side, so this only changes the address the page keeps; the list needs a
+	 * refetch because the replacement writes a row under the new id.
+	 */
+	const replacedTo = snapshot.replacedTo;
+	useEffect(() => {
+		if (replacedTo === undefined) return;
+		void queryClient.invalidateQueries({ queryKey: sessionKeys.all });
+		void navigate({
+			to: "/sessions/$sessionId",
+			params: { sessionId: replacedTo },
+			search: project === undefined ? {} : { project },
+			replace: true,
+		});
+	}, [replacedTo, navigate, project, queryClient]);
 	const rows = transcript(snapshot.state);
 	const { busy, dialogs, statuses, widgets, title, sessionName, commands } = snapshot.state;
 	const { models, model, thinkingLevel, availableThinkingLevels, codingTools } = snapshot.state;

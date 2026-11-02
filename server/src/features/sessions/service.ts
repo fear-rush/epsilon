@@ -95,11 +95,11 @@ const forgetPin = (home: AgentHome, id: string): Promise<void> =>
 export const deleteSession = async (
 	home: AgentHome,
 	id: string,
-	closeIfIdle: (id: string) => boolean,
+	closeIfIdle: (id: string) => Promise<boolean>,
 ): Promise<SessionOutcome<null>> => {
 	const located = await locateSession(id);
 	if (located === undefined) return notFound;
-	if (!closeIfIdle(id)) return running;
+	if (!(await closeIfIdle(id))) return running;
 	await rm(located.file, { force: true });
 	await forgetPin(home, id);
 	return { ok: true, value: null };
@@ -113,7 +113,7 @@ export const deleteSession = async (
 export const removeProject = async (
 	home: AgentHome,
 	path: string,
-	closeIfIdle: (id: string) => boolean,
+	closeIfIdle: (id: string) => Promise<boolean>,
 ): Promise<SessionOutcome<{ removed: number }>> => {
 	const sessions = (await listAllSessions()).filter((session) => {
 		const place = placeOf(session.cwd, home.chatsDir);
@@ -126,7 +126,10 @@ export const removeProject = async (
 			message: "Epsilon has no chats in that folder.",
 		};
 	}
-	const busy = sessions.filter((session) => !closeIfIdle(session.id));
+	const busy: typeof sessions = [];
+	for (const session of sessions) {
+		if (!(await closeIfIdle(session.id))) busy.push(session);
+	}
 	if (busy.length > 0) {
 		return {
 			ok: false,

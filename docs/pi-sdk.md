@@ -111,8 +111,9 @@ Other facts worth having before embedding:
   session it holds. `fork(entryId)` copies the
   branch up to a user message, `fork(leafId, { position: "at" })` is the CLI's `/clone`,
   and both write a new session file under a fresh id — a fork before the first message
-  makes an empty session that has no file yet. Epsilon uses the runtime for fork and
-  clone, and the `SessionManager` half otherwise, opening one session per engine.
+  makes an empty session that has no file yet. Epsilon opens one runtime per live
+  session and keeps every id it held, so a replacement is pi's operation and the page
+  follows the new id; a copy is a second runtime built for that request and closed.
 - `AgentSession` also carries the controls around a turn: `prompt` (with
   `streamingBehavior`), `steer`, `followUp`, `abort`, `clearQueue`,
   `getSteeringMessages`, `getFollowUpMessages`, `getSessionStats`, `getContextUsage`,
@@ -155,8 +156,10 @@ Other facts worth having before embedding:
   listeners. A host that forgets it leaks a running agent. It does **not** emit
   `session_shutdown`; only the runtime's `dispose()` does (see Traps), so a host that
   calls the plain one skips every extension cleanup registered on that event.
-- `session.reload()` re-reads resources without replacing the session. Epsilon
-  exposes it as a socket command and calls it after every settings write.
+- `session.reload()` re-reads resources without replacing the session or changing its
+  id, but it does tear the extension runners down and start them again: extensions see
+  `session_shutdown` and then `session_start`, both with reason `reload` (Extensions,
+  below). Epsilon exposes it as a socket command and calls it after every settings write.
 
 ## Events
 

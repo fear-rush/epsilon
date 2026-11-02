@@ -118,6 +118,10 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 					);
 		case "error":
 			return withNotice(state, "error", `${frame.code}: ${frame.message}`);
+		case "session-replaced":
+			// The page follows the new id; the transcript shown here belongs to the
+			// session that was replaced, so nothing in it changes.
+			return state;
 		default:
 			return state;
 	}

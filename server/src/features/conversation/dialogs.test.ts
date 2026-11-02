@@ -10,7 +10,7 @@ import { Dialogs } from "./dialogs";
 const make = () => {
 	const frames: ServerFrame[] = [];
 	const dialogs = new Dialogs(
-		"check",
+		() => "check",
 		(frame) => frames.push(frame),
 		() => undefined,
 	);
