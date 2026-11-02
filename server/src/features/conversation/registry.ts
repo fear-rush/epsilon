@@ -37,6 +37,7 @@ const NO_TAB: UiHost = {
 	editorText: () => "",
 	toolsExpanded: () => false,
 	setToolsExpanded: () => undefined,
+	addAutocompleteProvider: () => undefined,
 	unsupported: () => undefined,
 	fail: () => undefined,
 };

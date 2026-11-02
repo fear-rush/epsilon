@@ -4,7 +4,7 @@
  * without touching the engine's lifetime, the tab fan-out or the file watcher.
  */
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
-import type { PromptQueue, SnapshotModel } from "shared";
+import type { AutocompleteReply, PromptQueue, SnapshotModel } from "shared";
 
 import type { AgentHome } from "../../../platform/agent-home";
 import type { SessionHost } from "../host/host";
@@ -30,6 +30,10 @@ export type CommandTarget = {
 	 * the composer instead of losing text the user typed. Only one command returns one.
 	 */
 	returnQueue(queue: PromptQueue): void;
+	/** Ask the extension autocomplete providers what they suggest at the cursor. */
+	suggestions(text: string, cursor: number): Promise<AutocompleteReply>;
+	/** What that chain answered, for the `command-result` frame. */
+	returnAutocomplete(reply: AutocompleteReply): void;
 	reload(): Promise<void>;
 	reloadFromDisk(): Promise<void>;
 };

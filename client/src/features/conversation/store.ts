@@ -4,6 +4,7 @@
  * rebuilding the transcript from a snapshot, and leaving the route releases it.
  */
 import type {
+	AutocompleteReply,
 	Command,
 	DialogAnswer,
 	Place,
@@ -42,6 +43,8 @@ export type ConversationSnapshot = {
 	 * them in its draft. pi's queue has no per-item removal, so this is all of them.
 	 */
 	restoreDraft: string | undefined;
+	/** What the extension autocomplete providers last suggested, and for which draft. */
+	suggestions: AutocompleteReply | undefined;
 	state: ConversationState;
 };
 
@@ -82,6 +85,7 @@ export class ConversationStore {
 			bashCommand: undefined,
 			replacedTo: undefined,
 			restoreDraft: undefined,
+			suggestions: undefined,
 			state: emptyConversation,
 		};
 		this.stopStatus = link.onStatus((status) => this.update({ status }));
@@ -97,6 +101,14 @@ export class ConversationStore {
 				(frame.t === "snapshot" && !frame.snapshot.state.isBashRunning) ||
 				(frame.t === "command-result" && frame.command === "bash");
 			const restored = frame.t === "command-result" ? queueText(frame.queue) : undefined;
+			// A suggestion reply names the draft it answered, so the composer can drop one
+			// that arrived after the operator typed on. A refused one clears the list.
+			const asked =
+				frame.t === "command-result" && frame.command === "autocomplete"
+					? frame.ok
+						? frame.autocomplete
+						: undefined
+					: undefined;
 			const change: Partial<ConversationSnapshot> = {
 				state,
 				bashCommand: bashSettled ? undefined : this.snapshot.bashCommand,
@@ -106,6 +118,9 @@ export class ConversationStore {
 					startErrorOf(frame) ?? (frame.t === "snapshot" ? undefined : this.snapshot.startError),
 			};
 			if (restored !== undefined) change.restoreDraft = restored;
+			if (frame.t === "command-result" && frame.command === "autocomplete") {
+				change.suggestions = asked;
+			}
 			this.update(change);
 		});
 	}
@@ -210,6 +225,14 @@ export class ConversationStore {
 	/** The composer took the draft an extension wrote, so the request is spent. */
 	dismissEditorRequest(): void {
 		this.update({ state: takeEditorRequest(this.snapshot.state) });
+	}
+
+	/**
+	 * Ask the engine's extension autocomplete providers what they suggest at the
+	 * cursor. The browser's own palette answers `/`, so this only adds their items.
+	 */
+	requestAutocomplete(text: string, cursor: number): void {
+		this.sendCommand({ type: "autocomplete", text, cursor });
 	}
 
 	/** Re-read extensions, skills and packages without replacing the session. */

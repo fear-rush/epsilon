@@ -5,6 +5,7 @@
  */
 import type { Command } from "shared";
 
+import { runAutocomplete } from "./autocomplete";
 import { abortBash, runBash } from "./bash";
 import type { CommandTarget } from "./context";
 import { runPrompt } from "./prompt";
@@ -52,6 +53,7 @@ const HANDLERS: CommandHandlers = {
 	set_coding_tools: setCodingToolsEnabled,
 	set_hide_thinking: setHideThinking,
 	navigate_tree: navigateTree,
+	autocomplete: runAutocomplete,
 };
 
 /** Run one command a tab sent, and reject with the reason the engine or host gave. */

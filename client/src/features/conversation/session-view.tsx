@@ -131,6 +131,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				header={where.kind === "project" ? <ComposerPlace place={where} /> : undefined}
 				restoreDraft={snapshot.restoreDraft}
 				editorRequest={editorRequest}
+				suggestions={snapshot.suggestions}
 				widgets={widgets}
 			/>
 		),
@@ -145,6 +146,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 			cloneChat,
 			composerKey,
 			editorRequest,
+			snapshot.suggestions,
 			widgets,
 			models,
 			model,

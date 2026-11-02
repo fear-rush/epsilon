@@ -9,6 +9,7 @@
  * arrives, because a session_start often touches several at once.
  */
 import type {
+	AutocompleteProviderFactory,
 	ExtensionUIContext,
 	ExtensionWidgetOptions,
 	Theme,
@@ -29,6 +30,8 @@ export type UiHost = {
 	toolsExpanded: () => boolean;
 	/** Record that expansion and draw it, so both tabs and pi agree on it. */
 	setToolsExpanded: (expanded: boolean) => void;
+	/** Keep a provider factory; the session asks the chain when a tab types. */
+	addAutocompleteProvider: (factory: AutocompleteProviderFactory) => void;
 	/** A method that needs pi's TUI. The host shows one notice per method. */
 	unsupported: (method: string) => void;
 	fail: (error: Error, code?: ProtocolErrorCode) => void;
@@ -40,6 +43,8 @@ export class UiBridge {
 	private editor = "";
 	/** pi's session-wide tool-card expansion; pi's own default is collapsed. */
 	private expanded = false;
+	/** The autocomplete factories extensions registered, in pi's wrapping order. */
+	private readonly wrappers: AutocompleteProviderFactory[] = [];
 	readonly host: UiHost;
 
 	constructor(
@@ -56,6 +61,7 @@ export class UiBridge {
 				this.expanded = expanded;
 				this.dialogs.display({ method: "set_tools_expanded", expanded });
 			},
+			addAutocompleteProvider: (factory) => this.wrappers.push(factory),
 			unsupported: (method) => {
 				if (this.hasSubscriber()) this.dialogs.unsupported(method);
 				else this.early.add(method);
@@ -67,6 +73,11 @@ export class UiBridge {
 	/** A tab reported its draft; this is what `getEditorText` answers from then on. */
 	setEditorText(text: string): void {
 		this.editor = text;
+	}
+
+	/** The autocomplete factories an extension registered, in the order pi wraps them. */
+	get autocompleteProviders(): readonly AutocompleteProviderFactory[] {
+		return this.wrappers;
 	}
 
 	/** Called when a tab arrives: one notice for everything held back. */
@@ -215,8 +226,8 @@ export const createUiContext = (host: UiHost): ExtensionUIContext => ({
 	getEditorText() {
 		return host.editorText();
 	},
-	addAutocompleteProvider() {
-		host.unsupported("addAutocompleteProvider");
+	addAutocompleteProvider(factory) {
+		host.addAutocompleteProvider(factory);
 	},
 	setEditorComponent() {
 		host.unsupported("setEditorComponent");

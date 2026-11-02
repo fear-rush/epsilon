@@ -159,6 +159,12 @@ Every keyed status is drawn in a rail above the composer, in the order the keys 
 appeared, and clearing one removes its row. The permission key is the exception: the
 footer's menu draws it in the browser's words.
 
+An extension's autocomplete providers are asked over the socket, on a debounced draft,
+and their items are merged into the same palette as the commands. The answer names the
+draft it was for, so a late reply is dropped, and picking one replaces the prefix its
+provider matched. The command list stays the browser's, which is why a provider that
+delegates to the one before it inherits no commands.
+
 Extension widgets are drawn around the box they name: `aboveEditor` above the composer,
 `belowEditor` under it. The working row, the label for hidden thinking and the
 session-wide tool expansion follow pi's own settings, and each is replayed to a tab

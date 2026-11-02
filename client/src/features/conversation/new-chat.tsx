@@ -108,6 +108,7 @@ function DraftConversation({
 				widgets={widgets}
 				restoreDraft={undefined}
 				editorRequest={editorRequest}
+				suggestions={snapshot.suggestions}
 				commands={commands}
 				codingTools={codingTools}
 				contextUsage={contextUsage}
@@ -137,6 +138,7 @@ function DraftConversation({
 			contextUsage,
 			stats.cost,
 			editorRequest,
+			snapshot.suggestions,
 			onChangeProject,
 			where,
 			start,

@@ -1,5 +1,7 @@
 // Shared, browser-safe code: the socket contract both sides parse with.
 export type {
+	AutocompleteItem,
+	AutocompleteReply,
 	ClientFrame,
 	Command,
 	CommandName,
@@ -24,6 +26,8 @@ export {
 	PROMPT_IMAGE_MAX,
 	PROTOCOL_VERSION,
 	agentEventSchema,
+	autocompleteItemSchema,
+	autocompleteReplySchema,
 	clientFrameSchema,
 	commandNameSchema,
 	commandSchema,

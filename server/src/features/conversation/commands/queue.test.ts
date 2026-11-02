@@ -44,6 +44,8 @@ const targetOf = (host: SessionHost, home: AgentHome, returned: PromptQueue[]): 
 	reload: async () => undefined,
 	reloadFromDisk: async () => undefined,
 	returnQueue: (queue) => returned.push(queue),
+	suggestions: async (text) => ({ text, prefix: "", items: [] }),
+	returnAutocomplete: () => undefined,
 });
 
 describe("a queue of prompts", () => {

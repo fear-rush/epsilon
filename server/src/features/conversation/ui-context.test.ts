@@ -231,3 +231,123 @@ describe("an extension that shapes the view", () => {
 		}
 	});
 });
+
+/**
+ * An extension that suggests tags. Its provider answers at a `#` token, returns a
+ * duplicate on purpose, and delegates to the base everywhere else, which is how pi's
+ * own `addAutocompleteProvider` factories wrap the provider that was there before.
+ */
+const tagSuggester = `
+export default function tagSuggester(pi) {
+	pi.on("session_start", (_event, ctx) => {
+		ctx.ui.addAutocompleteProvider((current) => ({
+			triggerCharacters: ["#"],
+			getSuggestions: async (lines, cursorLine, cursorCol) => {
+				const line = lines[cursorLine] ?? "";
+				if (!line.slice(0, cursorCol).endsWith("#")) {
+					return current.getSuggestions(lines, cursorLine, cursorCol, {
+						signal: AbortSignal.timeout(100),
+					});
+				}
+				return {
+					prefix: "#",
+					items: [
+						{ value: "#alpha", label: "alpha", description: "the first" },
+						{ value: "#alpha", label: "duplicate", description: "dropped" },
+					],
+				};
+			},
+			applyCompletion: (lines, cursorLine, cursorCol) => ({ lines, cursorLine, cursorCol }),
+		}));
+	});
+}
+`;
+
+describe("an extension that suggests tokens", () => {
+	test("answers the draft with what its provider offered, once per value", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "epsilon-suggest-"));
+		const home = agentHome(dir);
+		await mkdir(join(dir, "extensions"), { recursive: true });
+		await mkdir(home.chatsDir, { recursive: true });
+		await writeFile(join(dir, "extensions", "tag-suggester.ts"), tagSuggester, "utf8");
+		const registry = new SessionRegistry(home);
+		try {
+			const session = await registry.ensure(crypto.randomUUID(), { kind: "chat" });
+			const frames: ServerFrame[] = [];
+			const unsubscribe = session.subscribe((frame) => frames.push(frame));
+			try {
+				// A second line, so the cursor's line and column are read from the draft.
+				await session.run({ type: "autocomplete", text: "hello\na #", cursor: 9 });
+			} finally {
+				unsubscribe();
+			}
+
+			const result = frames.find(
+				(frame) => frame.t === "command-result" && frame.command === "autocomplete",
+			);
+			if (result?.t !== "command-result") throw new Error("the engine never answered");
+			expect(result.ok).toBe(true);
+			expect(result.autocomplete).toEqual({
+				text: "hello\na #",
+				prefix: "#",
+				items: [{ value: "#alpha", label: "alpha", description: "the first" }],
+			});
+		} finally {
+			await registry.disposeAll();
+			await rm(dir, { recursive: true, force: true });
+		}
+	});
+});
+
+/** A provider that throws: a keystroke must not turn into a notice every time. */
+const brokenSuggester = `
+export default function brokenSuggester(pi) {
+	pi.on("session_start", (_event, ctx) => {
+		ctx.ui.addAutocompleteProvider(() => ({
+			getSuggestions: async () => {
+				throw new Error("bad provider");
+			},
+			applyCompletion: (lines, cursorLine, cursorCol) => ({ lines, cursorLine, cursorCol }),
+		}));
+	});
+}
+`;
+
+describe("a provider that throws", () => {
+	test("leaves the palette empty and reports itself once", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "epsilon-suggest-bad-"));
+		const home = agentHome(dir);
+		await mkdir(join(dir, "extensions"), { recursive: true });
+		await mkdir(home.chatsDir, { recursive: true });
+		await writeFile(join(dir, "extensions", "broken-suggester.ts"), brokenSuggester, "utf8");
+		const registry = new SessionRegistry(home);
+		try {
+			const session = await registry.ensure(crypto.randomUUID(), { kind: "chat" });
+			const frames: ServerFrame[] = [];
+			const unsubscribe = session.subscribe((frame) => frames.push(frame));
+			try {
+				await session.run({ type: "autocomplete", text: "a #", cursor: 3 });
+				await session.run({ type: "autocomplete", text: "a #b", cursor: 4 });
+			} finally {
+				unsubscribe();
+			}
+
+			const results = frames.filter(
+				(frame) => frame.t === "command-result" && frame.command === "autocomplete",
+			);
+			expect(results).toHaveLength(2);
+			for (const result of results) {
+				if (result.t !== "command-result") throw new Error("expected a command result");
+				expect(result.ok).toBe(true);
+				expect(result.autocomplete).toEqual({ text: expect.any(String), prefix: "", items: [] });
+			}
+			const failures = frames.filter(
+				(frame) => frame.t === "error" && frame.message.includes("autocomplete provider"),
+			);
+			expect(failures).toHaveLength(1);
+		} finally {
+			await registry.disposeAll();
+			await rm(dir, { recursive: true, force: true });
+		}
+	});
+});

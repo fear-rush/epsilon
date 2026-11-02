@@ -12,6 +12,7 @@
  */
 import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import type {
+	AutocompleteReply,
 	Command,
 	DialogAnswer,
 	Place,
@@ -33,6 +34,7 @@ import { Dialogs } from "./dialogs";
 import type { AnswerOutcome, FrameSink } from "./dialogs";
 import { toJsonEvent } from "./engine";
 import { SessionFrames } from "./frames";
+import { suggestionsFor } from "./commands/autocomplete";
 import { bindHost } from "./host/bindings";
 import { SessionHost } from "./host/host";
 import { buildSnapshot, readModelsFrom, shadowedCommandsOf } from "./snapshot";
@@ -79,6 +81,10 @@ export class LiveSession {
 	private dispatching = false;
 	/** Prompts this command took back from pi, for the tab that sent it. */
 	private returnedQueue: PromptQueue | undefined;
+	/** What an extension's autocomplete providers suggested for the tab that asked. */
+	private returnedAutocomplete: AutocompleteReply | undefined;
+	/** Set once a provider failed, so a keystroke does not repeat the notice. */
+	private reportedSuggestionError = false;
 	/** The models the picker offers, refreshed when the engine's providers change. */
 	private models: SnapshotModel[] = [];
 	private idleTimer: ReturnType<typeof setTimeout> | undefined;
@@ -272,6 +278,27 @@ export class LiveSession {
 		this.bridge.setEditorText(text);
 	}
 
+	/**
+	 * What the extension autocomplete providers suggest for a draft. A provider that
+	 * throws is reported once: typing through the palette must not cost a notice per
+	 * keystroke.
+	 */
+	private async suggestions(text: string, cursor: number): Promise<AutocompleteReply> {
+		try {
+			return await suggestionsFor(this.bridge.autocompleteProviders, { text, cursor });
+		} catch (error) {
+			if (!this.reportedSuggestionError) {
+				this.reportedSuggestionError = true;
+				this.fail(
+					new Error(
+						`An extension's autocomplete provider failed: ${error instanceof Error ? error.message : String(error)}`,
+					),
+				);
+			}
+			return { text, prefix: "", items: [] };
+		}
+	}
+
 	/** Rename through the live engine, so every tab watching gets the new snapshot. */
 	rename(name: string): boolean {
 		const agent = this.host?.session;
@@ -293,6 +320,7 @@ export class LiveSession {
 	async run(command: Command): Promise<void> {
 		this.dispatching = true;
 		this.returnedQueue = undefined;
+		this.returnedAutocomplete = undefined;
 		try {
 			await this.dispatch(command);
 			this.files.markOwnActivity();
@@ -302,6 +330,7 @@ export class LiveSession {
 				command: command.type,
 				ok: true,
 				queue: this.returnedQueue,
+				autocomplete: this.returnedAutocomplete,
 			});
 		} catch (error) {
 			this.emit({
@@ -442,6 +471,10 @@ export class LiveSession {
 			resync: () => this.resync(),
 			returnQueue: (queue) => {
 				this.returnedQueue = queue;
+			},
+			suggestions: (text, cursor) => this.suggestions(text, cursor),
+			returnAutocomplete: (reply) => {
+				this.returnedAutocomplete = reply;
 			},
 			reload: () => this.reload(),
 			reloadFromDisk: () => this.reloadFromDisk(),

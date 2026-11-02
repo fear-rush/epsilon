@@ -11,6 +11,7 @@ import {
 	promptImagesBase64Length,
 } from "shared";
 import type {
+	AutocompleteReply,
 	ContextUsage,
 	EditorRequest,
 	ParsedBuiltinCommand,
@@ -40,6 +41,7 @@ import { runComposerCommand } from "./builtin-commands";
 import { ContextMeter } from "./context-meter";
 import { ModelMenu } from "./model-menu";
 import { Palette } from "./palette";
+import type { PaletteEntry } from "./palette";
 import { PermissionMenu } from "./permission-menu";
 import { ThinkingMenu } from "./thinking-menu";
 import { ToolsMenu } from "./tools-menu";
@@ -69,6 +71,12 @@ const MEGABYTE = 1024 * 1024;
  * extension's `getEditorText` reads what was typed without a frame per key.
  */
 const EDITOR_REPORT_DELAY_MS = 120;
+
+/**
+ * How long the composer waits after a keystroke before asking an extension's
+ * autocomplete providers, so typing does not send a frame per key.
+ */
+const SUGGESTION_DELAY_MS = 150;
 
 /** What one image may hold, in the words of the message that refuses it. */
 const IMAGE_MEGABYTES = PROMPT_IMAGE_BYTES_MAX / MEGABYTE;
@@ -151,6 +159,8 @@ type ComposerProps = {
 	restoreDraft: string | undefined;
 	/** A draft an extension wrote: `setEditorText` replaces it, its paste appends. */
 	editorRequest: EditorRequest | undefined;
+	/** What the engine's autocomplete providers suggested, and for which draft. */
+	suggestions: AutocompleteReply | undefined;
 };
 
 function ComposerImpl({
@@ -178,6 +188,7 @@ function ComposerImpl({
 	onSent,
 	restoreDraft,
 	editorRequest,
+	suggestions,
 }: ComposerProps) {
 	const [draft, setDraft] = useState(() => pendingDraftOf(store.sessionId));
 	/** The highlighted command, and the draft it was dismissed at. */
@@ -229,29 +240,77 @@ function ComposerImpl({
 		store.dismissEditorRequest();
 	}, [editorRequest, store]);
 
+	// An extension's providers see the draft after a pause, with the caret, the way its
+	// `getEditorText` sees it. An empty draft asks nothing.
+	useEffect(() => {
+		if (draft.trim() === "") return;
+		const timer = setTimeout(() => {
+			const cursor = textareaRef.current?.selectionStart ?? draft.length;
+			store.requestAutocomplete(draft, cursor);
+		}, SUGGESTION_DELAY_MS);
+		return () => clearTimeout(timer);
+	}, [draft, store]);
+
 	const query = commandQuery(draft);
-	const matches =
+	const commandMatches =
 		query === undefined
 			? []
 			: commands.filter((command) => command.name.toLowerCase().includes(query.toLowerCase()));
-	const paletteOpen = query !== undefined && matches.length > 0 && dismissed !== draft;
+	// A reply names the draft it answered, so one that arrived after the operator typed
+	// on is not drawn.
+	const answered =
+		suggestions !== undefined && suggestions.text === draft ? suggestions : undefined;
+	const entries: PaletteEntry[] = [
+		...commandMatches.map<PaletteEntry>((command) => ({
+			kind: "command",
+			key: `command:${command.name}`,
+			command,
+		})),
+		...(answered?.items ?? []).map<PaletteEntry>((item) => ({
+			kind: "suggestion",
+			key: `suggestion:${item.value}`,
+			item,
+			prefix: answered?.prefix ?? "",
+		})),
+	];
+	const paletteOpen = entries.length > 0 && dismissed !== draft;
 	const highlighted = Math.max(
 		0,
-		matches.findIndex((command) => command.name === selected),
+		entries.findIndex((entry) => entry.key === selected),
 	);
 
-	const pick = (name: string) => {
-		// pi expands its own `/name` when a prompt carries it, and answers Epsilon's
-		// own before a prompt exists, so the palette fills the draft for Enter either way.
-		setDraft(`/${name} `);
-		setSelected(name);
-		textareaRef.current?.focus();
+	const pick = (entry: PaletteEntry) => {
+		if (entry.kind === "command") {
+			// pi expands its own `/name` when a prompt carries it, and answers Epsilon's
+			// own before a prompt exists, so the palette fills the draft for Enter either way.
+			setDraft(`/${entry.command.name} `);
+			setSelected(entry.key);
+			textareaRef.current?.focus();
+			return;
+		}
+		// An extension's suggestion replaces the prefix its provider matched, the way pi
+		// applies one; when the draft moved on, it lands at the caret instead.
+		const area = textareaRef.current;
+		const caret = area?.selectionStart ?? draft.length;
+		const start =
+			entry.prefix !== "" && draft.slice(0, caret).endsWith(entry.prefix)
+				? caret - entry.prefix.length
+				: caret;
+		const next = draft.slice(0, start) + entry.item.value + draft.slice(caret);
+		setDraft(next);
+		setSelected(entry.key);
+		setDismissed(next);
+		requestAnimationFrame(() => {
+			const at = start + entry.item.value.length;
+			area?.setSelectionRange(at, at);
+			area?.focus();
+		});
 	};
 
 	const move = (step: number) => {
-		if (matches.length === 0) return;
-		const next = (highlighted + step + matches.length) % matches.length;
-		setSelected(matches[next]?.name);
+		if (entries.length === 0) return;
+		const next = (highlighted + step + entries.length) % entries.length;
+		setSelected(entries[next]?.key);
 	};
 
 	/**
@@ -417,10 +476,10 @@ function ComposerImpl({
 				return;
 			}
 			if (event.key === "Enter" || event.key === "Tab") {
-				const match = matches[highlighted];
-				if (match !== undefined) {
+				const entry = entries[highlighted];
+				if (entry !== undefined) {
 					event.preventDefault();
-					pick(match.name);
+					pick(entry);
 					return;
 				}
 			}
@@ -588,8 +647,8 @@ function ComposerImpl({
 				<Palette
 					open={paletteOpen}
 					anchor={surfaceRef}
-					commands={matches}
-					selected={matches[highlighted]?.name}
+					entries={entries}
+					selected={entries[highlighted]?.key}
 					onSelect={setSelected}
 					onPick={pick}
 					onDismiss={() => setDismissed(draft)}

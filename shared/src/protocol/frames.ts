@@ -15,7 +15,7 @@ import type { JsonAgentSessionEvent } from "../pi";
  * Bumped whenever a frame's shape changes. The client sends it in `hello` and
  * reloads on a mismatch instead of guessing.
  */
-export const PROTOCOL_VERSION = 20;
+export const PROTOCOL_VERSION = 21;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([
@@ -63,6 +63,7 @@ export const commandNameSchema = z.enum([
 	"navigate_tree",
 	/** pi's global display setting for thinking blocks; it writes settings.json itself. */
 	"set_hide_thinking",
+	"autocomplete",
 ]);
 
 export type CommandName = z.infer<typeof commandNameSchema>;
@@ -163,6 +164,15 @@ export const commandSchema = z.discriminatedUnion("type", [
 	}),
 	/** Show or hide thinking blocks, which is pi's global `hideThinkingBlock` setting. */
 	z.object({ type: z.literal("set_hide_thinking"), enabled: z.boolean() }),
+	/**
+	 * What the engine's autocomplete providers suggest at the cursor. The browser's
+	 * own palette answers commands, so only an extension's providers are asked.
+	 */
+	z.object({
+		type: z.literal("autocomplete"),
+		text: z.string(),
+		cursor: z.number().int().nonnegative(),
+	}),
 ]);
 
 export type Command = z.infer<typeof commandSchema>;
@@ -224,6 +234,29 @@ export const clientFrameSchema = z.discriminatedUnion("t", [
 	z.object({ t: z.literal("editor"), sessionId: z.string(), text: z.string() }),
 	z.object({ t: z.literal("ping") }),
 ]);
+
+/** One suggestion an extension's provider offers: pi's own `AutocompleteItem` shape. */
+export const autocompleteItemSchema = z.object({
+	/** What picking it inserts. */
+	value: z.string(),
+	label: z.string(),
+	description: z.string().optional(),
+});
+
+export type AutocompleteItem = z.infer<typeof autocompleteItemSchema>;
+
+/**
+ * A provider's answer, echoed with the draft it was asked for: a tab drops a reply
+ * that arrives after the operator typed on. `prefix` is the text before the cursor
+ * that the provider matched, so picking an item replaces exactly that.
+ */
+export const autocompleteReplySchema = z.object({
+	text: z.string(),
+	prefix: z.string(),
+	items: z.array(autocompleteItemSchema),
+});
+
+export type AutocompleteReply = z.infer<typeof autocompleteReplySchema>;
 
 /** One entry of the model picker: an identity and a label, nothing else. */
 export const snapshotModelSchema = z.object({
@@ -393,6 +426,8 @@ export const serverFrameSchema = z.discriminatedUnion("t", [
 		error: z.string().optional(),
 		/** Prompts pi still held, when the command took them back instead of running them. */
 		queue: promptQueueSchema.optional(),
+		/** An `autocomplete` command's answer. */
+		autocomplete: autocompleteReplySchema.optional(),
 	}),
 	/**
 	 * pi replaced the session under this chat: `/new`, a fork, a switch or a reload

@@ -104,8 +104,8 @@ Other facts worth having before embedding:
     expansion is one session-wide boolean, `false` in pi's defaults, and
     `getToolsExpanded()` is synchronous, so it answers what was last set.
   - **terminal only**: `custom`, `onTerminalInput`, `setFooter`, `setHeader`,
-    `addAutocompleteProvider`, `setEditorComponent`, `getEditorComponent`, and the
-    theme trio `getAllThemes`, `getTheme`, `setTheme`
+    `setEditorComponent`, `getEditorComponent`, and the theme trio `getAllThemes`,
+    `getTheme`, `setTheme`
     `custom` exists and takes a component factory, so a host with no terminal cannot
     render it. `theme` does not belong with the trio: it is a working `Theme` in every
     mode where a host supplies a uiContext, and an extension reads it without asking.
@@ -118,9 +118,10 @@ Other facts worth having before embedding:
     therefore supply its own `Theme` value where every colour method returns its text
     unchanged. A host that returns a stub which throws kills whichever handler reads
     it, and pi counts a failed `tool_call` handler as blocking the tool. Epsilon answers
-    the dialog group and the display half of the state groups, reports the terminal
-    group once, and returns silent defaults for `getEditorComponent`, `getAllThemes`
-    and `getTheme` ([DECISIONS.md](DECISIONS.md), UI contract).
+    the dialog group, the display and composer groups and the autocomplete chain,
+    reports the terminal group once, and returns silent defaults for
+    `getEditorComponent`, `getAllThemes` and `getTheme`
+    ([DECISIONS.md](DECISIONS.md), UI contract).
 - `mode` and `hasUI` answer different questions, and only one of them matters to an
   extension. `ExtensionMode` is `"tui" | "rpc" | "json" | "print"`: a presentation, not
   a transport, and its doc comment says to use `"tui"` as the guard for terminal-only UI.
@@ -130,6 +131,17 @@ Other facts worth having before embedding:
   still supplies a full uiContext: a combination pi's own modes never produce, and the
   one that makes an extension's dialogs work in a browser. Its `mode` is honest about
   the presentation and its `hasUI` is honest about the dialogs.
+- Autocomplete is a provider chain, not a list of items. `addAutocompleteProvider`
+  takes `AutocompleteProviderFactory = (current: AutocompleteProvider) => AutocompleteProvider`
+  and pi applies the factories in registration order over its own base, collecting
+  each one's `triggerCharacters` (`dist/modes/interactive/interactive-mode.js`,
+  `setupAutocompleteProvider`). A provider answers
+  `getSuggestions(lines, cursorLine, cursorCol, { signal, force? })`, which is
+  **async** and returns `{ items, prefix } | null`; `items` are
+  `{ value, label, description? }`, and `prefix` is the text before the cursor the
+  provider matched. `applyCompletion(lines, cursorLine, cursorCol, item, prefix)`
+  turns a pick into new lines and a cursor position. pi's RPC host ignores the whole
+  method, so a host that wants it must build the chain itself.
 - `NewSessionOptions.id` creates a session with an exact id. `SessionManager` lists,
   opens, finds, creates and owns `getEntries()`, `getTree()` and `getSessionName()`;
   `AgentSessionRuntime` owns `newSession`, `switchSession`, `fork` and
