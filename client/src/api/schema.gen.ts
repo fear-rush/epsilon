@@ -984,6 +984,12 @@ export interface components {
 			hasProjectResources: boolean;
 			decidedHere: boolean;
 			parent: string | null;
+			settingsProblems?: components["schemas"]["SettingsProblem"][];
+		};
+		SettingsProblem: {
+			scope: "global" | "project";
+			path?: string;
+			message: string;
 		};
 		SessionError: components["schemas"]["Problem"] & ({
 			code: "SESSION_NOT_FOUND" | "SESSION_RUNNING" | "PROJECT_NOT_TRUSTED" | "PROJECT_INVALID" | "EXPORT_FAILED" | "SESSION_COPY_FAILED";
@@ -1091,11 +1097,6 @@ export interface components {
 			error?: string;
 		};
 		SettingScope: "project" | "global" | "default";
-		SettingsProblem: {
-			scope: "global" | "project";
-			path?: string;
-			message: string;
-		};
 		ProviderView: {
 			id: string;
 			name: string;

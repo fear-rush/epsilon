@@ -1,6 +1,8 @@
 /** The project shapes the routes, the session catalog and the settings scope share. */
 import { z } from "@hono/zod-openapi";
 
+import { settingsProblemSchema } from "../general";
+
 /**
  * A folder the operator opened. `trusted` is pi's chain's answer (`trust.ts`): a
  * folder with nothing pi gates is trusted outright, a saved parent decision counts,
@@ -17,6 +19,11 @@ export const projectStatusSchema = z
 		decidedHere: z.boolean(),
 		/** The folder above, for pi's "trust parent" choice, or null at the filesystem root. */
 		parent: z.string().nullable(),
+		/**
+		 * A project `.pi/settings.json` pi cannot parse, read when one folder's status is
+		 * asked for. The session list leaves it out so its polling parses no projects.
+		 */
+		settingsProblems: z.array(settingsProblemSchema).optional(),
 	})
 	.openapi("ProjectStatus");
 

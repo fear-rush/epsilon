@@ -657,10 +657,12 @@ Trust is decided before project settings load, in this order
 5. For `"ask"`, pi's own dialog, when it has a UI.
 
 `getDefaultProjectTrust()` reads the global settings only; a project's
-`.pi/settings.json` is not loaded until the folder is trusted. Extensions see the
-result through `ctx.isProjectTrusted()`, which returns
-`settingsManager.isProjectTrusted()`. `resolveProjectTrusted`, `emitProjectTrustEvent`,
-`getProjectTrustOptions` and `getProjectTrustParentPath` are private.
+`.pi/settings.json` is not loaded until the folder is trusted. Epsilon reads that file
+before trust for one exception: to report a parse error on the trust page. No value
+from it is applied. Extensions see the result through `ctx.isProjectTrusted()`, which
+returns `settingsManager.isProjectTrusted()`. `resolveProjectTrusted`,
+`emitProjectTrustEvent`, `getProjectTrustOptions` and `getProjectTrustParentPath` are
+private.
 
 An embedded engine does not run that resolution. `SettingsManager.create(cwd,
 agentDir)` starts at `projectTrusted = true` (`dist/core/settings-manager.js`), and

@@ -348,6 +348,11 @@ offers the choice; the server refuses with a sentence when none is given, and it
 uses a chosen folder when the recorded one is missing, so a tab cannot redirect a
 healthy session.
 
+A project's `.pi/settings.json` that pi cannot parse is named on the trust prompt
+before the folder is trusted and on that project's Settings page. pi ignores the file
+and loads the project with the home's values; the dashboard reads it only to report
+that, and applies nothing from it before trust.
+
 The list of projects is derived from the folders pi's session files record; nothing
 stores it. A folder opened but never used exists only in the page URL until its first
 message. A chat moves into a project through `SessionManager.forkFrom`, which writes

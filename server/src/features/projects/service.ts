@@ -12,6 +12,7 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 import type { AgentHome } from "../../platform/agent-home";
 import { hasProjectResources, projectTrustStore } from "../../platform/pi";
 import type { SettingsScope } from "../../platform/pi";
+import { readSettingsProblems } from "../general";
 import type { FolderListing, ProjectStatus, ProjectTrustAction } from "./contract";
 import { isInside, projectName } from "./domain";
 import { decideProjectTrust } from "./trust";
@@ -83,9 +84,22 @@ export const projectStatus = async (home: AgentHome, path: string): Promise<Proj
 	};
 };
 
+/**
+ * The trust page's extra read. A `.pi/settings.json` pi cannot parse is exactly the
+ * case where the folder looks trusted and nothing loads, so it is named before the
+ * operator trusts it. The session catalog leaves this out, so its polling does not
+ * parse every project's settings.
+ */
+const withSettingsProblems = (home: AgentHome, status: ProjectStatus): ProjectStatus => ({
+	...status,
+	settingsProblems: readSettingsProblems(home, status.path).filter(
+		(problem) => problem.scope === "project",
+	),
+});
+
 /** The status of a folder the browser named, after it passed the same checks. */
 export const readProjectStatus = async (home: AgentHome, raw: string): Promise<ProjectStatus> =>
-	projectStatus(home, await resolveProjectFolder(home, raw));
+	withSettingsProblems(home, await projectStatus(home, await resolveProjectFolder(home, raw)));
 
 /**
  * Change what `trust.json` says about one folder, then answer what pi loads now.
@@ -121,7 +135,7 @@ export const setProjectTrust = async (
 			break;
 		}
 	}
-	return projectStatus(home, path);
+	return withSettingsProblems(home, await projectStatus(home, path));
 };
 
 /**

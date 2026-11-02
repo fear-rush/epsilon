@@ -10,7 +10,7 @@ import { join } from "node:path";
 
 import { agentHome } from "../../platform/agent-home";
 import { projectTrustStore, settingsManager } from "../../platform/pi";
-import { setProjectTrust } from "./service";
+import { readProjectStatus, setProjectTrust } from "./service";
 import { decideProjectTrust } from "./trust";
 
 const scratch = async () => {
@@ -41,6 +41,30 @@ const setDefault = async (
 
 const trustFile = async (home: ReturnType<typeof agentHome>) =>
 	JSON.parse(await readFile(join(home.dir, "trust.json"), "utf8").catch(() => "{}"));
+
+describe("a project settings file pi cannot load", () => {
+	test("is named on the trust page before and after the folder is trusted", async () => {
+		const { home, root } = await scratch();
+		const project = await gated(root);
+		const file = join(project, ".pi", "settings.json");
+		await writeFile(file, "{ broken");
+
+		const status = await readProjectStatus(home, project);
+		expect(status.settingsProblems).toEqual([
+			{ scope: "project", path: file, message: expect.any(String) },
+		]);
+
+		const trusted = await setProjectTrust(home, project, "trust");
+		expect(trusted.settingsProblems).toEqual(status.settingsProblems);
+	});
+
+	test("a file that parses adds no problem", async () => {
+		const { home, root } = await scratch();
+		const project = await gated(root);
+		await writeFile(join(project, ".pi", "settings.json"), "{}\n");
+		expect((await readProjectStatus(home, project)).settingsProblems).toEqual([]);
+	});
+});
 
 describe("changing a folder's trust decision", () => {
 	test("trust, revoke and forget write the record and answer the folder as it stands", async () => {
