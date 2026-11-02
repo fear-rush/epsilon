@@ -253,7 +253,7 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 			<DeleteDialog
 				open={form.deleteOpen}
 				title={`Remove ${detail?.name ?? draft.name}?`}
-				description="Removes it from models.json and its stored credential from auth.json."
+				description="Removes its models.json entry. A stored credential stays in auth.json; sign out before deleting if you want it gone."
 				error={remove.error}
 				pending={remove.isPending}
 				onOpenChange={form.setDeleteOpen}

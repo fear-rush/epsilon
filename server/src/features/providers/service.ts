@@ -267,11 +267,9 @@ export const logoutProvider = async (home: AgentHome, providerId: string): Promi
 };
 
 /**
- * Drop the models.json entry and, when the credential is a stored one, the entry
- * in auth.json too. The list shows a provider with either, so leaving the
- * credential behind would bring the row back the moment it was deleted. A key
- * from the environment or from models.json is not touched here: the first is not
- * ours to remove and the second leaves with the entry.
+ * Drop the models.json entry and nothing else. Deleting a base-URL or proxy
+ * override for a provider pi ships must not sign the account out; the credential
+ * in auth.json changes only through the sign-out control (`logoutProvider`).
  */
 export const removeProvider = async (home: AgentHome, providerId: string): Promise<void> => {
 	await modelsDocument(home).update((file) => {
@@ -279,8 +277,4 @@ export const removeProvider = async (home: AgentHome, providerId: string): Promi
 		delete providers[providerId];
 		return { ...file, providers };
 	});
-	const runtime = await modelRuntime(home);
-	if (runtime.getProviderAuthStatus(providerId).source === "stored") {
-		await runtime.logout(providerId);
-	}
 };

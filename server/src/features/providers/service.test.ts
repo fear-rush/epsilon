@@ -234,6 +234,24 @@ describe("provider writes", () => {
 		expect(detail?.modelOverrides["gpt-5"]?.cost).toEqual({ input: 1, output: 5 });
 	});
 
+	test("removing a provider entry leaves a stored credential alone", async () => {
+		const root = await home();
+		const runtime = await modelRuntime(root);
+		await runtime.login("anthropic", "api_key", {
+			prompt: async () => "sk-test-not-a-key",
+			notify: () => undefined,
+		});
+		await writeProvider(root, { id: "anthropic", baseUrl: "https://example.test" });
+
+		await removeProvider(root, "anthropic");
+
+		expect((await stored(root)).providers.anthropic).toBeUndefined();
+		// Deleting the override must not sign the account out.
+		expect(await (await modelRuntime(root)).listCredentials()).toEqual([
+			{ providerId: "anthropic", type: "api_key" },
+		]);
+	});
+
 	test("a provider's auth header and radius OAuth survive a round trip", async () => {
 		const root = await home();
 		await writeProvider(root, {
