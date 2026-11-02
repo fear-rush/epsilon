@@ -212,11 +212,11 @@ refuses is that key's error on screen; it never fails the page, and the panel do
 present a limit pi would not use.
 
 One setting is one request: the page validates the value against that key's own
-schema, writes it through the matching `SettingsManager` setter, flushes, and reloads
-the live engines. A key with no setter is refused by that route rather than merged
-into it; the merged keys keep their own writer. A project's value wins over the
-home's, so the panel shows it read-only instead of letting a write appear to do
-nothing.
+schema, then writes it through pi's matching `SettingsManager` setter or merges it
+into `settings.json` under a lock that keeps every unknown key and the operator's
+key order. Either way the file is flushed and the live engines reload, and a key the
+panel does not model is refused. A project's value wins over the home's, so the panel
+shows it read-only instead of letting a write appear to do nothing.
 
 Signing in with an account is the dashboard's too, because `ModelRuntime.login()` is a
 host API: the panel starts the flow, relays the questions and links pi reports, and

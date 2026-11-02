@@ -5,7 +5,6 @@
  * saying why, so pi's surface stays discoverable without pretending it applies.
  */
 import { useMutation } from "@tanstack/react-query";
-import type { SnapshotModel } from "shared";
 import { z } from "zod";
 
 import { saveSetting } from "@/api/endpoints";
@@ -17,7 +16,9 @@ import { Notice } from "@/components/patterns/status/notice";
 import { useSettingsRefresh } from "@/features/settings/queries";
 import {
 	BooleanControl,
+	CompactionOverridesControl,
 	LevelsControl,
+	ModelsControl,
 	NumberControl,
 	SelectControl,
 	TextControl,
@@ -56,7 +57,7 @@ export function SettingsForm({ snapshot }: { snapshot: SettingsSnapshot }) {
 							key={entry.key}
 							entry={entry}
 							row={rows.get(entry.key)}
-							models={snapshot.models}
+							snapshot={snapshot}
 							disabled={save.isPending}
 							onChange={write}
 						/>
@@ -81,13 +82,13 @@ export function SettingsForm({ snapshot }: { snapshot: SettingsSnapshot }) {
 function ControlRow({
 	entry,
 	row,
-	models,
+	snapshot,
 	disabled,
 	onChange,
 }: {
 	entry: SettingEntry;
 	row: ReadRow | undefined;
-	models: readonly SnapshotModel[];
+	snapshot: SettingsSnapshot;
 	disabled: boolean;
 	onChange: (key: string, value: SettingValue) => void;
 }) {
@@ -115,7 +116,7 @@ function ControlRow({
 			<Control
 				entry={entry}
 				row={row}
-				models={models}
+				snapshot={snapshot}
 				disabled={disabled || overridden}
 				onChange={(value) => onChange(entry.key, value)}
 			/>
@@ -126,19 +127,24 @@ function ControlRow({
 function Control({
 	entry,
 	row,
-	models,
+	snapshot,
 	disabled,
 	onChange,
 }: {
 	entry: SettingEntry;
 	row: ReadRow;
-	models: readonly SnapshotModel[];
+	snapshot: SettingsSnapshot;
 	disabled: boolean;
 	onChange: (value: SettingValue) => void;
 }) {
 	if (row.error !== undefined) {
 		return <span className="text-meta text-destructive">{row.error}</span>;
 	}
+	const valueOf = (key: string) => snapshot.settings.find((setting) => setting.key === key)?.value;
+	const seedOf = (key: string): number | undefined => {
+		const parsed = z.number().safeParse(valueOf(key));
+		return parsed.success ? parsed.data : undefined;
+	};
 	const control = entry.control;
 	switch (control.kind) {
 		case "switch":
@@ -190,7 +196,34 @@ function Control({
 			);
 		case "levels":
 			return (
-				<LevelsControl models={models} value={row.value} disabled={disabled} onChange={onChange} />
+				<LevelsControl
+					models={snapshot.models}
+					value={row.value}
+					disabled={disabled}
+					onChange={onChange}
+				/>
+			);
+		case "models":
+			return (
+				<ModelsControl
+					value={row.value}
+					scope={snapshot.modelScope}
+					disabled={disabled}
+					onChange={onChange}
+				/>
+			);
+		case "compactionOverrides":
+			return (
+				<CompactionOverridesControl
+					models={snapshot.models}
+					seeds={{
+						reserveTokens: seedOf("compaction.reserveTokens"),
+						keepRecentTokens: seedOf("compaction.keepRecentTokens"),
+					}}
+					value={row.value}
+					disabled={disabled}
+					onChange={onChange}
+				/>
 			);
 	}
 }

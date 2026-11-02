@@ -237,10 +237,6 @@ export const logoutProvider = async (id: string): Promise<void> => {
 };
 
 /** The agent-wide limits: the numbers pi only reads, and the model scope. */
-export const setAgentLimits = async (limits: SettingsSnapshot["agent"]): Promise<void> => {
-	await api.PUT("/api/settings/agent-limits", { body: limits });
-};
-
 export const setDefaultModel = async (model: DefaultModel): Promise<void> => {
 	await api.PUT("/api/settings/default-model", { body: model });
 };

@@ -4,7 +4,7 @@
  * the route the browser uses, then read pi's answer back.
  */
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
@@ -27,7 +27,7 @@ const rowSchema = z.object({
 	error: z.string().optional(),
 });
 
-const bodySchema = z.object({ agent: z.unknown(), settings: z.array(rowSchema) });
+const bodySchema = z.object({ settings: z.array(rowSchema) });
 type Body = z.infer<typeof bodySchema>;
 
 const appOn = async (settings?: SettingsFile) => {
@@ -57,7 +57,6 @@ const rowOf = (body: Body, key: string): z.infer<typeof rowSchema> => {
 test("a refused number is that key's error, not a failed page", async () => {
 	const { app } = await appOn({ compaction: { reserveTokens: "lots" } });
 	const body = await settingsOf(app);
-	expect(body.agent).toBeNull();
 	const row = rowOf(body, "compaction.reserveTokens");
 	expect(row.value).toBeNull();
 	expect(row.scope).toBe("global");
@@ -152,16 +151,93 @@ test("a per-model thinking override is added and removed", async () => {
 	expect(globalSettings(home).getModelThinkingLevel("anthropic", "claude-sonnet")).toBeUndefined();
 });
 
-test("a key without a setter, or a value pi cannot take, is refused", async () => {
+test("a key the panel does not write, or a value pi cannot take, is refused", async () => {
 	const { app } = await appOn({});
-	const unsettable = await write(app, { key: "compaction.reserveTokens", value: 1000 });
-	expect(unsettable.status).toBe(400);
-	expect(await unsettable.json()).toMatchObject({
-		message: expect.stringContaining("compaction.reserveTokens"),
+	const unknown = await write(app, { key: "noSuchSetting", value: true });
+	expect(unknown.status).toBe(400);
+	expect(await unknown.json()).toMatchObject({
+		message: expect.stringContaining("noSuchSetting"),
 	});
 	const wrongType = await write(app, { key: "steeringMode", value: 5 });
 	expect(wrongType.status).toBe(400);
 	expect(await wrongType.json()).toMatchObject({
 		message: "steeringMode cannot take that value.",
 	});
+	const negative = await write(app, { key: "compaction.reserveTokens", value: -1 });
+	expect(negative.status).toBe(400);
+	expect(await negative.json()).toMatchObject({
+		message: "compaction.reserveTokens cannot take that value.",
+	});
+});
+
+test("a per-model compaction override changes what the engine compacts at", async () => {
+	const { app, home } = await appOn({});
+	expect((await write(app, { key: "compaction.reserveTokens", value: 12000 })).status).toBe(204);
+	const override = {
+		modelKey: "anthropic/claude-sonnet",
+		reserveTokens: 4000,
+		keepRecentTokens: null,
+	};
+	expect((await write(app, { key: "compaction.modelOverrides", value: override })).status).toBe(
+		204,
+	);
+	// pi resolves the model's own number before the ordinary one.
+	const model = { provider: "anthropic", id: "claude-sonnet" };
+	expect(globalSettings(home).getCompactionSettings(model)).toEqual({
+		enabled: true,
+		reserveTokens: 4000,
+		keepRecentTokens: 20000,
+	});
+	// Clearing both fields removes the entry, so the ordinary number applies again.
+	await write(app, {
+		key: "compaction.modelOverrides",
+		value: { ...override, reserveTokens: null },
+	});
+	expect(globalSettings(home).getCompactionReserveTokens(model)).toBe(12000);
+	expect(globalSettings(home).getSettings().compaction?.modelOverrides).toBeUndefined();
+});
+
+test("a merged write keeps unknown keys and their order", async () => {
+	const { app, home } = await appOn();
+	const path = join(home.dir, "settings.json");
+	await writeFile(
+		path,
+		JSON.stringify({
+			futureKey: { keep: true },
+			compaction: { reserveTokens: 1000, futureNested: "keep" },
+			retry: { maxRetries: 5 },
+		}),
+	);
+	expect((await write(app, { key: "compaction.keepRecentTokens", value: 9000 })).status).toBe(204);
+	const text = await readFile(path, "utf8");
+	const written = z
+		.object({
+			futureKey: z.object({ keep: z.boolean() }),
+			compaction: z.object({
+				reserveTokens: z.number(),
+				futureNested: z.string(),
+				keepRecentTokens: z.number(),
+			}),
+			retry: z.object({ maxRetries: z.number() }),
+		})
+		.parse(JSON.parse(text));
+	expect(written.futureKey).toEqual({ keep: true });
+	expect(written.compaction).toEqual({
+		reserveTokens: 1000,
+		futureNested: "keep",
+		keepRecentTokens: 9000,
+	});
+	expect(written.retry).toEqual({ maxRetries: 5 });
+	// A key this version does not model stays where it was, and the new key is last.
+	expect(Object.keys(JSON.parse(text))).toEqual(["futureKey", "compaction", "retry"]);
+	expect(text.indexOf('"reserveTokens"')).toBeLessThan(text.indexOf('"futureNested"'));
+	expect(text.indexOf('"futureNested"')).toBeLessThan(text.indexOf('"keepRecentTokens"'));
+});
+
+test("the model scope is written through its setter", async () => {
+	const { app, home } = await appOn({});
+	expect((await write(app, { key: "enabledModels", value: ["openai/*"] })).status).toBe(204);
+	expect(globalSettings(home).getEnabledModels()).toEqual(["openai/*"]);
+	expect((await write(app, { key: "enabledModels", value: null })).status).toBe(204);
+	expect(globalSettings(home).getEnabledModels()).toBeUndefined();
 });

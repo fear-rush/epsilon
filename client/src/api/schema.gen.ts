@@ -254,23 +254,6 @@ export interface paths {
 		patch: operations["writeSetting"];
 		trace?: never;
 	};
-	"/api/settings/agent-limits": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/** Write the agent-wide compaction and retry limits and the model scope; a project can still override them */
-		put: operations["setAgentLimits"];
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/settings/default-model": {
 		parameters: {
 			query?: never;
@@ -956,7 +939,6 @@ export interface components {
 		SettingsSnapshot: {
 			home: string;
 			defaultModel: components["schemas"]["DefaultModel"];
-			agent: components["schemas"]["AgentLimits"];
 			settings: components["schemas"]["SettingView"][];
 			modelScope: {
 				matched: number;
@@ -982,14 +964,6 @@ export interface components {
 		DefaultModel: ({
 			provider: string;
 			modelId: string;
-		}) | null;
-		AgentLimits: ({
-			compactionEnabled: boolean;
-			compactionReserveTokens: number;
-			compactionKeepRecentTokens: number;
-			retryEnabled: boolean;
-			retryMaxRetries: number;
-			enabledModels: (string[]) | null;
 		}) | null;
 		SettingView: {
 			key: string;
@@ -2207,38 +2181,6 @@ interface operations {
 				content?: never;
 			};
 			/** The panel does not write that key, or the value is not one pi accepts */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Problem"];
-				};
-			};
-		};
-	};
-	/** Write the agent-wide compaction and retry limits and the model scope; a project can still override them */
-	setAgentLimits: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["AgentLimits"];
-			};
-		};
-		responses: {
-			/** pi's settings.json now holds these limits */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** settings.json could not be parsed, so nothing was written */
 			400: {
 				headers: {
 					[name: string]: unknown;

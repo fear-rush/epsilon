@@ -1,9 +1,9 @@
 /**
  * The panel's words around pi's settings keys. The read supplies each value and
  * the layer that set it; this file says what the value means, which control shows
- * it, and, for a key only a terminal can apply, why. pi's own labels and sentences
- * are reused where its settings menu has them, so the page and the terminal name
- * one setting the same way.
+ * it, and, for a key only a terminal can apply, why. pi's own sentences from
+ * `docs/settings.md` and its settings menu are reused wherever they exist, so the
+ * page and the terminal name one setting the same way.
  */
 import { THINKING_LEVELS, THINKING_LEVEL_LABELS } from "../providers/reasoning";
 
@@ -15,7 +15,9 @@ type SettingControl =
 	| { kind: "select"; options: readonly SettingOption[] }
 	| { kind: "text"; placeholder?: string }
 	| { kind: "number" }
+	| { kind: "models" }
 	| { kind: "levels" }
+	| { kind: "compactionOverrides" }
 	| { kind: "warnings" };
 
 export type SettingEntry = {
@@ -67,20 +69,104 @@ export const settingGroups: readonly SettingGroup[] = [
 		],
 	},
 	{
-		title: "Thinking",
-		description: "How much the model thinks when a chat does not say otherwise.",
+		title: "Compaction",
+		description: "How pi summarises the context when it nears the window.",
+		entries: [
+			{
+				key: "compaction.enabled",
+				label: "Automatic compaction",
+				description: "Enable automatic compaction.",
+				control: { kind: "switch" },
+			},
+			{
+				key: "compaction.reserveTokens",
+				label: "Reserve tokens",
+				description: "Free context tokens below which automatic compaction starts.",
+				control: { kind: "number" },
+			},
+			{
+				key: "compaction.keepRecentTokens",
+				label: "Keep recent tokens",
+				description: "Recent tokens retained without summarization.",
+				control: { kind: "number" },
+			},
+			{
+				key: "compaction.modelOverrides",
+				label: "Per-model reserves",
+				description:
+					"Per-model token settings keyed by exact provider/modelId. A blank field uses the number above.",
+				control: { kind: "compactionOverrides" },
+			},
+		],
+	},
+	{
+		title: "Retry",
+		entries: [
+			{
+				key: "retry.enabled",
+				label: "Automatic retry",
+				description: "Enable automatic agent-level retry for transient failures.",
+				control: { kind: "switch" },
+			},
+			{
+				key: "retry.maxRetries",
+				label: "Max retries",
+				description: "Maximum agent-level retry attempts.",
+				control: { kind: "number" },
+			},
+			{
+				key: "retry.baseDelayMs",
+				label: "Base delay",
+				description: "Initial exponential-backoff delay in milliseconds.",
+				control: { kind: "number" },
+			},
+			{
+				key: "retry.maxAgentDelayMs",
+				label: "Longest delay",
+				description: "Maximum agent-level retry delay in milliseconds.",
+				control: { kind: "number" },
+			},
+		],
+	},
+	{
+		title: "Branch summaries",
+		description: "What pi writes when it branches from earlier history.",
+		entries: [
+			{
+				key: "branchSummary.reserveTokens",
+				label: "Reserve tokens",
+				description: "Tokens reserved when summarizing branch history.",
+				control: { kind: "number" },
+			},
+			{
+				key: "branchSummary.skipPrompt",
+				label: "Skip the prompt",
+				description: "Skip the branch-summary prompt and default to no summary.",
+				control: { kind: "switch" },
+			},
+		],
+	},
+	{
+		title: "Models and thinking",
 		entries: [
 			{
 				key: "defaultThinkingLevel",
-				label: "Default thinking level",
-				description: "The level a model uses when it has no override of its own.",
+				label: "Startup thinking level",
+				description: "The thinking level a model starts at.",
 				control: { kind: "select", options: thinkingOptions },
 			},
 			{
 				key: "modelThinkingLevels",
 				label: "Per-model thinking level",
-				description: "Override the default level for one model.",
+				description: "Per-model startup thinking levels keyed by exact provider/modelId.",
 				control: { kind: "levels" },
+			},
+			{
+				key: "enabledModels",
+				label: "Enabled models",
+				description:
+					"Model patterns used for startup selection and model cycling, the same format as --models. Empty offers every model; a chat keeps the model it is already using.",
+				control: { kind: "models" },
 			},
 		],
 	},
@@ -90,7 +176,7 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "transport",
 				label: "Transport",
-				description: "The preferred transport for a provider that offers more than one.",
+				description: "Preferred transport for AI providers that support multiple transports.",
 				control: {
 					kind: "select",
 					options: [
@@ -104,21 +190,20 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "httpIdleTimeoutMs",
 				label: "HTTP idle timeout",
-				description:
-					"Maximum idle gap while waiting for HTTP headers or body chunks, in milliseconds. 0 waits forever, for a local model that pauses longer than five minutes.",
+				description: "HTTP header and body idle timeout in milliseconds. Set to 0 to disable.",
 				control: { kind: "number" },
 			},
 			{
 				key: "cacheWarming",
 				label: "Cache warming",
 				description:
-					"Off, streaming while the agent runs, or idle between runs while continuation stays profitable.",
+					"Keep eligible provider prompt caches warm during active runs or, with idle, between runs. The agent home's value is the one pi reads.",
 				control: {
 					kind: "select",
 					options: [
 						{ value: "off", label: "Off" },
-						{ value: "streaming", label: "While streaming" },
-						{ value: "idle", label: "Idle too" },
+						{ value: "streaming", label: "During runs" },
+						{ value: "idle", label: "Between runs too" },
 					],
 				},
 			},
@@ -130,7 +215,7 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "hideThinkingBlock",
 				label: "Hide thinking",
-				description: "Hide thinking blocks in assistant responses.",
+				description: "Hide thinking blocks in the transcript.",
 				control: { kind: "switch" },
 			},
 			{
@@ -142,13 +227,13 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "images.autoResize",
 				label: "Resize images",
-				description: "Shrink a large image before it reaches the model.",
+				description: "Resize images to at most 2000 by 2000 pixels before sending them to a model.",
 				control: { kind: "switch" },
 			},
 			{
 				key: "images.blockImages",
 				label: "Block images",
-				description: "Never send an image to a model.",
+				description: "Prevent images from being sent to models.",
 				control: { kind: "switch" },
 			},
 		],
@@ -159,19 +244,20 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "enableSkillCommands",
 				label: "Skill commands",
-				description: "Offer each skill as a slash command in the palette.",
+				description: "Register skills as /skill:name commands.",
 				control: { kind: "switch" },
 			},
 			{
 				key: "shellPath",
 				label: "Shell path",
-				description: "The shell pi runs commands with. Empty uses the system default.",
+				description:
+					"Custom shell executable path. Supports a leading ~. Empty uses the system default.",
 				control: { kind: "text", placeholder: "/bin/zsh" },
 			},
 			{
 				key: "shellCommandPrefix",
 				label: "Shell command prefix",
-				description: "Text prepended to every command pi runs, such as an environment setup.",
+				description: "Prefix prepended to every shell command.",
 				control: { kind: "text", placeholder: "source ~/.profile" },
 			},
 		],
@@ -182,26 +268,27 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "warnings",
 				label: "Anthropic extra usage",
-				description: "Warn when a Claude subscription starts billing as extra usage.",
+				description: "Warn when Anthropic subscription authentication may use paid extra usage.",
 				control: { kind: "warnings" },
 			},
 			{
 				key: "enableInstallTelemetry",
 				label: "Install telemetry",
-				description: "Send an anonymous version ping after a changelog-detected update.",
+				description:
+					"Enable anonymous install/update reporting and selected provider attribution headers.",
 				control: { kind: "switch" },
 			},
 			{
 				key: "enableAnalytics",
 				label: "Analytics",
-				description: "Send anonymous usage counts for this installation.",
+				description: "Opt in to analytics data sharing.",
 				control: { kind: "switch" },
 			},
 			{
 				key: "defaultProjectTrust",
 				label: "Default project trust",
 				description:
-					"The fallback when no saved decision or extension decides whether a folder is trusted.",
+					"Fallback behavior when no extension or saved trust decision decides project trust. The agent home's value is the one pi reads.",
 				control: {
 					kind: "select",
 					options: [
@@ -214,7 +301,7 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "treeFilterMode",
 				label: "Tree filter",
-				description: "The filter a new /tree view starts with.",
+				description: "Default filter when opening /tree.",
 				control: {
 					kind: "select",
 					options: [

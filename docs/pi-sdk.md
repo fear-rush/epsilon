@@ -628,9 +628,15 @@ Turborepo or the runtime.
 - **A model list's `supported_endpoints` is a gateway hint.** A model that only
   accepts `/messages` or `/responses` needs that API on its own entry, and newer
   Claude models need adaptive thinking metadata. Import both per model.
-- **Configuration shapes with no exporter, and one without a setter.**
+- **Configuration shapes with no exporter, and several without a setter.**
   `SettingsManager` has `getDefaultTools()` and no `setDefaultTools`, so the
-  `defaultTools` array is a merge. `models.json` `modelOverrides` accepts no `api` and
+  `defaultTools` array is a merge. The same holds, with getters only, for
+  `compaction.reserveTokens`, `compaction.keepRecentTokens`,
+  `compaction.modelOverrides`, `retry.maxRetries`, `retry.baseDelayMs`,
+  `retry.maxAgentDelayMs`, `branchSummary.reserveTokens` and
+  `branchSummary.skipPrompt`. `getCompactionReserveTokens(model)` resolves the
+  model's override before the ordinary number, so a host that shows only the
+  ordinary value is showing the wrong one. `models.json` `modelOverrides` accepts no `api` and
   no `baseUrl`, and its `cost` may be partial, field by field. And pi reads both
   `models.json` and `mcp.json` with a comment- and trailing-comma-tolerant reader
   (`dist/utils/json.js`), so a strict rewrite silently deletes comments an operator

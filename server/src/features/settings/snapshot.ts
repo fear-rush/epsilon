@@ -8,7 +8,7 @@ import type { AgentHome } from "../../platform/agent-home";
 import { modelRuntime } from "../../platform/pi";
 import { readModelsFrom } from "../conversation";
 import type { SessionRegistry } from "../conversation";
-import { readAgentLimits, readDefaultModel, readEnabledModels, readSettingViews } from "../general";
+import { readDefaultModel, readEnabledModels, readSettingViews } from "../general";
 import { isMcpTurnedOff, listMcpServers } from "../mcp";
 import { listPackages } from "../packages";
 import { projectStatus } from "../projects";
@@ -47,7 +47,6 @@ export const readSettings = async (
 ): Promise<SettingsSnapshot> => {
 	const project = folder === home.chatsDir ? null : projectStatus(home, folder);
 	const runtime = await modelRuntime(home);
-	const agent = readAgentLimits(home);
 	const [providers, builtins, offers, mcp, mcpDisabled, skills, packages] = await Promise.all([
 		listProviders(home, runtime),
 		listBuiltins(home, runtime),
@@ -66,7 +65,6 @@ export const readSettings = async (
 		// The panel's picker offers every model; the scope is reported beside it, so
 		// an operator can see what it matches without the list going blank.
 		models: offers.models,
-		agent,
 		settings: readSettingViews(home, project === null ? null : folder),
 		modelScope: offers.scope ?? {
 			matched: offers.models.length,

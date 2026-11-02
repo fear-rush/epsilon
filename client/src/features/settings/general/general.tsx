@@ -4,7 +4,6 @@ import { modelKey } from "shared";
 import { Badge } from "@/components/ui/badge";
 import { setDefaultModel } from "@/api/endpoints";
 import { useSettings, useSettingsRefresh } from "@/features/settings/queries";
-import { AgentLimitsForm } from "./agent-limits";
 import { ModelPicker } from "./model-picker";
 import { SettingsForm } from "./settings-form";
 import { DetailPage } from "@/components/patterns/pane/detail-page";
@@ -80,41 +79,8 @@ function GeneralBody({ snapshot }: { snapshot: SettingsSnapshot }) {
 					/>
 				</Row>
 			</Section>
-			<RefusedSettings settings={snapshot.settings} limitsHidden={snapshot.agent === null} />
-			{snapshot.agent !== null && (
-				<AgentLimitsForm limits={snapshot.agent} scope={snapshot.modelScope} />
-			)}
 			<SettingsForm snapshot={snapshot} />
 			{defaults.error !== null && <Notice tone="error">{defaults.error.message}</Notice>}
 		</div>
-	);
-}
-
-/**
- * pi refuses a value in `settings.json` by making the getter throw, so the form
- * cannot show a limit pi would not use. The keyed read names which key, and the
- * panel says so instead of borrowing pi's default.
- */
-function RefusedSettings({
-	settings,
-	limitsHidden,
-}: {
-	settings: SettingsSnapshot["settings"];
-	/** The agent limits form is withheld, not just missing, when pi refuses a number. */
-	limitsHidden: boolean;
-}) {
-	const refused = settings.filter((setting) => setting.error !== undefined);
-	if (refused.length === 0) return null;
-	return (
-		<Notice tone="error" title="pi refused a value in settings.json">
-			<ul className="grid gap-1">
-				{refused.map((setting) => (
-					<li key={setting.key}>
-						<code>{setting.key}</code>: {setting.error}
-					</li>
-				))}
-			</ul>
-			{limitsHidden && <p>Fix the value in settings.json to set these limits here.</p>}
-		</Notice>
 	);
 }

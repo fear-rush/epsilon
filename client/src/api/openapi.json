@@ -425,9 +425,6 @@
 					"defaultModel": {
 						"$ref": "#/components/schemas/DefaultModel"
 					},
-					"agent": {
-						"$ref": "#/components/schemas/AgentLimits"
-					},
 					"settings": {
 						"type": "array",
 						"items": {
@@ -532,7 +529,6 @@
 				"required": [
 					"home",
 					"defaultModel",
-					"agent",
 					"settings",
 					"modelScope",
 					"providers",
@@ -565,50 +561,6 @@
 				"required": [
 					"provider",
 					"modelId"
-				]
-			},
-			"AgentLimits": {
-				"type": [
-					"object",
-					"null"
-				],
-				"properties": {
-					"compactionEnabled": {
-						"type": "boolean"
-					},
-					"compactionReserveTokens": {
-						"type": "integer",
-						"minimum": 0
-					},
-					"compactionKeepRecentTokens": {
-						"type": "integer",
-						"minimum": 0
-					},
-					"retryEnabled": {
-						"type": "boolean"
-					},
-					"retryMaxRetries": {
-						"type": "integer",
-						"minimum": 0
-					},
-					"enabledModels": {
-						"type": [
-							"array",
-							"null"
-						],
-						"items": {
-							"type": "string",
-							"minLength": 1
-						}
-					}
-				},
-				"required": [
-					"compactionEnabled",
-					"compactionReserveTokens",
-					"compactionKeepRecentTokens",
-					"retryEnabled",
-					"retryMaxRetries",
-					"enabledModels"
 				]
 			},
 			"SettingView": {
@@ -4166,40 +4118,6 @@
 					},
 					"400": {
 						"description": "The panel does not write that key, or the value is not one pi accepts",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/Problem"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/settings/agent-limits": {
-			"put": {
-				"tags": [
-					"settings"
-				],
-				"operationId": "setAgentLimits",
-				"description": "Write the agent-wide compaction and retry limits and the model scope; a project can still override them",
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/AgentLimits"
-							}
-						}
-					}
-				},
-				"responses": {
-					"204": {
-						"description": "pi's settings.json now holds these limits"
-					},
-					"400": {
-						"description": "settings.json could not be parsed, so nothing was written",
 						"content": {
 							"application/json": {
 								"schema": {
