@@ -305,6 +305,28 @@ const toolAnnotationsSchema = z
 /** What an MCP server says about a tool, which changes how a caller should treat it. */
 export type McpToolAnnotations = z.infer<typeof toolAnnotationsSchema>;
 
+/** How a tool reaches the model in one live engine, and the rule the panel writes for it. */
+const mcpLiveToolSchema = z
+	.object({
+		/** The registered name without its `mcp__<server>__` prefix, as a transcript shows it. */
+		name: z.string(),
+		/**
+		 * The `toolExposure` key pi matches this tool against: the server's own name, or
+		 * a pattern when pi's registered name cannot say which spelling it used.
+		 */
+		key: z.string(),
+		/** Whether `key` is the server's own name, or a pattern that can match another too. */
+		exact: z.boolean(),
+		/** The exposure pi resolved for the tool in the engine that reported it. */
+		exposure: mcpExposureSchema,
+		/** The hints the server sent, when it sent any. */
+		annotations: toolAnnotationsSchema.optional(),
+	})
+	.openapi("McpLiveTool");
+
+/** One live tool of a server: the name a transcript shows and the rule that reaches it. */
+export type McpLiveTool = z.infer<typeof mcpLiveToolSchema>;
+
 export const mcpLiveSchema = z
 	.object({
 		/** Live engines that answered. Zero means no session is open in this process. */
@@ -316,13 +338,10 @@ export const mcpLiveSchema = z
 		servers: z.array(
 			z.object({
 				name: z.string(),
-				tools: z.number().int(),
-				/** The server's own tool names, as far as the registered name lets them be recovered. */
-				toolNames: z.array(z.string()),
-				/** An extension registered it, so zero tools is "no tools yet", not "unknown". */
+				/** The tools this server registered, by the name a transcript shows them under. */
+				tools: z.array(mcpLiveToolSchema),
+				/** An extension registered it, so no tools is "no tools yet", not "unknown". */
 				registered: z.boolean(),
-				/** The hints the server sent for each tool, by the name listed above. */
-				annotations: z.record(z.string(), toolAnnotationsSchema),
 			}),
 		),
 		/** The reaching tools that are active in at least one live engine. */

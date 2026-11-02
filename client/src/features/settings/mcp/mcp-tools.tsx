@@ -1,19 +1,22 @@
 /**
  * The Tools card: how the model reaches this server's tools, and, when a live
- * engine has seen them, one switch per tool with the hints the server sent. pi
- * reports a server's tools only once a chat has connected to it and keeps every
- * other connection state inside its own MCP extension, so the card says what is
- * missing rather than guessing which state it is. A switch edits the same draft
- * rows as the tool rules under Advanced, and writes only an exact tool name.
+ * engine has seen them, one switch per tool. The switch writes the rule pi matches
+ * the server's own tool name against, which `mcpToolAddress()` derives from the
+ * name pi registered; beside it, pi's own answer for the tool shows what the
+ * running engine actually does, which a saved rule changes only when a session
+ * opens the server again. pi reports a server's tools only once a chat has
+ * connected to it and keeps every other connection state inside its own MCP
+ * extension, so the card says what is missing rather than guessing which state it
+ * is. A switch edits the same draft rows as the tool rules under Advanced.
  */
 import { useState } from "react";
-import { effectiveToolExposure, isToolReachable, withToolReachable } from "shared";
+import { isToolReachable, withToolReachable } from "shared";
 
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Section } from "@/components/patterns/section/section";
-import type { McpLiveServer } from "@/api/types";
+import type { McpLiveServer, McpLiveTool } from "@/api/types";
 import type { McpDraft } from "./mcp-draft";
 import { exposureLabel } from "./mcp-exposure";
 import { ExposureSelect } from "./mcp-exposure-select";
@@ -32,27 +35,37 @@ const HINTS = [
 	["idempotentHint", "repeatable"],
 ] as const;
 
-const hintsOf = (annotations: McpLiveServer["annotations"][string] | undefined): string[] =>
+const hintsOf = (annotations: McpLiveTool["annotations"]): string[] =>
 	HINTS.filter(([hint]) => annotations?.[hint] === true).map(([, label]) => label);
 
 export function McpTools({
 	draft,
 	live,
+	saved,
 	update,
 }: {
 	draft: McpDraft;
 	/** What a live engine can see of this server, or undefined when none can. */
 	live: McpLiveServer | undefined;
+	/** Whether the draft is what the file holds, so a disagreement is pi's answer to it. */
+	saved: boolean;
 	update: (patch: Partial<McpDraft>) => void;
 }) {
-	const toolNames = live?.toolNames;
+	const tools = live?.tools;
 	const [filter, setFilter] = useState("");
 	const rules = draft.toolExposure.map((row) => ({
 		pattern: row.pattern,
 		exposure: row.exposure,
 	}));
 	const shown =
-		toolNames?.filter((name) => name.toLowerCase().includes(filter.trim().toLowerCase())) ?? [];
+		tools?.filter((tool) => tool.name.toLowerCase().includes(filter.trim().toLowerCase())) ?? [];
+	const inexact = (tools ?? []).some((tool) => !tool.exact);
+	/** Whether pi's answer for a tool contradicts the rule this form would write for it. */
+	const disagrees =
+		saved &&
+		(tools ?? []).some(
+			(tool) => (tool.exposure !== "hidden") !== isToolReachable(draft.exposure, rules, tool.key),
+		);
 	return (
 		<Section title="Tools">
 			<div className="grid gap-field pad-row">
@@ -69,17 +82,31 @@ export function McpTools({
 							under Advanced.
 						</FieldDescription>
 					)}
-					{live !== undefined && live.tools === 0 && (
+					{live !== undefined && tools?.length === 0 && (
 						<FieldDescription>
 							Registered, but it has not offered a tool yet. pi keeps whether it is still
 							connecting, failed or needs a sign-in inside its own MCP extension, so this card
 							cannot tell those apart; the log can.
 						</FieldDescription>
 					)}
+					{disagrees && (
+						<FieldDescription>
+							The running engine answers differently from this form. pi matches a rule against the
+							name the server reports; when a rule still does not reach its tool, type that name
+							under Advanced.
+						</FieldDescription>
+					)}
+					{inexact && (
+						<FieldDescription>
+							pi matches a rule against the name the server reports, which it does not expose. Where
+							the registered name cannot say it, the switch writes a pattern so the rule still
+							reaches the tool.
+						</FieldDescription>
+					)}
 				</Field>
-				{toolNames !== undefined && toolNames.length > 0 && (
+				{tools !== undefined && tools.length > 0 && (
 					<>
-						{toolNames.length >= FILTER_FROM && (
+						{tools.length >= FILTER_FROM && (
 							<Input
 								value={filter}
 								placeholder="Filter tools"
@@ -88,15 +115,16 @@ export function McpTools({
 							/>
 						)}
 						<ul className="max-h-dialog-body-md divide-y overflow-y-auto rounded-xl border">
-							{shown.map((name) => {
-								const reachable = isToolReachable(draft.exposure, rules, name);
-								const effective = effectiveToolExposure(draft.exposure, rules, name);
-								const hints = hintsOf(live?.annotations[name]);
+							{shown.map((tool) => {
+								const reachable = isToolReachable(draft.exposure, rules, tool.key);
+								const hints = hintsOf(tool.annotations);
+								const piReachable = tool.exposure !== "hidden";
+								const contradicting = saved && piReachable !== reachable;
 								return (
-									<li key={name}>
+									<li key={tool.name}>
 										<label className="flex items-center justify-between gap-3 pad-row">
 											<span className="flex min-w-0 items-baseline gap-2">
-												<span className="min-w-0 truncate font-mono text-code">{name}</span>
+												<span className="min-w-0 truncate font-mono text-code">{tool.name}</span>
 												{hints.length > 0 && (
 													<span className="shrink-0 text-meta text-muted-foreground">
 														{hints.join(", ")}
@@ -104,18 +132,32 @@ export function McpTools({
 												)}
 											</span>
 											<span className="flex shrink-0 items-center gap-3">
-												{reachable && effective !== draft.exposure && (
-													<span className="text-meta text-muted-foreground">
-														{exposureLabel(effective)}
+												{!tool.exact && (
+													<span className="min-w-0 truncate font-mono text-meta text-muted-foreground">
+														writes {tool.key}
 													</span>
 												)}
+												<span
+													className={
+														contradicting
+															? "text-meta text-warning-foreground dark:text-warning"
+															: "text-meta text-muted-foreground"
+													}
+												>
+													pi: {exposureLabel(tool.exposure)}
+												</span>
 												<Switch
 													size="sm"
 													checked={reachable}
-													aria-label={`${reachable ? "Hide" : "Show"} ${name}`}
+													aria-label={`${reachable ? "Hide" : "Show"} ${tool.name}`}
 													onCheckedChange={(checked) =>
 														update({
-															toolExposure: withToolReachable(draft.exposure, rules, name, checked),
+															toolExposure: withToolReachable(
+																draft.exposure,
+																rules,
+																tool.key,
+																checked,
+															),
 														})
 													}
 												/>

@@ -264,9 +264,13 @@ TUI-only toggles. The dashboard names that boundary and the documented terminal 
 
 An MCP server also reports what the next session can reach and what a live engine
 registered, because a configured server that no tool can call is a state the operator
-must see. A server's page lists the tool names a live engine registered, with a switch
-that writes an exact-name `toolExposure` rule; with no live engine it says to open a
-chat instead of guessing. Those are reads: the panel says sign-in stays in the terminal and how a
+must see. A server's page lists the tools a live engine registered, each with pi's own
+exposure for it, and a switch that writes the `toolExposure` rule pi matches: the
+server's own tool name, or a `*` pattern where pi's registered spelling cannot say that
+name, since the registered spelling is the only one a host can read. When pi's answer
+and the saved rule disagree the page says so instead of showing a switch that did
+nothing. With no live engine it says to open a chat instead of guessing. Those are
+reads: the panel says sign-in stays in the terminal and how a
 stored credential is detected, and it never shows the credential.
 
 An MCP server and a skill can also be edited raw. For an MCP server that is its own
@@ -291,6 +295,10 @@ copies of pi config registered at engine start (lost on restart, duplicates reso
 Showing a terminal command in the UI. A screen for every pi setting. A second key store:
 the panel's field writes `models.json`, and only pi's own flows write `auth.json`. Raw
 editing of the whole `mcp.json` (one entry is enough, and the rest stays out of reach).
+Writing an MCP tool rule under the spelling pi registered (pi matches the name the
+server reports, so that rule is silently ignored for every tool whose name it
+rewrote), and refusing the switch in that case (the tool keeps a switch that cannot
+work, and an underscore in a tool name is the common case, not the odd one).
 Glama and mcp.so as registries: Glama needs an API key, gives no install command and
 requires its credit on every page; mcp.so has no public API.
 

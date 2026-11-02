@@ -90,10 +90,11 @@ export type { ImportedEntry, ImportedServer, ImportedTarget, ParsedMcpPaste } fr
 export {
 	effectiveToolExposure,
 	isToolReachable,
+	mcpToolAddress,
 	toolPatternMatches,
 	withToolReachable,
 } from "./mcp/tools";
-export type { ToolRule } from "./mcp/tools";
+export type { McpToolAddress, ToolRule } from "./mcp/tools";
 export type {
 	McpExposure,
 	McpOAuth,

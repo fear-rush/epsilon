@@ -1,20 +1,26 @@
 /**
  * What the panel can claim about a running server. pi reports no connection state,
  * only the tools a server registered and which servers an extension registered, so
- * these checks are the whole truth the dashboard has.
+ * these checks are the whole truth the dashboard has. Each tool also carries the
+ * rule the panel writes for it: the server's own name when pi's registered name
+ * can say it, and a pattern when it cannot.
  */
 import { describe, expect, test } from "bun:test";
+import type { McpExposure } from "shared";
 
 import { aggregateMcpLive, mcpLiveOf } from "./live";
 
-const tool = (namespace: string, name: string, annotations?: Record<string, boolean>) => ({
-	namespace,
-	name,
-	annotations,
-});
+const tool = (
+	namespace: string,
+	name: string,
+	extra: { exposure?: McpExposure; annotations?: { readOnlyHint?: boolean } } = {},
+) => ({ namespace, name, exposure: extra.exposure ?? "direct", ...extra });
+
+/** A row whose registered name is the server's own, so the rule is that name. */
+const row = (name: string) => ({ name, key: name, exact: true, exposure: "direct" as const });
 
 /** What every listed server carries, so each expectation states only what it checks. */
-const quiet = { registered: false, annotations: {} };
+const quiet = { registered: false };
 
 describe("one live engine", () => {
 	test("tools are listed per server under the configured name, without the registered prefix", () => {
@@ -30,8 +36,15 @@ describe("one live engine", () => {
 		expect(live).toEqual({
 			sessions: 1,
 			servers: [
-				{ name: "my-server", tools: 2, toolNames: ["get_page", "search"], ...quiet },
-				{ name: "other", tools: 1, toolNames: ["ping"], ...quiet },
+				{
+					name: "my-server",
+					tools: [
+						{ name: "get_page", key: "get*page", exact: false, exposure: "direct" },
+						row("search"),
+					],
+					...quiet,
+				},
+				{ name: "other", tools: [row("ping")], ...quiet },
 			],
 			codemode: true,
 			toolSearch: false,
@@ -45,16 +58,20 @@ describe("one live engine", () => {
 			active: [],
 		});
 		expect(live.servers).toEqual([
-			{ name: "files", tools: 1, toolNames: ["read_mcp_resource"], ...quiet },
+			{
+				name: "files",
+				tools: [
+					{ name: "read_mcp_resource", key: "read*mcp*resource", exact: false, exposure: "direct" },
+				],
+				...quiet,
+			},
 		]);
 	});
 
 	test("a server an extension registered is listed even with no tools", () => {
 		const live = mcpLiveOf({ names: [], tools: [], active: [], registered: ["ghost"] });
 
-		expect(live.servers).toEqual([
-			{ name: "ghost", tools: 0, toolNames: [], registered: true, annotations: {} },
-		]);
+		expect(live.servers).toEqual([{ name: "ghost", tools: [], registered: true }]);
 	});
 
 	test("a registered server keeps its tools when the namespace had to be spelled", () => {
@@ -65,25 +82,58 @@ describe("one live engine", () => {
 			registered: ["my-server"],
 		});
 
-		expect(live.servers).toEqual([
+		expect(live.servers).toEqual([{ name: "my-server", tools: [row("ping")], registered: true }]);
+	});
+
+	test("a name pi rewrote is written as a pattern, so the rule still reaches the tool", () => {
+		const live = mcpLiveOf({
+			names: ["github"],
+			tools: [tool("mcp__github", "mcp__github__get_issue")],
+			active: [],
+		});
+
+		expect(live.servers[0]?.tools).toEqual([
+			{ name: "get_issue", key: "get*issue", exact: false, exposure: "direct" },
+		]);
+	});
+
+	test("a name pi shortened is matched by its head, since the end is gone", () => {
+		const own = "list_every_repository_the_operator_can_see_and_search";
+		const registered = `mcp__github__${own}`;
+		// pi keeps the first 55 characters of a name past 64 and ends it with a hash.
+		const shortened = `${registered.slice(0, 55)}_0123abcd`;
+		const head = registered.slice(0, 55).slice("mcp__github__".length);
+		const live = mcpLiveOf({
+			names: ["github"],
+			tools: [tool("mcp__github", shortened)],
+			active: [],
+		});
+
+		expect(live.servers[0]?.tools).toEqual([
 			{
-				name: "my-server",
-				tools: 1,
-				toolNames: ["ping"],
-				registered: true,
-				annotations: {},
+				name: shortened.slice("mcp__github__".length),
+				key: `${head.split("_").join("*")}*`,
+				exact: false,
+				exposure: "direct",
 			},
 		]);
 	});
 
-	test("a tool's hints travel with the name the panel lists", () => {
+	test("pi's own exposure for a tool travels with it", () => {
 		const live = mcpLiveOf({
 			names: ["docs"],
-			tools: [tool("mcp__docs", "mcp__docs__search", { readOnlyHint: true })],
+			tools: [
+				tool("mcp__docs", "mcp__docs__search", {
+					exposure: "hidden",
+					annotations: { readOnlyHint: true },
+				}),
+			],
 			active: [],
 		});
 
-		expect(live.servers[0]?.annotations).toEqual({ search: { readOnlyHint: true } });
+		expect(live.servers[0]?.tools).toEqual([
+			{ ...row("search"), exposure: "hidden", annotations: { readOnlyHint: true } },
+		]);
 	});
 
 	test("a server with no tool registered is not reported, and nothing active stays false", () => {
@@ -97,7 +147,7 @@ describe("one live engine", () => {
 });
 
 describe("several live engines", () => {
-	test("the union keeps every tool name per server and any active reaching tool", () => {
+	test("the union keeps every tool per server and any active reaching tool", () => {
 		const live = aggregateMcpLive([
 			mcpLiveOf({
 				names: ["files"],
@@ -117,12 +167,31 @@ describe("several live engines", () => {
 		expect(live).toEqual({
 			sessions: 2,
 			servers: [
-				{ name: "docs", tools: 1, toolNames: ["find"], ...quiet },
-				{ name: "files", tools: 2, toolNames: ["read", "write"], ...quiet },
+				{ name: "docs", tools: [row("find")], ...quiet },
+				{ name: "files", tools: [row("read"), row("write")], ...quiet },
 			],
 			codemode: false,
 			toolSearch: true,
 		});
+	});
+
+	test("a tool two engines report keeps one row", () => {
+		const live = aggregateMcpLive([
+			mcpLiveOf({
+				names: ["files"],
+				tools: [tool("mcp__files", "mcp__files__read", { exposure: "hidden" })],
+				active: [],
+			}),
+			mcpLiveOf({
+				names: ["files"],
+				tools: [tool("mcp__files", "mcp__files__read")],
+				active: [],
+			}),
+		]);
+
+		expect(live.servers).toEqual([
+			{ name: "files", tools: [{ ...row("read"), exposure: "hidden" }], ...quiet },
+		]);
 	});
 
 	test("an engine that registered a server keeps that answer beside a connected one", () => {
@@ -131,7 +200,9 @@ describe("several live engines", () => {
 			mcpLiveOf({ names: ["docs"], tools: [tool("mcp__docs", "mcp__docs__find")], active: [] }),
 		]);
 
-		expect(live.servers.map((server) => [server.name, server.tools, server.registered])).toEqual([
+		expect(
+			live.servers.map((server) => [server.name, server.tools.length, server.registered]),
+		).toEqual([
 			["docs", 1, false],
 			["ghost", 0, true],
 		]);

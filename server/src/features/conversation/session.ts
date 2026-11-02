@@ -19,6 +19,7 @@ import type {
 	AutocompleteReply,
 	Command,
 	DialogAnswer,
+	McpExposure,
 	Place,
 	PromptQueue,
 	ProtocolErrorCode,
@@ -26,6 +27,7 @@ import type {
 	Snapshot,
 	SnapshotModel,
 } from "shared";
+import { MCP_DEFAULT_EXPOSURE, mcpExposureSchema } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { EXTENSION_RESOURCE_SOURCE, globalSettings } from "../../platform/pi";
@@ -278,18 +280,30 @@ export class LiveSession {
 	/**
 	 * What this engine's MCP servers report through their tools. pi exposes no
 	 * connection state, so a server appears here once it registered a tool and
-	 * `sessions` is the only answer for "is anything connected yet".
+	 * `sessions` is the only answer for "is anything connected yet". Each tool carries
+	 * the exposure pi resolved for it, which is the answer a saved `toolExposure` rule
+	 * changed.
 	 */
 	mcpLive(names: readonly string[]): McpLive {
 		const agent = this.host?.session;
 		if (agent === undefined)
 			return { sessions: 0, servers: [], codemode: false, toolSearch: false };
-		const tools: { namespace: string; name: string; annotations?: ToolAnnotations }[] = [];
+		const tools: {
+			namespace: string;
+			name: string;
+			exposure: McpExposure;
+			annotations?: ToolAnnotations;
+		}[] = [];
 		for (const tool of agent.getAllTools()) {
 			const namespace = tool.namespace?.name;
-			if (namespace !== undefined && namespace.startsWith("mcp__")) {
-				tools.push({ namespace, name: tool.name, annotations: tool.annotations });
-			}
+			if (namespace === undefined || !namespace.startsWith("mcp__")) continue;
+			const exposure = mcpExposureSchema.safeParse(tool.exposure);
+			tools.push({
+				namespace,
+				name: tool.name,
+				exposure: exposure.success ? exposure.data : MCP_DEFAULT_EXPOSURE,
+				annotations: tool.annotations,
+			});
 		}
 		return mcpLiveOf({
 			names,

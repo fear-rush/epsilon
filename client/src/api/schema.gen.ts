@@ -1146,15 +1146,18 @@ export interface components {
 			sessions: number;
 			servers: ({
 				name: string;
-				tools: number;
-				toolNames: string[];
+				tools: components["schemas"]["McpLiveTool"][];
 				registered: boolean;
-				annotations: {
-					[key: string]: components["schemas"]["ToolAnnotations"];
-				};
 			})[];
 			codemode: boolean;
 			toolSearch: boolean;
+		};
+		McpLiveTool: {
+			name: string;
+			key: string;
+			exact: boolean;
+			exposure: "codemode" | "deferred" | "direct" | "hidden";
+			annotations?: components["schemas"]["ToolAnnotations"];
 		};
 		ToolAnnotations: {
 			readOnlyHint?: boolean;

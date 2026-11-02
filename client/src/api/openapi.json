@@ -1105,30 +1105,19 @@
 									"type": "string"
 								},
 								"tools": {
-									"type": "integer"
-								},
-								"toolNames": {
 									"type": "array",
 									"items": {
-										"type": "string"
+										"$ref": "#/components/schemas/McpLiveTool"
 									}
 								},
 								"registered": {
 									"type": "boolean"
-								},
-								"annotations": {
-									"type": "object",
-									"additionalProperties": {
-										"$ref": "#/components/schemas/ToolAnnotations"
-									}
 								}
 							},
 							"required": [
 								"name",
 								"tools",
-								"toolNames",
-								"registered",
-								"annotations"
+								"registered"
 							]
 						}
 					},
@@ -1144,6 +1133,38 @@
 					"servers",
 					"codemode",
 					"toolSearch"
+				]
+			},
+			"McpLiveTool": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"key": {
+						"type": "string"
+					},
+					"exact": {
+						"type": "boolean"
+					},
+					"exposure": {
+						"type": "string",
+						"enum": [
+							"codemode",
+							"deferred",
+							"direct",
+							"hidden"
+						]
+					},
+					"annotations": {
+						"$ref": "#/components/schemas/ToolAnnotations"
+					}
+				},
+				"required": [
+					"name",
+					"key",
+					"exact",
+					"exposure"
 				]
 			},
 			"ToolAnnotations": {

@@ -32,9 +32,7 @@ describe("a server an extension registered", () => {
 		try {
 			const session = await registry.ensure(crypto.randomUUID(), { kind: "chat" });
 
-			expect(session.mcpLive([]).servers).toEqual([
-				{ name: "ghost", tools: 0, toolNames: [], registered: true, annotations: {} },
-			]);
+			expect(session.mcpLive([]).servers).toEqual([{ name: "ghost", tools: [], registered: true }]);
 		} finally {
 			await registry.disposeAll();
 			await rm(dir, { recursive: true, force: true });

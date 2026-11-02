@@ -556,6 +556,25 @@ and `auth.provider` decide how an HTTP server authenticates: `auth` sends a
 every save back through the same rules pi's validator applies, so a save either
 produces an entry pi loads or is refused with pi's reason.
 
+`exposure` and `toolExposure` are matched by `getMcpToolExposure()` against the name
+the **server** reports: an exact key first, then the first `*` pattern in the object,
+else the server's own `exposure`. The name pi registers the tool under is a different
+string: `mcp__<server>__<tool>` with every character outside `[A-Za-z0-9_]` replaced
+by `_`, truncated to 55 characters plus `_` and eight hex digits of a SHA-256 when it
+exceeds 64 (the provider limit). `session.getAllTools()` reports that registered name,
+the namespace, the annotations and the exposure pi resolved for the tool (its
+`codemode` arrives as `deferred`), and never the server's own spelling. So a rule key
+is exact only when the registered name carries no `_`: a tool the server calls
+`read-file` is registered as `mcp__<server>__read_file` and stays reachable under that
+key, which is why Epsilon writes a `*` for every unknown character instead of the
+registered spelling.
+
+pi reads `mcp.json` from `getAgentDir()`, the `PI_CODING_AGENT_DIR` process variable
+or `~/.pi/agent`, not from the `agentDir` an engine is built with. `main.ts` publishes
+the chosen home there once for that reason (AGENTS.md, Invariants 5), and a check that
+opens an engine on a scratch home sets it to that home, or pi loads the operator's
+`mcp.json` beside it.
+
 A settings write reaches the live engines through `session.reload()`, which emits
 `session_shutdown` (reason `reload`). The MCP extension closes every connection
 there and reconnects on the next `session_start`, so an edit in the panel applies
@@ -642,7 +661,10 @@ Turborepo or the runtime.
 - **pi exposes no MCP connection state.** A connected server's tools appear in
   `session.getAllTools()` with `namespace.name === "mcp__<server>"` and, when the
   server sent hints, `annotations` (`readOnlyHint`, `destructiveHint`,
-  `idempotentHint`, `openWorldHint`). `session.getActiveToolNames()` says whether
+  `idempotentHint`, `openWorldHint`). Each also carries `exposure`, the value pi
+  resolved for it, so a saved `toolExposure` rule is checkable from outside without
+  guessing; the name the server reported is not in `ToolInfo`, only the registered
+  one (see the MCP section on the key rule). `session.getActiveToolNames()` says whether
   `codemode`/`tool_search` are active. That is all a host can read: pi keeps its six
   connection states (`connecting`, `connected`, `disconnected`, `needs-auth`,
   `failed`, `closed`) inside its own MCP extension, so failed, needs-sign-in and
