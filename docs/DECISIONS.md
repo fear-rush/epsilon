@@ -260,11 +260,15 @@ has none of them and needs all of them. An entry that configures nothing (a disp
 name alone) is refused at save with pi's own sentence, because pi would compose it into
 an invalid provider and every auth check would then say so.
 
-Stays in the terminal, because pi exposes no host API for it: MCP sign-in and
-TUI-only toggles. The dashboard names that boundary and the documented terminal step
-(`pi mcp login <name>`) and offers no sign-in button. Project trust is not one of them: it goes through pi's exported
-`ProjectTrustStore` (Chats and projects), and the dashboard never writes
-`trust.json` by hand.
+MCP sign-in runs from the dashboard, but it is pi's flow, not Epsilon's: the server
+page's buttons send `/mcp login`, `/mcp logout` or `/mcp reconnect` as the line a typed
+command becomes, into the live chat of that folder, because the connection belongs to
+an engine. The result and the sign-in's prompts are that chat's, so the page says which
+chat it went to and links there, and says so plainly when no chat is open. The browser
+opens on the machine running Epsilon, which here is the operator's machine; a terminal
+is still the way in when it is not. TUI-only toggles stay terminal-only. Project trust
+is not one of them: it goes through pi's exported `ProjectTrustStore` (Chats and
+projects), and the dashboard never writes `trust.json` by hand.
 
 An MCP server also reports what the next session can reach and what a live engine
 registered, because a configured server that no tool can call is a state the operator

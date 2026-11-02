@@ -7,6 +7,7 @@ import { configWrite, failure, toError } from "../../platform/http";
 import { requireProject, settingsFolder } from "../projects";
 import {
 	autoEnableMcpRoute,
+	commandMcpRoute,
 	defaultToolMcpRoute,
 	deleteMcpRoute,
 	enabledMcpRoute,
@@ -113,6 +114,27 @@ export const mcpRoutes = ({ home, engines }: Deps) =>
 					input,
 				),
 			);
+		})
+		.openapi(commandMcpRoute, async (c) => {
+			const input = c.req.valid("json");
+			try {
+				const folder = await settingsFolder(home, c.req.valid("query").project);
+				// pi's command reaches an engine, so it runs where the connection is, and a
+				// reload afterwards would drop the connection it just established.
+				const sessionId = await engines.runInFolder(folder, `/mcp ${input.action} ${input.name}`);
+				if (sessionId === undefined) {
+					return failure(
+						c,
+						new Error(
+							"No live chat is running in this folder, and /mcp has to run inside the engine that holds the connection. Open a chat first.",
+						),
+						400,
+					);
+				}
+				return c.json({ sessionId }, 200);
+			} catch (error) {
+				return failure(c, toError(error, "The MCP command did not run"), 400);
+			}
 		})
 		.openapi(defaultToolMcpRoute, (c) => {
 			return configWrite(c, engines, async () =>

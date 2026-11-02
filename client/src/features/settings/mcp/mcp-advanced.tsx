@@ -24,27 +24,18 @@ export function McpAdvanced({
 	errors,
 	providerIds,
 	detail,
-	signInName,
 	update,
 }: {
 	draft: McpDraft;
 	errors: McpFieldErrors;
 	providerIds: readonly string[];
 	detail: McpServerEntryDetail | undefined;
-	/** The server's name when OAuth is configured, for the terminal sign-in line. */
-	signInName: string | undefined;
 	update: (patch: Partial<McpDraft>) => void;
 }) {
 	const [open, setOpen] = useState(false);
 	const failing = ADVANCED_FIELDS.some((field) => errors[field] !== undefined);
 	return (
 		<CollapsibleSection title="Advanced" open={open || failing} onOpenChange={setOpen}>
-			{signInName !== undefined && (
-				<p className="text-meta text-muted-foreground">
-					Sign in from a terminal: <code>pi mcp login {signInName}</code>
-				</p>
-			)}
-
 			<Section title="Requests">
 				<FieldStack>
 					<Field data-invalid={errors.timeout !== undefined}>

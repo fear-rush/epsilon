@@ -9,6 +9,8 @@ import type {
 	ExportFormat,
 	FolderListing,
 	McpAutoEnableInput,
+	McpCommandInput,
+	McpCommandResult,
 	McpDefaultToolInput,
 	McpEnabledInput,
 	McpInProjectInput,
@@ -365,6 +367,15 @@ export const setMcpDefaultTool = async (
 ): Promise<void> => {
 	await api.POST("/api/settings/mcp/default-tool", { params: scoped(project), body: input });
 };
+
+/** Run `/mcp <action> <name>` in this folder's live chat, and answer which chat it ran in. */
+export const runMcpCommand = async (
+	project: Project,
+	input: McpCommandInput,
+): Promise<McpCommandResult> =>
+	body(
+		(await api.POST("/api/settings/mcp/command", { params: scoped(project), body: input })).data,
+	);
 
 export const fetchSkill = async (
 	project: Project,

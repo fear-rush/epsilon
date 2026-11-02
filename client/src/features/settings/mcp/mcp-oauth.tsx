@@ -2,8 +2,8 @@
  * The two ways an HTTP server authenticates: pi's own OAuth flow, with the
  * options a server that cannot register clients needs, or the token of a
  * `/login` provider. Both are editable here because their values are what a save
- * has to keep valid for pi to accept the entry; signing in stays in the terminal
- * (docs/DECISIONS.md, Configure in the dashboard).
+ * has to keep valid for pi to accept the entry. Signing in is the server page's
+ * sign-in card, which runs pi's own `/mcp login` in a live chat.
  */
 import type { McpScope } from "shared";
 

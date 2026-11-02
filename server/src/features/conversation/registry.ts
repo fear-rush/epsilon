@@ -103,6 +103,21 @@ export class SessionRegistry {
 	}
 
 	/**
+	 * Run one typed line on the open engine in this folder, the way a tab sends it,
+	 * and answer which chat it ran in. Undefined means no engine is open there, so a
+	 * command that acts on a live connection has nothing to act on.
+	 */
+	async runInFolder(folder: string, text: string): Promise<string | undefined> {
+		const target = resolve(folder);
+		for (const session of this.sessions.values()) {
+			if (!session.isOpen || resolve(session.folder) !== target) continue;
+			await session.run({ type: "prompt", text });
+			return session.sessionId;
+		}
+		return undefined;
+	}
+
+	/**
 	 * The extension-discovered skills of the open engines in one folder. `engines`
 	 * counts the engines that answered, so a reader can tell "no extension added
 	 * one" from "nothing is running".

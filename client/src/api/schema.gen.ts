@@ -545,6 +545,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/settings/mcp/command": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Run `/mcp <action> <name>` in the live chat of this folder, the line a typed command becomes, and answer which chat it ran in. The sign-in's browser opens on the machine running Epsilon, and its prompts appear in that chat */
+		post: operations["runMcpCommand"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/settings/mcp/default-tool": {
 		parameters: {
 			query?: never;
@@ -1654,6 +1671,13 @@ export interface components {
 		McpAutoEnableInput: {
 			scope: "global" | "project";
 			enabled: boolean;
+		};
+		McpCommandResult: {
+			sessionId: string;
+		};
+		McpCommandInput: {
+			action: "login" | "logout" | "reconnect";
+			name: string;
 		};
 		McpDefaultToolInput: {
 			tool: "codemode" | "tool_search";
@@ -3168,6 +3192,43 @@ interface operations {
 				content?: never;
 			};
 			/** The change was refused */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Run `/mcp <action> <name>` in the live chat of this folder, the line a typed command becomes, and answer which chat it ran in. The sign-in's browser opens on the machine running Epsilon, and its prompts appear in that chat */
+	runMcpCommand: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["McpCommandInput"];
+			};
+		};
+		responses: {
+			/** The chat the command ran in */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["McpCommandResult"];
+				};
+			};
+			/** No live chat in this folder could run it */
 			400: {
 				headers: {
 					[name: string]: unknown;

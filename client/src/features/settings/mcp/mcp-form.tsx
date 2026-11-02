@@ -37,6 +37,7 @@ import { McpOverrideForm } from "./mcp-override";
 import { McpRawPane } from "./mcp-raw";
 import { useMcpRawDraft } from "./mcp-raw-draft";
 import { McpServerCard } from "./mcp-server-card";
+import { McpSignIn } from "./mcp-signin";
 import { McpTools } from "./mcp-tools";
 import { mcpFieldErrors, mcpFields } from "./mcp-validation";
 import type { McpDraft } from "./mcp-draft";
@@ -135,9 +136,6 @@ function McpServerForm({
 		save.mutate(inputOf(draft));
 	};
 
-	const signIn =
-		draft.transport === "http" &&
-		(detail.oauth !== undefined || (server?.credentialsStored ?? false));
 	const failure = save.error ?? enable.error;
 	const onRaw = tab === "raw";
 	const leavingDirty = onRaw ? raw.dirty : form.dirty;
@@ -220,12 +218,18 @@ function McpServerForm({
 						saved={!form.dirty}
 						update={update}
 					/>
+					{server === undefined ? undefined : (
+						<McpSignIn
+							detail={server}
+							enabled={server.enabled}
+							live={live?.servers.some((entry) => entry.name === server.name) === true}
+						/>
+					)}
 					<McpAdvanced
 						draft={draft}
 						errors={errors}
 						providerIds={providerIds}
 						detail={server}
-						signInName={signIn ? detail.name : undefined}
 						update={update}
 					/>
 				</>

@@ -540,6 +540,16 @@ depends on the same versions (`1.4.0` here):
   `codemode` tool, with no pi dependencies. The coding agent adds the tool and
   the script globals the docs describe; the package itself is only the VM.
 
+`/mcp` is the extension command over all of it, and it is reachable by typing the
+line into a session: `prompt()` dispatches extension commands. Outside the TUI it
+answers through `ctx.ui` — with no argument it notifies `formatStatus()`, one line per
+server with its state, tool count and exposure; `login` notifies the authorization URL,
+calls `openUrl()` **on the machine running the engine**, and asks for a redirect URL
+through `ui.input` while the loopback callback races that prompt; `logout` and
+`reconnect` notify their outcome, the reconnect one naming pi's own state. So a host
+that can show a notice and ask for input can sign in, and one that cannot yet can still
+say so.
+
 `createMcpExtension()` and `createCodemodeExtension()` are wrappers over them, and
 that is the surface Epsilon uses. Importing the packages directly would mean a
 second MCP client: another connection per server, a second stdio process for

@@ -3278,6 +3278,39 @@
 					"enabled"
 				]
 			},
+			"McpCommandResult": {
+				"type": "object",
+				"properties": {
+					"sessionId": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"sessionId"
+				]
+			},
+			"McpCommandInput": {
+				"type": "object",
+				"properties": {
+					"action": {
+						"type": "string",
+						"enum": [
+							"login",
+							"logout",
+							"reconnect"
+						]
+					},
+					"name": {
+						"type": "string",
+						"minLength": 1,
+						"pattern": "^[A-Za-z0-9_-]+$"
+					}
+				},
+				"required": [
+					"action",
+					"name"
+				]
+			},
 			"McpDefaultToolInput": {
 				"type": "object",
 				"properties": {
@@ -5795,6 +5828,60 @@
 					},
 					"400": {
 						"description": "The change was refused",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/mcp/command": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "runMcpCommand",
+				"description": "Run `/mcp <action> <name>` in the live chat of this folder, the line a typed command becomes, and answer which chat it ran in. The sign-in's browser opens on the machine running Epsilon, and its prompts appear in that chat",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/McpCommandInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "The chat the command ran in",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/McpCommandResult"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "No live chat in this folder could run it",
 						"content": {
 							"application/json": {
 								"schema": {

@@ -456,6 +456,47 @@ export const defaultToolMcpRoute = createRoute({
 	},
 });
 
+/** The three things pi's `/mcp` command does beyond its TUI menu. */
+const mcpCommandSchema = z.enum(["login", "logout", "reconnect"]);
+
+const mcpCommandInputSchema = z
+	.object({
+		action: mcpCommandSchema,
+		/** The server the command names. */
+		name: mcpNameSchema,
+	})
+	.openapi("McpCommandInput");
+
+const mcpCommandResultSchema = z
+	.object({
+		/** The chat the line ran in, so the page can send the operator there. */
+		sessionId: z.string(),
+	})
+	.openapi("McpCommandResult");
+
+export const commandMcpRoute = createRoute({
+	method: "post",
+	path: "/api/settings/mcp/command",
+	tags: ["settings"],
+	operationId: "runMcpCommand",
+	description:
+		"Run `/mcp <action> <name>` in the live chat of this folder, the line a typed command becomes, and answer which chat it ran in. The sign-in's browser opens on the machine running Epsilon, and its prompts appear in that chat",
+	request: {
+		query: settingsScopeQuerySchema,
+		body: {
+			required: true,
+			content: { "application/json": { schema: mcpCommandInputSchema } },
+		},
+	},
+	responses: {
+		200: {
+			description: "The chat the command ran in",
+			content: { "application/json": { schema: mcpCommandResultSchema } },
+		},
+		400: { description: "No live chat in this folder could run it", content: errorContent },
+	},
+});
+
 export const enabledMcpRoute = createRoute({
 	method: "post",
 	path: "/api/settings/mcp/enabled",
