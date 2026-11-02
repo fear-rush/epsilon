@@ -42,7 +42,10 @@ type ToolCall = Extract<AssistantMessage["content"][number], { type: "toolCall" 
 const userRows = new WeakMap<UserMessage, TranscriptRow>();
 const otherRows = new WeakMap<OtherMessage, TranscriptRow>();
 const noticeRows = new WeakMap<Notice, TranscriptRow>();
-const assistantTextRows = new WeakMap<AssistantMessage, TranscriptRow | undefined>();
+/** One message's row depends on the thinking toggle, so both answers are cached. */
+type ThinkingRows = { shown?: TranscriptRow; hidden?: TranscriptRow };
+
+const assistantTextRows = new WeakMap<AssistantMessage, ThinkingRows>();
 const assistantStopRows = new WeakMap<AssistantMessage, TranscriptRow | undefined>();
 const toolRowsByRun = new WeakMap<ToolRun, TranscriptRow>();
 /** A tool call with no run yet gets one placeholder row that outlives each frame. */
@@ -75,14 +78,24 @@ const segmentsOf = (content: AssistantMessage["content"]): AssistantSegment[] =>
 		return [];
 	});
 
-const assistantTextRow = (message: AssistantMessage, index: number): TranscriptRow | undefined => {
-	if (assistantTextRows.has(message)) return assistantTextRows.get(message);
-	const segments = segmentsOf(message.content);
+const assistantTextRow = (
+	message: AssistantMessage,
+	index: number,
+	hideThinking: boolean,
+): TranscriptRow | undefined => {
+	const slot = hideThinking ? "hidden" : "shown";
+	const cached = assistantTextRows.get(message);
+	if (cached !== undefined && slot in cached) return cached[slot];
+	const segments = segmentsOf(message.content).filter(
+		(segment) => !hideThinking || segment.kind === "text",
+	);
 	const row: TranscriptRow | undefined =
 		segments.length > 0
 			? { kind: "assistant", key: `a${index}`, segments, streaming: false }
 			: undefined;
-	assistantTextRows.set(message, row);
+	const rows: ThinkingRows = cached ?? {};
+	rows[slot] = row;
+	assistantTextRows.set(message, rows);
 	return row;
 };
 
@@ -187,9 +200,10 @@ const assistantRows = (
 	message: AssistantMessage,
 	index: number,
 	tools: ToolRun[],
+	hideThinking: boolean,
 ): TranscriptRow[] => {
 	const rows: TranscriptRow[] = [];
-	const text = assistantTextRow(message, index);
+	const text = assistantTextRow(message, index, hideThinking);
 	if (text !== undefined) rows.push(text);
 	const stop = assistantStopRow(message, index);
 	if (stop !== undefined) rows.push(stop);
@@ -308,17 +322,18 @@ export const transcript = (state: ConversationState): TranscriptRow[] => {
 	flushNotices(0);
 	state.messages.forEach((message, index) => {
 		if (message.role === "user") rows.push(userRow(message, `u${index}`));
-		if (message.role === "assistant") rows.push(...assistantRows(message, index, state.tools));
+		if (message.role === "assistant")
+			rows.push(...assistantRows(message, index, state.tools, state.hideThinkingBlock));
 		if (message.role === "bashExecution" || message.role === "branchSummary") {
 			rows.push(otherRow(message, `m${index}`));
 		}
-		if (message.role === "compactionSummary" || message.role === "custom") {
+		if (message.role === "compactionSummary" || (message.role === "custom" && message.display)) {
 			rows.push(otherRow(message, `m${index}`));
 		}
 		flushNotices(index + 1);
 	});
 
-	const segments = streamingSegments(state.streaming);
+	const segments = streamingSegments(state.streaming, state.hideThinkingBlock);
 	if (segments.length > 0) {
 		rows.push({ kind: "assistant", key: "streaming", segments, streaming: true });
 	}
@@ -326,14 +341,16 @@ export const transcript = (state: ConversationState): TranscriptRow[] => {
 };
 
 /** The blocks of a reply still arriving, in pi's order and without the empties. */
-const streamingSegments = (turn: StreamingTurn | null): AssistantSegment[] =>
+const streamingSegments = (turn: StreamingTurn | null, hideThinking: boolean): AssistantSegment[] =>
 	turn === null
 		? []
 		: turn.blocks.flatMap<AssistantSegment>((block) => {
 				if (block === undefined) return [];
 				if (block.type === "text")
 					return block.text === "" ? [] : [{ kind: "text", text: block.text }];
-				return block.thinking === "" ? [] : [{ kind: "thinking", text: block.thinking }];
+				return hideThinking || block.thinking === ""
+					? []
+					: [{ kind: "thinking", text: block.thinking }];
 			});
 
 /** Whether the last row is still being written to, for scroll behaviour. */

@@ -31,6 +31,7 @@ export function SessionControls({
 	empty,
 	autoCompaction,
 	autoRetry,
+	hideThinkingBlock,
 	isCompacting,
 	blocked,
 	cloning,
@@ -43,6 +44,8 @@ export function SessionControls({
 	empty: boolean;
 	autoCompaction: boolean;
 	autoRetry: boolean;
+	/** pi hides thinking when this is on; the transcript follows its setting. */
+	hideThinkingBlock: boolean;
 	isCompacting: boolean;
 	/** Why branch actions are refused right now; undefined when they are possible. */
 	blocked: string | undefined;
@@ -130,6 +133,18 @@ export function SessionControls({
 						>
 							<span className="flex flex-col gap-0.5">
 								<span>Auto-retry failed turns</span>
+								<span className="text-meta text-muted-foreground">
+									pi's global setting: applies to every chat
+								</span>
+							</span>
+						</DropdownMenuCheckboxItem>
+						<DropdownMenuCheckboxItem
+							checked={hideThinkingBlock}
+							onCheckedChange={(checked) => store.setHideThinking(checked === true)}
+							className="items-start"
+						>
+							<span className="flex flex-col gap-0.5">
+								<span>Hide thinking blocks</span>
 								<span className="text-meta text-muted-foreground">
 									pi's global setting: applies to every chat
 								</span>

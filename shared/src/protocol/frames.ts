@@ -15,7 +15,7 @@ import type { JsonAgentSessionEvent } from "../pi";
  * Bumped whenever a frame's shape changes. The client sends it in `hello` and
  * reloads on a mismatch instead of guessing.
  */
-export const PROTOCOL_VERSION = 15;
+export const PROTOCOL_VERSION = 16;
 
 /** pi's thinking levels. A model supports a subset of them. */
 export const thinkingLevelSchema = z.enum([
@@ -61,6 +61,8 @@ export const commandNameSchema = z.enum([
 	"abort_bash",
 	"clear_queue",
 	"navigate_tree",
+	/** pi's global display setting for thinking blocks; it writes settings.json itself. */
+	"set_hide_thinking",
 ]);
 
 export type CommandName = z.infer<typeof commandNameSchema>;
@@ -159,6 +161,8 @@ export const commandSchema = z.discriminatedUnion("type", [
 		entryId: z.string().min(1),
 		summarize: z.boolean().optional(),
 	}),
+	/** Show or hide thinking blocks, which is pi's global `hideThinkingBlock` setting. */
+	z.object({ type: z.literal("set_hide_thinking"), enabled: z.boolean() }),
 ]);
 
 export type Command = z.infer<typeof commandSchema>;
@@ -322,6 +326,8 @@ export const snapshotStateSchema = z.object({
 	thinkingLevel: thinkingLevelSchema,
 	availableThinkingLevels: z.array(thinkingLevelSchema),
 	place: placeSchema,
+	/** Whether pi hides thinking blocks; its global `hideThinkingBlock` setting. */
+	hideThinkingBlock: z.boolean(),
 	/** Whether the tools that run commands and change files are active. */
 	codingTools: z.boolean(),
 	contextUsage: contextUsageSchema.optional(),
@@ -371,7 +377,7 @@ export const serverFrameSchema = z.discriminatedUnion("t", [
 	z.object({
 		t: z.literal("notice"),
 		sessionId: z.string(),
-		kind: z.enum(["external-change", "command"]),
+		kind: z.enum(["external-change", "command", "extension"]),
 		text: z.string(),
 	}),
 	z.object({

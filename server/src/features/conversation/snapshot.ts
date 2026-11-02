@@ -322,6 +322,7 @@ export const buildSnapshot = (
 			availableThinkingLevels: agent.getAvailableThinkingLevels(),
 			place,
 			codingTools: hasCodingTools(agent),
+			hideThinkingBlock: agent.settingsManager.getHideThinkingBlock(),
 			contextUsage: contextUsageOf(agent.getContextUsage()),
 			stats: statsOf(agent.getSessionStats()),
 			isRetrying: agent.isRetrying,

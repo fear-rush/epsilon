@@ -394,7 +394,7 @@ export class LiveSession {
 	 * A command can run before any tab is watching (the shadowing report is one), so a
 	 * sentence nobody could receive waits for the next subscriber, as a failure does.
 	 */
-	private notice(text: string, kind: "external-change" | "command"): void {
+	private notice(text: string, kind: "external-change" | "command" | "extension"): void {
 		const frame: ServerFrame = { t: "notice", sessionId: this.sessionId, kind, text };
 		if (this.frames.count === 0) this.frames.defer(frame);
 		else this.frames.emit(frame);
@@ -493,6 +493,24 @@ export class LiveSession {
 		// A rename reaches the session file and the event, but the sidebar reads
 		// the snapshot, so refresh it.
 		if (event.type === "session_info_changed") this.resync();
+		this.reportUnrenderableEntry(event);
+	}
+
+	/**
+	 * pi draws a `custom` entry only when an extension registered a renderer for its
+	 * type; every other custom entry is bookkeeping and stays out of the transcript,
+	 * the way pi's own TUI leaves it out. A renderable one is a capability this build
+	 * does not have yet, so it says so instead of vanishing.
+	 */
+	private reportUnrenderableEntry(event: AgentSessionEvent): void {
+		if (event.type !== "entry_appended" || event.entry.type !== "custom") return;
+		const agent = this.host?.session;
+		if (agent === undefined) return;
+		if (agent.extensionRunner.getEntryRenderer(event.entry.customType) === undefined) return;
+		this.notice(
+			`An extension appended an entry of type "${event.entry.customType}". pi draws it with its own component, which this dashboard cannot render yet.`,
+			"extension",
+		);
 	}
 
 	private snapshotFrame(): ServerFrame {

@@ -19,6 +19,7 @@ import {
 	setAutoCompaction,
 	setAutoRetry,
 	setCodingToolsEnabled,
+	setHideThinking,
 	setModel,
 	setThinkingLevel,
 } from "./session-controls";
@@ -49,6 +50,7 @@ const HANDLERS: CommandHandlers = {
 	set_model: setModel,
 	set_thinking_level: setThinkingLevel,
 	set_coding_tools: setCodingToolsEnabled,
+	set_hide_thinking: setHideThinking,
 	navigate_tree: navigateTree,
 };
 

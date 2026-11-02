@@ -318,3 +318,90 @@ describe("a nested tool call", () => {
 		expect(child?.run.note).toBe("ls: no such directory");
 	});
 });
+
+describe("an extension entry", () => {
+	const appended = (display: boolean): JsonAgentSessionEvent => ({
+		type: "entry_appended",
+		entry: {
+			type: "custom_message",
+			customType: "note",
+			content: "hello from the extension",
+			display,
+			id: "entry-1",
+			parentId: null,
+			timestamp: "2026-01-01T00:00:00.000Z",
+		},
+	});
+
+	test("a custom message entry becomes a row when pi would show it", () => {
+		const state = feed([appended(true)]);
+		expect(transcript(state).filter((row) => row.kind === "summary")).toHaveLength(1);
+	});
+
+	test("an entry with display false is hidden, as pi hides it", () => {
+		const state = feed([appended(false)]);
+		expect(transcript(state).filter((row) => row.kind === "summary")).toHaveLength(0);
+	});
+
+	test("a bookkeeping custom entry stays out of the transcript", () => {
+		const state = feed([
+			{
+				type: "entry_appended",
+				entry: {
+					type: "custom",
+					customType: "permission-state",
+					data: { mode: "ask" },
+					id: "entry-2",
+					parentId: null,
+					timestamp: "2026-01-01T00:00:00.000Z",
+				},
+			},
+		]);
+		expect(transcript(state)).toHaveLength(0);
+	});
+
+	test("a custom message with display false is hidden too", () => {
+		const hidden = {
+			role: "custom",
+			customType: "note",
+			content: "quiet",
+			display: false,
+			timestamp: 1,
+		} satisfies ConversationMessage;
+		expect(transcript({ ...emptyConversation, messages: [hidden] })).toHaveLength(0);
+	});
+});
+
+describe("thinking display", () => {
+	test("pi's hideThinkingBlock removes thinking from finished and streaming replies", () => {
+		const reply = assistantMessage(
+			[
+				{ type: "thinking", thinking: "considered" },
+				{ type: "text", text: "answered" },
+			],
+			"stop",
+		);
+		// The same message object, so the row cache has to answer for both settings.
+		const shown = transcript({ ...emptyConversation, messages: [reply] });
+		const hidden = transcript({ ...emptyConversation, messages: [reply], hideThinkingBlock: true });
+		const segmentsOf = (rows: ReturnType<typeof transcript>) => {
+			const row = rows.find((candidate) => candidate.kind === "assistant");
+			if (row?.kind !== "assistant") throw new Error("expected an assistant row");
+			return row.segments;
+		};
+		expect(segmentsOf(shown)).toHaveLength(2);
+		expect(segmentsOf(hidden)).toEqual([{ kind: "text", text: "answered" }]);
+
+		const streaming = feed([
+			{ type: "message_start", message: assistantMessage([], "stop") },
+			update({ type: "thinking_start", contentIndex: 0 }),
+			update({ type: "thinking_delta", contentIndex: 0, delta: "considered" }),
+		]);
+		expect(transcript(streaming).filter((row) => row.kind === "assistant")).toHaveLength(1);
+		expect(
+			transcript({ ...streaming, hideThinkingBlock: true }).filter(
+				(row) => row.kind === "assistant",
+			),
+		).toHaveLength(0);
+	});
+});

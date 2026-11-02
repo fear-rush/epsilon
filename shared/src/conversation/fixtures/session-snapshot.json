@@ -48,6 +48,7 @@
 				"path": "/fixture/project"
 			},
 			"codingTools": true,
+			"hideThinkingBlock": false,
 			"contextUsage": {
 				"tokens": 24118,
 				"contextWindow": 1000000,

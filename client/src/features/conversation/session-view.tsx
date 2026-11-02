@@ -71,6 +71,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 		isRetrying,
 		isBashRunning,
 		bash,
+		hideThinkingBlock,
 		autoCompaction,
 		autoRetry,
 		queue,
@@ -191,6 +192,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				empty={rows.length === 0}
 				autoCompaction={autoCompaction}
 				autoRetry={autoRetry}
+				hideThinkingBlock={hideThinkingBlock}
 				isCompacting={isCompacting}
 				blocked={blocked}
 				cloning={cloning}

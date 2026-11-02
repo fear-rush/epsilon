@@ -156,6 +156,11 @@ export class ConversationStore {
 		this.sendCommand({ type: "set_auto_retry", enabled });
 	}
 
+	/** pi's global display setting: whether the transcript draws thinking blocks. */
+	setHideThinking(enabled: boolean): void {
+		this.sendCommand({ type: "set_hide_thinking", enabled });
+	}
+
 	abortBash(): void {
 		this.sendCommand({ type: "abort_bash" });
 	}

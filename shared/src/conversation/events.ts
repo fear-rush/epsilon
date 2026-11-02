@@ -185,6 +185,28 @@ const settleTools = (tools: ToolRun[]): ToolRun[] =>
 		tool.status === "running" ? { ...tool, status: "error", note: SETTLED_TOOL_NOTE } : tool,
 	);
 
+/**
+ * An entry is pi's append-only record. A `custom_message` entry is also a message
+ * in the transcript, and pi hides it when `display` is false. A plain `custom`
+ * entry is bookkeeping that pi draws only through an extension's own component,
+ * so it stays out of the transcript (the host says when one is renderable).
+ */
+const entryAppended = (
+	state: ConversationState,
+	entry: Extract<JsonAgentSessionEvent, { type: "entry_appended" }>["entry"],
+): ConversationState => {
+	if (entry.type !== "custom_message" || !entry.display) return state;
+	const message: ConversationMessage = {
+		role: "custom",
+		customType: entry.customType,
+		content: entry.content,
+		display: entry.display,
+		details: entry.details,
+		timestamp: new Date(entry.timestamp).getTime(),
+	};
+	return { ...state, messages: [...state.messages, message] };
+};
+
 /** A delay as pi shows it in a retry status: whole seconds, never a raw millisecond count. */
 const seconds = (ms: number): string => `${Math.max(1, Math.round(ms / 1_000))}s`;
 
@@ -260,6 +282,8 @@ export const reduceEvent = (
 			};
 		case "thinking_level_changed":
 			return { ...state, thinkingLevel: event.level };
+		case "entry_appended":
+			return entryAppended(state, event.entry);
 		case "queue_update":
 			// pi says which prompts it still holds after every queue change, so the
 			// composer shows what a run accepted instead of guessing.

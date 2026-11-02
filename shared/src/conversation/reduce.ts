@@ -76,6 +76,7 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				thinkingLevel: frame.snapshot.state.thinkingLevel,
 				availableThinkingLevels: frame.snapshot.state.availableThinkingLevels,
 				place: frame.snapshot.state.place,
+				hideThinkingBlock: frame.snapshot.state.hideThinkingBlock,
 				codingTools: frame.snapshot.state.codingTools,
 				contextUsage: frame.snapshot.state.contextUsage,
 				stats: frame.snapshot.state.stats,

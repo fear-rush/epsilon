@@ -139,6 +139,8 @@ export type ConversationState = {
 	availableThinkingLevels: ThinkingLevel[];
 	/** Where the session runs, or undefined before the first snapshot. */
 	place: Place | undefined;
+	/** Whether pi hides thinking blocks; its global `hideThinkingBlock` setting. */
+	hideThinkingBlock: boolean;
 	/** Whether the tools that run commands and change files are active. */
 	codingTools: boolean;
 	/** How full the context window is now, or absent while pi cannot tell. */
@@ -185,6 +187,7 @@ export const emptyConversation: ConversationState = {
 	thinkingLevel: "off",
 	availableThinkingLevels: [],
 	place: undefined,
+	hideThinkingBlock: false,
 	codingTools: false,
 	contextUsage: undefined,
 	stats: noStats,

@@ -78,6 +78,7 @@ function SessionHeaderImpl({
 	empty,
 	autoCompaction,
 	autoRetry,
+	hideThinkingBlock,
 	isCompacting,
 	blocked,
 	cloning,
@@ -94,6 +95,7 @@ function SessionHeaderImpl({
 	empty: boolean;
 	autoCompaction: boolean;
 	autoRetry: boolean;
+	hideThinkingBlock: boolean;
 	isCompacting: boolean;
 	/** Why branch actions are refused right now; undefined when they are possible. */
 	blocked: string | undefined;
@@ -117,6 +119,7 @@ function SessionHeaderImpl({
 							empty={empty}
 							autoCompaction={autoCompaction}
 							autoRetry={autoRetry}
+							hideThinkingBlock={hideThinkingBlock}
 							isCompacting={isCompacting}
 							blocked={blocked}
 							cloning={cloning}

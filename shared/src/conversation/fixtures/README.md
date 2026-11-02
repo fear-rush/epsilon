@@ -30,4 +30,5 @@ when the schema started checking the frame. Protocol 6 added
 `thinkingLevelMap`; the messages are the recording. Protocol 13 replaced
 `branches` with `tree`, the session tree the picker draws. The recording carries
 no entry ids, so the two user entries and their parent chain were added by hand
-with placeholder ids.
+with placeholder ids. Protocol 16 added `hideThinkingBlock`, added by hand as
+pi's default `false`; the messages are still the recording.

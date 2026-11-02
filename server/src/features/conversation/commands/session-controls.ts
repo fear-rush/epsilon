@@ -96,3 +96,15 @@ export const setCodingToolsEnabled = (
 	setCodingTools(target.agent, command.enabled);
 	target.resync();
 };
+
+/**
+ * pi's own writer for its global `hideThinkingBlock` setting, so a terminal sees
+ * what the dashboard chose and nothing is hand-written.
+ */
+export const setHideThinking = (
+	target: CommandTarget,
+	command: Extract<Command, { type: "set_hide_thinking" }>,
+): void => {
+	target.agent.settingsManager.setHideThinkingBlock(command.enabled);
+	target.resync();
+};
