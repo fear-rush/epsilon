@@ -92,6 +92,21 @@ describe("extension dialogs", () => {
 		expect(frames).toEqual([]);
 	});
 
+	test("a late tab receives the session's view settings, and no one-off display", () => {
+		const { dialogs } = make();
+		dialogs.display({ method: "set_working_message", message: "Reading files" });
+		dialogs.display({ method: "set_tools_expanded", expanded: true });
+		dialogs.display({ method: "notify", message: "only once" });
+
+		const replayed: ServerFrame[] = [];
+		dialogs.replay((frame) => replayed.push(frame));
+
+		expect(replayed.map((frame) => (frame.t === "ui" ? frame.request.method : frame.t))).toEqual([
+			"set_working_message",
+			"set_tools_expanded",
+		]);
+	});
+
 	test("an aborting signal resolves the dialog and closes it", async () => {
 		const { dialogs, frames } = make();
 		const controller = new AbortController();

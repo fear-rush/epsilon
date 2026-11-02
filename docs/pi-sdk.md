@@ -95,7 +95,14 @@ Other facts worth having before embedding:
     A host with a real composer reports the draft into the engine and answers from that.
   - **working and view state**: `setWorkingMessage`, `setWorkingVisible`,
     `setWorkingIndicator`, `setHiddenThinkingLabel`, `getToolsExpanded`,
-    `setToolsExpanded`
+    `setToolsExpanded`. `setWorkingMessage()` with no argument restores pi's own word,
+    `"Working"`, and `setHiddenThinkingLabel()` restores `"Thinking..."`. That label is
+    what pi draws **instead of** the thinking text when `hideThinkingBlock` is set:
+    pi does not drop the block silently, and a reply that only thought still shows the
+    label. `setWorkingIndicator` takes animation frames and an interval for the TUI
+    spinner, which is why a host that draws its own spinner cannot honour it. Tool
+    expansion is one session-wide boolean, `false` in pi's defaults, and
+    `getToolsExpanded()` is synchronous, so it answers what was last set.
   - **terminal only**: `custom`, `onTerminalInput`, `setFooter`, `setHeader`,
     `addAutocompleteProvider`, `setEditorComponent`, `getEditorComponent`, and the
     theme trio `getAllThemes`, `getTheme`, `setTheme`
@@ -112,9 +119,8 @@ Other facts worth having before embedding:
     unchanged. A host that returns a stub which throws kills whichever handler reads
     it, and pi counts a failed `tool_call` handler as blocking the tool. Epsilon answers
     the dialog group and the display half of the state groups, reports the terminal
-    group once, and returns silent defaults for `getEditorComponent`,
-    `getAllThemes`, `getTheme` and `getToolsExpanded`
-    ([DECISIONS.md](DECISIONS.md), UI contract).
+    group once, and returns silent defaults for `getEditorComponent`, `getAllThemes`
+    and `getTheme` ([DECISIONS.md](DECISIONS.md), UI contract).
 - `NewSessionOptions.id` creates a session with an exact id. `SessionManager` lists,
   opens, finds, creates and owns `getEntries()`, `getTree()` and `getSessionName()`;
   `AgentSessionRuntime` owns `newSession`, `switchSession`, `fork` and

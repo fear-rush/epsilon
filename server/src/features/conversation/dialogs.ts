@@ -27,10 +27,21 @@ type PendingDialog = {
 /** Whether an answer settled a dialog, or why it did not. */
 export type AnswerOutcome = "answered" | "stale" | "mismatch";
 
-/** The two methods that carry state across attaches, and how to key them. */
+/**
+ * The display methods that carry state across attaches, and how to key them. The
+ * session-wide settings have no extension key of their own, so the method names them.
+ */
+const STICKY_METHODS = new Set<ExtensionDisplay["method"]>([
+	"set_working_message",
+	"set_working_visible",
+	"set_hidden_thinking_label",
+	"set_tools_expanded",
+]);
+
 const displayKey = (request: ExtensionDisplay): string | undefined => {
 	if (request.method === "setStatus") return `status:${request.statusKey}`;
 	if (request.method === "setWidget") return `widget:${request.widgetKey}`;
+	if (STICKY_METHODS.has(request.method)) return `method:${request.method}`;
 	return undefined;
 };
 

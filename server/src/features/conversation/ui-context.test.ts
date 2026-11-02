@@ -175,3 +175,59 @@ describe("an extension that writes into the composer", () => {
 		}
 	});
 });
+
+/**
+ * An extension that shapes the view: pi's working row, the label for thinking pi
+ * hides, and the session-wide tool expansion it reads back.
+ */
+const viewOptions = `
+export default function viewOptions(pi) {
+	pi.registerCommand("shape", {
+		description: "Set every view option, then read one back",
+		handler: async (_args, ctx) => {
+			ctx.ui.setWorkingMessage("Reading files");
+			ctx.ui.setWorkingVisible(false);
+			ctx.ui.setHiddenThinkingLabel("Pondering");
+			ctx.ui.setToolsExpanded(true);
+			ctx.ui.notify(\`expanded:\${ctx.ui.getToolsExpanded()}\`, "info");
+		},
+	});
+}
+`;
+
+describe("an extension that shapes the view", () => {
+	test("sends each option and reads the expansion it set back", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "epsilon-view-"));
+		const home = agentHome(dir);
+		await mkdir(join(dir, "extensions"), { recursive: true });
+		await mkdir(home.chatsDir, { recursive: true });
+		await writeFile(join(dir, "extensions", "view-options.ts"), viewOptions, "utf8");
+		const registry = new SessionRegistry(home);
+		try {
+			const session = await registry.ensure(crypto.randomUUID(), { kind: "chat" });
+			const frames: ServerFrame[] = [];
+			const unsubscribe = session.subscribe((frame) => frames.push(frame));
+			try {
+				await session.run({ type: "prompt", text: "/shape" });
+			} finally {
+				unsubscribe();
+			}
+
+			// The permission extension sets its status on session_start; this command sets
+			// the rest.
+			const requests = frames.flatMap((frame) =>
+				frame.t === "ui" && frame.request.method !== "setStatus" ? [frame.request] : [],
+			);
+			expect(requests).toEqual([
+				{ method: "set_working_message", message: "Reading files" },
+				{ method: "set_working_visible", visible: false },
+				{ method: "set_hidden_thinking_label", label: "Pondering" },
+				{ method: "set_tools_expanded", expanded: true },
+				{ method: "notify", message: "expanded:true", notifyType: "info" },
+			]);
+		} finally {
+			await registry.disposeAll();
+			await rm(dir, { recursive: true, force: true });
+		}
+	});
+});

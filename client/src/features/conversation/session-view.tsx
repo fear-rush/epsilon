@@ -78,11 +78,13 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 		tree,
 		drift,
 		editorRequest,
+		workingMessage,
+		workingVisible,
+		hiddenThinkingLabel,
+		toolsExpanded,
 	} = snapshot.state;
 	const confirmations = dialogs.filter(isConfirm);
 	const questions = dialogs.filter((dialog) => !isConfirm(dialog));
-	const aboveComposer = widgets.filter((widget) => widget.placement === "aboveEditor");
-	const belowComposer = widgets.filter((widget) => widget.placement === "belowEditor");
 	/** pi fills the place in once the engine is up; until then the page's own answer holds. */
 	const where = snapshot.state.place ?? place;
 	const empty = rows.length === 0;
@@ -129,6 +131,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				header={where.kind === "project" ? <ComposerPlace place={where} /> : undefined}
 				restoreDraft={snapshot.restoreDraft}
 				editorRequest={editorRequest}
+				widgets={widgets}
 			/>
 		),
 		[
@@ -142,6 +145,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 			cloneChat,
 			composerKey,
 			editorRequest,
+			widgets,
 			models,
 			model,
 			thinkingLevel,
@@ -161,6 +165,8 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 	const runStatus = useMemo(
 		() => (
 			<RunStatus
+				working={busy && workingVisible}
+				workingMessage={workingMessage}
 				isCompacting={isCompacting}
 				isRetrying={isRetrying}
 				isBashRunning={isBashRunning}
@@ -175,7 +181,19 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				onClearQueue={() => store.clearQueue()}
 			/>
 		),
-		[store, isCompacting, isRetrying, isBashRunning, snapshot.bashCommand, bash, queue, drift],
+		[
+			store,
+			busy,
+			workingVisible,
+			workingMessage,
+			isCompacting,
+			isRetrying,
+			isBashRunning,
+			snapshot.bashCommand,
+			bash,
+			queue,
+			drift,
+		],
 	);
 
 	// A session that has no snapshot yet shows a loader, not an empty transcript.
@@ -228,17 +246,11 @@ function Conversation({ sessionId, place }: { sessionId: string; place: Place })
 				<ConversationWelcome place={where} composer={composer} status={runStatus} />
 			) : (
 				<>
-					<Transcript rows={rows} />
-
-					{widgets.length > 0 && (
-						<div className="flex flex-col gap-1 border-t px-4 py-2 font-mono text-code whitespace-pre-wrap text-muted-foreground">
-							{[...aboveComposer, ...belowComposer].map((widget) => (
-								<div key={widget.key} data-placement={widget.placement}>
-									{widget.lines.join("\n")}
-								</div>
-							))}
-						</div>
-					)}
+					<Transcript
+						rows={rows}
+						toolsExpanded={toolsExpanded}
+						hiddenThinkingLabel={hiddenThinkingLabel}
+					/>
 
 					{runStatus}
 					<div className="animate-enter-rise">{composer}</div>

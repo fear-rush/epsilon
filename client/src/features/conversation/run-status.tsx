@@ -10,7 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 
+/** pi's own word for the working row, which an extension may replace. */
+const DEFAULT_WORKING_MESSAGE = "Working";
+
 type RunStatusProps = {
+	/** A run is going and pi has not hidden its working row. */
+	working: boolean;
+	/** The label an extension set for that row; absent means pi's own word. */
+	workingMessage: string | undefined;
 	isCompacting: boolean;
 	isRetrying: boolean;
 	isBashRunning: boolean;
@@ -29,6 +36,8 @@ type RunStatusProps = {
 };
 
 export function RunStatus({
+	working,
+	workingMessage,
 	isCompacting,
 	isRetrying,
 	isBashRunning,
@@ -46,11 +55,28 @@ export function RunStatus({
 		...queue.steering.map((text) => ({ text, label: "Steering" })),
 		...queue.followUp.map((text) => ({ text, label: "Follow-up" })),
 	];
-	if (!isCompacting && !isRetrying && !isBashRunning && drift === undefined && queued.length === 0)
+	if (
+		!working &&
+		!isCompacting &&
+		!isRetrying &&
+		!isBashRunning &&
+		drift === undefined &&
+		queued.length === 0
+	)
 		return null;
 
 	return (
 		<div className="mx-auto flex w-full max-w-4xl flex-col gap-2 px-3 pt-3">
+			{working && (
+				<div className="flex items-center gap-2 rounded-xl border bg-background px-3 py-2 text-meta">
+					<Spinner />
+					<span className="min-w-0 flex-1 truncate">
+						{workingMessage === undefined || workingMessage.trim() === ""
+							? `${DEFAULT_WORKING_MESSAGE}…`
+							: workingMessage}
+					</span>
+				</div>
+			)}
 			{drift !== undefined && (
 				<div className="flex items-center gap-2 rounded-xl border bg-background px-3 py-2 text-meta">
 					<span className="min-w-0 flex-1">{drift}</span>

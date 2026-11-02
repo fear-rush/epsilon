@@ -373,7 +373,7 @@ describe("an extension entry", () => {
 });
 
 describe("thinking display", () => {
-	test("pi's hideThinkingBlock removes thinking from finished and streaming replies", () => {
+	test("pi's hideThinkingBlock drops the thinking and leaves a labelled gap", () => {
 		const reply = assistantMessage(
 			[
 				{ type: "thinking", thinking: "considered" },
@@ -389,19 +389,33 @@ describe("thinking display", () => {
 			if (row?.kind !== "assistant") throw new Error("expected an assistant row");
 			return row.segments;
 		};
+		const rowOf = (rows: ReturnType<typeof transcript>) => {
+			const row = rows.find((candidate) => candidate.kind === "assistant");
+			if (row?.kind !== "assistant") throw new Error("expected an assistant row");
+			return row;
+		};
 		expect(segmentsOf(shown)).toHaveLength(2);
+		expect(rowOf(shown).hiddenThinking).toBe(false);
 		expect(segmentsOf(hidden)).toEqual([{ kind: "text", text: "answered" }]);
+		// What was dropped is exactly what the label stands for.
+		expect(rowOf(hidden).hiddenThinking).toBe(true);
 
 		const streaming = feed([
 			{ type: "message_start", message: assistantMessage([], "stop") },
 			update({ type: "thinking_start", contentIndex: 0 }),
 			update({ type: "thinking_delta", contentIndex: 0, delta: "considered" }),
 		]);
-		expect(transcript(streaming).filter((row) => row.kind === "assistant")).toHaveLength(1);
-		expect(
-			transcript({ ...streaming, hideThinkingBlock: true }).filter(
-				(row) => row.kind === "assistant",
-			),
-		).toHaveLength(0);
+		expect(rowOf(transcript(streaming)).segments).toHaveLength(1);
+		const hiddenStreaming = rowOf(transcript({ ...streaming, hideThinkingBlock: true }));
+		expect(hiddenStreaming.segments).toEqual([]);
+		expect(hiddenStreaming.hiddenThinking).toBe(true);
+	});
+
+	test("a reply that only thought still has a row to stand on", () => {
+		const reply = assistantMessage([{ type: "thinking", thinking: "considered" }], "stop");
+		const rows = transcript({ ...emptyConversation, messages: [reply], hideThinkingBlock: true });
+
+		expect(rows).toHaveLength(1);
+		expect(rows[0]).toMatchObject({ kind: "assistant", hiddenThinking: true, segments: [] });
 	});
 });

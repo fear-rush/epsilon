@@ -20,6 +20,7 @@ import type {
 	SnapshotTreeNode,
 	ThinkingLevel,
 	UiStatus,
+	UiWidget,
 } from "shared";
 
 import { shortcut } from "@/components/patterns/shortcut";
@@ -101,6 +102,17 @@ const readAttachment = async (file: File): Promise<Attachment | undefined> => {
 	}
 };
 
+/** The lines an extension set for one placement, above or below the box. */
+const widgetLines = (list: UiWidget[]) => (
+	<div className="flex flex-col gap-1 px-1 font-mono text-code whitespace-pre-wrap text-muted-foreground">
+		{list.map((widget) => (
+			<div key={widget.key} data-placement={widget.placement}>
+				{widget.lines.join("\n")}
+			</div>
+		))}
+	</div>
+);
+
 type ComposerProps = {
 	store: ConversationStore;
 	busy: boolean;
@@ -121,6 +133,8 @@ type ComposerProps = {
 	thinkingLevel: ThinkingLevel;
 	availableThinkingLevels: ThinkingLevel[];
 	statuses: UiStatus[];
+	/** Lines an extension set around the box, above it or below it. */
+	widgets: UiWidget[];
 	commands: SnapshotCommand[];
 	codingTools: boolean;
 	/** Absent while pi cannot read the context; the meter then shows nothing. */
@@ -154,6 +168,7 @@ function ComposerImpl({
 	thinkingLevel,
 	availableThinkingLevels,
 	statuses,
+	widgets,
 	commands,
 	codingTools,
 	contextUsage,
@@ -431,11 +446,15 @@ function ComposerImpl({
 	// Every keyed status an extension set, except the permission mode: the footer's
 	// menu already draws that one, in the browser's words rather than the extension's.
 	const rail = statuses.filter((status) => status.key !== PERMISSION_STATUS_KEY);
+	// pi renders widgets above or below its editor, so the box is the divider here too.
+	const aboveEditor = widgets.filter((widget) => widget.placement === "aboveEditor");
+	const belowEditor = widgets.filter((widget) => widget.placement === "belowEditor");
 
 	return (
 		<div className={inline ? undefined : "border-t p-3"}>
 			<div ref={surfaceRef} className="mx-auto w-full max-w-4xl">
 				{header !== undefined && <div className="min-w-0 pb-2">{header}</div>}
+				{aboveEditor.length > 0 && <div className="pb-2">{widgetLines(aboveEditor)}</div>}
 				{rail.length > 0 && (
 					<div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-1 pb-1 text-meta text-muted-foreground">
 						{rail.map((status) => (
@@ -565,6 +584,7 @@ function ComposerImpl({
 						</div>
 					</div>
 				)}
+				{belowEditor.length > 0 && <div className="pt-1">{widgetLines(belowEditor)}</div>}
 				<Palette
 					open={paletteOpen}
 					anchor={surfaceRef}

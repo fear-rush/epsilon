@@ -21,6 +21,8 @@ const NO_TAB: UiHost = {
 	ask: async (question) => ({ id: question.id, method: "cancel" }),
 	display: () => undefined,
 	editorText: () => "",
+	toolsExpanded: () => false,
+	setToolsExpanded: () => undefined,
 	unsupported: () => undefined,
 	fail: (error) => {
 		throw error;

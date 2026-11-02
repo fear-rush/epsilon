@@ -68,6 +68,14 @@ const reduceDisplay = (
 			return withNotice(state, notifyKind(frame.notifyType), frame.message);
 		case "set_editor_text":
 			return { ...state, editorRequest: { text: frame.text, mode: frame.mode } };
+		case "set_working_message":
+			return { ...state, workingMessage: frame.message };
+		case "set_working_visible":
+			return { ...state, workingVisible: frame.visible };
+		case "set_hidden_thinking_label":
+			return { ...state, hiddenThinkingLabel: frame.label };
+		case "set_tools_expanded":
+			return { ...state, toolsExpanded: frame.expanded };
 	}
 };
 

@@ -72,8 +72,9 @@ const editorWriteSchema = z.enum(["replace", "append"]);
 export type EditorWriteMode = z.infer<typeof editorWriteSchema>;
 
 /**
- * A method that shows something and never waits. `setStatus` and `setWidget`
- * are keyed and replayed to a late-attaching tab; the rest happen once.
+ * A method that shows something and never waits. `setStatus`, `setWidget` and the
+ * session-wide display settings are replayed to a late-attaching tab; the rest
+ * happen once.
  */
 export const extensionDisplaySchema = z.discriminatedUnion("method", [
 	z.object({
@@ -98,6 +99,17 @@ export const extensionDisplaySchema = z.discriminatedUnion("method", [
 		text: z.string(),
 		mode: editorWriteSchema,
 	}),
+	/** pi's working label; `undefined` restores pi's own word. */
+	z.object({ method: z.literal("set_working_message"), message: z.string().optional() }),
+	/** Whether the working row is drawn at all while a run is going. */
+	z.object({ method: z.literal("set_working_visible"), visible: z.boolean() }),
+	/** The label that stands in for thinking pi hides; `undefined` restores the default. */
+	z.object({
+		method: z.literal("set_hidden_thinking_label"),
+		label: z.string().optional(),
+	}),
+	/** pi's session-wide tool-card expansion. */
+	z.object({ method: z.literal("set_tools_expanded"), expanded: z.boolean() }),
 ]);
 
 export type ExtensionDisplay = z.infer<typeof extensionDisplaySchema>;

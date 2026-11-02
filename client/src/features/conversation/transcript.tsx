@@ -29,14 +29,32 @@ import { ToolTrace } from "./tool-trace";
  * component (docs/ARCHITECTURE.md, UI rules: semantic components, not decorated divs).
  */
 
-export function Transcript({ rows }: { rows: TranscriptRow[] }) {
+/** pi's own word for the label that stands in for thinking it hides. */
+const DEFAULT_HIDDEN_THINKING_LABEL = "Thinking...";
+
+export function Transcript({
+	rows,
+	toolsExpanded,
+	hiddenThinkingLabel,
+}: {
+	rows: TranscriptRow[];
+	/** pi's session-wide tool-card expansion, from `setToolsExpanded`. */
+	toolsExpanded: boolean;
+	/** The label an extension set for hidden thinking; absent means pi's own. */
+	hiddenThinkingLabel: string | undefined;
+}) {
 	return (
 		<MessageScrollerProvider autoScroll>
 			<MessageScroller>
 				<MessageScrollerViewport>
 					<MessageScrollerContent className="mx-auto w-full max-w-4xl gap-6 px-3 py-8 sm:px-6">
 						{rows.map((row) => (
-							<RowItem key={row.key} row={row} />
+							<RowItem
+								key={row.key}
+								row={row}
+								toolsExpanded={toolsExpanded}
+								hiddenThinkingLabel={hiddenThinkingLabel}
+							/>
 						))}
 					</MessageScrollerContent>
 				</MessageScrollerViewport>
@@ -182,7 +200,15 @@ const previewOf = (text: string): string => {
  * object for an unchanged message, so a streaming reply re-renders only itself.
  * One unrenderable message stays one notice instead of taking the page down.
  */
-const RowItem = memo(function RowItem({ row }: { row: TranscriptRow }) {
+const RowItem = memo(function RowItem({
+	row,
+	toolsExpanded,
+	hiddenThinkingLabel,
+}: {
+	row: TranscriptRow;
+	toolsExpanded: boolean;
+	hiddenThinkingLabel: string | undefined;
+}) {
 	return (
 		<MessageScrollerItem
 			messageId={row.key}
@@ -190,7 +216,7 @@ const RowItem = memo(function RowItem({ row }: { row: TranscriptRow }) {
 			className="animate-enter-rise"
 		>
 			<CatchBoundary getResetKey={() => row.key} errorComponent={RowError}>
-				<Row row={row} />
+				<Row row={row} toolsExpanded={toolsExpanded} hiddenThinkingLabel={hiddenThinkingLabel} />
 			</CatchBoundary>
 		</MessageScrollerItem>
 	);
@@ -204,7 +230,15 @@ function RowError({ error }: ErrorComponentProps) {
 	);
 }
 
-function Row({ row }: { row: TranscriptRow }) {
+function Row({
+	row,
+	toolsExpanded,
+	hiddenThinkingLabel,
+}: {
+	row: TranscriptRow;
+	toolsExpanded: boolean;
+	hiddenThinkingLabel: string | undefined;
+}) {
 	switch (row.kind) {
 		case "user":
 			return (
@@ -232,6 +266,11 @@ function Row({ row }: { row: TranscriptRow }) {
 			return (
 				<Message align="start">
 					<MessageContent>
+						{row.hiddenThinking === true && (
+							<p className="mb-2 text-meta whitespace-pre-wrap text-muted-foreground">
+								{hiddenThinkingLabel ?? DEFAULT_HIDDEN_THINKING_LABEL}
+							</p>
+						)}
 						{row.segments.map((segment, index) =>
 							segment.kind === "thinking" ? (
 								<p key={index} className="mb-2 text-meta whitespace-pre-wrap text-muted-foreground">
@@ -250,7 +289,7 @@ function Row({ row }: { row: TranscriptRow }) {
 				</Message>
 			);
 		case "tool":
-			return <ToolTrace run={row.run} nested={row.children} />;
+			return <ToolTrace run={row.run} nested={row.children} expanded={toolsExpanded} />;
 		case "summary":
 			return (
 				<Fragment>

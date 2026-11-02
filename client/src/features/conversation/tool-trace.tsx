@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ReactNode } from "react";
 import {
 	SquareTerminalIcon,
@@ -110,7 +111,24 @@ const toolTitle = (run: ToolRun, args: ToolArgs | undefined): string => {
 	}
 };
 
-export function ToolTrace({ run, nested = [] }: { run: ToolRun; nested?: ToolRowNode[] }) {
+export function ToolTrace({
+	run,
+	nested = [],
+	expanded = false,
+}: {
+	run: ToolRun;
+	nested?: ToolRowNode[];
+	/** pi's session-wide expansion, which a click on one card may override. */
+	expanded?: boolean;
+}) {
+	// pi's `setToolsExpanded` opens every card. A click still wins for that card, and a
+	// new flag starts the cards over, the way pi's own toggle re-renders them.
+	const [own, setOwn] = useState<boolean | undefined>(undefined);
+	const [flag, setFlag] = useState(expanded);
+	if (flag !== expanded) {
+		setFlag(expanded);
+		setOwn(undefined);
+	}
 	const args = argsOf(run);
 	const body = toolBody(run, args);
 	const line = (
@@ -133,7 +151,12 @@ export function ToolTrace({ run, nested = [] }: { run: ToolRun; nested?: ToolRow
 		nested.length === 0 ? null : (
 			<div className="flex flex-col gap-2 px-1">
 				{nested.map((child) => (
-					<ToolTrace key={child.run.toolCallId} run={child.run} nested={child.children} />
+					<ToolTrace
+						key={child.run.toolCallId}
+						run={child.run}
+						nested={child.children}
+						expanded={expanded}
+					/>
 				))}
 			</div>
 		);
@@ -141,7 +164,7 @@ export function ToolTrace({ run, nested = [] }: { run: ToolRun; nested?: ToolRow
 
 	return (
 		<Trace>
-			<TraceCollapsible>
+			<TraceCollapsible open={own ?? expanded} onOpenChange={setOwn}>
 				<TraceCollapsibleTrigger>{line}</TraceCollapsibleTrigger>
 				<TraceCollapsibleContent>
 					{note}

@@ -26,7 +26,14 @@ type AssistantSegment = { kind: "text"; text: string } | { kind: "thinking"; tex
 
 export type TranscriptRow =
 	| { kind: "user"; key: string; text: string; images: { data: string; mimeType: string }[] }
-	| { kind: "assistant"; key: string; segments: AssistantSegment[]; streaming: boolean }
+	| {
+			kind: "assistant";
+			key: string;
+			segments: AssistantSegment[];
+			streaming: boolean;
+			/** pi hides the thinking, so one label stands in for blocks it dropped. */
+			hiddenThinking?: boolean;
+	  }
 	| { kind: "tool"; key: string; run: ToolRun; children: ToolRowNode[] }
 	| { kind: "summary"; key: string; label: string; text: string }
 	| { kind: "notice"; key: string; notice: Notice };
@@ -86,12 +93,14 @@ const assistantTextRow = (
 	const slot = hideThinking ? "hidden" : "shown";
 	const cached = assistantTextRows.get(message);
 	if (cached !== undefined && slot in cached) return cached[slot];
-	const segments = segmentsOf(message.content).filter(
-		(segment) => !hideThinking || segment.kind === "text",
-	);
+	const all = segmentsOf(message.content);
+	// pi draws a label where it hid thinking instead of dropping the reply's block, so
+	// a reply that only thought still has a row to stand on.
+	const hiddenThinking = hideThinking && all.some((segment) => segment.kind === "thinking");
+	const segments = hideThinking ? all.filter((segment) => segment.kind === "text") : all;
 	const row: TranscriptRow | undefined =
-		segments.length > 0
-			? { kind: "assistant", key: `a${index}`, segments, streaming: false }
+		segments.length > 0 || hiddenThinking
+			? { kind: "assistant", key: `a${index}`, segments, streaming: false, hiddenThinking }
 			: undefined;
 	const rows: ThinkingRows = cached ?? {};
 	rows[slot] = row;
@@ -333,25 +342,31 @@ export const transcript = (state: ConversationState): TranscriptRow[] => {
 		flushNotices(index + 1);
 	});
 
-	const segments = streamingSegments(state.streaming, state.hideThinkingBlock);
-	if (segments.length > 0) {
-		rows.push({ kind: "assistant", key: "streaming", segments, streaming: true });
-	}
+	const streaming = streamingRow(state.streaming, state.hideThinkingBlock);
+	if (streaming !== undefined) rows.push(streaming);
 	return rows;
 };
 
 /** The blocks of a reply still arriving, in pi's order and without the empties. */
-const streamingSegments = (turn: StreamingTurn | null, hideThinking: boolean): AssistantSegment[] =>
-	turn === null
-		? []
-		: turn.blocks.flatMap<AssistantSegment>((block) => {
-				if (block === undefined) return [];
-				if (block.type === "text")
-					return block.text === "" ? [] : [{ kind: "text", text: block.text }];
-				return hideThinking || block.thinking === ""
-					? []
-					: [{ kind: "thinking", text: block.thinking }];
-			});
+const streamingRow = (
+	turn: StreamingTurn | null,
+	hideThinking: boolean,
+): TranscriptRow | undefined => {
+	if (turn === null) return undefined;
+	let hiddenThinking = false;
+	const segments = turn.blocks.flatMap<AssistantSegment>((block) => {
+		if (block === undefined) return [];
+		if (block.type === "text") return block.text === "" ? [] : [{ kind: "text", text: block.text }];
+		if (block.thinking === "") return [];
+		if (hideThinking) {
+			hiddenThinking = true;
+			return [];
+		}
+		return [{ kind: "thinking", text: block.thinking }];
+	});
+	if (segments.length === 0 && !hiddenThinking) return undefined;
+	return { kind: "assistant", key: "streaming", segments, streaming: true, hiddenThinking };
+};
 
 /** Whether the last row is still being written to, for scroll behaviour. */
 export const isStreaming = (state: ConversationState): boolean => state.streaming !== null;

@@ -25,6 +25,10 @@ export type UiHost = {
 	display: (request: ExtensionDisplay) => void;
 	/** The draft the composer last reported, which an extension's `getEditorText` reads. */
 	editorText: () => string;
+	/** pi's session-wide tool-card expansion, which `getToolsExpanded` answers. */
+	toolsExpanded: () => boolean;
+	/** Record that expansion and draw it, so both tabs and pi agree on it. */
+	setToolsExpanded: (expanded: boolean) => void;
 	/** A method that needs pi's TUI. The host shows one notice per method. */
 	unsupported: (method: string) => void;
 	fail: (error: Error, code?: ProtocolErrorCode) => void;
@@ -34,6 +38,8 @@ export class UiBridge {
 	private readonly early = new Set<string>();
 	/** The composer's draft as the tab last reported it; empty until one attaches. */
 	private editor = "";
+	/** pi's session-wide tool-card expansion; pi's own default is collapsed. */
+	private expanded = false;
 	readonly host: UiHost;
 
 	constructor(
@@ -45,6 +51,11 @@ export class UiBridge {
 			ask: dialogs.ask,
 			display: dialogs.display,
 			editorText: () => this.editor,
+			toolsExpanded: () => this.expanded,
+			setToolsExpanded: (expanded) => {
+				this.expanded = expanded;
+				this.dialogs.display({ method: "set_tools_expanded", expanded });
+			},
 			unsupported: (method) => {
 				if (this.hasSubscriber()) this.dialogs.unsupported(method);
 				else this.early.add(method);
@@ -175,17 +186,19 @@ export const createUiContext = (host: UiHost): ExtensionUIContext => ({
 		host.unsupported("onTerminalInput");
 		return () => undefined;
 	},
-	setWorkingMessage() {
-		host.unsupported("setWorkingMessage");
+	setWorkingMessage(message) {
+		host.display({ method: "set_working_message", message });
 	},
-	setWorkingVisible() {
-		host.unsupported("setWorkingVisible");
+	setWorkingVisible(visible) {
+		host.display({ method: "set_working_visible", visible });
 	},
+	// The browser draws one spinner, not an animation the extension composed, so its
+	// frames and interval have nowhere to go.
 	setWorkingIndicator() {
 		host.unsupported("setWorkingIndicator");
 	},
-	setHiddenThinkingLabel() {
-		host.unsupported("setHiddenThinkingLabel");
+	setHiddenThinkingLabel(label) {
+		host.display({ method: "set_hidden_thinking_label", label });
 	},
 	setFooter() {
 		host.unsupported("setFooter");
@@ -224,9 +237,9 @@ export const createUiContext = (host: UiHost): ExtensionUIContext => ({
 		return { success: false, error: "Theme switching needs the terminal tab" };
 	},
 	getToolsExpanded() {
-		return false;
+		return host.toolsExpanded();
 	},
-	setToolsExpanded() {
-		host.unsupported("setToolsExpanded");
+	setToolsExpanded(expanded) {
+		host.setToolsExpanded(expanded);
 	},
 });

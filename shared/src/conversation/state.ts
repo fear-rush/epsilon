@@ -129,6 +129,14 @@ export type ConversationState = {
 	title?: string;
 	/** A draft an extension wrote, until a composer takes it. */
 	editorRequest?: EditorRequest;
+	/** pi's working label while a run goes; absent means pi's own word. */
+	workingMessage?: string;
+	/** Whether the working row is drawn at all; pi's own default is visible. */
+	workingVisible: boolean;
+	/** The label that stands in for thinking pi hides; absent means pi's default. */
+	hiddenThinkingLabel?: string;
+	/** Whether tool cards open by themselves, from pi's `setToolsExpanded`. */
+	toolsExpanded: boolean;
 	/** pi's own session name, from `set_session_name` or the terminal. */
 	sessionName?: string;
 	/** A turn is in progress. `agent_start` starts it and `agent_settled` ends it;
@@ -198,6 +206,8 @@ export const emptyConversation: ConversationState = {
 	availableThinkingLevels: [],
 	place: undefined,
 	hideThinkingBlock: false,
+	workingVisible: true,
+	toolsExpanded: false,
 	codingTools: false,
 	contextUsage: undefined,
 	stats: noStats,

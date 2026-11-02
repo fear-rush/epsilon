@@ -137,10 +137,11 @@ only source).
 ## UI contract
 
 Epsilon renders the extension UI methods that are data (`select`, `confirm`, `input`,
-`editor`, `notify`, `setStatus`, `setWidget` as text, `setTitle`, `theme`), through
-`ExtensionUIContext`. A method that needs pi's terminal UI (`custom`, footer and header
-components, terminal input) answers with a visible notice naming it, once. Silence is
-never an answer. A dialog's timeout and the extension's abort signal are enforced by the
+`editor`, `notify`, `setStatus`, `setWidget` as text, `setTitle`, `setEditorText`,
+`pasteToEditor`, `getEditorText`, the working and thinking labels, the tool expansion and
+`theme`), through `ExtensionUIContext`. A method that needs pi's terminal UI (`custom`,
+footer and header components, terminal input, the indicator's own animation frames)
+answers with a visible notice naming it, once. Silence is never an answer. A dialog's timeout and the extension's abort signal are enforced by the
 engine: the tab receives the time the question has left and counts down, and either
 ending closes the dialog there, so nothing waits for a click that will not come.
 
@@ -157,6 +158,11 @@ The composer is the editor: it reports its draft to the engine, debounced, so
 Every keyed status is drawn in a rail above the composer, in the order the keys first
 appeared, and clearing one removes its row. The permission key is the exception: the
 footer's menu draws it in the browser's words.
+
+Extension widgets are drawn around the box they name: `aboveEditor` above the composer,
+`belowEditor` under it. The working row, the label for hidden thinking and the
+session-wide tool expansion follow pi's own settings, and each is replayed to a tab
+that attaches late, so a session does not look different in a second tab.
 
 Why: terminal components have no data form, and the set of extensions is open-ended, so
 an adapter has no cost ceiling. A theme in a browser has nothing to colour, so the text

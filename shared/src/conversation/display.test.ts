@@ -6,6 +6,7 @@
  */
 import { describe, expect, test } from "bun:test";
 
+import type { ExtensionDisplay } from "../protocol/extui";
 import { serverFrameSchema } from "../protocol/frames";
 import { reduce, takeEditorRequest } from "./reduce";
 import { emptyConversation } from "./state";
@@ -90,5 +91,39 @@ describe("an extension status", () => {
 		state = status(state, "build");
 
 		expect(state.statuses).toEqual([]);
+	});
+});
+
+/** One session-wide display setting, exactly as a browser parses it. */
+const setting = (request: ExtensionDisplay) =>
+	reduce(emptyConversation, serverFrameSchema.parse({ t: "ui", sessionId, request }));
+
+describe("an extension's view settings", () => {
+	test("a working message replaces pi's word, and clearing it restores that word", () => {
+		expect(
+			setting({ method: "set_working_message", message: "Reading files" }).workingMessage,
+		).toBe("Reading files");
+		expect(setting({ method: "set_working_message" }).workingMessage).toBeUndefined();
+	});
+
+	test("the working row can be hidden and shown again", () => {
+		expect(setting({ method: "set_working_visible", visible: false }).workingVisible).toBe(false);
+		expect(setting({ method: "set_working_visible", visible: true }).workingVisible).toBe(true);
+	});
+
+	test("the hidden-thinking label is kept and cleared", () => {
+		expect(
+			setting({ method: "set_hidden_thinking_label", label: "Pondering" }).hiddenThinkingLabel,
+		).toBe("Pondering");
+		expect(setting({ method: "set_hidden_thinking_label" }).hiddenThinkingLabel).toBeUndefined();
+	});
+
+	test("tool cards are expanded for the session", () => {
+		expect(setting({ method: "set_tools_expanded", expanded: true }).toolsExpanded).toBe(true);
+	});
+
+	test("pi's own defaults are what the state starts with", () => {
+		expect(emptyConversation.workingVisible).toBe(true);
+		expect(emptyConversation.toolsExpanded).toBe(false);
 	});
 });
