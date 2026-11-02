@@ -31,8 +31,8 @@ const MODES = PERMISSION_MODE_VALUES;
 const DEFAULT_MODE: PermissionMode = "ask";
 
 const MODE_DESC: Record<PermissionMode, string> = {
-	strict: "Ask before every bash command and every write/edit",
-	ask: "Ask before bash commands; writes auto-approved",
+	strict: "Ask before every bash command, every write/edit and every destructive tool",
+	ask: "Ask before bash commands and destructive tools; other writes auto-approved",
 	yolo: "Auto-approve everything; never prompts",
 };
 
@@ -49,12 +49,26 @@ const entrySchema = z.object({
 /** The one argument worth showing, whatever tool the call belongs to. */
 const detailSchema = z.object({ command: z.string().optional(), path: z.string().optional() });
 
-/** Which tools stop for a human under each mode. `yolo` stops for none. */
-const asksBefore = (mode: PermissionMode, toolName: string): boolean => {
+/**
+ * Which tools stop for a human under each mode. `yolo` stops for none, and the two
+ * guarded modes stop for a tool whose server or extension declares
+ * `destructiveHint`, whatever its name: an MCP server and a custom tool describe
+ * their own danger, and a name check alone would run them without asking.
+ */
+export const toolStops = (
+	mode: PermissionMode,
+	toolName: string,
+	destructiveHint: boolean | undefined,
+): boolean => {
+	if (mode === "yolo") return false;
+	if (destructiveHint === true) return true;
 	if (mode === "strict") return toolName === "bash" || toolName === "write" || toolName === "edit";
-	if (mode === "ask") return toolName === "bash";
-	return false;
+	return toolName === "bash";
 };
+
+/** The hints pi has for one tool, which are the server's own claim about it. */
+const annotationsOf = (pi: ExtensionAPI, toolName: string) =>
+	pi.getAllTools().find((tool) => tool.name === toolName)?.annotations;
 
 /** What the dialog shows: the command for a shell call, the path for a write. */
 const callDetail = (event: ToolCallEvent): string => {
@@ -136,7 +150,9 @@ export const permissionExtension = (pi: ExtensionAPI): void => {
 	});
 
 	pi.on("tool_call", async (event, ctx) => {
-		if (!asksBefore(mode, event.toolName)) return undefined;
+		if (mode === "yolo") return undefined;
+		const declared = annotationsOf(pi, event.toolName);
+		if (!toolStops(mode, event.toolName, declared?.destructiveHint)) return undefined;
 		const detail = callDetail(event);
 		if (!ctx.hasUI) {
 			// Nothing can answer. Blocking is the only honest answer in a guarded mode.

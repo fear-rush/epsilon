@@ -86,8 +86,8 @@ export type { PermissionMode };
  * says so.
  */
 const WORDS: Record<PermissionMode, { label: string; description: string }> = {
-	strict: { label: "Strict", description: "Ask before every command and edit" },
-	ask: { label: "Ask", description: "Ask before commands, writes allowed" },
+	strict: { label: "Strict", description: "Ask before commands, edits and destructive tools" },
+	ask: { label: "Ask", description: "Ask before commands and destructive tools" },
 	yolo: { label: "Yolo", description: "Run everything without asking" },
 };
 

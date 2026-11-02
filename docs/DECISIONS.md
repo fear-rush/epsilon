@@ -581,11 +581,18 @@ The defaults exist in the dashboard's engine only. They are not written into the
 and are not claimed to exist in a terminal; the dashboard is therefore more guarded than
 a terminal using the same agent home, and the docs say so.
 
+The permission guard stops for `bash`, `write` and `edit` by name, and for any tool
+that declares `destructiveHint` in either guarded mode. A custom extension and an MCP
+server describe their own danger; keying on names alone would run a `delete_all` tool
+without asking, and keying on every custom tool would turn the guard into a wall.
+
 One default observes rather than guards: `mcp-observer` reports the servers extensions
 registered, and its session merges that into the live MCP answer, so a server that
-connected no tool is still named instead of silently missing. pi keeps every connection
-state inside its own MCP extension, so the panel says which question it cannot answer
-rather than guessing between failed, needs-sign-in and still-connecting. The observer
+connected no tool is still named instead of silently missing. pi keeps its connection
+states inside its own MCP extension, and the one channel it leaves is the notice that
+names the servers needing a sign-in or failing; the panel repeats those two in pi's
+words and claims nothing about the ones that stay inside, which is why a server with no
+tool and no report reads as "no tool yet" rather than "broken". The observer
 reads no files, connects nothing and is not a second MCP client.
 
 Why: writing extension files into pi's home makes Epsilon a writer of pi's configuration
