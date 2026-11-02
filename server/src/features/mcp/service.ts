@@ -15,12 +15,15 @@
  * and `true` removes it, as pi's own writer does, except on an override, which
  * keeps the value written because it replaces the global entry's.
  */
+import { join } from "node:path";
+
 import type { McpExposure, McpOAuth, McpOAuthJson, McpScope } from "shared";
 import { mcpOAuthJsonSchema, mcpOAuthSchema, mcpToolExposureSchema, oauthProblem } from "shared";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { mergeSecrets, setDefined, setOrDelete } from "../../platform/patch";
 import { packageManager, settingsManager } from "../../platform/pi";
+import { writeDefaultTool } from "../general";
 import {
 	entriesOf,
 	projectEntryProblem,
@@ -261,14 +264,19 @@ const reachOf = async (
 	// both kinds of tool.
 	const codemodeDefault = defaultTools.includes("codemode");
 	const toolSearchDefault = defaultTools.includes("tool_search");
+	// A project's list wins over the home's, so a home write would appear to do nothing.
+	const defaultToolsProject =
+		settingsManager(projectDir, home).getProjectSettings().defaultTools !== undefined;
 	const codemode = !codemodeDisabled && (codemodeDefault || (needs("codemode") && auto));
 	const toolSearch = !toolSearchDisabled && (toolSearchDefault || needs("deferred"));
 	const unreachable = codemode || toolSearch ? [] : unreachableOf(enabled);
 	return {
 		autoEnableCodemode,
 		codemodeDefault,
+		toolSearchDefault,
 		codemodeDisabled,
 		toolSearchDisabled,
+		defaultToolsProject,
 		unreachable,
 	};
 };
@@ -277,6 +285,29 @@ export type McpListing = {
 	servers: McpServerView[];
 	reach: McpReach;
 	error?: string;
+};
+
+/** The one `settings.json` file a project's list lives in, named when a write is refused. */
+const projectSettingsPath = (projectDir: string): string =>
+	join(projectDir, ".pi", "settings.json");
+
+/**
+ * Name `codemode` or `tool_search` in the home's `defaultTools`, or take it out
+ * again. pi has a getter for that key and no setter, so the file is merged, and a
+ * name the operator wrote beside it is left alone. A project's own list decides
+ * that project, so writing the home's file would look like nothing happened.
+ */
+export const setMcpDefaultTool = async (
+	home: AgentHome,
+	projectDir: string,
+	input: { tool: "codemode" | "tool_search"; enabled: boolean },
+): Promise<void> => {
+	if (settingsManager(projectDir, home).getProjectSettings().defaultTools !== undefined) {
+		throw new Error(
+			`defaultTools is set in ${projectSettingsPath(projectDir)}, and pi reads that list for this project. Change it there.`,
+		);
+	}
+	await writeDefaultTool(home, input.tool, input.enabled);
 };
 
 /** The two files as one list, this project's entries first, and what the next session can reach. */

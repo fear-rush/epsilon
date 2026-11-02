@@ -9,6 +9,7 @@ import type {
 	ExportFormat,
 	FolderListing,
 	McpAutoEnableInput,
+	McpDefaultToolInput,
 	McpEnabledInput,
 	McpInProjectInput,
 	McpRegistryDetail,
@@ -356,6 +357,13 @@ export const setMcpAutoEnableCodemode = async (
 		params: scoped(project),
 		body: input,
 	});
+};
+
+export const setMcpDefaultTool = async (
+	project: Project,
+	input: McpDefaultToolInput,
+): Promise<void> => {
+	await api.POST("/api/settings/mcp/default-tool", { params: scoped(project), body: input });
 };
 
 export const fetchSkill = async (

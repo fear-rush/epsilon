@@ -13,6 +13,7 @@ import {
 	listMcpServers,
 	readMcpServer,
 	setMcpAutoEnableCodemode,
+	setMcpDefaultTool,
 	setMcpServerEnabled,
 	writeMcpServer,
 } from "./service";
@@ -373,6 +374,86 @@ describe("what a session can reach", () => {
 			autoEnableCodemode: { global: false, project: true },
 			unreachable: [],
 		});
+	});
+});
+
+describe("defaultTools and the reaching tools", () => {
+	const seedCodemodeServer = async () => {
+		const { home, projectDir } = await scratch();
+		await writeFile(
+			home.mcpFile,
+			JSON.stringify({
+				mcpServers: {
+					files: { command: "npx", exposure: "codemode" },
+					docs: { command: "npx", exposure: "direct" },
+				},
+			}),
+		);
+		return { home, projectDir };
+	};
+	const settingsFile = async (home: ReturnType<typeof agentHome>) =>
+		JSON.parse(await readFile(join(home.dir, "settings.json"), "utf8"));
+
+	test("no list gains +codemode instead of a list that would freeze pi's defaults", async () => {
+		const { home, projectDir } = await seedCodemodeServer();
+		await setMcpAutoEnableCodemode(home, projectDir, { scope: "global", enabled: false });
+
+		await setMcpDefaultTool(home, projectDir, { tool: "codemode", enabled: true });
+
+		expect(await settingsFile(home)).toEqual({ defaultTools: ["+codemode"] });
+		expect((await listMcpServers(home, projectDir)).reach).toMatchObject({
+			codemodeDefault: true,
+			unreachable: [],
+		});
+
+		// The list held only that entry, so turning it off removes the key rather than
+		// writing an empty list, which pi reads as "no tools at all".
+		await setMcpDefaultTool(home, projectDir, { tool: "codemode", enabled: false });
+		expect(await settingsFile(home)).toEqual({});
+	});
+
+	test("a list of plain names gains the plain name, and keeps its other entries", async () => {
+		const { home, projectDir } = await seedCodemodeServer();
+		await writeFile(
+			join(home.dir, "settings.json"),
+			JSON.stringify({ theme: "dark", defaultTools: ["read", "tool_search"] }),
+		);
+
+		await setMcpDefaultTool(home, projectDir, { tool: "codemode", enabled: true });
+		expect(await settingsFile(home)).toEqual({
+			theme: "dark",
+			defaultTools: ["read", "tool_search", "codemode"],
+		});
+
+		await setMcpDefaultTool(home, projectDir, { tool: "tool_search", enabled: false });
+		expect((await settingsFile(home)).defaultTools).toEqual(["read", "codemode"]);
+	});
+
+	test("a list of modifiers gains +name, and a -name that holds the tool out is dropped", async () => {
+		const { home, projectDir } = await seedCodemodeServer();
+		await writeFile(
+			join(home.dir, "settings.json"),
+			JSON.stringify({ defaultTools: ["+tool_search", "-codemode"] }),
+		);
+
+		await setMcpDefaultTool(home, projectDir, { tool: "codemode", enabled: true });
+
+		expect((await settingsFile(home)).defaultTools).toEqual(["+tool_search", "+codemode"]);
+	});
+
+	test("a project's own list is refused instead of writing a home list it would ignore", async () => {
+		const { home, projectDir } = await seedCodemodeServer();
+		await mkdir(join(projectDir, ".pi"), { recursive: true });
+		const projectSettings = join(projectDir, ".pi", "settings.json");
+		await writeFile(projectSettings, JSON.stringify({ defaultTools: ["read"] }));
+
+		await expect(
+			setMcpDefaultTool(home, projectDir, { tool: "codemode", enabled: true }),
+		).rejects.toThrow(projectSettings);
+		expect((await listMcpServers(home, projectDir)).reach.defaultToolsProject).toBe(true);
+		await expect(
+			setMcpDefaultTool(home, projectDir, { tool: "codemode", enabled: true }),
+		).rejects.toThrow("Change it there.");
 	});
 });
 

@@ -204,7 +204,11 @@ read the way pi reads it, with `//` comments and trailing commas, but a write ag
 such a file is refused with the line number: the merge would silently drop them. A
 provider key goes to the documented `apiKey` field of `models.json` and is never sent
 back to the browser.
-Every settings write reloads the live engines. A pi-shipped provider keeps its catalog
+`defaultTools` has a getter and no setter, so naming a reaching tool there is a merge:
+pi's own list semantics decide the entry (a plain name replaces its defaults, `+name`
+adds to them), which is why the panel writes `+codemode` into a file with no list and
+removes the key instead of writing an empty one, and why it refuses in a project that
+sets the list itself. Every settings write reloads the live engines. A pi-shipped provider keeps its catalog
 and is edited through `modelOverrides`; importing models is Epsilon's own bounded HTTP
 call, disabled where an API family has no shared list shape. The override dialog starts
 from pi's effective model and writes only the fields the operator changed, because pi

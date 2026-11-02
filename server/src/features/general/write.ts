@@ -12,6 +12,7 @@ import { z } from "zod";
 
 import type { AgentHome } from "../../platform/agent-home";
 import { jsonDocument } from "../../platform/json-document";
+import { setOrDelete } from "../../platform/patch";
 import { globalSettings } from "../../platform/pi";
 import type { SettingView } from "./contract";
 
@@ -26,6 +27,9 @@ const timeoutSchema = z.number().int().min(0);
 
 /** A token count pi requires to be a non-negative safe integer. */
 const tokensSchema = z.number().int().min(0);
+
+/** A `defaultTools` entry that adds or removes a tool instead of naming the whole list. */
+const isToolModifier = (entry: string): boolean => entry.startsWith("+") || entry.startsWith("-");
 
 /** A per-model thinking level; `null` removes the override and returns to the default. */
 const thinkingOverrideSchema = z.object({
@@ -83,6 +87,48 @@ const checked = <T>(key: string, schema: z.ZodType<T>, value: SettingView["value
 	const parsed = schema.safeParse(value);
 	if (!parsed.success) throw new Error(`${key} cannot take that value.`);
 	return parsed.data;
+};
+
+/**
+ * `defaultTools` with one tool named or taken out. pi has a getter for that key and
+ * no setter, so the file is merged. The list's own semantics decide the entry:
+ * pi resolves plain names by **replacing** its defaults and `+name`/`-name` by
+ * modifying them (`resolveDefaultTools` in `dist/core/settings-manager.js`), so a
+ * file with no list gains `+name` rather than a list that would freeze today's
+ * defaults. A list that would end up empty is removed, because pi reads an empty
+ * `defaultTools` as "no tools at all" while a missing key keeps its own.
+ */
+export const writeDefaultTool = async (
+	home: AgentHome,
+	tool: string,
+	enabled: boolean,
+): Promise<void> => {
+	await settingsDocument(home).update((current) => {
+		const parsed = z.array(z.string()).safeParse(current["defaultTools"]);
+		const entries = parsed.success ? parsed.data : undefined;
+		const next = { ...current };
+		setOrDelete(next, "defaultTools", withTool(entries, tool, enabled));
+		return next;
+	});
+};
+
+/** The list after naming `tool` in it, or taking it out; undefined removes the key. */
+const withTool = (
+	entries: readonly string[] | undefined,
+	tool: string,
+	enabled: boolean,
+): string[] | undefined => {
+	const current = [...(entries ?? [])];
+	if (!enabled) {
+		const next = current.filter((entry) => entry !== tool && entry !== `+${tool}`);
+		return next.length === 0 ? undefined : next;
+	}
+	// A `-tool` entry holds it out, so naming it means dropping that entry as well.
+	const on = current.filter((entry) => entry !== `-${tool}`);
+	if (on.some((entry) => entry === tool || entry === `+${tool}`)) return on;
+	const plain = (entry: string): boolean => !isToolModifier(entry);
+	const adds = entries === undefined || (current.length > 0 && !current.some(plain));
+	return [...on, adds ? `+${tool}` : tool];
 };
 
 /** Write one setting and wait for the file to hold it. */

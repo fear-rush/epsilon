@@ -4,7 +4,7 @@
  */
 export { readDefaultModel, readEnabledModels } from "./store";
 export { readSettingViews, readSettingsProblems } from "./settings";
-export { writeSetting } from "./write";
+export { writeDefaultTool, writeSetting } from "./write";
 export {
 	defaultModelSchema,
 	settingViewSchema,

@@ -17,6 +17,7 @@ export type McpLive = Schemas["McpLive"];
 export type McpLiveServer = Schemas["McpLive"]["servers"][number];
 /** One tool of a live server: the name a transcript shows and the rule that reaches it. */
 export type McpLiveTool = Schemas["McpLiveTool"];
+export type McpDefaultToolInput = Schemas["McpDefaultToolInput"];
 export type McpEnabledInput = Schemas["McpEnabledInput"];
 export type McpInProjectInput = Schemas["McpInProjectInput"];
 export type McpOAuthInput = Schemas["McpOAuthInput"];

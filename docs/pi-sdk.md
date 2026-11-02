@@ -549,7 +549,8 @@ resources or permission hooks the extension already applies.
 The top-level `autoEnableCodemode` (default `true`) is what lets a connecting
 `codemode` server activate the codemode tool, and a project value overrides the
 global one. Turning it off while `defaultTools` does not name codemode leaves the
-server connected but unreachable; the panel reads that state and says so. `oauth`
+server connected but unreachable; the panel reads that state and offers to name
+`codemode` or `tool_search` in `defaultTools` for the home. `oauth`
 and `auth.provider` decide how an HTTP server authenticates: `auth` sends a
 `/login` provider's token and is refused in a project file, and both `oauth` and
 `auth` are bounded to https or loopback hosts. Epsilon writes those keys and runs
@@ -760,7 +761,12 @@ Turborepo or the runtime.
   Claude models need adaptive thinking metadata. Import both per model.
 - **Configuration shapes with no exporter, and several without a setter.**
   `SettingsManager` has `getDefaultTools()` and no `setDefaultTools`, so the
-  `defaultTools` array is a merge. The same holds, with getters only, for
+  `defaultTools` array is a merge. That getter answers the **resolved** list
+  (`resolveDefaultTools` in `dist/core/settings-manager.js`): plain names replace
+  pi's `["read", "bash", "edit", "write"]`, `+name` and `-name` modify it, and an
+  empty array means no tools at all. A host that writes the resolved list back
+  freezes today's defaults, so Epsilon adds `+name` to a file that has no list and
+  removes the key rather than writing `[]`. The same holds, with getters only, for
   `compaction.reserveTokens`, `compaction.keepRecentTokens`,
   `compaction.modelOverrides`, `retry.maxRetries`, `retry.baseDelayMs`,
   `retry.maxAgentDelayMs`, `branchSummary.reserveTokens` and

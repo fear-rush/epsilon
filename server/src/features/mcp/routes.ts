@@ -7,6 +7,7 @@ import { configWrite, failure, toError } from "../../platform/http";
 import { requireProject, settingsFolder } from "../projects";
 import {
 	autoEnableMcpRoute,
+	defaultToolMcpRoute,
 	deleteMcpRoute,
 	enabledMcpRoute,
 	inProjectMcpRoute,
@@ -20,6 +21,7 @@ import {
 	readMcpServer,
 	removeMcpServer,
 	setMcpAutoEnableCodemode,
+	setMcpDefaultTool,
 	setMcpServerEnabled,
 	setMcpServerInProject,
 	writeMcpServer,
@@ -109,6 +111,15 @@ export const mcpRoutes = ({ home, engines }: Deps) =>
 					home,
 					await folderFor(home, c.req.valid("query").project, input.scope),
 					input,
+				),
+			);
+		})
+		.openapi(defaultToolMcpRoute, (c) => {
+			return configWrite(c, engines, async () =>
+				setMcpDefaultTool(
+					home,
+					await settingsFolder(home, c.req.valid("query").project),
+					c.req.valid("json"),
 				),
 			);
 		})

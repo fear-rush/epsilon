@@ -13,8 +13,8 @@ import { MasterDetail } from "@/components/patterns/pane/master-detail";
 import { Notice } from "@/components/patterns/status/notice";
 import { useSettings, useSettingsProject } from "@/features/settings/queries";
 import { useSettingsRefresh } from "@/features/settings/queries";
-import { setMcpAutoEnableCodemode } from "@/api/endpoints";
-import type { McpReach, McpServerView } from "@/api/types";
+import { setMcpAutoEnableCodemode, setMcpDefaultTool } from "@/api/endpoints";
+import type { McpDefaultToolInput, McpReach, McpServerView } from "@/api/types";
 import { McpAddDialog } from "./mcp-add-dialog";
 import { asScope } from "./mcp-detail";
 
@@ -38,6 +38,23 @@ const unreachableReason = (reach: McpReach): string => {
 	}
 	return "codemode auto-enable is off";
 };
+
+/**
+ * The reaching tools one click can add to `defaultTools`: the ones pi does not
+ * start with and whose built-in is not turned off, since a name cannot revive a
+ * package the operator disabled.
+ */
+const offerableDefaults = (reach: McpReach): McpDefaultToolInput["tool"][] =>
+	[
+		{ tool: "codemode" as const, named: reach.codemodeDefault, off: reach.codemodeDisabled },
+		{
+			tool: "tool_search" as const,
+			named: reach.toolSearchDefault,
+			off: reach.toolSearchDisabled,
+		},
+	]
+		.filter((candidate) => !candidate.named && !candidate.off)
+		.map((candidate) => candidate.tool);
 
 /** The switch that decides codemode auto-enable, written to the file the tab shows. */
 function CodemodeBlock({
@@ -122,6 +139,10 @@ function McpPanel({ selected }: { selected: { scope: McpScope; name: string } | 
 			setMcpAutoEnableCodemode(projectPath, input),
 		onSuccess: () => refresh(),
 	});
+	const defaultTool = useMutation({
+		mutationFn: (input: McpDefaultToolInput) => setMcpDefaultTool(projectPath, input),
+		onSuccess: () => refresh(),
+	});
 	const reach = settings.data?.mcpReach;
 	const live = settings.data?.mcpLive;
 	const mcpDisabled = settings.data?.mcpDisabled;
@@ -160,8 +181,32 @@ function McpPanel({ selected }: { selected: { scope: McpScope; name: string } | 
 		),
 		mcpDisabled === true || unreachable.length === 0 || reach === undefined ? undefined : (
 			<Notice key="unreachable" tone="warning">
-				The model cannot call {unreachable.map((server) => server.name).join(", ")}:{" "}
-				{unreachableReason(reach)}.
+				<div className="grid gap-2">
+					<span>
+						The model cannot call {unreachable.map((server) => server.name).join(", ")}:{" "}
+						{unreachableReason(reach)}.
+					</span>
+					{reach.defaultToolsProject ? (
+						<span>
+							This project sets <code>defaultTools</code> itself, so add the tool in its{" "}
+							<code>.pi/settings.json</code>.
+						</span>
+					) : (
+						<span className="flex flex-wrap gap-2">
+							{offerableDefaults(reach).map((tool) => (
+								<Button
+									key={tool}
+									size="sm"
+									variant="outline"
+									disabled={defaultTool.isPending}
+									onClick={() => defaultTool.mutate({ tool, enabled: true })}
+								>
+									Name {tool} in defaultTools
+								</Button>
+							))}
+						</span>
+					)}
+				</div>
 			</Notice>
 		),
 		mcpDisabled === true || unreachable.length > 0 || stalled.length === 0 ? undefined : (
@@ -173,6 +218,11 @@ function McpPanel({ selected }: { selected: { scope: McpScope; name: string } | 
 		codemode.error === null ? undefined : (
 			<Notice key="codemode" tone="error">
 				{codemode.error.message}
+			</Notice>
+		),
+		defaultTool.error === null ? undefined : (
+			<Notice key="default-tool" tone="error">
+				{defaultTool.error.message}
 			</Notice>
 		),
 	].filter((notice) => notice !== undefined);

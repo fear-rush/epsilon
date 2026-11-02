@@ -1045,10 +1045,16 @@
 					"codemodeDefault": {
 						"type": "boolean"
 					},
+					"toolSearchDefault": {
+						"type": "boolean"
+					},
 					"codemodeDisabled": {
 						"type": "boolean"
 					},
 					"toolSearchDisabled": {
+						"type": "boolean"
+					},
+					"defaultToolsProject": {
 						"type": "boolean"
 					},
 					"unreachable": {
@@ -1061,8 +1067,10 @@
 				"required": [
 					"autoEnableCodemode",
 					"codemodeDefault",
+					"toolSearchDefault",
 					"codemodeDisabled",
 					"toolSearchDisabled",
+					"defaultToolsProject",
 					"unreachable"
 				]
 			},
@@ -3267,6 +3275,25 @@
 				},
 				"required": [
 					"scope",
+					"enabled"
+				]
+			},
+			"McpDefaultToolInput": {
+				"type": "object",
+				"properties": {
+					"tool": {
+						"type": "string",
+						"enum": [
+							"codemode",
+							"tool_search"
+						]
+					},
+					"enabled": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"tool",
 					"enabled"
 				]
 			},
@@ -5765,6 +5792,53 @@
 				"responses": {
 					"204": {
 						"description": "The file now carries the setting, and live engines reloaded"
+					},
+					"400": {
+						"description": "The change was refused",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/mcp/default-tool": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "setMcpDefaultTool",
+				"description": "Name codemode or tool_search in settings.json's defaultTools, the list pi starts its tools from, and keep the other names",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/McpDefaultToolInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "defaultTools now names it, and live engines reloaded"
 					},
 					"400": {
 						"description": "The change was refused",

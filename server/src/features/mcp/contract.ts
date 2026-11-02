@@ -273,9 +273,16 @@ export const mcpReachSchema = z
 		}),
 		/** Whether `defaultTools` in `settings.json` already names codemode. */
 		codemodeDefault: z.boolean(),
+		/** Whether `defaultTools` in `settings.json` already names tool_search. */
+		toolSearchDefault: z.boolean(),
 		/** `settings.json` disables the built-in that reaches these tools. */
 		codemodeDisabled: z.boolean(),
 		toolSearchDisabled: z.boolean(),
+		/**
+		 * The project's `.pi/settings.json` writes `defaultTools`, which wins over the
+		 * home's, so naming a tool there is the only way to change this project.
+		 */
+		defaultToolsProject: z.boolean(),
 		/** Enabled servers nothing can reach, with the exposures that need a reaching tool. */
 		unreachable: z.array(mcpUnreachableSchema),
 	})
@@ -414,6 +421,38 @@ export const writeMcpRoute = createRoute({
 	responses: {
 		204: { description: "The file now carries the server, and live engines reloaded" },
 		400: { description: "The server entry was refused", content: errorContent },
+	},
+});
+
+/** The two tools that reach MCP tools the model cannot call directly. */
+const mcpReachToolSchema = z.enum(["codemode", "tool_search"]);
+
+const mcpDefaultToolInputSchema = z
+	.object({
+		/** The reaching tool to name in `defaultTools`, or to take out of it. */
+		tool: mcpReachToolSchema,
+		/** On adds the name; off removes it, and an empty list removes the key. */
+		enabled: z.boolean(),
+	})
+	.openapi("McpDefaultToolInput");
+
+export const defaultToolMcpRoute = createRoute({
+	method: "post",
+	path: "/api/settings/mcp/default-tool",
+	tags: ["settings"],
+	operationId: "setMcpDefaultTool",
+	description:
+		"Name codemode or tool_search in settings.json's defaultTools, the list pi starts its tools from, and keep the other names",
+	request: {
+		query: settingsScopeQuerySchema,
+		body: {
+			required: true,
+			content: { "application/json": { schema: mcpDefaultToolInputSchema } },
+		},
+	},
+	responses: {
+		204: { description: "defaultTools now names it, and live engines reloaded" },
+		400: { description: "The change was refused", content: errorContent },
 	},
 });
 

@@ -545,6 +545,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/settings/mcp/default-tool": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Name codemode or tool_search in settings.json's defaultTools, the list pi starts its tools from, and keep the other names */
+		post: operations["setMcpDefaultTool"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/settings/skills/import/upload": {
 		parameters: {
 			query?: never;
@@ -1134,8 +1151,10 @@ export interface components {
 				project?: boolean;
 			};
 			codemodeDefault: boolean;
+			toolSearchDefault: boolean;
 			codemodeDisabled: boolean;
 			toolSearchDisabled: boolean;
+			defaultToolsProject: boolean;
 			unreachable: components["schemas"]["McpUnreachable"][];
 		};
 		McpUnreachable: {
@@ -1634,6 +1653,10 @@ export interface components {
 		};
 		McpAutoEnableInput: {
 			scope: "global" | "project";
+			enabled: boolean;
+		};
+		McpDefaultToolInput: {
+			tool: "codemode" | "tool_search";
 			enabled: boolean;
 		};
 		SkillImportReport: {
@@ -3138,6 +3161,41 @@ interface operations {
 		};
 		responses: {
 			/** The file now carries the setting, and live engines reloaded */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The change was refused */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Name codemode or tool_search in settings.json's defaultTools, the list pi starts its tools from, and keep the other names */
+	setMcpDefaultTool: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["McpDefaultToolInput"];
+			};
+		};
+		responses: {
+			/** defaultTools now names it, and live engines reloaded */
 			204: {
 				headers: {
 					[name: string]: unknown;
