@@ -325,6 +325,13 @@ stored credential wins over a `models.json` `apiKey` and over the ambient enviro
 `models_json_key`, `models_json_command`, `fallback`), and `listCredentials()` is the
 non-secret enumeration of `{ providerId, type }`.
 
+Readiness is not a model count. `checkAuth(providerId)` resolves that provider's auth
+and returns `{ type, source }`, or `undefined` when it has no credential; it runs the
+provider's own side-effect-free `check()` where one exists. `getError()` holds the
+composition failure for the whole `models.json` snapshot, and pi's sentence names the
+provider it could not build. `pi auth check` maps those to `ready`, `not_ready` and
+`invalid`.
+
 Because the flow asks and reports through callbacks, a host without a terminal serves
 it with a record per provider: what pi reported, the question it waits on, and an
 abort signal, polled by the page. pi also narrates the loopback callback server it

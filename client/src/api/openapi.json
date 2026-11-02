@@ -32,6 +32,16 @@
 									false
 								]
 							},
+							"status": {
+								"type": "string",
+								"enum": [
+									"not_ready",
+									"invalid"
+								]
+							},
+							"provider": {
+								"type": "string"
+							},
 							"detail": {
 								"type": "string"
 							},
@@ -44,6 +54,7 @@
 						},
 						"required": [
 							"ready",
+							"status",
 							"detail",
 							"fix",
 							"home"

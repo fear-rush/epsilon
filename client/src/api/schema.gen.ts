@@ -846,6 +846,8 @@ export interface components {
 			ready: true;
 		}) | ({
 			ready: false;
+			status: "not_ready" | "invalid";
+			provider?: string;
 			detail: string;
 			fix: string;
 			home: string;
