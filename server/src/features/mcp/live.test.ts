@@ -136,6 +136,19 @@ describe("one live engine", () => {
 		]);
 	});
 
+	test("what pi said about a server travels with it even when it holds no tool", () => {
+		const live = mcpLiveOf({
+			names: ["docs"],
+			tools: [],
+			active: [],
+			attention: new Map([["docs", { kind: "needs-sign-in" } as const]]),
+		});
+
+		expect(live.servers).toEqual([
+			{ name: "docs", tools: [], registered: false, attention: { kind: "needs-sign-in" } },
+		]);
+	});
+
 	test("a server with no tool registered is not reported, and nothing active stays false", () => {
 		expect(mcpLiveOf({ names: ["files"], tools: [], active: ["read"] })).toEqual({
 			sessions: 1,
@@ -191,6 +204,31 @@ describe("several live engines", () => {
 
 		expect(live.servers).toEqual([
 			{ name: "files", tools: [{ ...row("read"), exposure: "hidden" }], ...quiet },
+		]);
+	});
+
+	test("a server two engines report keeps the first reason pi gave", () => {
+		const live = aggregateMcpLive([
+			mcpLiveOf({
+				names: ["docs"],
+				tools: [],
+				active: [],
+				attention: new Map([["docs", { kind: "failed", message: "boom" } as const]]),
+			}),
+			mcpLiveOf({
+				names: ["docs"],
+				tools: [tool("mcp__docs", "mcp__docs__find")],
+				active: [],
+			}),
+		]);
+
+		expect(live.servers).toEqual([
+			{
+				name: "docs",
+				tools: [row("find")],
+				registered: false,
+				attention: { kind: "failed", message: "boom" },
+			},
 		]);
 	});
 

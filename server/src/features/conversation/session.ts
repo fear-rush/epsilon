@@ -32,8 +32,8 @@ import { MCP_DEFAULT_EXPOSURE, mcpExposureSchema } from "shared";
 import type { AgentHome } from "../../platform/agent-home";
 import { EXTENSION_RESOURCE_SOURCE, globalSettings } from "../../platform/pi";
 import type { Skill } from "../../platform/pi";
-import type { McpLive } from "../mcp";
-import { mcpLiveOf } from "../mcp";
+import type { McpAttention, McpLive } from "../mcp";
+import { mcpLiveOf, readMcpAttention } from "../mcp";
 import { runCommand } from "./commands";
 import type { CommandTarget } from "./commands/context";
 import { exportSession } from "./commands/export";
@@ -98,6 +98,12 @@ export class LiveSession {
 	private returnedAutocomplete: AutocompleteReply | undefined;
 	/** What the MCP observer last saw in this engine: servers extensions registered. */
 	private mcpReport: McpObserverReport | undefined;
+	/**
+	 * The MCP servers pi last reported a problem with, from its attention notice. The
+	 * notice lists every such server, so a later one replaces this whole map and an
+	 * engine start clears it, since a connected server is one pi stopped naming.
+	 */
+	private mcpAttention = new Map<string, McpAttention>();
 	/** Set once a provider failed, so a keystroke does not repeat the notice. */
 	private reportedSuggestionError = false;
 	/** The models the picker offers, refreshed when the engine's providers change. */
@@ -142,6 +148,7 @@ export class LiveSession {
 			this.dialogs,
 			() => this.frames.count > 0,
 			(error, code) => this.fail(error, code),
+			(message) => this.noteAttention(message),
 		);
 	}
 
@@ -184,6 +191,8 @@ export class LiveSession {
 	 */
 	private async wire(host: SessionHost): Promise<void> {
 		await bindHost(host, this.bridge.host);
+		// A rebuilt engine reports its own problems, so what the last one said no longer applies.
+		this.mcpAttention = new Map();
 		host.onSwap((session) => this.rebound(session));
 		host.onReplaced(({ from, to }) => this.onReplaced(from, to));
 		host.onShutdownRequested(() => this.extensionShutdown());
@@ -310,7 +319,14 @@ export class LiveSession {
 			tools,
 			active: agent.getActiveToolNames(),
 			registered: this.mcpReport?.registered,
+			attention: this.mcpAttention,
 		});
+	}
+
+	/** pi's MCP extension reports the servers it could not use as one notice, and only that way. */
+	private noteAttention(message: string): void {
+		const servers = readMcpAttention(message);
+		if (servers.size > 0) this.mcpAttention = servers;
 	}
 
 	/**
@@ -566,6 +582,8 @@ export class LiveSession {
 	 */
 	async reload(): Promise<void> {
 		const agent = this.engine;
+		// pi re-reports the servers it still cannot use, so drop what the last read said.
+		this.mcpAttention = new Map();
 		await agent.reload();
 		this.models = (await readModelsFrom(agent.modelRuntime, patternsOf(this.home))).scoped;
 		// A reloaded resource set has its own palette, so a name can collide for the

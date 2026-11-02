@@ -1112,6 +1112,9 @@
 								},
 								"registered": {
 									"type": "boolean"
+								},
+								"attention": {
+									"$ref": "#/components/schemas/McpAttention"
 								}
 							},
 							"required": [
@@ -1183,6 +1186,42 @@
 						"type": "boolean"
 					}
 				}
+			},
+			"McpAttention": {
+				"oneOf": [
+					{
+						"type": "object",
+						"properties": {
+							"kind": {
+								"type": "string",
+								"enum": [
+									"needs-sign-in"
+								]
+							}
+						},
+						"required": [
+							"kind"
+						]
+					},
+					{
+						"type": "object",
+						"properties": {
+							"kind": {
+								"type": "string",
+								"enum": [
+									"failed"
+								]
+							},
+							"message": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"kind",
+							"message"
+						]
+					}
+				]
 			},
 			"SkillView": {
 				"type": "object",

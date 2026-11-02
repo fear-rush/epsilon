@@ -7,21 +7,23 @@
  */
 import { type McpExposure, mcpNamespaceOf, mcpToolAddress } from "shared";
 
-import type { McpLive, McpLiveTool, McpToolAnnotations } from "./contract";
+import type { McpAttention, McpLive, McpLiveTool, McpToolAnnotations } from "./contract";
 
-/** One live engine's view of a server: its tools, and whether an extension registered it. */
+/** One live engine's view of a server: its tools, what pi said about it, and who registered it. */
 type ServerEntry = {
 	tools: McpLiveTool[];
+	attention: McpAttention | undefined;
 	registered: boolean;
 };
 
-const entryOf = (): ServerEntry => ({ tools: [], registered: false });
+const entryOf = (): ServerEntry => ({ tools: [], attention: undefined, registered: false });
 
 /**
  * One live engine's answer. `tools` carries one entry per registered MCP tool:
  * the name the transcript shows, the rule that reaches it, and the exposure pi
- * resolved for it in that engine. A server an extension registered is listed even
- * with no tools, which is the one thing its tools cannot tell the panel.
+ * resolved for it in that engine. `attention` is what pi said about a server it
+ * could not use. A server an extension registered is listed even with no tools,
+ * which is the one thing its tools cannot tell the panel.
  */
 export function mcpLiveOf(input: {
 	/** The configured names, so a server is reported by the name the panel lists. */
@@ -36,12 +38,19 @@ export function mcpLiveOf(input: {
 	active: readonly string[];
 	/** Servers extensions registered, connected or not. */
 	registered?: readonly string[];
+	/** The servers pi last reported a problem with, by name. */
+	attention?: ReadonlyMap<string, McpAttention>;
 }): McpLive {
 	const configured = new Map(input.names.map((name) => [mcpNamespaceOf(name), name]));
 	const byNamespace = new Map((input.registered ?? []).map((name) => [mcpNamespaceOf(name), name]));
 	const servers = new Map<string, ServerEntry>();
 	for (const name of byNamespace.values()) {
 		servers.set(name, { ...entryOf(), registered: true });
+	}
+	for (const [name, attention] of input.attention ?? []) {
+		const entry = servers.get(name) ?? entryOf();
+		entry.attention = attention;
+		servers.set(name, entry);
 	}
 	for (const tool of input.tools) {
 		const server =
@@ -62,6 +71,7 @@ export function mcpLiveOf(input: {
 			name,
 			tools: entry.tools.toSorted((left, right) => left.name.localeCompare(right.name)),
 			registered: entry.registered,
+			attention: entry.attention,
 		})),
 		codemode: input.active.includes("codemode"),
 		toolSearch: input.active.includes("tool_search"),
@@ -70,8 +80,8 @@ export function mcpLiveOf(input: {
 
 /**
  * The union over the live engines; a server counts as connected if any engine holds
- * its tools. A tool two engines report keeps the first answer, since the panel shows
- * one row per tool and the engines run the same file.
+ * its tools. A tool or a report two engines carry keeps the first answer, since the
+ * panel shows one row per server and the engines run the same file.
  */
 export function aggregateMcpLive(states: readonly McpLive[]): McpLive {
 	const servers = new Map<string, ServerEntry>();
@@ -80,6 +90,7 @@ export function aggregateMcpLive(states: readonly McpLive[]): McpLive {
 			const entry = servers.get(server.name) ?? entryOf();
 			const seen = new Set(entry.tools.map((tool) => tool.name));
 			entry.tools = [...entry.tools, ...server.tools.filter((tool) => !seen.has(tool.name))];
+			entry.attention ??= server.attention;
 			entry.registered = entry.registered || server.registered;
 			servers.set(server.name, entry);
 		}
@@ -93,6 +104,7 @@ export function aggregateMcpLive(states: readonly McpLive[]): McpLive {
 				name,
 				tools: entry.tools.toSorted((left, right) => left.name.localeCompare(right.name)),
 				registered: entry.registered,
+				attention: entry.attention,
 			}))
 			.sort((left, right) => left.name.localeCompare(right.name)),
 		codemode: states.some((state) => state.codemode),

@@ -269,8 +269,10 @@ exposure for it, and a switch that writes the `toolExposure` rule pi matches: th
 server's own tool name, or a `*` pattern where pi's registered spelling cannot say that
 name, since the registered spelling is the only one a host can read. When pi's answer
 and the saved rule disagree the page says so instead of showing a switch that did
-nothing. With no live engine it says to open a chat instead of guessing. Those are
-reads: the panel says sign-in stays in the terminal and how a
+nothing. The page also names the server's state: off in the file, connected with the
+tool count pi registered, waiting for a sign-in, failed with pi's own sentence (those
+two come from the notice pi pushes, since its SDK reports no connection state), or no
+tool yet, which is what silence leaves. Those are reads: the panel says sign-in stays in the terminal and how a
 stored credential is detected, and it never shows the credential.
 
 An MCP server and a skill can also be edited raw. For an MCP server that is its own

@@ -575,6 +575,28 @@ the chosen home there once for that reason (AGENTS.md, Invariants 5), and a chec
 opens an engine on a scratch home sets it to that home, or pi loads the operator's
 `mcp.json` beside it.
 
+Connection state still reaches a host, but only as a notice. After the connections
+settle (`session_start`) and after a reconnect batch, `reportProblems()` in
+`dist/extensions/mcp/index.js` pushes one notice naming every server that needs
+attention:
+
+```
+MCP servers need attention:
+  docs: needs sign-in
+  files: failed: connect ECONNREFUSED 127.0.0.1:3001
+Run /mcp to fix.
+```
+
+A server appears only while it is `needs-auth` or `failed`; a `config:` line reports
+a `mcp.json` pi could not read, not a server. The list is complete for the moment it
+is sent, so the host replaces what it kept rather than merging into it, and `reload()`
+clears it before pi speaks again. `Epsilon` reads those lines in
+`server/src/features/mcp/attention.ts` and shows `needs-sign-in` and `failed` per
+server; `disabled`, connected with its tool count and no-tool-yet come from the file
+and the tool inventory instead. `connected` is never claimed from the notice: a tool
+registered for the server is the proof, which is why a recovered server stops reading
+as failed without another notice.
+
 A settings write reaches the live engines through `session.reload()`, which emits
 `session_shutdown` (reason `reload`). The MCP extension closes every connection
 there and reconnects on the next `session_start`, so an edit in the panel applies
@@ -664,7 +686,8 @@ Turborepo or the runtime.
   `idempotentHint`, `openWorldHint`). Each also carries `exposure`, the value pi
   resolved for it, so a saved `toolExposure` rule is checkable from outside without
   guessing; the name the server reported is not in `ToolInfo`, only the registered
-  one (see the MCP section on the key rule). `session.getActiveToolNames()` says whether
+  one (see the MCP section on the key rule). The two states it does report, a needed
+  sign-in and a failure, arrive as the attention notice described there. `session.getActiveToolNames()` says whether
   `codemode`/`tool_search` are active. That is all a host can read: pi keeps its six
   connection states (`connecting`, `connected`, `disconnected`, `needs-auth`,
   `failed`, `closed`) inside its own MCP extension, so failed, needs-sign-in and

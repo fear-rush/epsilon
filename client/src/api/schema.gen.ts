@@ -1148,6 +1148,7 @@ export interface components {
 				name: string;
 				tools: components["schemas"]["McpLiveTool"][];
 				registered: boolean;
+				attention?: components["schemas"]["McpAttention"];
 			})[];
 			codemode: boolean;
 			toolSearch: boolean;
@@ -1165,6 +1166,12 @@ export interface components {
 			idempotentHint?: boolean;
 			openWorldHint?: boolean;
 		};
+		McpAttention: ({
+			kind: "needs-sign-in";
+		}) | ({
+			kind: "failed";
+			message: string;
+		});
 		SkillView: {
 			name: string;
 			folder: string;

@@ -101,7 +101,7 @@ function McpServerForm({
 	const [pendingTab, setPendingTab] = useState<McpTab>();
 	const server = detail.kind === "server" ? detail : undefined;
 	const providerIds = (settings.data?.providers ?? []).map((provider) => provider.id);
-	const liveServer = settings.data?.mcpLive?.servers.find((entry) => entry.name === detail.name);
+	const live = settings.data?.mcpLive;
 
 	const save = useMutation({
 		mutationFn: (input: McpServerInput) => saveMcpServer(project, input),
@@ -213,7 +213,13 @@ function McpServerForm({
 				<>
 					<McpServerCard draft={draft} update={update} />
 					<McpConnection draft={draft} errors={errors} update={update} />
-					<McpTools draft={draft} live={liveServer} saved={!form.dirty} update={update} />
+					<McpTools
+						draft={draft}
+						enabled={server?.enabled ?? true}
+						live={live}
+						saved={!form.dirty}
+						update={update}
+					/>
 					<McpAdvanced
 						draft={draft}
 						errors={errors}

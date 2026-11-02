@@ -305,6 +305,21 @@ const toolAnnotationsSchema = z
 /** What an MCP server says about a tool, which changes how a caller should treat it. */
 export type McpToolAnnotations = z.infer<typeof toolAnnotationsSchema>;
 
+/** What pi said about one MCP server it could not use, from its own attention notice. */
+const mcpAttentionSchema = z
+	.discriminatedUnion("kind", [
+		z.object({ kind: z.literal("needs-sign-in") }),
+		z.object({
+			kind: z.literal("failed"),
+			/** pi's sentence for the failure, its first line only. */
+			message: z.string(),
+		}),
+	])
+	.openapi("McpAttention");
+
+/** What pi said about one MCP server it could not use. */
+export type McpAttention = z.infer<typeof mcpAttentionSchema>;
+
 /** How a tool reaches the model in one live engine, and the rule the panel writes for it. */
 const mcpLiveToolSchema = z
 	.object({
@@ -342,6 +357,13 @@ export const mcpLiveSchema = z
 				tools: z.array(mcpLiveToolSchema),
 				/** An extension registered it, so no tools is "no tools yet", not "unknown". */
 				registered: z.boolean(),
+				/**
+				 * Why pi could not use it, when pi said so in its attention notice: a sign-in it
+				 * needs or its own failure message. Absent means pi reported no problem. It stays
+				 * while the server holds no tool, since a connected server is what pi stopped
+				 * complaining about.
+				 */
+				attention: mcpAttentionSchema.optional(),
 			}),
 		),
 		/** The reaching tools that are active in at least one live engine. */

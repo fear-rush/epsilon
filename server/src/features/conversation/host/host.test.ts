@@ -28,6 +28,7 @@ const NO_TAB: UiHost = {
 	fail: (error) => {
 		throw error;
 	},
+	notice: () => undefined,
 };
 
 /**

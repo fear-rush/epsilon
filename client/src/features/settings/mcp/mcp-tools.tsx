@@ -16,10 +16,11 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Section } from "@/components/patterns/section/section";
-import type { McpLiveServer, McpLiveTool } from "@/api/types";
+import type { McpLive, McpLiveTool } from "@/api/types";
 import type { McpDraft } from "./mcp-draft";
 import { exposureLabel } from "./mcp-exposure";
 import { ExposureSelect } from "./mcp-exposure-select";
+import { mcpServerState } from "./mcp-state";
 
 /** Beyond this many tools the list gets a filter. */
 const FILTER_FROM = 10;
@@ -40,18 +41,23 @@ const hintsOf = (annotations: McpLiveTool["annotations"]): string[] =>
 
 export function McpTools({
 	draft,
+	enabled,
 	live,
 	saved,
 	update,
 }: {
 	draft: McpDraft;
-	/** What a live engine can see of this server, or undefined when none can. */
-	live: McpLiveServer | undefined;
+	/** Whether the file says pi should connect this server. */
+	enabled: boolean;
+	/** What the live engines answered for this server's name. */
+	live: McpLive | undefined;
 	/** Whether the draft is what the file holds, so a disagreement is pi's answer to it. */
 	saved: boolean;
 	update: (patch: Partial<McpDraft>) => void;
 }) {
-	const tools = live?.tools;
+	const server = live?.servers.find((entry) => entry.name === draft.name);
+	const tools = server?.tools;
+	const state = mcpServerState({ enabled, live, server });
 	const [filter, setFilter] = useState("");
 	const rules = draft.toolExposure.map((row) => ({
 		pattern: row.pattern,
@@ -76,19 +82,11 @@ export function McpTools({
 						value={draft.exposure}
 						onChange={(exposure) => update({ exposure })}
 					/>
-					{live === undefined && (
-						<FieldDescription>
-							No open session holds this server's tools. What pi last said about it is in the log
-							under Advanced.
-						</FieldDescription>
-					)}
-					{live !== undefined && tools?.length === 0 && (
-						<FieldDescription>
-							Registered, but it has not offered a tool yet. pi keeps whether it is still
-							connecting, failed or needs a sign-in inside its own MCP extension, so this card
-							cannot tell those apart; the log can.
-						</FieldDescription>
-					)}
+					<FieldDescription
+						className={state.warning ? "text-warning-foreground dark:text-warning" : undefined}
+					>
+						{state.text}
+					</FieldDescription>
 					{disagrees && (
 						<FieldDescription>
 							The running engine answers differently from this form. pi matches a rule against the

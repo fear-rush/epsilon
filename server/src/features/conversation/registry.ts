@@ -42,6 +42,7 @@ const NO_TAB: UiHost = {
 	addAutocompleteProvider: () => undefined,
 	unsupported: () => undefined,
 	fail: () => undefined,
+	notice: () => undefined,
 };
 
 /** Where a session will run, resolved before its engine is built. */

@@ -35,6 +35,12 @@ export type UiHost = {
 	/** A method that needs pi's TUI. The host shows one notice per method. */
 	unsupported: (method: string) => void;
 	fail: (error: Error, code?: ProtocolErrorCode) => void;
+	/**
+	 * Every notice an extension shows. pi reports some state only as a notice (its MCP
+	 * extension lists the servers it could not use), so the session reads them all and
+	 * keeps the ones it can answer a question with.
+	 */
+	notice: (message: string) => void;
 };
 
 export class UiBridge {
@@ -51,6 +57,12 @@ export class UiBridge {
 		private readonly dialogs: Dialogs,
 		private readonly hasSubscriber: () => boolean,
 		fail: (error: Error, code?: ProtocolErrorCode) => void,
+		/**
+		 * Every notice an extension shows. pi reports some state only as a notice (its MCP
+		 * extension lists the servers it could not use), so the session reads them all
+		 * and keeps the ones it can answer a question with.
+		 */
+		onNotice: (message: string) => void = () => undefined,
 	) {
 		this.host = {
 			ask: dialogs.ask,
@@ -67,6 +79,7 @@ export class UiBridge {
 				else this.early.add(method);
 			},
 			fail,
+			notice: onNotice,
 		};
 	}
 
@@ -162,6 +175,7 @@ export const createUiContext = (host: UiHost): ExtensionUIContext => ({
 		return answerValue(answer);
 	},
 	notify(message, type) {
+		host.notice(message);
 		host.display({ method: "notify", message, notifyType: type });
 	},
 	setStatus(key, text) {

@@ -11,6 +11,8 @@ export type DefaultModel = Schemas["DefaultModel"];
 export type ExportedSession = Schemas["ExportedSession"];
 export type ExportFormat = Schemas["ExportFormat"];
 export type McpAutoEnableInput = Schemas["McpAutoEnableInput"];
+/** Every live engine's answer, one row per server holding tools or registered. */
+export type McpLive = Schemas["McpLive"];
 /** One server a live engine can see: it holds tools, or an extension registered it. */
 export type McpLiveServer = Schemas["McpLive"]["servers"][number];
 /** One tool of a live server: the name a transcript shows and the rule that reaches it. */
