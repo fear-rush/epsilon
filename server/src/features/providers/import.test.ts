@@ -5,7 +5,7 @@
  * shape and refuses every request.
  */
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -19,7 +19,51 @@ afterEach(() => {
 	servers.length = 0;
 });
 
+/** The two headers the bearer test looks at. */
+type Seen = { authorization: string | null; apiKey: string | null };
+
 describe("model list import", () => {
+	test("a provider with authHeader sends the key as Bearer", async () => {
+		const seen: Seen = { authorization: null, apiKey: null };
+		const server = Bun.serve({
+			port: 0,
+			fetch(request) {
+				seen.authorization = request.headers.get("authorization");
+				seen.apiKey = request.headers.get("x-api-key");
+				return Response.json({ data: [{ id: "m" }] });
+			},
+		});
+		servers.push(server);
+
+		const home = agentHome(await mkdtemp(join(tmpdir(), "epsilon-import-bearer-")));
+		const base = `http://127.0.0.1:${server.port}/v1`;
+		await writeFile(
+			join(home.dir, "models.json"),
+			JSON.stringify({
+				providers: {
+					acme: {
+						baseUrl: base,
+						api: "anthropic-messages",
+						apiKey: "stored-key",
+						authHeader: true,
+						models: [{ id: "m" }],
+					},
+				},
+			}),
+		);
+
+		await importModelsForHome(home, {
+			providerId: "acme",
+			baseUrl: base,
+			api: "anthropic-messages",
+			apiKey: "typed-key",
+		});
+
+		// pi sets the bearer header after its merge, so the family's x-api-key is not used.
+		expect(seen.authorization).toBe("Bearer typed-key");
+		expect(seen.apiKey).toBeNull();
+	});
+
 	test("marks models that only speak Anthropic Messages", async () => {
 		const server = Bun.serve({
 			port: 0,

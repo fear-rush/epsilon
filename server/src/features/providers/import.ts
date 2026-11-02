@@ -13,6 +13,7 @@ import type { AgentHome } from "../../platform/agent-home";
 import { modelRuntime } from "../../platform/pi";
 import type { ModelRuntime } from "../../platform/pi";
 import type { ProviderImportInput, ProviderModelInput } from "./contract";
+import { readProvidersFile } from "./store";
 
 const TIMEOUT_MS = 10_000;
 const MAX_BYTES = 2_000_000;
@@ -29,24 +30,46 @@ const modelListSchema = z.union([
 	z.array(modelEntrySchema),
 ]);
 
+/**
+ * pi's header rules, for the list request Epsilon makes itself. A configured
+ * `authHeader` sends the key as `Authorization: Bearer` and wins over the family
+ * default, which is what a gateway that only accepts bearer auth needs. A header
+ * the credential resolved to `null` is suppressed, not replaced by that default.
+ */
 const authHeaders = (
 	api: ProviderApi,
 	apiKey: string | undefined,
-	stored: Record<string, string> | undefined,
-) => {
-	const entries: [string, string][] = [
-		["accept", "application/json"],
-		...Object.entries(stored ?? {}),
-	];
-	const has = (name: string) => entries.some(([key]) => key.toLowerCase() === name);
-	if (api === "anthropic-messages") {
-		if (!has("anthropic-version")) entries.push(["anthropic-version", "2023-06-01"]);
-		if (apiKey !== undefined && !has("x-api-key")) entries.push(["x-api-key", apiKey]);
-	} else if (apiKey !== undefined && !has("authorization")) {
-		entries.push(["authorization", `Bearer ${apiKey}`]);
+	resolved: Record<string, string | null> | undefined,
+	authHeader: boolean,
+): Record<string, string> => {
+	const headers = new Map<string, string | null>([["accept", "application/json"]]);
+	for (const [name, value] of Object.entries(resolved ?? {})) {
+		headers.set(name.toLowerCase(), value);
 	}
-	return Object.fromEntries(entries);
+	const key = apiKey?.trim();
+	const hasKey = key !== undefined && key !== "";
+	if (hasKey && authHeader) {
+		// pi applies this after its own merge, so it wins over a configured header.
+		headers.set("authorization", `Bearer ${key}`);
+	} else if (api === "anthropic-messages") {
+		if (!headers.has("anthropic-version")) headers.set("anthropic-version", "2023-06-01");
+		if (hasKey && !headers.has("x-api-key")) headers.set("x-api-key", key);
+	} else if (hasKey && !headers.has("authorization")) {
+		headers.set("authorization", `Bearer ${key}`);
+	}
+	return Object.fromEntries(
+		[...headers].filter((entry): entry is [string, string] => entry[1] !== null),
+	);
 };
+
+/** Fill the credential's `{NAME}` placeholders, as pi's Cloudflare adapter does. */
+const resolvedBaseUrl = (baseUrl: string, env: Record<string, string> | undefined): string =>
+	env === undefined
+		? baseUrl
+		: baseUrl.replace(
+				/\{([A-Za-z0-9_]+)\}/gu,
+				(placeholder, name: string) => env[name] ?? placeholder,
+			);
 
 type LibraryModel = ReturnType<ModelRuntime["getModels"]>[number];
 
@@ -107,7 +130,8 @@ const importModels = async (options: {
 	api: ProviderApi;
 	baseUrl: string;
 	apiKey?: string;
-	headers?: Record<string, string>;
+	authHeader: boolean;
+	headers?: Record<string, string | null>;
 	library: readonly LibraryModel[];
 }): Promise<ProviderModelInput[]> => {
 	const url = providerModelsEndpoint(options.api, options.baseUrl);
@@ -125,7 +149,7 @@ const importModels = async (options: {
 	}
 
 	const response = await fetch(parsed, {
-		headers: authHeaders(options.api, options.apiKey, options.headers),
+		headers: authHeaders(options.api, options.apiKey, options.headers, options.authHeader),
 		signal: AbortSignal.timeout(TIMEOUT_MS),
 		redirect: "error",
 	});
@@ -164,20 +188,20 @@ export const importModelsForHome = async (
 	input: ProviderImportInput,
 ): Promise<ProviderModelInput[]> => {
 	const runtime = await modelRuntime(home);
+	const entry =
+		input.providerId === undefined ? undefined : (await readProvidersFile(home))[input.providerId];
 	const typedKey = input.apiKey?.trim();
 	const stored =
 		typedKey === undefined && input.providerId !== undefined
 			? await runtime.getAuth(input.providerId)
 			: undefined;
-	const headers: Record<string, string> = {};
-	for (const [key, value] of Object.entries(stored?.auth.headers ?? {})) {
-		if (value !== null) headers[key] = value;
-	}
 	return importModels({
 		api: input.api,
-		baseUrl: input.baseUrl,
+		// A credential can carry its own base URL and the values its placeholders need.
+		baseUrl: resolvedBaseUrl(stored?.auth.baseUrl ?? input.baseUrl, stored?.env),
 		apiKey: typedKey ?? stored?.auth.apiKey,
-		headers,
+		authHeader: entry?.authHeader === true,
+		headers: stored?.auth.headers,
 		library: runtime.getModels(),
 	});
 };

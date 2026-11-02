@@ -429,8 +429,12 @@ commandcode paths.
 The model list is not a pi SDK method. The settings panel makes its own bounded
 `GET` to the endpoints above, with the typed key or the credential resolved by
 `ModelRuntime.getAuth()`, no cross-origin redirects, a ten second timeout and a
-response cap. Google's list API is a different shape, so the panel asks for those
-models by hand.
+response cap. The headers follow the rules pi applies to a request: a provider's
+`authHeader` sends the key as `Authorization: Bearer` and wins over the family's
+header, a credential header resolved to `null` is suppressed rather than replaced,
+and the credential's `baseUrl` and `env` values apply, including the `{NAME}`
+placeholders Cloudflare endpoints use. Google's list API is a different shape, so
+the panel asks for those models by hand.
 
 The provider test is a pi SDK call instead. It registers the draft with
 `ModelRuntime.registerProvider()` on a throwaway runtime, which is runtime-only and
