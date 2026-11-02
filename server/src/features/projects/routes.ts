@@ -7,10 +7,10 @@ import {
 	folderListingSchema,
 	newFolderInputSchema,
 	createdFolderSchema,
-	projectPathInputSchema,
 	projectStatusSchema,
+	projectTrustInputSchema,
 } from "./contract";
-import { createFolder, listFolders, readProjectStatus, trustProjectFolder } from "./service";
+import { createFolder, listFolders, readProjectStatus, setProjectTrust } from "./service";
 
 const statusContent = { "application/json": { schema: projectStatusSchema } };
 
@@ -26,17 +26,17 @@ const projectStatusRoute = createRoute({
 	},
 });
 
-const trustProjectRoute = createRoute({
+const setProjectTrustRoute = createRoute({
 	method: "post",
 	path: "/api/projects/trust",
 	tags: ["projects"],
-	operationId: "trustProject",
-	description: "Trust a folder in pi's trust.json, through pi's own store",
+	operationId: "setProjectTrust",
+	description: "Trust a folder, revoke it, forget its record, or trust its parent",
 	request: {
-		body: { required: true, content: { "application/json": { schema: projectPathInputSchema } } },
+		body: { required: true, content: { "application/json": { schema: projectTrustInputSchema } } },
 	},
 	responses: {
-		200: { description: "The folder, now trusted", content: statusContent },
+		200: { description: "The folder, and what pi loads for it now", content: statusContent },
 		400: { description: "The path is not a folder that can be a project", content: errorContent },
 	},
 });
@@ -88,11 +88,12 @@ export const projectsRoutes = ({ home }: Deps) =>
 				return failure(c, toError(error, "The folder cannot be opened"), 400);
 			}
 		})
-		.openapi(trustProjectRoute, async (c) => {
+		.openapi(setProjectTrustRoute, async (c) => {
 			try {
-				return c.json(await trustProjectFolder(home, c.req.valid("json").path), 200);
+				const { path, action } = c.req.valid("json");
+				return c.json(await setProjectTrust(home, path, action), 200);
 			} catch (error) {
-				return failure(c, toError(error, "The folder cannot be trusted"), 400);
+				return failure(c, toError(error, "The folder's trust was not changed"), 400);
 			}
 		})
 		.openapi(browseFoldersRoute, async (c) => {

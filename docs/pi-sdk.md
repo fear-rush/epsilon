@@ -664,8 +664,10 @@ What the SDK exports for that decision:
 
 - `ProjectTrustStore(agentDir)`: `get(cwd)` answers the closest saved decision
   (`true`, `false` or `null`); `set(cwd, decision)` writes `trust.json` under pi's
-  own lock. It is the same file `/trust` writes, so a terminal and the dashboard
-  share decisions.
+  own lock, and `null` removes that folder's entry so a parent or the default
+  decides again. Trusting a parent writes the parent's `true` and `null` for the
+  folder, which is what pi's own "Trust parent folder" choice does. It is the same
+  file `/trust` writes, so a terminal and the dashboard share decisions.
 - `hasTrustRequiringProjectResources(cwd)`: whether the folder holds anything pi
   gates (`.pi/settings.json`, `.pi/mcp.json`, `.pi/extensions|skills|prompts|themes`,
   `.pi/SYSTEM.md`, `.agents/skills` in the folder or a parent). Context files

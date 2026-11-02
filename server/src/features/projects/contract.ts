@@ -13,14 +13,23 @@ export const projectStatusSchema = z
 		trusted: z.boolean(),
 		/** The folder holds a `.pi` or `.agents/skills` that pi loads only once trusted. */
 		hasProjectResources: z.boolean(),
+		/** This folder has its own `trust.json` record; a parent's decision covers it otherwise. */
+		decidedHere: z.boolean(),
+		/** The folder above, for pi's "trust parent" choice, or null at the filesystem root. */
+		parent: z.string().nullable(),
 	})
 	.openapi("ProjectStatus");
 
 export type ProjectStatus = z.infer<typeof projectStatusSchema>;
 
-export const projectPathInputSchema = z
-	.object({ path: z.string().min(1) })
-	.openapi("ProjectPathInput");
+export const projectTrustInputSchema = z
+	.object({
+		path: z.string().min(1),
+		action: z.enum(["trust", "untrust", "forget", "trust-parent"]),
+	})
+	.openapi("ProjectTrustInput");
+
+export type ProjectTrustAction = z.infer<typeof projectTrustInputSchema>["action"];
 
 /** One level of the folder picker: subfolders only, never file names or contents. */
 export const folderListingSchema = z

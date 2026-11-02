@@ -14,12 +14,15 @@ import {
 	FolderIcon,
 	FolderMinusIcon,
 	FolderPlusIcon,
+	FolderUpIcon,
 	MessageSquareIcon,
 	MoreHorizontalIcon,
 	PlusIcon,
 	SearchXIcon,
 	Settings2Icon,
 	ShieldAlertIcon,
+	ShieldCheckIcon,
+	ShieldOffIcon,
 	SquarePenIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -60,7 +63,7 @@ import { StatusView } from "@/components/patterns/status/status-view";
 import { Tip } from "@/components/patterns/tip";
 import { SidebarAccount } from "@/features/sessions/sidebar-account";
 import { DeleteDialog } from "@/components/patterns/dialog/confirm-dialogs";
-import { FolderDialog } from "@/features/projects";
+import { FolderDialog, useSetProjectTrust } from "@/features/projects";
 import { sessionKeys } from "@/api/keys";
 import {
 	deleteSession,
@@ -70,7 +73,7 @@ import {
 	setSessionPinned,
 } from "@/api/endpoints";
 import { sessionLabel } from "@/features/sessions/format";
-import type { ProjectSessions, SessionList, SessionSummary } from "@/api/types";
+import type { ProjectSessions, ProjectTrustAction, SessionList, SessionSummary } from "@/api/types";
 
 /** Live children come and go outside this tab, so the badges poll. */
 const LIVE_REFRESH_MS = 5_000;
@@ -167,6 +170,7 @@ export function SessionSidebar() {
 			await queryClient.invalidateQueries({ queryKey: sessionKeys.all });
 		},
 	});
+	const projectTrust = useSetProjectTrust();
 	const pinChat = useMutation({
 		mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) => setSessionPinned(id, pinned),
 		onMutate: async ({ id, pinned }) => {
@@ -286,6 +290,9 @@ export function SessionSidebar() {
 													forgetProject.reset();
 													setPendingProject(entry);
 												}}
+												onTrust={(action) =>
+													projectTrust.mutate({ path: entry.project.path, action })
+												}
 												onRename={onRename}
 												onPin={onPin}
 												onDelete={onDelete}
@@ -331,11 +338,14 @@ export function SessionSidebar() {
 				)}
 			</SidebarContent>
 
-			{pinChat.error !== null && (
-				<div className="animate-enter-rise px-pane pb-pane">
-					<Notice tone="error">{pinChat.error.message}</Notice>
+			{pinChat.error !== null || projectTrust.error !== null ? (
+				<div className="animate-enter-rise grid gap-2 px-pane pb-pane">
+					{pinChat.error !== null && <Notice tone="error">{pinChat.error.message}</Notice>}
+					{projectTrust.error !== null && (
+						<Notice tone="error">{projectTrust.error.message}</Notice>
+					)}
 				</div>
-			)}
+			) : undefined}
 
 			<Separator className="bg-sidebar-border" />
 			<SidebarFooter className="animate-enter-rise">
@@ -428,6 +438,7 @@ function ProjectGroup({
 	onRename,
 	onPin,
 	onDelete,
+	onTrust,
 }: {
 	entry: ProjectSessions;
 	activeId: string | undefined;
@@ -440,10 +451,17 @@ function ProjectGroup({
 	onRename: (session: SessionSummary) => void;
 	onPin: (session: SessionSummary) => void;
 	onDelete: (session: SessionSummary) => void;
+	/** Trust, revoke, forget or trust the parent of this folder. */
+	onTrust: (action: ProjectTrustAction) => void;
 }) {
 	const navigate = useNavigate();
 	const { project, sessions } = entry;
 	const holdsActive = sessions.some((session) => session.id === activeId);
+	const canTrust = !project.trusted;
+	const canTrustParent = !project.trusted && project.parent !== null;
+	const canRevoke = project.trusted && project.hasProjectResources;
+	const canForget = project.trusted && project.decidedHere;
+	const hasTrustActions = canTrust || canTrustParent || canRevoke || canForget;
 	// Controlled from the first render: an uncontrolled default that changes after
 	// mount makes Base UI warn, and the user's own toggle must keep working.
 	const [open, setOpen] = useState(holdsActive);
@@ -510,6 +528,37 @@ function ProjectGroup({
 								{project.trusted ? "Project settings" : "Project settings (trust it first)"}
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
+						{hasTrustActions && (
+							<>
+								<DropdownMenuSeparator />
+								<DropdownMenuGroup>
+									{canTrust && (
+										<DropdownMenuItem onClick={() => onTrust("trust")}>
+											<ShieldCheckIcon />
+											Trust folder
+										</DropdownMenuItem>
+									)}
+									{canTrustParent && (
+										<DropdownMenuItem onClick={() => onTrust("trust-parent")}>
+											<FolderUpIcon />
+											Trust parent folder
+										</DropdownMenuItem>
+									)}
+									{canRevoke && (
+										<DropdownMenuItem variant="destructive" onClick={() => onTrust("untrust")}>
+											<ShieldAlertIcon />
+											Revoke trust
+										</DropdownMenuItem>
+									)}
+									{canForget && (
+										<DropdownMenuItem onClick={() => onTrust("forget")}>
+											<ShieldOffIcon />
+											Forget trust decision
+										</DropdownMenuItem>
+									)}
+								</DropdownMenuGroup>
+							</>
+						)}
 						<DropdownMenuSeparator />
 						<DropdownMenuItem variant="destructive" onClick={onRemove}>
 							<FolderMinusIcon />

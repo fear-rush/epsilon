@@ -12,7 +12,7 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 import type { AgentHome } from "../../platform/agent-home";
 import { hasProjectResources, projectTrustStore } from "../../platform/pi";
 import type { SettingsScope } from "../../platform/pi";
-import type { FolderListing, ProjectStatus } from "./contract";
+import type { FolderListing, ProjectStatus, ProjectTrustAction } from "./contract";
 import { isInside, projectName } from "./domain";
 import { decideProjectTrust } from "./trust";
 
@@ -70,21 +70,57 @@ const resolveProjectFolder = async (home: AgentHome, raw: string): Promise<strin
 	return folder;
 };
 
-export const projectStatus = async (home: AgentHome, path: string): Promise<ProjectStatus> => ({
-	path,
-	name: projectName(path),
-	trusted: await decideProjectTrust({ cwd: path, home }),
-	hasProjectResources: hasProjectResources(path),
-});
+export const projectStatus = async (home: AgentHome, path: string): Promise<ProjectStatus> => {
+	const canonical = await realpath(path).catch(() => path);
+	const parent = dirname(canonical);
+	return {
+		path,
+		name: projectName(path),
+		trusted: await decideProjectTrust({ cwd: path, home }),
+		hasProjectResources: hasProjectResources(path),
+		decidedHere: projectTrustStore(home).getEntry(path)?.path === canonical,
+		parent: parent === canonical ? null : parent,
+	};
+};
 
 /** The status of a folder the browser named, after it passed the same checks. */
 export const readProjectStatus = async (home: AgentHome, raw: string): Promise<ProjectStatus> =>
 	projectStatus(home, await resolveProjectFolder(home, raw));
 
-/** Trust one folder in pi's `trust.json`, through pi's store and its lock. */
-export const trustProjectFolder = async (home: AgentHome, raw: string): Promise<ProjectStatus> => {
+/**
+ * Change what `trust.json` says about one folder, then answer what pi loads now.
+ * `forget` removes the folder's own record, so a parent or the default decides;
+ * `trust-parent` writes the parent and removes this folder's record, the way pi's
+ * own "Trust parent folder" option does. `getProjectTrustOptions` is private, so
+ * the parent is computed from the folder itself.
+ */
+export const setProjectTrust = async (
+	home: AgentHome,
+	raw: string,
+	action: ProjectTrustAction,
+): Promise<ProjectStatus> => {
 	const path = await resolveProjectFolder(home, raw);
-	projectTrustStore(home).set(path, true);
+	const store = projectTrustStore(home);
+	switch (action) {
+		case "trust":
+			store.set(path, true);
+			break;
+		case "untrust":
+			store.set(path, false);
+			break;
+		case "forget":
+			store.set(path, null);
+			break;
+		case "trust-parent": {
+			const parent = dirname(path);
+			if (parent === path) throw new Error("The filesystem root has no parent to trust.");
+			store.setMany([
+				{ path: parent, decision: true },
+				{ path, decision: null },
+			]);
+			break;
+		}
+	}
 	return projectStatus(home, path);
 };
 

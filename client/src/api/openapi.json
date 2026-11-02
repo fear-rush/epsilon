@@ -165,13 +165,24 @@
 					},
 					"hasProjectResources": {
 						"type": "boolean"
+					},
+					"decidedHere": {
+						"type": "boolean"
+					},
+					"parent": {
+						"type": [
+							"string",
+							"null"
+						]
 					}
 				},
 				"required": [
 					"path",
 					"name",
 					"trusted",
-					"hasProjectResources"
+					"hasProjectResources",
+					"decidedHere",
+					"parent"
 				]
 			},
 			"SessionError": {
@@ -345,16 +356,26 @@
 					"jsonl"
 				]
 			},
-			"ProjectPathInput": {
+			"ProjectTrustInput": {
 				"type": "object",
 				"properties": {
 					"path": {
 						"type": "string",
 						"minLength": 1
+					},
+					"action": {
+						"type": "string",
+						"enum": [
+							"trust",
+							"untrust",
+							"forget",
+							"trust-parent"
+						]
 					}
 				},
 				"required": [
-					"path"
+					"path",
+					"action"
 				]
 			},
 			"FolderListing": {
@@ -4593,21 +4614,21 @@
 				"tags": [
 					"projects"
 				],
-				"operationId": "trustProject",
-				"description": "Trust a folder in pi's trust.json, through pi's own store",
+				"operationId": "setProjectTrust",
+				"description": "Trust a folder, revoke it, forget its record, or trust its parent",
 				"requestBody": {
 					"required": true,
 					"content": {
 						"application/json": {
 							"schema": {
-								"$ref": "#/components/schemas/ProjectPathInput"
+								"$ref": "#/components/schemas/ProjectTrustInput"
 							}
 						}
 					}
 				},
 				"responses": {
 					"200": {
-						"description": "The folder, now trusted",
+						"description": "The folder, and what pi loads for it now",
 						"content": {
 							"application/json": {
 								"schema": {

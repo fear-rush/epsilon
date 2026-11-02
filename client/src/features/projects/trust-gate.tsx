@@ -13,7 +13,7 @@ import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { StatusView } from "@/components/patterns/status/status-view";
-import { useProjectStatus, useTrustProject } from "@/features/projects/queries";
+import { useProjectStatus, useSetProjectTrust } from "@/features/projects/queries";
 import { TrustNotice } from "@/features/projects/trust-notice";
 
 export function TrustGate({
@@ -28,7 +28,7 @@ export function TrustGate({
 }) {
 	const navigate = useNavigate();
 	const status = useProjectStatus(project);
-	const trust = useTrustProject();
+	const trust = useSetProjectTrust();
 
 	if (status.data?.trusted === true) return children;
 
@@ -59,10 +59,19 @@ export function TrustGate({
 							<Button variant="destructive" onClick={() => void navigate({ to: "/", search: {} })}>
 								Cancel
 							</Button>
+							{status.data.parent !== null && (
+								<Button
+									variant="outline"
+									disabled={trust.isPending}
+									onClick={() => trust.mutate({ path: status.data.path, action: "trust-parent" })}
+								>
+									Trust parent folder
+								</Button>
+							)}
 							<Button
 								variant="warning"
 								disabled={trust.isPending}
-								onClick={() => trust.mutate(project)}
+								onClick={() => trust.mutate({ path: status.data.path, action: "trust" })}
 							>
 								{trust.isPending && <Spinner data-icon="inline-start" />}
 								Trust folder

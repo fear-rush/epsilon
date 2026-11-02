@@ -41,6 +41,7 @@ export type PackageUpdate = Schemas["PackageUpdate"];
 export type PackageView = Schemas["PackageView"];
 export type ProjectSessions = Schemas["ProjectSessions"];
 export type ProjectStatus = Schemas["ProjectStatus"];
+export type ProjectTrustAction = Schemas["ProjectTrustInput"]["action"];
 export type ProviderDetail = Schemas["ProviderDetail"];
 export type ProviderImportInput = Schemas["ProviderImportInput"];
 export type ProviderInput = Schemas["ProviderInput"];

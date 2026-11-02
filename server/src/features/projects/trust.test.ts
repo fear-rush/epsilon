@@ -10,6 +10,7 @@ import { join } from "node:path";
 
 import { agentHome } from "../../platform/agent-home";
 import { projectTrustStore, settingsManager } from "../../platform/pi";
+import { setProjectTrust } from "./service";
 import { decideProjectTrust } from "./trust";
 
 const scratch = async () => {
@@ -37,6 +38,45 @@ const setDefault = async (
 	settings.setDefaultProjectTrust(value);
 	await settings.flush();
 };
+
+const trustFile = async (home: ReturnType<typeof agentHome>) =>
+	JSON.parse(await readFile(join(home.dir, "trust.json"), "utf8").catch(() => "{}"));
+
+describe("changing a folder's trust decision", () => {
+	test("trust, revoke and forget write the record and answer the folder as it stands", async () => {
+		const { home, root } = await scratch();
+		const project = await gated(root);
+		const sibling = await gated(root, "sibling");
+		await setProjectTrust(home, sibling, "trust");
+
+		const trusted = await setProjectTrust(home, project, "trust");
+		expect(trusted).toMatchObject({ trusted: true, decidedHere: true });
+		expect(await trustFile(home)).toEqual({ [project]: true, [sibling]: true });
+
+		const revoked = await setProjectTrust(home, project, "untrust");
+		expect(revoked).toMatchObject({ trusted: false, decidedHere: true });
+		expect(await trustFile(home)).toEqual({ [project]: false, [sibling]: true });
+
+		const forgotten = await setProjectTrust(home, project, "forget");
+		expect(forgotten).toMatchObject({ trusted: false, decidedHere: false });
+		// Only this folder's record goes; pi's store keeps the sibling's decision.
+		expect(await trustFile(home)).toEqual({ [sibling]: true });
+	});
+
+	test("trusting the parent records the parent and drops this folder's own record", async () => {
+		const { home, root } = await scratch();
+		const parent = join(root, "parent");
+		await mkdir(parent);
+		const project = await gated(parent);
+		await setProjectTrust(home, project, "trust");
+
+		const status = await setProjectTrust(home, project, "trust-parent");
+
+		expect(status).toMatchObject({ trusted: true, decidedHere: false, parent });
+		expect(await trustFile(home)).toEqual({ [parent]: true });
+		expect(await decideProjectTrust({ cwd: project, home })).toBe(true);
+	});
+});
 
 describe("project trust", () => {
 	test("a folder pi gates nothing in is trusted with no decision and no record", async () => {

@@ -15,6 +15,12 @@ export function TrustNotice({ status }: { status: ProjectStatus }) {
 					and MCP servers that can run code on this machine.
 				</p>
 			)}
+			{status.parent !== null && (
+				<p>
+					Trusting the parent <span className="font-mono">{status.parent}</span> trusts this folder
+					and every folder under it.
+				</p>
+			)}
 		</div>
 	);
 }

@@ -23,9 +23,9 @@ import { Notice } from "@/components/patterns/status/notice";
 import { StatusView } from "@/components/patterns/status/status-view";
 import { projectKeys } from "@/api/keys";
 import { createFolder, fetchFolders, fetchProjectStatus } from "@/api/endpoints";
-import { useTrustProject } from "@/features/projects/queries";
+import { useSetProjectTrust } from "@/features/projects/queries";
 import { TrustNotice } from "@/features/projects/trust-notice";
-import type { ProjectStatus } from "@/api/types";
+import type { ProjectStatus, ProjectTrustAction } from "@/api/types";
 
 type FolderDialogProps = {
 	open: boolean;
@@ -57,7 +57,7 @@ export function FolderDialog({
 	const [pending, setPending] = useState<ProjectStatus | undefined>(undefined);
 	const [error, setError] = useState<string | undefined>(undefined);
 	const [working, setWorking] = useState(false);
-	const trust = useTrustProject();
+	const trust = useSetProjectTrust();
 	const queryClient = useQueryClient();
 
 	/** Each opening starts from a clean draft. Remounting for it would skip the entry transition. */
@@ -110,6 +110,21 @@ export function FolderDialog({
 		}
 	};
 
+	/** Write the decision, then finish with the folder the server resolved. */
+	const applyTrust = (path: string, action: ProjectTrustAction) => {
+		setWorking(true);
+		trust.mutate(
+			{ path, action },
+			{
+				onSuccess: async (status) => {
+					await finish(status.path);
+					setWorking(false);
+				},
+				onError: () => setWorking(false),
+			},
+		);
+	};
+
 	/** A trusted folder goes straight through; any other asks first. */
 	const choose = async (path: string) => {
 		setError(undefined);
@@ -154,18 +169,18 @@ export function FolderDialog({
 						<Button variant="outline" onClick={() => setPending(undefined)}>
 							Back
 						</Button>
+						{pending.parent !== null && (
+							<Button
+								variant="outline"
+								disabled={trust.isPending || working}
+								onClick={() => applyTrust(pending.path, "trust-parent")}
+							>
+								Trust parent folder
+							</Button>
+						)}
 						<Button
 							disabled={trust.isPending || working}
-							onClick={() => {
-								setWorking(true);
-								trust.mutate(pending.path, {
-									onSuccess: async (status) => {
-										await finish(status.path);
-										setWorking(false);
-									},
-									onError: () => setWorking(false),
-								});
-							}}
+							onClick={() => applyTrust(pending.path, "trust")}
 						>
 							{(trust.isPending || working) && <Spinner data-icon="inline-start" />}
 							Trust and {action.toLowerCase()}

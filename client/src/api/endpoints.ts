@@ -32,6 +32,7 @@ import type {
 	ProviderModelInput,
 	ProviderTestInput,
 	ProjectStatus,
+	ProjectTrustAction,
 	Readiness,
 	SessionList,
 	SettingsSnapshot,
@@ -144,8 +145,11 @@ export const fetchProjectStatus = async (
 ): Promise<ProjectStatus> =>
 	body((await api.GET("/api/projects/status", { params: { query: { path } }, signal })).data);
 
-export const trustProject = async (path: string): Promise<ProjectStatus> =>
-	body((await api.POST("/api/projects/trust", { body: { path } })).data);
+export const setProjectTrust = async (
+	path: string,
+	action: ProjectTrustAction,
+): Promise<ProjectStatus> =>
+	body((await api.POST("/api/projects/trust", { body: { path, action } })).data);
 
 export const fetchFolders = async (
 	path: string | undefined,

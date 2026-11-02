@@ -211,8 +211,8 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Trust a folder in pi's trust.json, through pi's own store */
-		post: operations["trustProject"];
+		/** Trust a folder, revoke it, forget its record, or trust its parent */
+		post: operations["setProjectTrust"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -981,6 +981,8 @@ export interface components {
 			name: string;
 			trusted: boolean;
 			hasProjectResources: boolean;
+			decidedHere: boolean;
+			parent: string | null;
 		};
 		SessionError: components["schemas"]["Problem"] & ({
 			code: "SESSION_NOT_FOUND" | "SESSION_RUNNING" | "PROJECT_NOT_TRUSTED" | "PROJECT_INVALID" | "EXPORT_FAILED" | "SESSION_COPY_FAILED";
@@ -1022,8 +1024,9 @@ export interface components {
 			format: components["schemas"]["ExportFormat"];
 		};
 		ExportFormat: "html" | "jsonl";
-		ProjectPathInput: {
+		ProjectTrustInput: {
 			path: string;
+			action: "trust" | "untrust" | "forget" | "trust-parent";
 		};
 		FolderListing: {
 			path: string;
@@ -2292,8 +2295,8 @@ interface operations {
 			};
 		};
 	};
-	/** Trust a folder in pi's trust.json, through pi's own store */
-	trustProject: {
+	/** Trust a folder, revoke it, forget its record, or trust its parent */
+	setProjectTrust: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -2302,11 +2305,11 @@ interface operations {
 		};
 		requestBody: {
 			content: {
-				"application/json": components["schemas"]["ProjectPathInput"];
+				"application/json": components["schemas"]["ProjectTrustInput"];
 			};
 		};
 		responses: {
-			/** The folder, now trusted */
+			/** The folder, and what pi loads for it now */
 			200: {
 				headers: {
 					[name: string]: unknown;

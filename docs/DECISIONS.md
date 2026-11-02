@@ -335,6 +335,12 @@ server refuses to build an engine or write project settings in a folder pi does 
 trust. The Trust button writes the same store `/trust` writes, so a terminal and the
 dashboard share decisions.
 
+A mistake is undoable from the project's row: revoke writes a saved `false`, forget
+removes the folder's own record so the parent or the default decides, and trusting
+the parent writes the parent's `true` and removes the folder's record. An engine that
+is already open keeps the resources it loaded until it is rebuilt; the page and the
+next engine use the new answer.
+
 The list of projects is derived from the folders pi's session files record; nothing
 stores it. A folder opened but never used exists only in the page URL until its first
 message. A chat moves into a project through `SessionManager.forkFrom`, which writes

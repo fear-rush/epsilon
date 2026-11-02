@@ -104,7 +104,7 @@ test("a project's settings file is reported as the project layer", async () => {
 	const trusted = await app.request("/api/projects/trust", {
 		method: "POST",
 		headers: { "content-type": "application/json" },
-		body: JSON.stringify({ path: project }),
+		body: JSON.stringify({ path: project, action: "trust" }),
 	});
 	expect(trusted.status).toBe(200);
 	const folder = z.object({ path: z.string() }).parse(await trusted.json()).path;
