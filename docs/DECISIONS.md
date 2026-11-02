@@ -339,7 +339,9 @@ makes between the home and a project's `.pi`. The tab decides what Add writes an
 names the file; a project tab also lists the global entries it inherits, and
 switching an inherited MCP server there writes an override in the project file. A
 package's page switches its resources one by one; the switch is a filter in the
-package entry of the file the tab names, so the package itself stays installed. The
+package entry of the file the tab names, so the package itself stays installed. A
+package pi reports as outdated carries the marker on its row and its page, and
+Update runs pi's own updater, whose npm or git failure text is shown as it is. The
 project is in the Settings URL, so a project's menu in the sidebar links straight to
 it.
 

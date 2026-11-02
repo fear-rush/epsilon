@@ -30,6 +30,7 @@ export type FolderListing = Schemas["FolderListing"];
 export type ModelOverride = Schemas["ModelOverride"];
 export type PackageResourceInput = Schemas["PackageResourceInput"];
 export type PackageResources = Schemas["PackageResources"];
+export type PackageUpdate = Schemas["PackageUpdate"];
 export type PackageView = Schemas["PackageView"];
 export type ProjectSessions = Schemas["ProjectSessions"];
 export type ProjectStatus = Schemas["ProjectStatus"];

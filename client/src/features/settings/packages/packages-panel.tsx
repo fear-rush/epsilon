@@ -6,13 +6,16 @@ import { ListGroup } from "@/components/patterns/list/list-group";
 import { ListItem } from "@/components/patterns/list/list-item";
 import { ListPane } from "@/components/patterns/list/list-pane";
 import { MasterDetail } from "@/components/patterns/pane/master-detail";
+import { Notice } from "@/components/patterns/status/notice";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useSettings, useSettingsProject } from "@/features/settings/queries";
+import { usePackageUpdates, useSettings, useSettingsProject } from "@/features/settings/queries";
 import { packageLine, scopeOf } from "./package-kind";
 import { PackageInstallDialog } from "./package-install-dialog";
 
 function PackagesList({ selected }: { selected: string | undefined }) {
 	const settings = useSettings();
+	const updates = usePackageUpdates();
 	const project = useSettingsProject();
 	const scope = scopeOf(project);
 	const [query, setQuery] = useState("");
@@ -20,6 +23,7 @@ function PackagesList({ selected }: { selected: string | undefined }) {
 
 	// A project tab lists only the project's own packages.
 	const own = (settings.data?.packages ?? []).filter((entry) => entry.scope === scope);
+	const outdated = new Set((updates.data ?? []).map((entry) => `${entry.scope}\0${entry.source}`));
 	const needle = query.trim().toLowerCase();
 	const visible = own.filter((entry) =>
 		`${entry.source} ${packageLine(entry)}`.toLowerCase().includes(needle),
@@ -37,6 +41,13 @@ function PackagesList({ selected }: { selected: string | undefined }) {
 				pending={settings.isPending}
 				pendingLabel="Reading packages…"
 				error={settings.error}
+				notices={
+					updates.error !== null ? (
+						<Notice tone="error" title="Could not check for updates">
+							{updates.error.message}
+						</Notice>
+					) : undefined
+				}
 				empty={
 					visible.length === 0
 						? own.length === 0
@@ -63,6 +74,11 @@ function PackagesList({ selected }: { selected: string | undefined }) {
 							name={entry.source}
 							description={packageLine(entry)}
 							selected={selected === entry.source}
+							trailing={
+								outdated.has(`${entry.scope}\0${entry.source}`) ? (
+									<Badge variant="info">Update</Badge>
+								) : undefined
+							}
 							link={{
 								to: "/settings/packages/$scope/$source",
 								params: { scope: entry.scope, source: entry.source },

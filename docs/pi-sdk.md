@@ -287,7 +287,7 @@ never a top-level row and is not a message of its own.
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Default provider and model | `SettingsManager.setDefaultModelAndProvider`, then `flush()`                                                                                                                                           |
 | Other settings             | `SettingsManager` setters (there is none for `defaultTools`, below)                                                                                                                                    |
-| Packages                   | `DefaultPackageManager.installAndPersist`, `removeAndPersist`, `listConfiguredPackages`; `SettingsManager.setPackages` and `setProjectPackages` for a filter                                           |
+| Packages                   | `DefaultPackageManager.installAndPersist`, `removeAndPersist`, `listConfiguredPackages`, `update`, `checkForAvailableUpdates`; `SettingsManager.setPackages` and `setProjectPackages` for a filter     |
 | Project trust              | `ProjectTrustStore.set`                                                                                                                                                                                |
 | Providers (`models.json`)  | **none.** `registerProvider()` is runtime-only; `ModelConfig` is read-only                                                                                                                             |
 | MCP servers (`mcp.json`)   | **none reachable.** `addMcpServerConfig`, `removeMcpServerConfig` and `loadMcpConfig` exist, but the package's `exports` map exposes only `.` and `./rpc-entry`, so they cannot be imported through it |
@@ -486,6 +486,11 @@ disables that whole kind. `autoload: false` makes the entry a delta over the pac
 of the same source in the other scope, so only the named files load; `pi config`
 removes the entry when its last filter goes, which restores the parent. A project
 entry without `autoload: false` replaces a global entry of the same package.
+`checkForAvailableUpdates()` answers which npm and git sources are outdated; a local
+source, an exact npm version and an offline pi are never checked. `update(source)`
+runs the npm or git command itself: a failed command rejects with the command line
+and its exit code, and a source that matches nothing gets pi's "No matching package
+found" sentence.
 MCP servers come from `mcp.json` and a project's `.pi/mcp.json`. The project file
 is read only in a trusted project (see Project trust); a project entry
 there replaces a global entry of the same name, and one without `command`, `url`

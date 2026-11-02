@@ -1,9 +1,9 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { FileQuestionIcon, Trash2Icon } from "lucide-react";
+import { ArrowUpCircleIcon, FileQuestionIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 
-import { removePackage } from "@/api/endpoints";
+import { removePackage, updatePackage } from "@/api/endpoints";
 import type { PackageView } from "@/api/types";
 import { DeleteDialog } from "@/components/patterns/dialog/confirm-dialogs";
 import { DetailPage } from "@/components/patterns/pane/detail-page";
@@ -11,11 +11,15 @@ import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";
 import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
+import { Notice } from "@/components/patterns/status/notice";
 import { StatusView } from "@/components/patterns/status/status-view";
 import { Tip } from "@/components/patterns/tip";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
 	usePackageResources,
+	usePackageUpdates,
+	usePackageUpdatesRefresh,
 	useSettings,
 	useSettingsProject,
 	useSettingsRefresh,
@@ -31,12 +35,24 @@ export function PackageDetail({ scope, source }: { scope: PackageView["scope"]; 
 	const refresh = useSettingsRefresh();
 	const settings = useSettings();
 	const resources = usePackageResources(source, scope);
+	const updates = usePackageUpdates();
+	const updatesRefresh = usePackageUpdatesRefresh();
 	const [removing, setRemoving] = useState(false);
+	const update = useMutation({
+		mutationFn: () => updatePackage(project, source, scope),
+		onSuccess: () => {
+			refresh();
+			updatesRefresh();
+		},
+	});
+	const available =
+		updates.data?.some((entry) => entry.source === source && entry.scope === scope) === true;
 	const remove = useMutation({
 		mutationFn: () => removePackage(project, source, scope),
 		onSuccess: () => {
 			setRemoving(false);
 			refresh();
+			updatesRefresh();
 			void navigate({ to: "/settings/packages", search: (previous) => previous });
 		},
 	});
@@ -73,19 +89,37 @@ export function PackageDetail({ scope, source }: { scope: PackageView["scope"]; 
 			title={source}
 			back={back}
 			actions={
-				<Tip label="Remove package">
-					<Button
-						variant="destructive"
-						size="icon-sm"
-						aria-label="Remove package"
-						onClick={() => {
-							remove.reset();
-							setRemoving(true);
-						}}
-					>
-						<Trash2Icon />
-					</Button>
-				</Tip>
+				<>
+					{available && (
+						<Tip label="Update package">
+							<Button
+								variant="outline"
+								size="icon-sm"
+								aria-label={update.isPending ? "Updating package" : "Update package"}
+								disabled={update.isPending}
+								onClick={() => {
+									update.reset();
+									update.mutate();
+								}}
+							>
+								{update.isPending ? <Spinner /> : <ArrowUpCircleIcon />}
+							</Button>
+						</Tip>
+					)}
+					<Tip label="Remove package">
+						<Button
+							variant="destructive"
+							size="icon-sm"
+							aria-label="Remove package"
+							onClick={() => {
+								remove.reset();
+								setRemoving(true);
+							}}
+						>
+							<Trash2Icon />
+						</Button>
+					</Tip>
+				</>
 			}
 		>
 			<Section title="Package">
@@ -93,6 +127,11 @@ export function PackageDetail({ scope, source }: { scope: PackageView["scope"]; 
 				<Row title="Scope">{SCOPE_LABEL[entry.scope]}</Row>
 				{entry.installedPath !== undefined && <Row title="Install path">{entry.installedPath}</Row>}
 			</Section>
+			{update.error !== null && (
+				<Notice tone="error" title="The update failed">
+					{update.error.message}
+				</Notice>
+			)}
 			{resources.isPending ? (
 				<LoadingState label="Reading what it provides…" />
 			) : resources.error !== null ? (

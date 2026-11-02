@@ -20,7 +20,13 @@ import {
 	writePackageEntries,
 } from "../../platform/pi";
 import type { PackageSource, ResolvedResource } from "../../platform/pi";
-import type { PackageResourceInput, PackageResources, PackageScope, PackageView } from "./contract";
+import type {
+	PackageResourceInput,
+	PackageResources,
+	PackageScope,
+	PackageUpdate,
+	PackageView,
+} from "./contract";
 
 export const listPackages = (folder: string, home: AgentHome): PackageView[] =>
 	packageManager(folder, home)
@@ -44,12 +50,13 @@ export const installPackage = async (
 const NON_LOCAL = ["npm:", "git:", "github:", "http:", "https:", "ssh:", "builtin:"];
 
 /**
- * A local source is declared relative to the settings file that holds it, while
- * pi matches an input source from the process's folder. Only a plain relative
- * path needs rebasing; an absolute path, a URL, a `~` path and a `file:` URL are
- * left for pi to resolve, as they were before.
+ * A local source is declared relative to the settings file that holds it, while pi
+ * matches an input source from the process's folder. Only a plain relative path
+ * needs rebasing; an absolute path, a URL, a `~` path and a `file:` URL are left
+ * for pi to resolve, as they were before. Remove and update both take a source the
+ * way `pi` does from a terminal, so both hand pi a path from the process's folder.
  */
-const sourceForRemoval = (
+const rebasedSource = (
 	folder: string,
 	home: AgentHome,
 	source: string,
@@ -71,9 +78,37 @@ export const removePackage = async (
 	source: string,
 	scope: PackageScope,
 ): Promise<boolean> =>
-	packageManager(folder, home).removeAndPersist(sourceForRemoval(folder, home, source, scope), {
+	packageManager(folder, home).removeAndPersist(rebasedSource(folder, home, source, scope), {
 		local: scope === "project",
 	});
+
+/** Which declared packages have a newer version, asked of pi's own checker. */
+export const packageUpdates = async (folder: string, home: AgentHome): Promise<PackageUpdate[]> =>
+	(await packageManager(folder, home).checkForAvailableUpdates()).map(
+		({ source, scope, type }) => ({
+			source,
+			scope,
+			type,
+		}),
+	);
+
+/**
+ * Updates one declared package through pi's updater. A source the settings do not
+ * declare is refused before a package manager runs; a failure inside it is pi's own
+ * text, which the route hands back verbatim.
+ */
+export const updatePackage = async (
+	folder: string,
+	home: AgentHome,
+	source: string,
+	scope: PackageScope,
+): Promise<void> => {
+	const declared = listPackages(folder, home).some(
+		(entry) => entry.source === source && entry.scope === scope,
+	);
+	if (!declared) throw new Error("No declared package matched that source");
+	await packageManager(folder, home).update(rebasedSource(folder, home, source, scope));
+};
 
 const nameOf = (path: string): string =>
 	basename(path) === "SKILL.md" ? basename(dirname(path)) : basename(path, extname(path));

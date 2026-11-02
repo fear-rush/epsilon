@@ -5,10 +5,11 @@ import type { McpScope } from "shared";
 
 import type { PackageView, SkillRoot } from "@/api/types";
 
-import { providerLoginKeys, readinessKeys, settingsKeys } from "@/api/keys";
+import { packageUpdateKeys, providerLoginKeys, readinessKeys, settingsKeys } from "@/api/keys";
 import {
 	fetchMcpRaw,
 	fetchPackageResources,
+	fetchPackageUpdates,
 	fetchMcpServer,
 	fetchProviderDetail,
 	fetchProviderLogin,
@@ -180,3 +181,26 @@ export const useSkillBundleFile = (root: SkillRoot, name: string, path: string |
 /** What one declared package provides, as pi resolves it. */
 export const usePackageResources = (source: string, scope: PackageView["scope"]) =>
 	useQuery(packageResourcesQuery(useSettingsProject(), source, scope));
+
+/**
+ * The packages pi's own check reports as outdated. The check runs npm or git, so it
+ * shares the settings freshness window instead of the focus rule, and only a package
+ * write refetches it sooner.
+ */
+const packageUpdatesQuery = (project: string | undefined) =>
+	queryOptions({
+		queryKey: packageUpdateKeys.list(project),
+		queryFn: ({ signal }) => fetchPackageUpdates(project, signal),
+		staleTime: SETTINGS_STALE_MS,
+		refetchOnWindowFocus: false,
+	});
+
+export const usePackageUpdates = () => useQuery(packageUpdatesQuery(useSettingsProject()));
+
+/** Runs the update check again. Only a package write changes pi's answer. */
+export const usePackageUpdatesRefresh = (): (() => void) => {
+	const queryClient = useQueryClient();
+	return useCallback(() => {
+		void queryClient.invalidateQueries({ queryKey: packageUpdateKeys.all });
+	}, [queryClient]);
+};

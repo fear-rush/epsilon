@@ -855,6 +855,40 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/settings/packages/updates": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Which declared packages have a newer npm or git version, asked of pi. A local source and a pinned version are never checked, and pi answers none when it is offline */
+		get: operations["getPackageUpdates"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/settings/packages/update": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Update one declared package through pi's own updater. npm or git text is the refusal, verbatim */
+		post: operations["updatePackage"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 }
 
 export interface components {
@@ -1715,6 +1749,14 @@ export interface components {
 			type: "extensions" | "skills" | "prompts" | "themes";
 			path: string;
 			enabled: boolean;
+		};
+		PackageUpdateList: {
+			updates: components["schemas"]["PackageUpdate"][];
+		};
+		PackageUpdate: {
+			source: string;
+			scope: "user" | "project";
+			type: "npm" | "git";
 		};
 	};
 }
@@ -4012,6 +4054,77 @@ interface operations {
 				content?: never;
 			};
 			/** The resource could not be switched */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Which declared packages have a newer npm or git version, asked of pi. A local source and a pinned version are never checked, and pi answers none when it is offline */
+	getPackageUpdates: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The packages with an update available */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["PackageUpdateList"];
+				};
+			};
+			/** The check failed */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Update one declared package through pi's own updater. npm or git text is the refusal, verbatim */
+	updatePackage: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					source: string;
+					scope?: "user" | "project";
+				};
+			};
+		};
+		responses: {
+			/** The package is updated, and live engines reloaded */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** The update failed */
 			400: {
 				headers: {
 					[name: string]: unknown;

@@ -12,7 +12,14 @@ import { join, relative } from "node:path";
 import { agentHome } from "../../platform/agent-home";
 import { writePackageEntries } from "../../platform/pi";
 import { listSkills } from "../skills";
-import { installPackage, listPackages, packageResources, setPackageResource } from "./store";
+import {
+	installPackage,
+	listPackages,
+	packageResources,
+	packageUpdates,
+	setPackageResource,
+	updatePackage,
+} from "./store";
 
 const realHome = process.env.HOME;
 let scratch: string;
@@ -142,5 +149,25 @@ describe("package resources", () => {
 				enabled: false,
 			}),
 		).rejects.toThrow(/does not provide/);
+	});
+
+	test("an update check skips a local package, and only a declared source can be updated", async () => {
+		const { home, pkg } = await localPackage("update", ["greet"]);
+		await installPackage(home.chatsDir, home, pkg, "user");
+		const source = listPackages(home.chatsDir, home)[0]?.source ?? "";
+
+		// pi's checker never asks a local source for a newer version.
+		expect(await packageUpdates(home.chatsDir, home)).toEqual([]);
+
+		// pi's updater ignores a local source, and Epsilon hands it the source it declared.
+		await updatePackage(home.chatsDir, home, source, "user");
+		expect(JSON.parse(await readFile(join(home.dir, "settings.json"), "utf8")).packages).toEqual([
+			source,
+		]);
+
+		// A source the settings do not declare never reaches a package manager.
+		await expect(updatePackage(home.chatsDir, home, "npm:not-declared", "user")).rejects.toThrow(
+			"No declared package matched that source",
+		);
 	});
 });

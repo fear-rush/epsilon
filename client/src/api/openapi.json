@@ -3804,6 +3804,47 @@
 					"path",
 					"enabled"
 				]
+			},
+			"PackageUpdateList": {
+				"type": "object",
+				"properties": {
+					"updates": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/PackageUpdate"
+						}
+					}
+				},
+				"required": [
+					"updates"
+				]
+			},
+			"PackageUpdate": {
+				"type": "object",
+				"properties": {
+					"source": {
+						"type": "string"
+					},
+					"scope": {
+						"type": "string",
+						"enum": [
+							"user",
+							"project"
+						]
+					},
+					"type": {
+						"type": "string",
+						"enum": [
+							"npm",
+							"git"
+						]
+					}
+				},
+				"required": [
+					"source",
+					"scope",
+					"type"
+				]
 			}
 		},
 		"parameters": {}
@@ -7147,6 +7188,114 @@
 					},
 					"400": {
 						"description": "The resource could not be switched",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/packages/updates": {
+			"get": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "getPackageUpdates",
+				"description": "Which declared packages have a newer npm or git version, asked of pi. A local source and a pinned version are never checked, and pi answers none when it is offline",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The packages with an update available",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PackageUpdateList"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The check failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/packages/update": {
+			"post": {
+				"tags": [
+					"settings"
+				],
+				"operationId": "updatePackage",
+				"description": "Update one declared package through pi's own updater. npm or git text is the refusal, verbatim",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"source": {
+										"type": "string",
+										"minLength": 1
+									},
+									"scope": {
+										"type": "string",
+										"enum": [
+											"user",
+											"project"
+										],
+										"default": "user"
+									}
+								},
+								"required": [
+									"source"
+								]
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "The package is updated, and live engines reloaded"
+					},
+					"400": {
+						"description": "The update failed",
 						"content": {
 							"application/json": {
 								"schema": {

@@ -7,9 +7,17 @@ import {
 	packageResourcesSchema,
 	packageResourceInputSchema,
 	packageSourceSchema as sourceSchema,
+	packageUpdateListSchema,
 } from "./contract";
 import type { PackageScope } from "./contract";
-import { installPackage, packageResources, removePackage, setPackageResource } from "./store";
+import {
+	installPackage,
+	packageResources,
+	packageUpdates,
+	removePackage,
+	setPackageResource,
+	updatePackage,
+} from "./store";
 
 const installPackageRoute = createRoute({
 	method: "post",
@@ -83,6 +91,40 @@ const setPackageResourceRoute = createRoute({
 	},
 });
 
+const packageUpdatesRoute = createRoute({
+	method: "get",
+	path: "/api/settings/packages/updates",
+	tags: ["settings"],
+	operationId: "getPackageUpdates",
+	description:
+		"Which declared packages have a newer npm or git version, asked of pi. A local source and a pinned version are never checked, and pi answers none when it is offline",
+	request: { query: settingsScopeQuerySchema },
+	responses: {
+		200: {
+			description: "The packages with an update available",
+			content: { "application/json": { schema: packageUpdateListSchema } },
+		},
+		400: { description: "The check failed", content: errorContent },
+	},
+});
+
+const updatePackageRoute = createRoute({
+	method: "post",
+	path: "/api/settings/packages/update",
+	tags: ["settings"],
+	operationId: "updatePackage",
+	description:
+		"Update one declared package through pi's own updater. npm or git text is the refusal, verbatim",
+	request: {
+		query: settingsScopeQuerySchema,
+		body: { required: true, content: { "application/json": { schema: sourceSchema } } },
+	},
+	responses: {
+		204: { description: "The package is updated, and live engines reloaded" },
+		400: { description: "The update failed", content: errorContent },
+	},
+});
+
 export const packagesRoutes = ({ home, engines }: Deps) =>
 	new OpenAPIHono()
 		.openapi(installPackageRoute, (c) => {
@@ -106,6 +148,24 @@ export const packagesRoutes = ({ home, engines }: Deps) =>
 			const { project } = c.req.valid("query");
 			return configWrite(c, engines, async () =>
 				setPackageResource(await folderFor(home, project, input.scope), home, input),
+			);
+		})
+		.openapi(packageUpdatesRoute, async (c) => {
+			const { project } = c.req.valid("query");
+			try {
+				return c.json(
+					{ updates: await packageUpdates(await settingsFolder(home, project), home) },
+					200,
+				);
+			} catch (error) {
+				return failure(c, toError(error, "The package updates could not be checked"), 400);
+			}
+		})
+		.openapi(updatePackageRoute, (c) => {
+			const { source, scope } = c.req.valid("json");
+			const { project } = c.req.valid("query");
+			return configWrite(c, engines, async () =>
+				updatePackage(await folderFor(home, project, scope), home, source, scope),
 			);
 		})
 		.openapi(removePackageRoute, (c) => {

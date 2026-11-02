@@ -37,6 +37,15 @@ export const settingsKeys = {
 		[...settingsKeys.all, "skill-file", project, root, name, path] as const,
 };
 
+/**
+ * A package update check runs npm or git, so it is its own family: a settings write
+ * must not start one. A package write invalidates it explicitly.
+ */
+export const packageUpdateKeys = {
+	all: ["package-updates"] as const,
+	list: (project: string | undefined) => [...packageUpdateKeys.all, project] as const,
+};
+
 export const readinessKeys = {
 	all: ["readiness"] as const,
 };

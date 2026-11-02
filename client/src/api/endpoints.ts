@@ -18,6 +18,7 @@ import type {
 	McpServerInput,
 	PackageResourceInput,
 	PackageResources,
+	PackageUpdate,
 	PackageView,
 	ProviderDetail,
 	ProviderImportInput,
@@ -660,4 +661,24 @@ export const setPackageResource = async (
 	input: PackageResourceInput,
 ): Promise<void> => {
 	await api.PUT("/api/settings/packages/resource", { params: scoped(project), body: input });
+};
+
+/** The packages pi's own check reports as outdated. Local and pinned sources never appear. */
+export const fetchPackageUpdates = async (
+	project: Project,
+	signal?: AbortSignal,
+): Promise<PackageUpdate[]> =>
+	body((await api.GET("/api/settings/packages/updates", { params: scoped(project), signal })).data)
+		.updates;
+
+/** Updates one declared package through pi's manager; a refusal keeps pi's text. */
+export const updatePackage = async (
+	project: Project,
+	source: string,
+	scope: PackageScope,
+): Promise<void> => {
+	await api.POST("/api/settings/packages/update", {
+		params: scoped(project),
+		body: { source, scope },
+	});
 };

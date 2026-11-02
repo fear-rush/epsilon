@@ -9,7 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { useSettingsProject, useSettingsRefresh } from "@/features/settings/queries";
+import {
+	useSettingsProject,
+	useSettingsRefresh,
+	usePackageUpdatesRefresh,
+} from "@/features/settings/queries";
 
 const FORM = "package-install-form";
 
@@ -25,12 +29,14 @@ export function PackageInstallDialog({
 }) {
 	const project = useSettingsProject();
 	const refresh = useSettingsRefresh();
+	const updatesRefresh = usePackageUpdatesRefresh();
 	const [source, setSource] = useState("");
 	const install = useMutation({
 		mutationFn: (next: string) => installPackage(project, next, scope),
 		onSuccess: () => {
 			setSource("");
 			refresh();
+			updatesRefresh();
 			onOpenChange(false);
 		},
 	});

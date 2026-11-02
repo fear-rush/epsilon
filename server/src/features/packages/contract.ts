@@ -58,3 +58,19 @@ export const packageResourcesSchema = z
 	.openapi("PackageResources");
 
 export type PackageResources = z.infer<typeof packageResourcesSchema>;
+
+/** One package pi reports a newer version for. Local and pinned sources are never checked. */
+const packageUpdateSchema = z
+	.object({
+		source: z.string(),
+		scope: packageScopeSchema,
+		/** Which updater pi would run. */
+		type: z.enum(["npm", "git"]),
+	})
+	.openapi("PackageUpdate");
+
+export type PackageUpdate = z.infer<typeof packageUpdateSchema>;
+
+export const packageUpdateListSchema = z
+	.object({ updates: z.array(packageUpdateSchema) })
+	.openapi("PackageUpdateList");
