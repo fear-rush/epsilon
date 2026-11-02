@@ -243,3 +243,78 @@ describe("a compaction", () => {
 		expect(retried.notices.at(-1)?.text).toContain("Retrying the summary (attempt 1 of 3 in 2s)");
 	});
 });
+
+describe("a nested tool call", () => {
+	const parentCall = {
+		type: "toolCall",
+		id: "call-1",
+		name: "codemode",
+		arguments: { code: "await tools.bash({ command: 'ls' })" },
+	} satisfies AssistantMessage["content"][number];
+	const assistant = assistantMessage([parentCall], "stop");
+
+	test("stays inside its parent's card while it streams", () => {
+		const state = feed([
+			{ type: "message_end", message: assistant },
+			{
+				type: "tool_execution_start",
+				toolCallId: "call-1",
+				toolName: "codemode",
+				args: parentCall.arguments,
+			},
+			{
+				type: "tool_execution_start",
+				toolCallId: "call-1/1",
+				toolName: "bash",
+				args: { command: "ls" },
+				parentToolCallId: "call-1",
+			},
+		]);
+		const rows = transcript(state).filter((row) => row.kind === "tool");
+		expect(rows).toHaveLength(1);
+		const parent = rows[0];
+		if (parent?.kind !== "tool") throw new Error("expected the parent row");
+		expect(parent.run.toolName).toBe("codemode");
+		expect(parent.children.map((child) => child.run.toolName)).toEqual(["bash"]);
+	});
+
+	test("is kept from pi's record on the parent's result", () => {
+		const result = {
+			role: "toolResult",
+			toolCallId: "call-1",
+			toolName: "codemode",
+			content: [{ type: "text", text: "done" }],
+			isError: false,
+			timestamp: 4,
+			nestedCalls: {
+				calls: [
+					{
+						id: "call-1/1",
+						name: "bash",
+						arguments: { command: "ls" },
+						status: "error",
+						durationMs: 12,
+						error: "ls: no such directory",
+					},
+				],
+				complete: true,
+			},
+		} satisfies Extract<ConversationMessage, { role: "toolResult" }>;
+		// A reattach is where pi's record is read: the snapshot rebuilds the tools.
+		const base = snapshotOf("./fixtures/session-snapshot.json");
+		if (base.t !== "snapshot") throw new Error("expected a snapshot fixture");
+		const state = reduce(emptyConversation, {
+			t: "snapshot",
+			sessionId,
+			snapshot: { ...base.snapshot, messages: [assistant, result] },
+		});
+		const rows = transcript(state).filter((row) => row.kind === "tool");
+		expect(rows).toHaveLength(1);
+		const parent = rows[0];
+		if (parent?.kind !== "tool") throw new Error("expected the parent row");
+		const child = parent.children[0];
+		expect(child?.run.toolName).toBe("bash");
+		expect(child?.run.status).toBe("error");
+		expect(child?.run.note).toBe("ls: no such directory");
+	});
+});

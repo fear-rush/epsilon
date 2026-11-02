@@ -15,6 +15,7 @@ import { tokenLabel } from "./format";
 import type {
 	ConversationMessage,
 	ConversationState,
+	NestedToolRun,
 	Notice,
 	StreamingTurn,
 	ToolRun,
@@ -26,9 +27,12 @@ type AssistantSegment = { kind: "text"; text: string } | { kind: "thinking"; tex
 export type TranscriptRow =
 	| { kind: "user"; key: string; text: string; images: { data: string; mimeType: string }[] }
 	| { kind: "assistant"; key: string; segments: AssistantSegment[]; streaming: boolean }
-	| { kind: "tool"; key: string; run: ToolRun }
+	| { kind: "tool"; key: string; run: ToolRun; children: ToolRowNode[] }
 	| { kind: "summary"; key: string; label: string; text: string }
 	| { kind: "notice"; key: string; notice: Notice };
+
+/** One tool card and the calls it made, which it draws inside itself. */
+export type ToolRowNode = { run: ToolRun; children: ToolRowNode[] };
 
 type UserMessage = Extract<ConversationMessage, { role: "user" }>;
 type AssistantMessage = Extract<ConversationMessage, { role: "assistant" }>;
@@ -118,6 +122,36 @@ const stopRowOf = (message: AssistantMessage, index: number): TranscriptRow | un
 	return undefined;
 };
 
+/**
+ * A call's own cards: the ones streaming in with its id as their parent, or, once
+ * the run is recorded, the calls pi wrote on its result. pi records nested calls
+ * flat, with `<caller>/<n>` ids, so a recorded child gets no children of its own.
+ */
+const nestedNodes = (run: ToolRun, tools: ToolRun[], seen: ReadonlySet<string>): ToolRowNode[] => {
+	const live = tools.filter(
+		(tool) => tool.parentToolCallId === run.toolCallId && !seen.has(tool.toolCallId),
+	);
+	if (live.length > 0) {
+		return live.map((child) => {
+			const next = new Set(seen).add(child.toolCallId);
+			return { run: child, children: nestedNodes(child, tools, next) };
+		});
+	}
+	return (run.nested ?? []).map((call) => ({ run: recordedRun(call), children: [] }));
+};
+
+/** A recorded nested call as the tool row draws it; pi keeps no output for these. */
+const recordedRun = (call: NestedToolRun): ToolRun => ({
+	toolCallId: call.toolCallId,
+	toolName: call.toolName,
+	args: call.args,
+	output: "",
+	images: [],
+	status: call.status === "unfinished" ? "error" : call.status,
+	durationMs: call.durationMs,
+	note: call.status === "unfinished" ? "Unfinished when the calling tool ended." : call.error,
+});
+
 const toolRow = (call: ToolCall, key: string, tools: ToolRun[]): TranscriptRow => {
 	const run = tools.find((tool) => tool.toolCallId === call.id);
 	if (run === undefined) {
@@ -126,6 +160,7 @@ const toolRow = (call: ToolCall, key: string, tools: ToolRun[]): TranscriptRow =
 		const row: TranscriptRow = {
 			kind: "tool",
 			key,
+			children: [],
 			run: {
 				toolCallId: call.id,
 				toolName: call.name,
@@ -138,9 +173,12 @@ const toolRow = (call: ToolCall, key: string, tools: ToolRun[]): TranscriptRow =
 		toolRowsByCall.set(call, row);
 		return row;
 	}
+	const children = nestedNodes(run, tools, new Set([run.toolCallId]));
+	// A card with children redraws as they arrive, so it keeps no cached row.
+	if (children.length > 0) return { kind: "tool", key, run, children };
 	const cached = toolRowsByRun.get(run);
 	if (cached !== undefined) return cached;
-	const row: TranscriptRow = { kind: "tool", key, run };
+	const row: TranscriptRow = { kind: "tool", key, run, children: [] };
 	toolRowsByRun.set(run, row);
 	return row;
 };
@@ -207,6 +245,7 @@ const otherRowOf = (message: OtherMessage, key: string): TranscriptRow => {
 			return {
 				kind: "tool",
 				key,
+				children: [],
 				run: {
 					toolCallId: key,
 					toolName: "bash",

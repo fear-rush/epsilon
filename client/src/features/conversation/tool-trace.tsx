@@ -8,7 +8,7 @@ import {
 	WrenchIcon,
 } from "lucide-react";
 import { bashArgsSchema, editArgsSchema, readArgsSchema, writeArgsSchema } from "shared";
-import type { ToolRun } from "shared";
+import type { ToolRowNode, ToolRun } from "shared";
 
 import {
 	CodeBlock,
@@ -110,7 +110,7 @@ const toolTitle = (run: ToolRun, args: ToolArgs | undefined): string => {
 	}
 };
 
-export function ToolTrace({ run }: { run: ToolRun }) {
+export function ToolTrace({ run, nested = [] }: { run: ToolRun; nested?: ToolRowNode[] }) {
 	const args = argsOf(run);
 	const body = toolBody(run, args);
 	const line = (
@@ -128,7 +128,16 @@ export function ToolTrace({ run }: { run: ToolRun }) {
 		run.note === undefined ? null : (
 			<p className="px-1 text-meta whitespace-pre-wrap text-muted-foreground">{run.note}</p>
 		);
-	if (body === null && note === null) return <Trace>{line}</Trace>;
+	// Calls this tool made stay inside its card, never as rows of their own.
+	const childCards =
+		nested.length === 0 ? null : (
+			<div className="flex flex-col gap-2 px-1">
+				{nested.map((child) => (
+					<ToolTrace key={child.run.toolCallId} run={child.run} nested={child.children} />
+				))}
+			</div>
+		);
+	if (body === null && note === null && childCards === null) return <Trace>{line}</Trace>;
 
 	return (
 		<Trace>
@@ -137,6 +146,7 @@ export function ToolTrace({ run }: { run: ToolRun }) {
 				<TraceCollapsibleContent>
 					{note}
 					{body}
+					{childCards}
 				</TraceCollapsibleContent>
 			</TraceCollapsible>
 		</Trace>

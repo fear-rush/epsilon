@@ -39,6 +39,21 @@ type ToolResultPart = Extract<
 	{ type: "image" }
 >;
 
+/**
+ * A call a tool made while it ran (`ctx.executeTool()`), as pi records it on the
+ * calling tool's result. pi bounds this record: arguments over its size limit are
+ * omitted, and a call still running when its parent finished is `unfinished`.
+ */
+export type NestedToolRun = {
+	toolCallId: string;
+	toolName: string;
+	args?: ToolCallArguments;
+	status: "ok" | "error" | "unfinished";
+	durationMs?: number;
+	/** pi's own error text, truncated by pi. */
+	error?: string;
+};
+
 export type ToolRun = {
 	toolCallId: string;
 	toolName: string;
@@ -51,6 +66,10 @@ export type ToolRun = {
 	/** Why the row has this status when the tool never said: a run that ended, for one. */
 	note?: string;
 	durationMs?: number;
+	/** The call that made this one, on a run that is streaming from a nested event. */
+	parentToolCallId?: string;
+	/** Calls this tool made, which its own card draws instead of a top-level row. */
+	nested?: NestedToolRun[];
 };
 
 /** Assistant text that has arrived but has no authoritative message yet. */

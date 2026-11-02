@@ -10,6 +10,7 @@ import { costLabel, tokenLabel } from "./format";
 import type {
 	ConversationMessage,
 	ConversationState,
+	NestedToolRun,
 	Notice,
 	StreamingBlock,
 	StreamingTurn,
@@ -80,7 +81,28 @@ const withResult = (
 		output: textOf(parts),
 		images: imagesOf(parts),
 		status: message.isError ? "error" : "ok",
+		nested: nestedOf(message),
 	});
+};
+
+/**
+ * The calls a tool made while it ran are recorded on its result, so a reload or a
+ * reattach keeps them. pi leaves results out of the record by design: only the
+ * call, its arguments, its status and pi's truncated error text survive.
+ */
+const nestedOf = (
+	message: Extract<ConversationMessage, { role: "toolResult" }>,
+): NestedToolRun[] | undefined => {
+	const calls = message.nestedCalls?.calls;
+	if (calls === undefined || calls.length === 0) return undefined;
+	return calls.map((call) => ({
+		toolCallId: call.id,
+		toolName: call.name,
+		args: call.arguments,
+		status: call.status,
+		durationMs: call.durationMs,
+		error: call.error,
+	}));
 };
 
 /**
@@ -320,6 +342,7 @@ export const reduceEvent = (
 				tools: upsertTool(state.tools, event.toolCallId, {
 					toolName: event.toolName,
 					args: event.args,
+					parentToolCallId: event.parentToolCallId,
 				}),
 			};
 		case "tool_execution_update": {
@@ -329,6 +352,7 @@ export const reduceEvent = (
 				tools: upsertTool(state.tools, event.toolCallId, {
 					toolName: event.toolName,
 					output: textOf(parts),
+					parentToolCallId: event.parentToolCallId,
 				}),
 			};
 		}
@@ -342,6 +366,7 @@ export const reduceEvent = (
 					images: imagesOf(parts),
 					status: event.isError ? "error" : "ok",
 					durationMs: event.durationMs,
+					parentToolCallId: event.parentToolCallId,
 				}),
 			};
 		}

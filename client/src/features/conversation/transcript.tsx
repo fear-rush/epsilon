@@ -250,7 +250,7 @@ function Row({ row }: { row: TranscriptRow }) {
 				</Message>
 			);
 		case "tool":
-			return <ToolTrace run={row.run} />;
+			return <ToolTrace run={row.run} nested={row.children} />;
 		case "summary":
 			return (
 				<Fragment>

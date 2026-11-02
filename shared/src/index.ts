@@ -125,6 +125,7 @@ export { isVisibleMessage } from "./conversation/state";
 export type {
 	ConversationMessage,
 	ConversationState,
+	NestedToolRun,
 	Notice,
 	SnapshotMessage,
 	StreamingTurn,
@@ -141,7 +142,7 @@ export {
 	readArgsSchema,
 	writeArgsSchema,
 } from "./conversation/tools";
-export type { TranscriptRow } from "./conversation/selectors";
+export type { ToolRowNode, TranscriptRow } from "./conversation/selectors";
 export type { JsonAgentSessionEvent } from "./pi";
 export {
 	IMPORT_MAX_FILES,
