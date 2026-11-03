@@ -2,7 +2,7 @@ import { join } from "node:path";
 
 import { Context, Effect, Layer, Ref, Schema } from "effect";
 
-import type { GeneralProblem, GeneralSettings, GeneralView } from "#protocol/config/general";
+import type { EpsilonProblem, EpsilonValues, EpsilonView } from "#protocol/config/general";
 import { SettingRefused } from "#protocol/errors";
 
 import { AgentHome } from "./platform/agent-home.ts";
@@ -28,13 +28,13 @@ const defaultMaxRunning = 8;
 const minimumMaxRunning = 1;
 
 type State = {
-	readonly problems: ReadonlyArray<GeneralProblem>;
-	readonly settings: GeneralSettings;
+	readonly problems: ReadonlyArray<EpsilonProblem>;
+	readonly settings: EpsilonValues;
 };
 
 export type EpsilonSettingsApi = {
 	/** What the file holds, and what could not be used from it. */
-	readonly view: Effect.Effect<GeneralView>;
+	readonly view: Effect.Effect<EpsilonView>;
 	/** The cap as the file currently states it, read at each engine spawn. */
 	readonly maxRunning: Effect.Effect<number>;
 	readonly setMaxRunning: (maxRunning: number) => Effect.Effect<void, SettingRefused>;

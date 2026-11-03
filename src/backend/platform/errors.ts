@@ -51,3 +51,11 @@ export class TimedOut extends Schema.TaggedError<TimedOut, { readonly brand: uni
 		afterMs: Schema.Finite,
 	},
 ) {}
+
+/** pi's model runtime refused to build: a broken `models.json` or `auth.json`. */
+export class RuntimeUnavailable extends Schema.TaggedError<
+	RuntimeUnavailable,
+	{ readonly brand: unique symbol }
+>()("RuntimeUnavailable", {
+	reason: Schema.String,
+}) {}

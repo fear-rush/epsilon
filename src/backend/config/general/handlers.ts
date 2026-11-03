@@ -1,25 +1,24 @@
 import { Effect } from "effect";
-import type { Layer } from "effect";
-import type { Rpc, RpcGroup } from "effect/rpc";
 
 import { GeneralRpcs } from "#protocol/config/general";
 
 import { EpsilonSettings } from "../../settings.ts";
+import { GeneralStore } from "./store.ts";
 
 /**
- * Settings → General over the socket. The handlers answer with the service's own shapes;
+ * Settings → General over the socket. The handlers answer with the services' own shapes;
  * the decoding and the tagged errors are the group's.
  */
-export const GeneralHandlersLive: Layer.Layer<
-	Rpc.ToHandler<RpcGroup.Rpcs<typeof GeneralRpcs>>,
-	never,
-	EpsilonSettings
-> = GeneralRpcs.toLayer(
+export const GeneralHandlersLive = GeneralRpcs.toLayer(
 	Effect.gen(function* () {
-		const settings = yield* EpsilonSettings;
+		const epsilon = yield* EpsilonSettings;
+		const general = yield* GeneralStore;
 		return {
-			"config.general.read": () => settings.view,
-			"config.general.setMaxRunning": ({ maxRunning }) => settings.setMaxRunning(maxRunning),
+			"config.general.read": () => epsilon.view,
+			"config.general.setDefaultModel": (model) => general.setDefaultModel(model),
+			"config.general.setMaxRunning": ({ maxRunning }) => epsilon.setMaxRunning(maxRunning),
+			"config.general.settings": ({ folder }) => general.read(folder),
+			"config.general.writeSetting": ({ key, value }) => general.write(key, value),
 		};
 	}),
 );
