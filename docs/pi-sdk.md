@@ -421,6 +421,33 @@ frontmatter `description`, else the body's first line. A theme is a `.json` file
 pi applies exactly one. The session's `promptTemplates` is what the palette lists, and
 `prompt()` expands `/name args` into the message it sends.
 
+## Context files and the system prompt
+
+What pi loads before a request, read from `dist/core/resource-loader.js`
+(1.4.0):
+
+- **Context files:** `loadProjectContextFiles({ cwd, agentDir })` is a root export. It
+  reads one file per folder, trying `AGENTS.override.md`, `AGENTS.md`, `AGENTS.MD`,
+  `CLAUDE.md`, `CLAUDE.MD` in that order, starting with the agent directory and then
+  every ancestor of `cwd` from the root down to `cwd`. They load regardless of project
+  trust, so a folder's context files apply before anything is trusted. A nested
+  `git worktree` whose own copy shadows the main repository's file is skipped.
+  `ResourceLoader.getAgentsFiles()` answers the same list from inside an engine.
+- **The system prompt file:** `<cwd>/.pi/SYSTEM.md` when the project is trusted, else
+  `<agentDir>/SYSTEM.md`. `APPEND_SYSTEM.md` is discovered the same way, and only one
+  of the two is used. Both discoveries are private methods on `DefaultResourceLoader`,
+  reachable only by calling `reload()`, which resolves packages with no `onMissing`
+  handler and therefore installs a missing one. A reader that must not install
+  reproduces the four file checks instead.
+- **The prompt itself:** `agent.systemPrompt` is the exact text the model receives,
+  extensions' `before_agent_start` substitutions included. `agent.promptTemplates` is
+  pi's own parse of the templates, extension-contributed ones included.
+- **Frontmatter:** `parseFrontmatter` and `stripFrontmatter` are root exports.
+  `loadPromptTemplates` is not, so a reader outside an engine parses a template file
+  itself and repeats pi's two fallbacks: the name is the file's without `.md`, and the
+  description is the frontmatter `description`, else the body's first line cut at 60
+  characters.
+
 ## API family paths
 
 pi's clients append a fixed path to a provider's `baseUrl`. Verified against the

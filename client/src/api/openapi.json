@@ -480,6 +480,441 @@
 					"name"
 				]
 			},
+			"ContextView": {
+				"type": "object",
+				"properties": {
+					"folder": {
+						"type": "string"
+					},
+					"project": {
+						"type": [
+							"string",
+							"null"
+						]
+					},
+					"live": {
+						"type": "boolean"
+					},
+					"liveSessionId": {
+						"type": "string"
+					},
+					"contextFiles": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"path": {
+									"type": "string"
+								},
+								"directory": {
+									"type": "string"
+								},
+								"order": {
+									"type": "integer"
+								}
+							},
+							"required": [
+								"path",
+								"directory",
+								"order"
+							]
+						}
+					},
+					"systemPrompt": {
+						"$ref": "#/components/schemas/ContextSystemPrompt"
+					},
+					"skills": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/SkillView"
+						}
+					},
+					"prompts": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ContextPrompt"
+						}
+					},
+					"extensions": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ContextExtension"
+						}
+					},
+					"packages": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ContextPackage"
+						}
+					},
+					"tools": {
+						"type": "object",
+						"properties": {
+							"active": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							},
+							"all": {
+								"type": "array",
+								"items": {
+									"$ref": "#/components/schemas/ContextTool"
+								}
+							}
+						},
+						"required": [
+							"active",
+							"all"
+						]
+					},
+					"contextUsage": {
+						"type": "object",
+						"properties": {
+							"tokens": {
+								"type": "integer"
+							},
+							"contextWindow": {
+								"type": "integer"
+							},
+							"percent": {
+								"type": "number"
+							}
+						},
+						"required": [
+							"tokens",
+							"contextWindow",
+							"percent"
+						]
+					},
+					"problems": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ContextProblem"
+						}
+					}
+				},
+				"required": [
+					"folder",
+					"project",
+					"live",
+					"contextFiles",
+					"systemPrompt",
+					"skills",
+					"prompts",
+					"extensions",
+					"packages",
+					"problems"
+				]
+			},
+			"ContextSystemPrompt": {
+				"type": "object",
+				"properties": {
+					"source": {
+						"type": "string",
+						"enum": [
+							"project",
+							"agent",
+							"default"
+						]
+					},
+					"replacePath": {
+						"type": "string"
+					},
+					"appendPaths": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"text": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"source",
+					"appendPaths"
+				]
+			},
+			"SkillView": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"folder": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"filePath": {
+						"type": "string"
+					},
+					"dir": {
+						"type": "string"
+					},
+					"origin": {
+						"$ref": "#/components/schemas/SkillOrigin"
+					},
+					"packageSource": {
+						"type": "string"
+					},
+					"scope": {
+						"type": "string",
+						"enum": [
+							"user",
+							"project"
+						]
+					},
+					"editable": {
+						"type": "boolean"
+					},
+					"root": {
+						"$ref": "#/components/schemas/SkillRoot"
+					},
+					"modelInvocation": {
+						"type": "boolean"
+					},
+					"status": {
+						"$ref": "#/components/schemas/SkillStatus"
+					},
+					"shadowedBy": {
+						"type": "string"
+					},
+					"message": {
+						"type": "string"
+					},
+					"toggle": {
+						"$ref": "#/components/schemas/SkillToggle"
+					},
+					"warnings": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					}
+				},
+				"required": [
+					"name",
+					"folder",
+					"description",
+					"filePath",
+					"dir",
+					"origin",
+					"scope",
+					"editable",
+					"modelInvocation",
+					"status",
+					"toggle",
+					"warnings"
+				]
+			},
+			"SkillOrigin": {
+				"type": "string",
+				"enum": [
+					"home",
+					"user-agents",
+					"project-pi",
+					"project-agents",
+					"settings-path",
+					"package",
+					"extension"
+				]
+			},
+			"SkillRoot": {
+				"type": "string",
+				"enum": [
+					"home",
+					"user-agents",
+					"project-pi",
+					"project-agents"
+				]
+			},
+			"SkillStatus": {
+				"type": "string",
+				"enum": [
+					"active",
+					"manual",
+					"disabled",
+					"shadowed",
+					"invalid",
+					"untrusted"
+				]
+			},
+			"SkillToggle": {
+				"type": "string",
+				"enum": [
+					"settings",
+					"package",
+					"none"
+				]
+			},
+			"ContextPrompt": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"argumentHint": {
+						"type": "string"
+					},
+					"path": {
+						"type": "string"
+					},
+					"origin": {
+						"$ref": "#/components/schemas/ContextResourceOrigin"
+					},
+					"enabled": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"name",
+					"description",
+					"path",
+					"origin",
+					"enabled"
+				]
+			},
+			"ContextResourceOrigin": {
+				"type": "string",
+				"enum": [
+					"home",
+					"project",
+					"settings-path",
+					"package",
+					"extension"
+				]
+			},
+			"ContextExtension": {
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"origin": {
+						"$ref": "#/components/schemas/ContextResourceOrigin"
+					},
+					"enabled": {
+						"type": "boolean"
+					},
+					"errors": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"warnings": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					}
+				},
+				"required": [
+					"path",
+					"name",
+					"origin",
+					"enabled",
+					"errors",
+					"warnings"
+				]
+			},
+			"ContextPackage": {
+				"type": "object",
+				"properties": {
+					"source": {
+						"type": "string"
+					},
+					"scope": {
+						"type": "string",
+						"enum": [
+							"user",
+							"project"
+						]
+					},
+					"resources": {
+						"$ref": "#/components/schemas/ContextPackageResources"
+					}
+				},
+				"required": [
+					"source",
+					"scope",
+					"resources"
+				]
+			},
+			"ContextPackageResources": {
+				"type": "object",
+				"properties": {
+					"extensions": {
+						"type": "integer"
+					},
+					"skills": {
+						"type": "integer"
+					},
+					"prompts": {
+						"type": "integer"
+					},
+					"themes": {
+						"type": "integer"
+					}
+				},
+				"required": [
+					"extensions",
+					"skills",
+					"prompts",
+					"themes"
+				]
+			},
+			"ContextTool": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"namespace": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"name",
+					"description"
+				]
+			},
+			"ContextProblem": {
+				"type": "object",
+				"properties": {
+					"kind": {
+						"type": "string",
+						"enum": [
+							"settings",
+							"skill",
+							"prompt",
+							"extension"
+						]
+					},
+					"message": {
+						"type": "string"
+					},
+					"path": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"kind",
+					"message"
+				]
+			},
 			"SettingsSnapshot": {
 				"type": "object",
 				"properties": {
@@ -1286,120 +1721,6 @@
 							"message"
 						]
 					}
-				]
-			},
-			"SkillView": {
-				"type": "object",
-				"properties": {
-					"name": {
-						"type": "string"
-					},
-					"folder": {
-						"type": "string"
-					},
-					"description": {
-						"type": "string"
-					},
-					"filePath": {
-						"type": "string"
-					},
-					"dir": {
-						"type": "string"
-					},
-					"origin": {
-						"$ref": "#/components/schemas/SkillOrigin"
-					},
-					"packageSource": {
-						"type": "string"
-					},
-					"scope": {
-						"type": "string",
-						"enum": [
-							"user",
-							"project"
-						]
-					},
-					"editable": {
-						"type": "boolean"
-					},
-					"root": {
-						"$ref": "#/components/schemas/SkillRoot"
-					},
-					"modelInvocation": {
-						"type": "boolean"
-					},
-					"status": {
-						"$ref": "#/components/schemas/SkillStatus"
-					},
-					"shadowedBy": {
-						"type": "string"
-					},
-					"message": {
-						"type": "string"
-					},
-					"toggle": {
-						"$ref": "#/components/schemas/SkillToggle"
-					},
-					"warnings": {
-						"type": "array",
-						"items": {
-							"type": "string"
-						}
-					}
-				},
-				"required": [
-					"name",
-					"folder",
-					"description",
-					"filePath",
-					"dir",
-					"origin",
-					"scope",
-					"editable",
-					"modelInvocation",
-					"status",
-					"toggle",
-					"warnings"
-				]
-			},
-			"SkillOrigin": {
-				"type": "string",
-				"enum": [
-					"home",
-					"user-agents",
-					"project-pi",
-					"project-agents",
-					"settings-path",
-					"package",
-					"extension"
-				]
-			},
-			"SkillRoot": {
-				"type": "string",
-				"enum": [
-					"home",
-					"user-agents",
-					"project-pi",
-					"project-agents"
-				]
-			},
-			"SkillStatus": {
-				"type": "string",
-				"enum": [
-					"active",
-					"manual",
-					"disabled",
-					"shadowed",
-					"invalid",
-					"untrusted"
-				]
-			},
-			"SkillToggle": {
-				"type": "string",
-				"enum": [
-					"settings",
-					"package",
-					"none"
 				]
 			},
 			"ForeignSkillView": {
@@ -4760,6 +5081,50 @@
 					},
 					"400": {
 						"description": "The parent or the folder name is invalid",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Problem"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/context": {
+			"get": {
+				"tags": [
+					"context"
+				],
+				"operationId": "readContext",
+				"description": "Everything pi loads for a folder before the model answers: context files, the system prompt source, skills, prompt templates, extensions and packages, plus the live prompt and tools when a chat is open",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"description": "A trusted project folder. Absent means the agent home alone"
+						},
+						"required": false,
+						"description": "A trusted project folder. Absent means the agent home alone",
+						"name": "project",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "What steers the model in this folder, as pi resolves it now",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ContextView"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The folder could not be read",
 						"content": {
 							"application/json": {
 								"schema": {

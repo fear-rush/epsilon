@@ -7,6 +7,7 @@ import type { PackageView, SkillRoot } from "@/api/types";
 
 import { packageUpdateKeys, providerLoginKeys, readinessKeys, settingsKeys } from "@/api/keys";
 import {
+	fetchContext,
 	fetchMcpRaw,
 	fetchPackageResources,
 	fetchPackageUpdates,
@@ -34,6 +35,18 @@ export const settingsQuery = (project: string | undefined) =>
 	queryOptions({
 		queryKey: settingsKeys.snapshot(project),
 		queryFn: ({ signal }) => fetchSettings(project, signal),
+		staleTime: SETTINGS_STALE_MS,
+	});
+
+/**
+ * Everything pi loads for the folder before the model answers, plus what an open chat
+ * adds. It is read beside the Settings snapshot, not from it, because a section that
+ * needs it alone must not parse every other file.
+ */
+export const contextQuery = (project: string | undefined) =>
+	queryOptions({
+		queryKey: settingsKeys.context(project),
+		queryFn: ({ signal }) => fetchContext(project, signal),
 		staleTime: SETTINGS_STALE_MS,
 	});
 

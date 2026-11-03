@@ -7,6 +7,11 @@ import type { components } from "./schema.gen";
 type Schemas = components["schemas"];
 
 export type BuiltinProvider = Schemas["BuiltinProvider"];
+export type ContextExtension = Schemas["ContextExtension"];
+export type ContextPackage = Schemas["ContextPackage"];
+export type ContextProblem = Schemas["ContextProblem"];
+export type ContextPrompt = Schemas["ContextPrompt"];
+export type ContextView = Schemas["ContextView"];
 export type DefaultModel = Schemas["DefaultModel"];
 export type ExportedSession = Schemas["ExportedSession"];
 export type ExportFormat = Schemas["ExportFormat"];

@@ -7,6 +7,7 @@ import type { MiddlewareHandler } from "hono";
 import { z } from "zod";
 
 import type { Deps } from "./deps";
+import { contextRoutes } from "./features/context/routes";
 import { generalRoutes } from "./features/general/routes";
 import { mcpRoutes } from "./features/mcp/routes";
 import { mcpRegistryRoutes } from "./features/mcp-registry/routes";
@@ -70,6 +71,7 @@ export const mountRoutes = (deps: Deps, contractId: () => string) => {
 	app.route("/", readinessRoutes(deps));
 	app.route("/", sessionsRoutes(deps));
 	app.route("/", projectsRoutes(deps));
+	app.route("/", contextRoutes(deps));
 	app.route("/", settingsRoutes(deps));
 	app.route("/", generalRoutes(deps));
 	app.route("/", providersRoutes(deps));

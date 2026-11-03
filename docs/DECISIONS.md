@@ -609,6 +609,39 @@ is terminal colors. A page that edits config with no visible effect is worse tha
 the file. Not: a path editor, a theme picker, or a second list of templates beside the
 composer palette.
 
+## Context panel
+
+Settings, then Context is read-only. It names every file that steers the model in a
+folder and says what pi decided about it: the context files in pi's order, which
+`SYSTEM.md` replaces pi's prompt, the skills with their status, the prompt templates,
+the extensions and the packages with what each provides. Nothing on the page is
+editable. pi offers no API for editing a context file, and Epsilon has no editor for an
+arbitrary path, so the page names the file and the operator edits it where they already
+do.
+
+Two answers are distinguished and never merged silently. With no chat open the read is
+what pi would load from the files. With a chat open the exact prompt, the tool set, the
+context usage, the extension-discovered resources and an extension's load errors come
+from that engine, and the page says which answer it is showing. Those fields do not
+exist in a file, so a file-only answer says so instead of drawing an empty list as if
+nothing existed.
+
+The read never installs anything. pi's `DefaultResourceLoader.reload()` resolves
+packages with no `onMissing` handler, which installs a missing package, so the panel
+uses the resolver with `skip` and reads `SYSTEM.md` and `APPEND_SYSTEM.md` itself the
+way pi's own discovery does. The cost is that a file can be read twice; the alternative
+is a network write from a page view.
+
+`/session` carries one sentence of the same answer, so "what is in this chat's context"
+does not need the page open.
+
+Why: the terminal prints what it loaded at startup, and the dashboard showed none of it,
+so an operator could not tell whether their `AGENTS.md` was in effect or an extension
+had failed to load.
+
+Not: editing a context file from the panel. A second copy of the prompt text. Building
+an engine to answer a read.
+
 ## Default extensions
 
 Epsilon ships its own defaults (a permission guard, an ask-question flow) as code,

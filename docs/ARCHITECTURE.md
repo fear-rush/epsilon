@@ -14,6 +14,10 @@ decisions behind it read [DECISIONS.md](DECISIONS.md); for what pi exposes read
 - **Agent configuration.** Providers, models, MCP servers, skills, packages and
   general settings, written to pi's documented files and exporters, plus readiness
   (does the home hold a usable model).
+- **Context.** What pi loads for a folder before the model answers: the context files,
+  the system prompt's source, skills, prompt templates, extensions and packages, plus
+  the prompt and tools of an open chat. Read-only, and read from pi's own loaders
+  rather than re-derived.
 
 Server features, client features and settings sections carry the same names, so a
 concept is found by name in every workspace.

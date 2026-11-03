@@ -13,8 +13,10 @@ import {
 	SessionManager,
 	SettingsManager,
 	hasTrustRequiringProjectResources,
+	loadProjectContextFiles,
 	loadSkills,
 	loadSkillsFromDir,
+	parseFrontmatter,
 } from "@earendil-works/pi-coding-agent";
 import type {
 	LoadSkillsResult,
@@ -30,16 +32,37 @@ export type {
 	LoadExtensionsResult,
 	ModelRuntime,
 	PackageSource,
+	PathMetadata,
 	ProjectTrustContext,
 	ProjectTrustEvent,
 	ProjectTrustEventResult,
 	ProjectTrustHandler,
+	PromptTemplate,
 	ProviderModelConfig,
+	ResolvedPaths,
 	ResolvedResource,
 	ResourceDiagnostic,
 	SettingsManager,
 	Skill,
 } from "@earendil-works/pi-coding-agent";
+
+/*
+ * The context files pi loads before a request: every `AGENTS.md`/`CLAUDE.md` from
+ * the agent home down to `cwd`, in the order pi applies them. pi's loader also
+ * answers this, but only after `reload()`, which installs a missing package; a
+ * read must not touch the network.
+ */
+export { loadProjectContextFiles };
+
+/** pi's own frontmatter parser, for the prompt templates a read has to label itself. */
+export { parseFrontmatter };
+
+/**
+ * The prefix of pi's synthetic paths, such as `builtin:mcp`. pi keeps the constant
+ * inside `core/source-info.js` and re-exports only its helper, so the documented
+ * spelling is named here once.
+ */
+export const BUILTIN_PATH_PREFIX = "builtin:";
 
 /*
  * The sign-in vocabulary, read from `ModelRuntime.login()`'s own signature. pi

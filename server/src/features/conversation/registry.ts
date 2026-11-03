@@ -25,6 +25,7 @@ import { placeOf, trustedProjectFolder } from "../projects";
 import type { SessionHost } from "./host/host";
 import { withHost } from "./host/host";
 import { LiveSession } from "./session";
+import type { LiveContext } from "./session";
 import type { ExportedSession, ExportFormat } from "./commands/export";
 import type { UiHost } from "./ui-context";
 
@@ -51,6 +52,9 @@ type Location = { cwd: string; file: string | undefined; place: Place };
 
 /** What the open engines in one folder added at runtime, and how many answered. */
 type ExtensionSkills = { engines: number; skills: Skill[] };
+
+/** The live context of one folder: how many chats are open, and the first one's answer. */
+type FolderContext = { engines: number; live: LiveContext | undefined };
 
 /**
  * What a copy answers: the new session's id, or why pi made no copy. Only a refusal
@@ -137,6 +141,28 @@ export class SessionRegistry {
 			}
 		}
 		return { engines, skills };
+	}
+
+	/**
+	 * What the live engines in one folder say about their context. `engines` counts them:
+	 * two chats in a folder each hold their own prompt and tool set, so the first open
+	 * one answers and names itself.
+	 */
+	contextLive(folder: string): FolderContext {
+		const target = resolve(folder);
+		const answered: LiveContext[] = [];
+		let engines = 0;
+		for (const session of this.sessions.values()) {
+			if (!session.isOpen || resolve(session.folder) !== target) continue;
+			engines += 1;
+			try {
+				const live = session.contextLive();
+				if (live !== undefined) answered.push(live);
+			} catch {
+				// A session mid-reload answers on the next read; the panel must not fail.
+			}
+		}
+		return { engines, live: answered[0] };
 	}
 
 	/** Every session this server holds an engine for, for the list badges. */

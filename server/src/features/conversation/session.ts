@@ -31,7 +31,7 @@ import { MCP_DEFAULT_EXPOSURE, MCP_RESOURCE_TOOL_NAMES, mcpExposureSchema } from
 
 import type { AgentHome } from "../../platform/agent-home";
 import { EXTENSION_RESOURCE_SOURCE, globalSettings } from "../../platform/pi";
-import type { Skill } from "../../platform/pi";
+import type { LoadExtensionsResult, PromptTemplate, Skill } from "../../platform/pi";
 import type { McpAttention, McpLive } from "../mcp";
 import { mcpLiveOf, readMcpAttention } from "../mcp";
 import { runCommand } from "./commands";
@@ -64,6 +64,28 @@ const CACHE_WARM_LAG_MS = 1_000;
 /** pi's model scope for this home; null means every model is offered. */
 const patternsOf = (home: AgentHome): string[] | null =>
 	globalSettings(home).getEnabledModels() ?? null;
+
+/**
+ * What one live engine says about its context, which no file can answer: the prompt
+ * pi built, the tools it offers, and the extension set it loaded. `features/context`
+ * merges these over the file-based answer.
+ */
+export type LiveContext = {
+	sessionId: string;
+	/** The exact prompt the model receives for the next turn. */
+	systemPrompt: string;
+	tools: {
+		/** The names pi made active; an inactive tool is offered but cannot be called. */
+		active: string[];
+		all: { name: string; description: string; namespace?: string }[];
+	};
+	/** Absent while pi cannot count the window: right after a compaction, until a reply. */
+	contextUsage?: { tokens: number; contextWindow: number; percent: number };
+	/** pi's own parse of the prompt templates, including the ones an extension added. */
+	prompts: readonly PromptTemplate[];
+	/** The extensions pi loaded, with the errors and warnings of that load. */
+	extensions: LoadExtensionsResult;
+};
 
 export type LiveSessionOptions = {
 	sessionId: string;
@@ -285,6 +307,44 @@ export class LiveSession {
 		return agent.resourceLoader
 			.getSkills()
 			.skills.filter((skill) => skill.sourceInfo.source.startsWith(EXTENSION_RESOURCE_SOURCE));
+	}
+
+	/**
+	 * What only this engine can answer about its context: the prompt the model
+	 * receives, the tools pi offers, and how full the window is. The files say what pi
+	 * would load; this says what it loaded, extensions included.
+	 */
+	contextLive(): LiveContext | undefined {
+		const agent = this.host?.session;
+		if (agent === undefined) return undefined;
+		const usage = agent.getContextUsage();
+		const live: LiveContext = {
+			sessionId: this.sessionId,
+			systemPrompt: agent.systemPrompt,
+			tools: {
+				active: agent.getActiveToolNames(),
+				all: agent.getAllTools().map((tool) => {
+					const row: LiveContext["tools"]["all"][number] = {
+						name: tool.name,
+						description: tool.description,
+					};
+					if (tool.namespace !== undefined) row.namespace = tool.namespace.name;
+					return row;
+				}),
+			},
+			prompts: agent.promptTemplates,
+			extensions: agent.resourceLoader.getExtensions(),
+		};
+		// pi answers `null` for both the count and the percentage while the context is
+		// unknown, which is not a number to show.
+		if (usage !== undefined && usage.tokens !== null && usage.percent !== null) {
+			live.contextUsage = {
+				tokens: usage.tokens,
+				contextWindow: usage.contextWindow,
+				percent: usage.percent,
+			};
+		}
+		return live;
 	}
 
 	/**

@@ -33,6 +33,7 @@ export {
 	clientFrameSchema,
 	commandNameSchema,
 	commandSchema,
+	contextUsageSchema,
 	placeSchema,
 	promptImagesBase64Length,
 	protocolErrorCodeSchema,

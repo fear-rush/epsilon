@@ -15,6 +15,8 @@ import type {
 } from "shared";
 
 import { shortcut } from "@/components/patterns/shortcut";
+import { fetchContext } from "@/api/endpoints";
+import { contextSentence } from "@/features/conversation/session-context-sentence";
 import { cacheHitRate, costLabel, tokenLabel } from "@/features/conversation/cost";
 import { downloadExport } from "@/features/conversation/export-file";
 import type { ConversationStore } from "@/features/conversation/store";
@@ -145,14 +147,23 @@ const HANDLERS = {
 		}
 		return "Copied the last agent reply to the clipboard.";
 	},
-	session: (_argument, { store }) => {
+	session: async (_argument, { store }) => {
 		const { state } = store.getSnapshot();
 		const name = state.sessionName === undefined ? "untitled" : `"${state.sessionName}"`;
 		const model = state.model === undefined ? "no model yet" : modelLabel(state.model);
 		const { tokens } = state.stats;
 		const share = cacheHitRate(tokens);
 		const counted = `${state.stats.totalMessages} messages, ${tokenLabel(tokens.total)} tokens (${tokenLabel(tokens.input)} input, ${tokenLabel(tokens.output)} output, ${tokenLabel(tokens.cacheRead)} cache read, ${tokenLabel(tokens.cacheWrite)} cache write${share === undefined ? "" : `, ${share.toFixed(0)}% from cache`}), ${costLabel(state.stats.cost)} spent`;
-		return `Chat ${name}: ${model}, ${counted}.`;
+		// The context read is the same one the Context page names, so the two cannot
+		// disagree about what this chat holds. A failure is said, not dropped.
+		const project = state.place?.kind === "project" ? state.place.path : undefined;
+		let context: string;
+		try {
+			context = contextSentence(await fetchContext(project));
+		} catch (cause) {
+			context = `The context could not be read: ${cause instanceof Error ? cause.message : String(cause)}`;
+		}
+		return `Chat ${name}: ${model}, ${counted}. ${context}`;
 	},
 	hotkeys: () =>
 		`Enter sends, and steers a run that is already going. ${shortcut("Enter")} waits for that run to settle, Shift+Enter adds a line, Esc stops the run, and / lists every command.`,

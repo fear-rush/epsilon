@@ -236,6 +236,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/context": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Everything pi loads for a folder before the model answers: context files, the system prompt source, skills, prompt templates, extensions and packages, plus the live prompt and tools when a chat is open */
+		get: operations["readContext"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/settings": {
 		parameters: {
 			query?: never;
@@ -1051,6 +1068,98 @@ export interface components {
 			parent: string;
 			name: string;
 		};
+		ContextView: {
+			folder: string;
+			project: string | null;
+			live: boolean;
+			liveSessionId?: string;
+			contextFiles: ({
+				path: string;
+				directory: string;
+				order: number;
+			})[];
+			systemPrompt: components["schemas"]["ContextSystemPrompt"];
+			skills: components["schemas"]["SkillView"][];
+			prompts: components["schemas"]["ContextPrompt"][];
+			extensions: components["schemas"]["ContextExtension"][];
+			packages: components["schemas"]["ContextPackage"][];
+			tools?: {
+				active: string[];
+				all: components["schemas"]["ContextTool"][];
+			};
+			contextUsage?: {
+				tokens: number;
+				contextWindow: number;
+				percent: number;
+			};
+			problems: components["schemas"]["ContextProblem"][];
+		};
+		ContextSystemPrompt: {
+			source: "project" | "agent" | "default";
+			replacePath?: string;
+			appendPaths: string[];
+			text?: string;
+		};
+		SkillView: {
+			name: string;
+			folder: string;
+			description: string;
+			filePath: string;
+			dir: string;
+			origin: components["schemas"]["SkillOrigin"];
+			packageSource?: string;
+			scope: "user" | "project";
+			editable: boolean;
+			root?: components["schemas"]["SkillRoot"];
+			modelInvocation: boolean;
+			status: components["schemas"]["SkillStatus"];
+			shadowedBy?: string;
+			message?: string;
+			toggle: components["schemas"]["SkillToggle"];
+			warnings: string[];
+		};
+		SkillOrigin: "home" | "user-agents" | "project-pi" | "project-agents" | "settings-path" | "package" | "extension";
+		SkillRoot: "home" | "user-agents" | "project-pi" | "project-agents";
+		SkillStatus: "active" | "manual" | "disabled" | "shadowed" | "invalid" | "untrusted";
+		SkillToggle: "settings" | "package" | "none";
+		ContextPrompt: {
+			name: string;
+			description: string;
+			argumentHint?: string;
+			path: string;
+			origin: components["schemas"]["ContextResourceOrigin"];
+			enabled: boolean;
+		};
+		ContextResourceOrigin: "home" | "project" | "settings-path" | "package" | "extension";
+		ContextExtension: {
+			path: string;
+			name: string;
+			origin: components["schemas"]["ContextResourceOrigin"];
+			enabled: boolean;
+			errors: string[];
+			warnings: string[];
+		};
+		ContextPackage: {
+			source: string;
+			scope: "user" | "project";
+			resources: components["schemas"]["ContextPackageResources"];
+		};
+		ContextPackageResources: {
+			extensions: number;
+			skills: number;
+			prompts: number;
+			themes: number;
+		};
+		ContextTool: {
+			name: string;
+			description: string;
+			namespace?: string;
+		};
+		ContextProblem: {
+			kind: "settings" | "skill" | "prompt" | "extension";
+			message: string;
+			path?: string;
+		};
 		SettingsSnapshot: {
 			home: string;
 			defaultModel: components["schemas"]["DefaultModel"];
@@ -1218,28 +1327,6 @@ export interface components {
 			kind: "failed";
 			message: string;
 		});
-		SkillView: {
-			name: string;
-			folder: string;
-			description: string;
-			filePath: string;
-			dir: string;
-			origin: components["schemas"]["SkillOrigin"];
-			packageSource?: string;
-			scope: "user" | "project";
-			editable: boolean;
-			root?: components["schemas"]["SkillRoot"];
-			modelInvocation: boolean;
-			status: components["schemas"]["SkillStatus"];
-			shadowedBy?: string;
-			message?: string;
-			toggle: components["schemas"]["SkillToggle"];
-			warnings: string[];
-		};
-		SkillOrigin: "home" | "user-agents" | "project-pi" | "project-agents" | "settings-path" | "package" | "extension";
-		SkillRoot: "home" | "user-agents" | "project-pi" | "project-agents";
-		SkillStatus: "active" | "manual" | "disabled" | "shadowed" | "invalid" | "untrusted";
-		SkillToggle: "settings" | "package" | "none";
 		ForeignSkillView: {
 			agent: components["schemas"]["ForeignAgent"];
 			scope: "user" | "project";
@@ -2391,6 +2478,39 @@ interface operations {
 				};
 			};
 			/** The parent or the folder name is invalid */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Problem"];
+				};
+			};
+		};
+	};
+	/** Everything pi loads for a folder before the model answers: context files, the system prompt source, skills, prompt templates, extensions and packages, plus the live prompt and tools when a chat is open */
+	readContext: {
+		parameters: {
+			query?: {
+				/** A trusted project folder. Absent means the agent home alone */
+				project?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** What steers the model in this folder, as pi resolves it now */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ContextView"];
+				};
+			};
+			/** The folder could not be read */
 			400: {
 				headers: {
 					[name: string]: unknown;

@@ -9,3 +9,12 @@ export const isDirectory = async (path: string): Promise<boolean> => {
 		return false;
 	}
 };
+
+/** Whether the path is an existing regular file; a missing or unreadable path is false. */
+export const isFile = async (path: string): Promise<boolean> => {
+	try {
+		return (await stat(path)).isFile();
+	} catch {
+		return false;
+	}
+};

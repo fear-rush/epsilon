@@ -32,8 +32,11 @@ export function DetailPage({
 	actions?: ReactNode;
 	/** The Form/Raw tabs; omit and the page has no band. */
 	tabs?: ReactNode;
-	/** Where the phone back link goes, as a path of the section's list. */
-	back?: { to: ComponentProps<typeof Link>["to"]; label: string };
+	/**
+	 * Where the phone back link goes, as a path of the section's list. `search: true`
+	 * keeps the list's own scope, which a project selection needs.
+	 */
+	back?: { to: ComponentProps<typeof Link>["to"]; label: string; search?: true };
 	/** The footer's actions; omit with no `footerStatus` for no footer. */
 	footer?: ReactNode;
 	footerStatus?: ReactNode;
@@ -53,6 +56,7 @@ export function DetailPage({
 					back !== undefined && (
 						<Link
 							to={back.to}
+							search={back.search === true ? true : undefined}
 							aria-label={back.label}
 							// A back link is not the current page, even when its list route matches.
 							activeOptions={{ exact: true }}

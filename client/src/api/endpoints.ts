@@ -4,6 +4,7 @@
  */
 import { api, RefusalError } from "./client";
 import type {
+	ContextView,
 	DefaultModel,
 	ExportedSession,
 	ExportFormat,
@@ -176,6 +177,10 @@ export const createFolder = async (parent: string, name: string): Promise<string
 type Project = string | undefined;
 
 const scoped = (project: Project) => ({ query: { project } });
+
+/** Everything pi loads for a folder before the model answers, plus the live chat's own view. */
+export const fetchContext = async (project: Project, signal?: AbortSignal): Promise<ContextView> =>
+	body((await api.GET("/api/context", { params: scoped(project), signal })).data);
 
 export const fetchSettings = async (
 	project: Project,

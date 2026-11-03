@@ -313,7 +313,7 @@ export type SnapshotCommand = z.infer<typeof snapshotCommandSchema>;
  * How full the context window is. Absent when pi cannot say: before the first
  * request and right after a compaction, where it reports the tokens as unknown.
  */
-const contextUsageSchema = z.object({
+export const contextUsageSchema = z.object({
 	tokens: z.number().int(),
 	contextWindow: z.number().int(),
 	percent: z.number(),

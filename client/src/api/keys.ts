@@ -12,6 +12,7 @@ import type { SkillRoot } from "./types";
 export const settingsKeys = {
 	all: ["settings"] as const,
 	snapshot: (project: string | undefined) => [...settingsKeys.all, "snapshot", project] as const,
+	context: (project: string | undefined) => [...settingsKeys.all, "context", project] as const,
 	provider: (id: string | undefined) => [...settingsKeys.all, "provider", id] as const,
 	mcp: (project: string | undefined, scope: McpScope, name: string | undefined) =>
 		[...settingsKeys.all, "mcp", project, scope, name] as const,

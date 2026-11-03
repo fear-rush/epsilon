@@ -3,7 +3,14 @@
  * menu both map this list, so a section cannot exist in one and be missing from
  * the other.
  */
-import { PackageIcon, PlugIcon, ServerIcon, SettingsIcon, SparklesIcon } from "lucide-react";
+import {
+	BookOpenIcon,
+	PackageIcon,
+	PlugIcon,
+	ServerIcon,
+	SettingsIcon,
+	SparklesIcon,
+} from "lucide-react";
 import type { ComponentType } from "react";
 
 /** The section paths, as a union so a typo is a type error, not a dead link. */
@@ -11,6 +18,7 @@ export type SettingsPath =
 	| "/settings/general"
 	| "/settings/providers"
 	| "/settings/mcp"
+	| "/settings/context"
 	| "/settings/skills"
 	| "/settings/packages";
 
@@ -32,6 +40,7 @@ export const SETTINGS_GROUPS: { label: string; items: SettingsSection[] }[] = [
 		label: "Resources",
 		items: [
 			{ to: "/settings/mcp", label: "MCP servers", icon: ServerIcon },
+			{ to: "/settings/context", label: "Context", icon: BookOpenIcon },
 			{ to: "/settings/skills", label: "Skills", icon: SparklesIcon },
 			{ to: "/settings/packages", label: "Packages", icon: PackageIcon },
 		],
