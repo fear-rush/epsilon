@@ -81,11 +81,14 @@ Commands are the ones the page can send: a prompt, the queue behavior it joins a
 running turn with and the images it carries, the aborts (turn, retry, compaction,
 bash), bash itself, the model, thinking-level, coding-tool and thinking-visibility
 switches, manual compaction, the auto-compaction and auto-retry toggles, the queue
-clear, the move to an earlier message of the branch, and reload. `commandNameSchema` in
-`shared/src/protocol/frames.ts` is the list. Each is answered by `command-result`
-naming the command, and that frame also carries the prompts pi handed back when a
-command took them (`queue`). A frame change bumps `PROTOCOL_VERSION`, and a tab built
-for another version reloads.
+clear, a tree entry's label, the tree filter mode, the move to an earlier message of
+the branch, asking the engine's autocomplete providers, and reload.
+`commandNameSchema` in `shared/src/protocol/frames.ts` is the list. Each is answered
+by `command-result` naming the command, and that frame also carries the prompts pi
+handed back when a command took them (`queue`) and what an extension's autocomplete
+providers suggest (`autocomplete`). When pi replaces the session under a chat,
+`session-replaced` names the new id so the tab keeps watching it. A frame change bumps
+`PROTOCOL_VERSION`, and a tab built for another version reloads.
 
 Why: with no RPC envelope under it, pi's RPC types would be a translation layer, and a
 change to pi's private types would become a change to Epsilon's public contract.
