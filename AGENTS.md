@@ -56,8 +56,9 @@ lists into a doc.
    system (Tailwind + shadcn, tokens, the `design-tokens` rule).
 8. No `throw`, `try`/`catch`, `new Promise`, `.then`/`.catch`, `setTimeout`,
    `setInterval`, `Date.now` or `process.env` in `src/backend/**` and `src/engine/**`
-   outside `platform/`, `engine/main.ts` and `server/main.ts`. Wrap a Promise API once, in
-   the service that owns it. Lint enforces it.
+   outside `platform/`, `engine/main.ts`, `server/main.ts` and the one line reader over
+   pi's file format, `catalog/ingest.ts`, where a line that is not JSON is skipped, not
+   thrown. Wrap a Promise API once, in the service that owns it. Lint enforces it.
 9. Every resource (engine, process, watcher, socket, timer, fiber) belongs to a Scope.
    Nothing is fire-and-forget.
 10. Every failure is visible: a tagged error, an error frame or a notice. Silence is a

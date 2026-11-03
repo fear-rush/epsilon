@@ -63,8 +63,11 @@ type CrashRecord = {
 	exit: number;
 	signal?: string;
 	lastLogLines: ReadonlyArray<string>;
+	lastHeartbeat: { readonly at: number; readonly rss: number; readonly seq: number } | null;
 	piVersion: string;
 };
+
+const stopEngine = (engine: RemoteEngine): Effect.Effect<void> => engine.stop(5_000);
 
 export const makeSupervisor = (deps: {
 	readonly home: AgentHomeApi;
@@ -73,17 +76,18 @@ export const makeSupervisor = (deps: {
 	readonly fs: FileSystem.FileSystem;
 }): SupervisorApi => {
 	const streaks = Ref.makeUnsafe<ReadonlyMap<string, Streak>>(new Map());
-	const engines = Ref.makeUnsafe<ReadonlySet<RemoteEngine>>(new Set());
 
+	/** Three crashes inside the window refuse the chat; the fourth minute is a fresh start. */
 	const crashLoop = (sessionId: string): Effect.Effect<void, EngineCrashLoop> =>
-		Ref.get(streaks).pipe(
-			Effect.map((map) => map.get(sessionId)),
-			Effect.flatMap((streak) =>
-				streak !== undefined && streak.count >= crashLoopLimit
-					? Effect.fail(new EngineCrashLoop({ sessionId }))
-					: Effect.void,
-			),
-		);
+		Effect.flatMap(Ref.get(streaks), (map) => {
+			const streak = map.get(sessionId);
+			if (streak === undefined || streak.count < crashLoopLimit) return Effect.void;
+			return Effect.flatMap(Clock.currentTimeMillis, (now) =>
+				now - streak.firstAt > streakWindowMs
+					? Effect.void
+					: Effect.fail(new EngineCrashLoop({ sessionId })),
+			);
+		});
 
 	const noteCrash = (engine: RemoteEngine, info: ExitInfo): Effect.Effect<void> =>
 		Effect.gen(function* () {
@@ -105,8 +109,13 @@ export const makeSupervisor = (deps: {
 			});
 
 			const lines = yield* engine.recentLogLines;
+			const heartbeat = yield* engine.lastHeartbeat;
 			const record: CrashRecord = {
 				exit: info.code,
+				lastHeartbeat:
+					heartbeat === undefined
+						? null
+						: { at: heartbeat.at, rss: heartbeat.rss, seq: heartbeat.seq },
 				lastLogLines: lines,
 				piVersion,
 				sessionId,
@@ -204,7 +213,6 @@ export const makeSupervisor = (deps: {
 					}
 				}),
 			);
-			yield* Ref.update(engines, (set) => new Set([...set, engine]));
 		});
 
 	const start = (input: StartInput): Effect.Effect<RemoteEngine, EngineCrashLoop | EngineStopped> =>
@@ -223,13 +231,7 @@ export const makeSupervisor = (deps: {
 			return engine;
 		});
 
-	const stop = (engine: RemoteEngine): Effect.Effect<void> =>
-		Effect.gen(function* () {
-			yield* Ref.update(engines, (set) => new Set([...set].filter((item) => item !== engine)));
-			yield* engine.stop(5_000);
-		});
-
-	return { start, stop } satisfies SupervisorApi;
+	return { start, stop: stopEngine } satisfies SupervisorApi;
 };
 
 export const SupervisorLive: Layer.Layer<

@@ -170,18 +170,25 @@ export const makeEngines = (options: {
 			return false;
 		});
 
-	const lease = (entry: Entry, tab: string): Lease => ({
-		command: (command) => entry.engine.request((id) => ({ command, id, t: "command", tab })),
-		engine: entry.engine,
-		frames: entry.engine.frames(tab),
-		query: (kind, before) => entry.engine.request((id) => ({ before, id, kind, t: "query" })),
-		release: Effect.gen(function* () {
+	/** The last idle tab leaving gives the chat ten more seconds before it is closed. */
+	const releaseTab = (
+		entry: Entry,
+		tab: string,
+	): Effect.Effect<void, never, FileSystem.FileSystem> =>
+		Effect.gen(function* () {
 			entry.tabs.delete(tab);
 			yield* entry.engine.detachTab(tab);
 			const status = yield* entry.engine.currentStatus;
 			if (entry.closed || entry.tabs.size > 0 || status.busy || status.needsInput) return;
 			yield* Effect.forkIn(idleClose(entry), options.scope);
-		}),
+		});
+
+	const lease = (entry: Entry, tab: string): Lease => ({
+		command: (command) => entry.engine.request((id) => ({ command, id, t: "command", tab })),
+		engine: entry.engine,
+		frames: entry.engine.frames(tab),
+		query: (kind, before) => entry.engine.request((id) => ({ before, id, kind, t: "query" })),
+		release: releaseTab(entry, tab),
 	});
 
 	const attach: EnginesApi["attach"] = (input) =>
@@ -260,12 +267,7 @@ export const makeEngines = (options: {
 		Effect.gen(function* () {
 			const entry = find(sessionId);
 			if (entry === undefined) return;
-			entry.tabs.delete(tab);
-			yield* entry.engine.detachTab(tab);
-			const status = yield* entry.engine.currentStatus;
-			if (entry.tabs.size === 0 && !status.busy && !status.needsInput && !entry.closed) {
-				yield* Effect.forkIn(idleClose(entry), options.scope);
-			}
+			yield* releaseTab(entry, tab);
 		});
 
 	const close: EnginesApi["close"] = (sessionId) =>
