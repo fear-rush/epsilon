@@ -151,7 +151,7 @@ export const makeEpsilonSettings = (deps: {
 				Effect.map((current) => current.settings.maxRunning),
 				Effect.withSpan("epsilon/EpsilonSettings.maxRunning"),
 			),
-			setMaxRunning,
+			setMaxRunning: Effect.fn("epsilon/EpsilonSettings.setMaxRunning")(setMaxRunning),
 			view: Ref.get(state),
 		} satisfies EpsilonSettingsApi;
 	});
