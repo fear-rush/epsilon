@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { BunServices } from "@effect/platform-bun";
@@ -7,6 +7,8 @@ import { Clock, Effect, Exit, FileSystem, Scope, Schema } from "effect";
 
 import { TreeEntry } from "#protocol/conversation/frames";
 
+import { skillsCli } from "../src/backend/config/skill-import/cli.ts";
+import { download } from "../src/backend/config/skill-import/fetch.ts";
 import { startEngine, type RemoteEngine } from "../src/backend/engines/engine.ts";
 import { makeEngines } from "../src/backend/engines/registry.ts";
 import type { StartInput } from "../src/backend/engines/supervisor.ts";
@@ -15,6 +17,7 @@ import { startStubModel, writeStubModels } from "./e2e/stub-model.ts";
 import { fakeSpec } from "./fake-engine.ts";
 import { writeSession } from "./sessions.ts";
 import { testPaths } from "./setup.ts";
+import { until } from "./until.ts";
 
 /**
  * The Phase 0 bugs (`.sandbox/refactor/02-phase0-fixes.md`) as acceptance tests.
@@ -22,6 +25,16 @@ import { testPaths } from "./setup.ts";
  * Each one is the behaviour the new design must produce, not the old patch. The rows whose
  * feature lands later stay `todo` and name their step.
  */
+
+/** Whether a pid exists; `signal 0` asks the OS without touching the process. */
+const alive = (pid: number): boolean => {
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch {
+		return false;
+	}
+};
 
 const extension = new URL("./fixtures/test-extension.ts", import.meta.url).pathname;
 
@@ -228,10 +241,85 @@ describe("acceptance", () => {
 	});
 });
 
-test.todo("F8e: a timed-out skill import kills the whole process group", () => {
-	// Step 6. The CLI runs detached; the deadline kills the group and the request fails
-	// with a notice instead of hanging on open pipes.
+/**
+ * F8e: a timed-out skill import kills the whole process group.
+ *
+ * The stand-in CLI spawns a grandchild that ignores SIGTERM and records both pids, then
+ * waits. A kill that reached only the child would leave the grandchild alive and the test
+ * would fail on the pid it recorded, not on a timeout.
+ */
+test("F8e: a timed-out skill import kills the whole process group", async () => {
+	const dir = join(testPaths.scratch, "f8e");
+	mkdirSync(dir, { recursive: true });
+	const script = [
+		`echo $$ > "${join(dir, "leader.pid")}"`,
+		`sh -c 'trap "" TERM; echo $$ > "${join(dir, "child.pid")}"; sleep 30' &`,
+		"wait",
+	].join("\n");
+	const failure = await Effect.runPromise(
+		Effect.flip(
+			skillsCli(
+				{ skills: [], source: "owner/repo" },
+				{
+					command: ["sh", "-c", script],
+					cwd: dir,
+					env: { PATH: process.env["PATH"] ?? "" },
+					timeoutMs: 300,
+					userHome: testPaths.sandboxHome,
+				},
+			),
+		),
+	);
+	expect(failure.reason).toContain("longer than");
+	const pidFile = (name: string): number => Number(readFileSync(join(dir, name), "utf8").trim());
+	await until(() => !alive(pidFile("leader.pid")) && !alive(pidFile("child.pid")), {
+		deadline: 3000,
+		what: "both processes of the killed group to be gone",
+	});
 });
+
+/** F8k: a streamed body stops at the cap even when the server sends no length. */
+test("F8k: a skill download stops at the byte cap", async () => {
+	const dir = join(testPaths.scratch, "f8k");
+	mkdirSync(dir, { recursive: true });
+	const target = join(dir, "archive.tar.gz");
+	let sent = 0;
+	const chunk = new Uint8Array(8 * 1024).fill(1);
+	const server = Bun.serve({
+		fetch: () =>
+			new Response(
+				new ReadableStream({
+					pull(controller) {
+						// No content-length: exactly the case the old arrayBuffer() could not cap.
+						if (sent > 10) {
+							controller.close();
+							return;
+						}
+						sent += 1;
+						controller.enqueue(chunk);
+					},
+				}),
+			),
+		port: 0,
+	});
+	try {
+		const failure = await Effect.runPromise(
+			Effect.flip(
+				download({
+					maxBytes: 16 * 1024,
+					path: target,
+					source: "https://example.test/skill.tar.gz",
+					timeoutMs: 5000,
+					url: new URL("skill.tar.gz", server.url).toString(),
+				}),
+			),
+		);
+		expect(failure.reason).toContain("larger than");
+		expect(existsSync(target)).toBe(false);
+	} finally {
+		await server.stop(true);
+	}
+}, 10_000);
 
 test.todo("F8f: a command typed while reconnecting is queued or refused visibly", () => {
 	// Step 8. The runtime queues commands during reconnect and shows them once attached.

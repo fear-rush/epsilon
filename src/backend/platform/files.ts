@@ -1,10 +1,11 @@
 import { closeSync, openSync, readdirSync, readFileSync, readSync, statSync } from "node:fs";
+import { open, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import { Effect, FileSystem } from "effect";
 import type { Option } from "effect";
 
-import { FileUnreadable, FileUnwritable } from "./errors.ts";
+import { FileTooLarge, FileUnreadable, FileUnwritable } from "./errors.ts";
 
 /**
  * The file helpers the rest of the backend uses. They exist so that `node:*` stays in the
@@ -156,4 +157,55 @@ export const ensureDir = (
 	Effect.gen(function* () {
 		const fs = yield* FileSystem.FileSystem;
 		yield* fs.makeDirectory(path, { recursive: true }).pipe(Effect.mapError(unwritable(path)));
+	});
+
+/**
+ * Streams a response body to a file, stopping at the cap instead of after it.
+ *
+ * The old importer read the whole body and then checked its size, so a server that sent
+ * no `content-length` could fill memory before the check ran (F8k). This counts bytes as
+ * they arrive, cancels the body on the first one past the cap, and removes the partial
+ * file so a failed import leaves nothing behind.
+ */
+export const writeStreamCapped = (
+	path: string,
+	body: ReadableStream<Uint8Array>,
+	maxBytes: number,
+): Effect.Effect<number, FileTooLarge | FileUnwritable> =>
+	Effect.tryPromise({
+		try: async () => {
+			const handle = await open(path, "w");
+			let total = 0;
+			let tooLarge = false;
+			try {
+				const reader = body.getReader();
+				for (;;) {
+					// oxlint-disable-next-line no-await-in-loop -- a stream is read one chunk at a time
+					const { done, value } = await reader.read();
+					if (done) break;
+					total += value.byteLength;
+					if (total > maxBytes) {
+						tooLarge = true;
+						// oxlint-disable-next-line no-await-in-loop -- cancel before the loop ends
+						await reader.cancel();
+						break;
+					}
+					// oxlint-disable-next-line no-await-in-loop -- write each chunk as it arrives
+					await handle.write(value);
+				}
+			} finally {
+				await handle.close();
+			}
+			if (tooLarge) {
+				await rm(path, { force: true });
+				throw new FileTooLarge({
+					maxBytes,
+					path,
+					reason: `The body is larger than ${maxBytes} bytes.`,
+				});
+			}
+			return total;
+		},
+		catch: (cause) =>
+			cause instanceof FileTooLarge ? cause : new FileUnwritable({ path, reason: describe(cause) }),
 	});

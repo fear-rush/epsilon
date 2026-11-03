@@ -78,3 +78,13 @@ export class ProviderRefused extends Schema.TaggedError<
 	providerId: Schema.String,
 	reason: Schema.String,
 }) {}
+
+/** A skill import Epsilon could not complete, with the sentence the page shows. */
+export class ImportFailed extends Schema.TaggedError<
+	ImportFailed,
+	{ readonly brand: unique symbol }
+>()("ImportFailed", {
+	reason: Schema.String,
+	/** The source the person pasted, when one was involved. */
+	source: Schema.optional(Schema.String),
+}) {}

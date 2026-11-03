@@ -59,3 +59,13 @@ export class RuntimeUnavailable extends Schema.TaggedError<
 >()("RuntimeUnavailable", {
 	reason: Schema.String,
 }) {}
+
+/** A download or upload whose body passed the cap it was given. */
+export class FileTooLarge extends Schema.TaggedError<
+	FileTooLarge,
+	{ readonly brand: unique symbol }
+>()("FileTooLarge", {
+	path: Schema.String,
+	reason: Schema.String,
+	maxBytes: Schema.Finite,
+}) {}
