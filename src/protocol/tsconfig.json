@@ -7,5 +7,6 @@
 		"outDir": "../../dist/types/src/protocol",
 		"tsBuildInfoFile": "../../dist/types/src/protocol/tsbuildinfo"
 	},
-	"include": ["**/*.ts", "**/*.tsx"]
+	"include": ["**/*.ts", "**/*.tsx"],
+	"exclude": ["**/*.test.ts"]
 }

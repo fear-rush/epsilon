@@ -8,5 +8,10 @@
 		"tsBuildInfoFile": "../../dist/types/src/domain/tsbuildinfo"
 	},
 	"include": ["**/*.ts", "**/*.tsx"],
-	"references": [{ "path": "../protocol" }]
+	"references": [
+		{
+			"path": "../protocol"
+		}
+	],
+	"exclude": ["**/*.test.ts"]
 }

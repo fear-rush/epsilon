@@ -2,6 +2,12 @@
 	"files": [],
 	"references": [
 		{
+			"path": "src/protocol"
+		},
+		{
+			"path": "src/domain"
+		},
+		{
 			"path": "test"
 		},
 		{

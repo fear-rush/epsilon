@@ -2,7 +2,7 @@
 	// Step 0 had no code under src/. Dependency reporting turns on in Step 3, when the
 	// backend root first imports its pins.
 	"$schema": "./node_modules/knip/schema-jsonc.json",
-	"entry": ["scripts/*.ts", "tools/oxlint/*/index.ts", "test/**/*.test.ts"],
+	"entry": ["scripts/*.ts", "tools/oxlint/*/index.ts", "test/**/*.test.ts", "src/**/*.test.ts"],
 	"project": [
 		"test/**/*.ts",
 		"scripts/**/*.ts",

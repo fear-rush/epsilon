@@ -7,8 +7,8 @@
 	"author": "Muhammad Firas",
 	"type": "module",
 	"imports": {
-		"#domain/*": "./src/domain/*",
-		"#protocol/*": "./src/protocol/*"
+		"#domain/*": "./src/domain/*.ts",
+		"#protocol/*": "./src/protocol/*.ts"
 	},
 	"scripts": {
 		"bench": "bun run scripts/bench/run.ts",

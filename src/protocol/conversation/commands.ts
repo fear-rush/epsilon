@@ -1,0 +1,28 @@
+import { Schema } from "effect";
+
+import { DialogAnswer } from "./extui.ts";
+import { ImageBlock } from "./frames.ts";
+
+/**
+ * What the page asks the engine to do. A command carries its own tag, so a result can
+ * name the command that failed instead of guessing from order.
+ */
+const textCommand = (tag: "prompt" | "steer" | "followUp") =>
+	Schema.Struct({
+		t: Schema.Literals([tag]),
+		text: Schema.String,
+		images: Schema.optional(Schema.Array(ImageBlock)),
+	});
+
+export const Command = Schema.Union([
+	textCommand("prompt"),
+	textCommand("steer"),
+	textCommand("followUp"),
+	Schema.Struct({ t: Schema.Literals(["abort"]) }),
+	Schema.Struct({ t: Schema.Literals(["answerDialog"]), answer: DialogAnswer }),
+	/** Ask for the window before `before` (an entry id), for "load earlier messages". */
+	Schema.Struct({ t: Schema.Literals(["loadHistory"]), before: Schema.String }),
+	/** Re-open the runtime from the file after a foreign write. */
+	Schema.Struct({ t: Schema.Literals(["reloadFromDisk"]) }),
+]);
+export type Command = typeof Command.Type;
