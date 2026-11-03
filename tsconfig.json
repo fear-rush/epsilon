@@ -8,6 +8,9 @@
 			"path": "src/domain"
 		},
 		{
+			"path": "src/backend"
+		},
+		{
 			"path": "test"
 		},
 		{

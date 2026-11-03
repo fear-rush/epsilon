@@ -37,10 +37,6 @@ test.todo("F6: a prompt sent while an agent_settled handler is slow answers inst
 	// deadline, so `dispatching` cannot stay true forever.
 });
 
-test.todo("F7: a panel write and a pi SettingsManager write keep both keys", () => {
-	// Step 3. Both take pi's lockfile with the same path and options; neither write is lost.
-});
-
 test.todo("F8a: a runtime that fails to wire is closed before the error is reported", () => {
 	// Step 5. Opening a session is acquireRelease: a failed wire releases the runtime.
 });

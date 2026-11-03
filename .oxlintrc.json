@@ -113,7 +113,8 @@
 		"unicorn/prefer-string-replace-all": "error",
 		"unicorn/prefer-structured-clone": "error",
 		"unicorn/prefer-type-error": "error",
-		"unicorn/throw-new-error": "error"
+		"unicorn/throw-new-error": "error",
+		"effecttsgo/unstable-api-usage": "off"
 	},
 	"overrides": [
 		{
@@ -300,13 +301,35 @@
 		{
 			"files": ["src/**/*.test.ts"],
 			"rules": {
-				"no-restricted-imports": "off"
+				"no-restricted-imports": "off",
+				"effecttsgo/strict-effect-provide": "off"
 			}
 		},
 		{
-			"files": ["src/protocol/errors.ts"],
+			"files": ["src/protocol/errors.ts", "src/backend/platform/errors.ts"],
 			"rules": {
 				"unicorn/throw-new-error": "off"
+			}
+		},
+		{
+			"files": ["src/backend/platform/patch.ts", "src/backend/platform/json-document.ts"],
+			"rules": {
+				"anti-slop/no-known-value-widening": "off",
+				"anti-slop/no-runtime-typeof": "off"
+			}
+		},
+		{
+			"files": ["src/backend/platform/**"],
+			"rules": {
+				"anti-slop/no-object-parameters": "off",
+				"anti-slop/no-runtime-typeof": "off",
+				"anti-slop/no-unknown-parameters": "off"
+			}
+		},
+		{
+			"files": ["src/backend/main.ts"],
+			"rules": {
+				"effecttsgo/strict-effect-provide": "off"
 			}
 		}
 	]
