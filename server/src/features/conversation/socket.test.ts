@@ -50,6 +50,30 @@ const fakeSession = () => {
 const send = (engines: Engines, socket: ChatSocket, frame: ClientFrame): void =>
 	handleMessage(engines, socket, JSON.stringify(frame));
 
+describe("the protocol gate", () => {
+	test("refuses a tab built for another version, before any engine", () => {
+		const engines: Engines = {
+			ensure: () => {
+				throw new Error("a refused hello builds no engine");
+			},
+			find: () => undefined,
+		};
+		const socket = tab();
+
+		send(engines, socket, { t: "hello", protocol: PROTOCOL_VERSION - 1, tabId: "t" });
+
+		const frames: unknown[] = socket.sent.map((line) => JSON.parse(line));
+		expect(socket.data.welcomed).toBe(false);
+		expect(frames).toEqual([
+			{
+				t: "error",
+				code: "PROTOCOL_MISMATCH",
+				message: `Server speaks protocol ${PROTOCOL_VERSION}, client sent ${PROTOCOL_VERSION - 1}`,
+			},
+		]);
+	});
+});
+
 describe("attaching while the engine is being built", () => {
 	test("a tab that detached before the build finished releases the shared session", async () => {
 		const { session, calls } = fakeSession();
