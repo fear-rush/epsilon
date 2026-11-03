@@ -341,7 +341,7 @@ it with a record per provider: what pi reported, the question it waits on, and a
 abort signal, polled by the page. pi also narrates the loopback callback server it
 opens, which names a port the operator cannot act on, so those lines are dropped and
 the rest of what it reports is shown. Epsilon keeps that record in
-`src/server/features/providers/login.ts` and writes no `auth.json` of its own; pi
+`src/backend/features/providers/login.ts` and writes no `auth.json` of its own; pi
 exports neither the store nor its cross-process lock.
 
 `models.json` is parsed with `ModelConfig.load()`, which is read-only. Its provider
@@ -658,7 +658,7 @@ A server appears only while it is `needs-auth` or `failed`; a `config:` line rep
 a `mcp.json` pi could not read, not a server. The list is complete for the moment it
 is sent, so the host replaces what it kept rather than merging into it, and `reload()`
 clears it before pi speaks again. `Epsilon` reads those lines in
-`src/server/features/mcp/attention.ts` and shows `needs-sign-in` and `failed` per
+`src/backend/features/mcp/attention.ts` and shows `needs-sign-in` and `failed` per
 server; `disabled`, connected with its tool count and no-tool-yet come from the file
 and the tool inventory instead. `connected` is never claimed from the notice: a tool
 registered for the server is the proof, which is why a recovered server stops reading
@@ -719,7 +719,7 @@ What the SDK exports for that decision:
   the untrusted extension set first, calls back with the result, sets the decision
   and reloads the resources for it.
 
-Epsilon runs the chain in `src/server/features/projects/trust.ts`, over the store,
+Epsilon runs the chain in `src/backend/features/projects/trust.ts`, over the store,
 `hasTrustRequiringProjectResources()`, `Extension.handlers` and the settings getter.
 The project page and every route that runs in a project use its answer with no
 extension set, so their answer comes from the store and the default.

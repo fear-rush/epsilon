@@ -164,7 +164,7 @@
 									"react/*",
 									"@earendil-works/*",
 									"#domain/*",
-									"#server/*",
+									"#backend/*",
 									"#engine/*",
 									"#app/*"
 								],
@@ -190,7 +190,7 @@
 									"react-dom",
 									"react/*",
 									"@earendil-works/*",
-									"#server/*",
+									"#backend/*",
 									"#engine/*",
 									"#app/*"
 								],
@@ -209,7 +209,7 @@
 					{
 						"patterns": [
 							{
-								"group": ["node:*", "bun:*", "@earendil-works/*", "#server/*", "#engine/*"],
+								"group": ["node:*", "bun:*", "@earendil-works/*", "#backend/*", "#engine/*"],
 								"message": "The browser bundle may not reach server or engine code."
 							}
 						]
@@ -218,7 +218,7 @@
 			}
 		},
 		{
-			"files": ["src/server/**"],
+			"files": ["src/backend/**"],
 			"rules": {
 				"no-restricted-imports": [
 					"error",
@@ -241,7 +241,7 @@
 					{
 						"patterns": [
 							{
-								"group": ["react", "react-dom", "react/*", "#app/*", "#server/*"],
+								"group": ["react", "react-dom", "react/*", "#app/*", "#backend/*"],
 								"message": "The engine does not import the app or the server."
 							}
 						]
@@ -250,24 +250,24 @@
 			}
 		},
 		{
-			"files": ["src/server/**", "src/engine/**"],
+			"files": ["src/backend/**", "src/engine/**"],
 			"rules": {
 				"epsilon/effect-only-io": "error"
 			}
 		},
 		{
-			"files": ["src/server/platform/**", "src/server/main.ts", "src/engine/main.ts"],
+			"files": ["src/backend/platform/**", "src/backend/main.ts", "src/engine/main.ts"],
 			"rules": {
 				"epsilon/effect-only-io": "off"
 			}
 		},
 		{
-			"files": ["src/server/**"],
+			"files": ["src/backend/**"],
 			"rules": {
 				"epsilon/no-feature-internals": [
 					"error",
 					{
-						"root": "src/server/features",
+						"root": "src/backend/features",
 						"aliasRoot": "src/app",
 						"open": ["settings/kit"]
 					}

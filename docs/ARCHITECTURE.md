@@ -32,7 +32,7 @@ production `bun run start` is one process serving the built page and the socket.
   `PROTOCOL_VERSION` as a schema hash, errors both sides see. Types only from pi.
 - `src/domain/`: pure rules both sides run (the conversation reducer and selectors,
   permission rules, path rules, formatting). No I/O, no services, no React.
-- `src/server/`: sockets, the catalog, configuration features, the supervisor, and
+- `src/backend/`: sockets, the catalog, configuration features, the supervisor, and
   `platform/` where the only pi, filesystem, process and clock boundaries live.
 - `src/engine/`: the child process. It embeds pi, bridges extension UI, and speaks one
   tagged message set over Bun IPC.

@@ -186,7 +186,7 @@ Not: vitest and `@effect/vitest`; the repo's runner stays `bun test`.
 ## Full rebuild, no transition code
 
 The old `client/`, `server/` and `shared/` were deleted at the start and kept only as
-git history at tag `pre-refactor`. No adapters, shims, dual schema languages, old wire
+`main`'s history. No adapters, shims, dual schema languages, old wire
 frames or index-key fallbacks.
 
 Why: compatibility code is permanent and hides the design it was meant to protect. The
@@ -200,7 +200,7 @@ Kept compatible on purpose, because they are not Epsilon's legacy: pi's files, a
 
 ## One package, no workspaces
 
-One `package.json`, one lockfile, no turbo. `src/protocol`, `src/domain`, `src/server`,
+One `package.json`, one lockfile, no turbo. `src/protocol`, `src/domain`, `src/backend`,
 `src/engine`, `src/app` are separated by tsconfig project references and lint import
 rules.
 
@@ -248,9 +248,9 @@ Not: a version range, or upgrading to pick up a feature mid-step.
 
 ## Rollback is a tag, not a revert chain
 
-`pre-refactor` marks the last old commit and each step's last commit is tagged
-`refactor/step-N`. A step that fails its exit checks twice is reset to the previous tag
-and re-planned, not patched forward.
+`main` holds the last old commit; the rebuild is one branch with one commit per step. A
+step that fails its exit checks twice is reset to the previous step's commit and
+re-planned, not patched forward.
 
 Why: rebuilding on a broken foundation is how plans quietly become patches.
 

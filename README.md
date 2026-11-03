@@ -2,7 +2,7 @@
 
 A web dashboard for the `pi` coding agent on your machine.
 
-> Under rebuild. The old tree was deleted at tag `pre-refactor` and the new one is being
+> Under rebuild. The old tree was deleted and the new one is being
 > built step by step (see `AGENTS.md` and `docs/ARCHITECTURE.md`). Until the rebuild
 > reaches its serve step, `bun run dev` does not start an app.
 

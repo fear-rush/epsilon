@@ -15,7 +15,7 @@ lists into a doc.
 
 - `src/protocol/`: the wire. Effect Schema and types only.
 - `src/domain/`: rules both sides run, pure.
-- `src/server/`: sockets, configuration, catalog, supervisor, the page.
+- `src/backend/`: sockets, configuration, catalog, supervisor, the page.
 - `src/engine/`: the child process that hosts pi for one chat.
 - `src/app/`: React, Vite, Tailwind, shadcn.
 - `test/`, `scripts/`, `tools/`.
@@ -38,7 +38,7 @@ lists into a doc.
 ## Invariants
 
 1. pi's runtime is imported only in `src/engine/`. pi's exporters, `ModelRuntime`, trust
-   and `SettingsManager` reads are imported only in `src/server/platform/pi.ts`.
+   and `SettingsManager` reads are imported only in `src/backend/platform/pi.ts`.
    `src/protocol/pi.ts` is type-only.
 2. `src/protocol/` and `src/domain/` import no `node:*`, no React, no Effect services or
    layers (Schema and data types only). The reducer stays pure.
@@ -49,13 +49,13 @@ lists into a doc.
    `auth.json` or `trust.json`. Other files: use an exported writer, else `JsonDocument`
    (merge, keep unknown keys, refuse what you cannot parse, pi's lock for
    `settings.json`). MCP sign-in stays in the terminal.
-6. The agent home is chosen once in `src/server/main.ts` and passed to the catalog worker
+6. The agent home is chosen once in `src/backend/main.ts` and passed to the catalog worker
    and every engine explicitly (`PI_CODING_AGENT_DIR`, `HOME`), never inherited.
    `bun run dev` uses `.sandbox/agent`; tests use a temp home from `test/setup.ts`.
 7. One schema language (Effect Schema), one error model (tagged errors), one styling
    system (Tailwind + shadcn, tokens, the `design-tokens` rule).
 8. No `throw`, `try`/`catch`, `new Promise`, `.then`/`.catch`, `setTimeout`,
-   `setInterval`, `Date.now` or `process.env` in `src/server/**` and `src/engine/**`
+   `setInterval`, `Date.now` or `process.env` in `src/backend/**` and `src/engine/**`
    outside `platform/`, `engine/main.ts` and `server/main.ts`. Wrap a Promise API once, in
    the service that owns it. Lint enforces it.
 9. Every resource (engine, process, watcher, socket, timer, fiber) belongs to a Scope.
@@ -69,7 +69,7 @@ lists into a doc.
 
 1. If both sides run a rule, put it in `src/domain/<name>/rules.ts`.
 2. The schema goes in `src/protocol/<name>.ts`; the server handler in
-   `src/server/<name>/`; the UI in `src/app/features/<name>/`.
+   `src/backend/<name>/`; the UI in `src/app/features/<name>/`.
 3. Server code outside `platform/` reaches IO through a service: `Context.Service`, its
    `Layer` in the same file, `Effect.fn` on every operation
    ([docs/effect.md](docs/effect.md)).

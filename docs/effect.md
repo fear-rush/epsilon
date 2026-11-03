@@ -31,7 +31,7 @@ export const CatalogLive = Layer.effect(
 - Generators by default: `Effect.gen(function* () { ... })` for anything with more than
   one step. `pipe` for short transformations and for cross-cutting operators
   (`Effect.timeout`, `Effect.retry`, `Effect.withSpan`) applied at the end.
-- No `Effect.runPromise` inside services. Only `src/server/main.ts`,
+- No `Effect.runPromise` inside services. Only `src/backend/main.ts`,
   `src/engine/main.ts`, `src/app/runtime.ts` and tests run effects.
 - A Promise API is wrapped once, with `Effect.tryPromise({ try, catch })`, in the
   service that owns the dependency, and mapped to a tagged error. Never

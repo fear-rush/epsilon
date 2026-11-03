@@ -11,7 +11,7 @@
 		"#protocol/*": "./src/protocol/*"
 	},
 	"scripts": {
-		"build": "bun run routes:generate && vite build && bun build src/server/main.ts src/engine/main.ts src/server/catalog/worker.ts --target bun --outdir dist",
+		"build": "bun run routes:generate && vite build && bun build src/backend/main.ts src/engine/main.ts src/backend/catalog/worker.ts --target bun --outdir dist",
 		"check": "bun run format:check && bun run lint && bun run type-check && bun run dead-code && bun run test",
 		"dead-code": "knip --cycles",
 		"dev": "bun run scripts/dev.ts",
