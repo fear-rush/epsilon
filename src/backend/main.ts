@@ -9,8 +9,10 @@ import { Catalog, CatalogLive } from "./catalog/catalog.ts";
 import { Engines, EnginesLive } from "./engines/registry.ts";
 import { EngineSpecLive, SupervisorLive } from "./engines/supervisor.ts";
 import { AgentHome, AgentHomeLive } from "./platform/agent-home.ts";
+import { JsonDocumentLive } from "./platform/json-document.ts";
 import { Log, LogLive } from "./platform/log.ts";
 import { piVersion, sessionFormatVersion } from "./platform/pi.ts";
+import { EpsilonSettings, EpsilonSettingsLive } from "./settings.ts";
 
 /**
  * The process you start. It chooses the agent home once and never again, builds the
@@ -25,7 +27,6 @@ import { piVersion, sessionFormatVersion } from "./platform/pi.ts";
 const agentDir = process.env["EPSILON_AGENT_HOME"] ?? join(homedir(), ".pi", "agent");
 const userHome = process.env["HOME"] ?? homedir();
 const isProduction = process.env["NODE_ENV"] === "production";
-const maxRunning = 8;
 
 // pi's MCP loader takes no directory and resolves `getAgentDir()` itself, so the variable
 // it reads is published here, once, before anything can load MCP. See docs/pi-sdk.md.
@@ -49,7 +50,11 @@ const engineSpec = {
 	},
 } as const;
 
-const core = LogLive.pipe(Layer.provideMerge(homeLayer), Layer.provideMerge(BunServices.layer));
+const core = Layer.mergeAll(LogLive, JsonDocumentLive).pipe(
+	Layer.provideMerge(homeLayer),
+	Layer.provideMerge(BunServices.layer),
+);
+const settings = EpsilonSettingsLive.pipe(Layer.provideMerge(core));
 const catalog = CatalogLive(join(agentDir, ".epsilon", "session-index.sqlite"), {
 	formatVersion: sessionFormatVersion,
 	piVersion,
@@ -60,20 +65,26 @@ const supervisor = SupervisorLive.pipe(
 	Layer.provideMerge(EngineSpecLive(engineSpec)),
 	Layer.provideMerge(catalog),
 );
-const engines = EnginesLive({ maxRunning }).pipe(
+const engines = EnginesLive.pipe(
 	Layer.provideMerge(core),
 	Layer.provideMerge(catalog),
+	Layer.provideMerge(settings),
 	Layer.provideMerge(supervisor),
 );
 
-const AppLive = Layer.mergeAll(core, catalog, engines);
+const AppLive = Layer.mergeAll(core, settings, catalog, engines);
 
 const program = Effect.gen(function* () {
 	const home = yield* AgentHome;
 	const log = yield* Log;
 	const catalogService = yield* Catalog;
 	const engineService = yield* Engines;
-	yield* log.write("info", "epsilon started", { agentDir: home.agentDir });
+	const epsilonSettings = yield* EpsilonSettings;
+	const current = yield* epsilonSettings.view;
+	yield* log.write("info", "epsilon started", {
+		agentDir: home.agentDir,
+		maxRunning: current.settings.maxRunning,
+	});
 	yield* catalogService.sync([join(home.agentDir, "sessions")]);
 	const running = yield* engineService.running;
 	yield* log.write("info", "engines ready", { running: running.length });

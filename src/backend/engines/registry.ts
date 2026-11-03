@@ -10,6 +10,7 @@ import type { CommandRefused, EngineCrashLoop, EngineStopped } from "#protocol/e
 import { Catalog } from "../catalog/catalog.ts";
 import { SessionLocks } from "../catalog/locks.ts";
 import type { SessionLocksApi } from "../catalog/locks.ts";
+import { EpsilonSettings } from "../settings.ts";
 import type { RemoteEngine } from "./engine.ts";
 import { Supervisor } from "./supervisor.ts";
 
@@ -88,7 +89,8 @@ type Entry = {
 };
 
 export const makeEngines = (options: {
-	readonly maxRunning: number;
+	/** Read at each attach: a new cap applies to the next chat, not the next restart. */
+	readonly maxRunning: Effect.Effect<number>;
 	readonly supervisor: {
 		start: (input: {
 			sessionId: string;
@@ -203,11 +205,12 @@ export const makeEngines = (options: {
 					return lease(existing, input.tab);
 				}
 
-				if (entries().length >= options.maxRunning) {
+				const maxRunning = yield* options.maxRunning;
+				if (entries().length >= maxRunning) {
 					const evicted = yield* evict();
 					if (!evicted) {
 						return yield* new EngineLimitReached({
-							max: options.maxRunning,
+							max: maxRunning,
 							running: entries().length,
 						});
 					}
@@ -302,31 +305,33 @@ export const SessionLocksFromEngines: Layer.Layer<SessionLocks, never, Engines> 
 	Effect.map(Engines, (engines): SessionLocksApi => ({ isRunning: engines.isRunning })),
 );
 
-export const EnginesLive = (options: {
-	readonly maxRunning: number;
-}): Layer.Layer<Engines, never, Supervisor | Catalog | FileSystem.FileSystem> =>
-	Layer.effect(
-		Engines,
-		Effect.gen(function* () {
-			const supervisor = yield* Supervisor;
-			const catalog = yield* Catalog;
-			const scope = yield* Scope.Scope;
-			const engines = makeEngines({
-				locate: (sessionId) =>
-					Effect.map(catalog.locate(sessionId), (row) =>
-						row === undefined ? undefined : { cwd: row.cwd, path: row.path },
-					),
-				maxRunning: options.maxRunning,
-				scope,
-				supervisor,
-			});
-			yield* Effect.addFinalizer(() =>
-				Effect.gen(function* () {
-					for (const running of yield* engines.running) {
-						yield* engines.close(running.sessionId);
-					}
-				}).pipe(Effect.ignore),
-			);
-			return engines;
-		}),
-	);
+export const EnginesLive: Layer.Layer<
+	Engines,
+	never,
+	Supervisor | Catalog | EpsilonSettings | FileSystem.FileSystem
+> = Layer.effect(
+	Engines,
+	Effect.gen(function* () {
+		const supervisor = yield* Supervisor;
+		const catalog = yield* Catalog;
+		const settings = yield* EpsilonSettings;
+		const scope = yield* Scope.Scope;
+		const engines = makeEngines({
+			locate: (sessionId) =>
+				Effect.map(catalog.locate(sessionId), (row) =>
+					row === undefined ? undefined : { cwd: row.cwd, path: row.path },
+				),
+			maxRunning: settings.maxRunning,
+			scope,
+			supervisor,
+		});
+		yield* Effect.addFinalizer(() =>
+			Effect.gen(function* () {
+				for (const running of yield* engines.running) {
+					yield* engines.close(running.sessionId);
+				}
+			}).pipe(Effect.ignore),
+		);
+		return engines;
+	}),
+);

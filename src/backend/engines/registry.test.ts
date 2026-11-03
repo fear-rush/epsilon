@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { BunServices } from "@effect/platform-bun";
-import { Effect, Exit, Scope } from "effect";
+import { Effect, Exit, Ref, Scope } from "effect";
 import type { FileSystem } from "effect";
 
 import { fakeSpec } from "../../../test/fake-engine.ts";
@@ -42,7 +42,7 @@ const withEngines = <A, E>(
 		const scope = yield* Scope.make();
 		const engines = makeEngines({
 			locate: () => Effect.as(Effect.void, undefined),
-			maxRunning,
+			maxRunning: Effect.succeed(maxRunning),
 			scope,
 			supervisor: { start, stop },
 		});
@@ -77,6 +77,42 @@ describe("engine registry", () => {
 					expect(yield* engines.isRunning("s-old-new")).toBe(false);
 				}),
 			),
+		);
+	}, 10_000);
+
+	test("the cap is read at each attach, so a raised one applies without a restart (G2)", async () => {
+		await run(
+			Effect.gen(function* () {
+				const scope = yield* Scope.make();
+				const limit = Ref.makeUnsafe(1);
+				const engines = makeEngines({
+					locate: () => Effect.as(Effect.void, undefined),
+					maxRunning: Ref.get(limit),
+					scope,
+					supervisor: { start, stop },
+				});
+				const attach = (sessionId: string, tab: string) =>
+					engines.attach({ cwd: "/tmp", file: undefined, place: null, sessionId, tab });
+				yield* Effect.gen(function* () {
+					yield* attach("s-cap-1", "tab-1");
+					// One slot: the second chat closes the first.
+					yield* attach("s-cap-2", "tab-2");
+					expect(yield* engines.isRunning("s-cap-1")).toBe(false);
+
+					// Two slots: the chat already running keeps its process.
+					yield* Ref.set(limit, 2);
+					yield* attach("s-cap-3", "tab-3");
+					expect(yield* engines.isRunning("s-cap-2")).toBe(true);
+					expect(yield* engines.isRunning("s-cap-3")).toBe(true);
+				}).pipe(
+					Effect.ensuring(
+						Effect.gen(function* () {
+							for (const row of yield* engines.running) yield* engines.close(row.sessionId);
+							yield* Scope.close(scope, Exit.void);
+						}),
+					),
+				);
+			}),
 		);
 	}, 10_000);
 

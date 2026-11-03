@@ -133,7 +133,7 @@ describe("acceptance", () => {
 				const supervisor = makeSupervisor({ fs, home, log, spec: fakeSpec() });
 				const engines = makeEngines({
 					locate: () => Effect.as(Effect.void, undefined),
-					maxRunning: 4,
+					maxRunning: Effect.succeed(4),
 					scope,
 					supervisor: { start, stop: supervisor.stop },
 				});

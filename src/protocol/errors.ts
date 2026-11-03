@@ -60,3 +60,12 @@ export class FileUnreadable extends Schema.TaggedError<
 	path: Schema.String,
 	reason: Schema.String,
 }) {}
+
+/** A write Epsilon refused before it touched the file, with the sentence the page shows. */
+export class SettingRefused extends Schema.TaggedError<
+	SettingRefused,
+	{ readonly brand: unique symbol }
+>()("SettingRefused", {
+	key: Schema.String,
+	reason: Schema.String,
+}) {}
