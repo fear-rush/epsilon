@@ -351,3 +351,73 @@ describe("a provider that throws", () => {
 		}
 	});
 });
+
+/**
+ * An extension that draws with pi's terminal components. Each call has no browser
+ * equivalent, so the host answers with one sentence per method, not one per call:
+ * a `session_start` that touches several of them must not flood the transcript.
+ */
+const terminalOnly = `
+export default function terminalOnly(pi) {
+	pi.registerCommand("paint-terminal", {
+		description: "Use every method a browser cannot draw, twice",
+		handler: async (_args, ctx) => {
+			ctx.ui.setWidget("card", () => null);
+			ctx.ui.setWidget("card", () => null);
+			ctx.ui.onTerminalInput(() => undefined);
+			ctx.ui.onTerminalInput(() => undefined);
+			ctx.ui.setWorkingIndicator({ frames: ["|"] });
+			ctx.ui.setWorkingIndicator({ frames: ["-"] });
+			ctx.ui.setFooter(() => null);
+			ctx.ui.setFooter(() => null);
+			ctx.ui.setHeader(() => null);
+			ctx.ui.setHeader(() => null);
+			await ctx.ui.custom(() => null);
+			await ctx.ui.custom(() => null);
+			ctx.ui.setEditorComponent(() => null);
+			ctx.ui.setEditorComponent(() => null);
+		},
+	});
+}
+`;
+
+describe("an extension that draws terminal components", () => {
+	test("names each TUI-only method once, however often it is called", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "epsilon-terminal-only-"));
+		const home = agentHome(dir);
+		await mkdir(join(dir, "extensions"), { recursive: true });
+		await mkdir(home.chatsDir, { recursive: true });
+		await writeFile(join(dir, "extensions", "terminal-only.ts"), terminalOnly, "utf8");
+		const registry = new SessionRegistry(home);
+		try {
+			const session = await registry.ensure(crypto.randomUUID(), { kind: "chat" });
+			const frames: ServerFrame[] = [];
+			const unsubscribe = session.subscribe((frame) => frames.push(frame));
+			try {
+				await session.run({ type: "prompt", text: "/paint-terminal" });
+			} finally {
+				unsubscribe();
+			}
+
+			const notices = frames.flatMap((frame) =>
+				frame.t === "ui" &&
+				frame.request.method === "notify" &&
+				frame.request.message.startsWith("An extension used")
+					? [frame.request.message]
+					: [],
+			);
+			expect(notices).toEqual([
+				"An extension used setWidget, which needs the terminal tab.",
+				"An extension used onTerminalInput, which needs the terminal tab.",
+				"An extension used setWorkingIndicator, which needs the terminal tab.",
+				"An extension used setFooter, which needs the terminal tab.",
+				"An extension used setHeader, which needs the terminal tab.",
+				"An extension used custom, which needs the terminal tab.",
+				"An extension used setEditorComponent, which needs the terminal tab.",
+			]);
+		} finally {
+			await registry.disposeAll();
+			await rm(dir, { recursive: true, force: true });
+		}
+	});
+});

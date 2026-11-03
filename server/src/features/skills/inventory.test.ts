@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { agentHome } from "../../platform/agent-home";
+import { installPackage } from "../packages";
 import type { AgentHome } from "../../platform/agent-home";
 import { linkSkillFolder, listForeignSkills, unlinkSkillFolder } from "./foreign";
 import { listSkills, untrustedSkills } from "./inventory";
@@ -150,6 +151,28 @@ describe("skill inventory", () => {
 			toggle: "none",
 			editable: false,
 		});
+	});
+
+	test("a user skill wins the name over a package skill", async () => {
+		const { home } = await fresh();
+		const user = await skill(home.skillsDir, "dup", "name: dup\ndescription: Home copy");
+		const pkg = join(scratch, `precedence-${crypto.randomUUID()}`);
+		await mkdir(join(pkg, "skills", "dup"), { recursive: true });
+		await writeFile(
+			join(pkg, "skills", "dup", "SKILL.md"),
+			"---\nname: dup\ndescription: Package copy\n---\n\nBody\n",
+		);
+		await writeFile(join(pkg, "package.json"), JSON.stringify({ name: "precedence" }));
+		await installPackage(home.chatsDir, home, pkg, "user");
+
+		const views = (await listSkills(home.chatsDir, home, null)).filter(
+			(view) => view.name === "dup",
+		);
+		expect(views.map((view) => [view.origin, view.status]).sort()).toEqual([
+			["home", "active"],
+			["package", "shadowed"],
+		]);
+		expect(views.find((view) => view.filePath === user)?.status).toBe("active");
 	});
 });
 
