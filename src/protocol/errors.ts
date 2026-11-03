@@ -91,6 +91,22 @@ export class McpRefused extends Schema.TaggedError<McpRefused, { readonly brand:
 	},
 ) {}
 
+/** An MCP registry that did not answer, or answered something this version cannot read. */
+export class RegistryUnavailable extends Schema.TaggedError<
+	RegistryUnavailable,
+	{ readonly brand: unique symbol }
+>()("RegistryUnavailable", {
+	reason: Schema.String,
+}) {}
+
+/** The MCP registry has no server by that name. */
+export class RegistryNotFound extends Schema.TaggedError<
+	RegistryNotFound,
+	{ readonly brand: unique symbol }
+>()("RegistryNotFound", {
+	server: Schema.String,
+}) {}
+
 /** A skill import Epsilon could not complete, with the sentence the page shows. */
 export class ImportFailed extends Schema.TaggedError<
 	ImportFailed,
