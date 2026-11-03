@@ -509,6 +509,26 @@ apart before Save. A `level` on the request is passed to `completeSimple` as
 then reports the field the request carried plus the `reasoning_tokens` or thinking
 characters the provider returned.
 
+## Session files the index reads
+
+The catalog reads pi's v3 JSONL directly, so these are the fields it depends on. The
+conformance test (`src/backend/catalog/catalog.test.ts`) pins each one to
+`SessionManager.listAll`; a pi upgrade that changes one fails there first.
+
+- The first line is `{ type: "session", version: 3, id, timestamp, cwd, parentSession? }`.
+  A file whose first entry is not a session header is not listed.
+- Every entry is `{ type, id, parentId, timestamp, ... }`; `session_info` carries `name`.
+- `messageCount` counts every `message` entry, tool results included.
+- Activity time is the newest user or assistant message: `message.timestamp` when it is a
+  number, else the entry's `timestamp`. A tool result does not move it.
+- `firstMessage` is the first non-empty text of a user message, or `"(no messages)"`.
+- Text content is a string, or an array whose `text` blocks are joined with a space.
+- The line order is `{ type, id, parentId, timestamp, message }`, which is why a prefix
+  peek is possible at all (Traps).
+- Appending is the only write Epsilon expects; a rewrite (compaction, branch rewrite,
+  migration) is detected by a changed inode, a shrunken size or a changed head, and the
+  whole file is re-read.
+
 ## Files in the agent home
 
 | Path            | Owner   | What it holds                                                              |

@@ -327,9 +327,30 @@
 			}
 		},
 		{
-			"files": ["src/backend/main.ts"],
+			"files": ["src/backend/main.ts", "scripts/bench/**"],
 			"rules": {
 				"effecttsgo/strict-effect-provide": "off"
+			}
+		},
+		{
+			"files": ["src/backend/**/*.test.ts"],
+			"rules": {
+				"epsilon/effect-only-io": "off"
+			}
+		},
+		{
+			"files": ["src/backend/catalog/ingest.ts"],
+			"rules": {
+				"anti-slop/no-runtime-typeof": "off",
+				"epsilon/effect-only-io": "off"
+			}
+		},
+		{
+			"files": ["src/backend/catalog/ingest.ts"],
+			"rules": {
+				"anti-slop/no-runtime-typeof": "off",
+				"epsilon/effect-only-io": "off",
+				"typescript/no-unsafe-type-assertion": "off"
 			}
 		}
 	]

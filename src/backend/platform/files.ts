@@ -1,4 +1,5 @@
-import { dirname } from "node:path";
+import { closeSync, openSync, readdirSync, readFileSync, readSync, statSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 import { Effect, FileSystem } from "effect";
 import type { Option } from "effect";
@@ -59,4 +60,100 @@ export const writeText = (
 			.makeDirectory(dirname(path), { recursive: true })
 			.pipe(Effect.mapError(unwritable(path)));
 		yield* fs.writeFileString(path, text).pipe(Effect.mapError(unwritable(path)));
+	});
+
+export const appendText = (
+	path: string,
+	text: string,
+): Effect.Effect<void, FileUnwritable, FileSystem.FileSystem> =>
+	Effect.gen(function* () {
+		const fs = yield* FileSystem.FileSystem;
+		yield* fs.writeFileString(path, text, { flag: "a" }).pipe(Effect.mapError(unwritable(path)));
+	});
+
+export const renamePath = (
+	from: string,
+	to: string,
+): Effect.Effect<void, FileUnwritable, FileSystem.FileSystem> =>
+	Effect.gen(function* () {
+		const fs = yield* FileSystem.FileSystem;
+		yield* fs.rename(from, to).pipe(Effect.mapError(unwritable(from)));
+	});
+
+export const removePath = (
+	path: string,
+): Effect.Effect<void, FileUnwritable, FileSystem.FileSystem> =>
+	Effect.gen(function* () {
+		const fs = yield* FileSystem.FileSystem;
+		yield* fs.remove(path).pipe(Effect.mapError(unwritable(path)));
+	});
+
+export type FileStats = {
+	readonly size: number;
+	readonly mtimeNs: number;
+	readonly ino: number;
+};
+
+/**
+ * Synchronous reads for the catalog.
+ *
+ * The index consumes byte ranges and must finish a batch without interleaving, so these
+ * stay synchronous; they are Effects only so the caller does not have to guess. Step 5
+ * runs the whole batch inside a worker, where a synchronous read blocks nothing that
+ * serves a request.
+ */
+export const statFile = (path: string): Effect.Effect<FileStats, FileUnreadable> =>
+	Effect.try({
+		try: () => {
+			const stats = statSync(path, { bigint: true });
+			return { ino: Number(stats.ino), mtimeNs: Number(stats.mtimeNs), size: Number(stats.size) };
+		},
+		catch: unreadable(path),
+	});
+
+export const readTextSync = (path: string): Effect.Effect<string, FileUnreadable> =>
+	Effect.try({ try: () => readFileSync(path, "utf8"), catch: unreadable(path) });
+
+/** Reads `length` bytes from `offset`; a short read at the end yields the bytes that exist. */
+export const readRangeSync = (
+	path: string,
+	offset: number,
+	length: number,
+): Effect.Effect<string, FileUnreadable> =>
+	Effect.try({
+		try: () => {
+			const fd = openSync(path, "r");
+			try {
+				const buffer = Buffer.alloc(length);
+				const read = readSync(fd, buffer, 0, length, offset);
+				return buffer.subarray(0, read).toString("utf8");
+			} finally {
+				closeSync(fd);
+			}
+		},
+		catch: unreadable(path),
+	});
+
+/** Every `.jsonl` under these roots, recursively; a missing root contributes nothing. */
+export const listJsonl = (roots: ReadonlyArray<string>): Effect.Effect<ReadonlyArray<string>> =>
+	Effect.sync(() => {
+		const files: string[] = [];
+		for (const root of roots) {
+			let entries: ReadonlyArray<string>;
+			try {
+				entries = readdirSync(root, { encoding: "utf8", recursive: true });
+			} catch {
+				continue;
+			}
+			for (const entry of entries) if (entry.endsWith(".jsonl")) files.push(join(root, entry));
+		}
+		return files;
+	});
+
+export const ensureDir = (
+	path: string,
+): Effect.Effect<void, FileUnwritable, FileSystem.FileSystem> =>
+	Effect.gen(function* () {
+		const fs = yield* FileSystem.FileSystem;
+		yield* fs.makeDirectory(path, { recursive: true }).pipe(Effect.mapError(unwritable(path)));
 	});

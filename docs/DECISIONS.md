@@ -66,8 +66,12 @@ Cost accepted: the index reads pi's session fields directly, so a conformance te
 it to `SessionManager.listAll` and must pass after every pi upgrade. Delete the index
 and nothing is lost.
 
+The index holds sessions and their entry offsets. It does not hold a project list or the
+pins: those come from settings and `<home>/pinned-sessions.json` at read time, so they
+cannot disagree with what pi sees.
+
 Not: caching `SessionManager.listAll` in memory (same parse, plus staleness). Writing a
-new session format.
+new session format. Keeping the index only in memory.
 
 ## An engine cap
 

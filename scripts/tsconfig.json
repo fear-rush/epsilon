@@ -6,7 +6,16 @@
 		"emitDeclarationOnly": true,
 		"outDir": "../dist/types/scripts",
 		"tsBuildInfoFile": "../dist/types/scripts/tsbuildinfo",
-		"types": ["bun"]
+		"types": ["bun"],
+		"rootDir": ".."
 	},
-	"include": ["**/*.ts", "**/*.tsx"]
+	"include": ["**/*.ts", "**/*.tsx"],
+	"references": [
+		{
+			"path": "../src/backend"
+		},
+		{
+			"path": "../test"
+		}
+	]
 }

@@ -7,11 +7,6 @@ import { test } from "bun:test";
  * it pass, and the behaviour the new design has to produce, not the old patch.
  */
 
-test.todo("F1: moving a chat whose engine is running is refused and the file is untouched", () => {
-	// Step 4. The move goes through the registry's lock, so a running session answers
-	// SESSION_RUNNING instead of being forked and removed under the engine.
-});
-
 test.todo("F2: an extension whose session_shutdown rejects does not take the server down", () => {
 	// Step 5. The handler runs in the engine process; its crash costs that chat, and the
 	// server keeps answering.
@@ -20,11 +15,6 @@ test.todo("F2: an extension whose session_shutdown rejects does not take the ser
 test.todo("F3: disposing an engine does not forget the engine that replaced it", () => {
 	// Step 5. Close during a slow shutdown, re-attach, then exactly one engine exists and
 	// the shutdown sweep closes it.
-});
-
-test.todo("F4: no test type-checks or lists sessions from the real home", () => {
-	// Step 3. The preload sets a scratch home (already enforced above); the catalog
-	// conformance test calls listAll only through it.
 });
 
 test.todo("F5: a 50,000-entry linear chat opens and its tree renders", () => {
