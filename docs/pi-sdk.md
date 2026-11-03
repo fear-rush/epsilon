@@ -797,8 +797,13 @@ Turborepo or the runtime.
   `user_bash` handler. A handler answers `{ result }` or `{ operations }`, and the
   operations object is passed back in as the command's runner.
 - **`toJsonEvent` is not exported.** `package.json` exports only `.` and
-  `./rpc-entry`; `dist/modes/json-event.js` is private. The host carries its own
-  copy of the transform in `src/engine/bindings.ts`.
+  `./rpc-entry`; `dist/modes/json-event.js` is private. Epsilon does not consume pi's
+  JSON event shape: `src/engine/translate.ts` maps events and session entries onto the
+  wire frames directly.
+- **A `message_end` listener runs before the entry is persisted.** The listener is
+  called, then `SessionManager.appendMessage` writes it; a listener that reads the leaf
+  sees the previous message. Look the entry up after the event (or by the message
+  object) in `src/engine/translate.ts`.
 - **pi exposes no MCP connection state.** A connected server's tools appear in
   `session.getAllTools()` with `namespace.name === "mcp__<server>"` and, when the
   server sent hints, `annotations` (`readOnlyHint`, `destructiveHint`,

@@ -1,4 +1,4 @@
-import { SettingsManager } from "@earendil-works/pi-coding-agent";
+import { CURRENT_SESSION_VERSION, SettingsManager, VERSION } from "@earendil-works/pi-coding-agent";
 import { Context, Effect } from "effect";
 
 import { AgentHome } from "./agent-home.ts";
@@ -12,6 +12,12 @@ import { AgentHome } from "./agent-home.ts";
  * scratch one. (MCP is the exception that forces `main.ts` to export that variable: its
  * config loader takes no directory. See `docs/pi-sdk.md`.)
  */
+
+/** The pinned pi version, for a crash record and Diagnostics. */
+export const piVersion = VERSION;
+
+/** The session file format this index was built for; a mismatch rebuilds the index. */
+export const sessionFormatVersion = CURRENT_SESSION_VERSION;
 
 export type PiConfigApi = {
 	/** pi's merged settings for a folder, read through its own manager. */

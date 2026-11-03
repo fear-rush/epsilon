@@ -134,10 +134,18 @@ export const SnapshotFrame = Schema.Struct({
 	sessionId: Schema.String,
 	entries: Schema.Array(TranscriptEntry),
 	hasOlder: Schema.Boolean,
-	tree: Schema.Array(TreeEntry),
 	notices: Schema.Array(Notice),
 	/** The same state without replaying frames: what a stale tab asks for after a reconnect. */
 	resync: Schema.optional(Schema.Boolean),
+});
+
+/**
+ * The branch tree, flat, when a tab opens the picker. 50,000 entries at snapshot time would
+ * blow the frame budget, and the tree is not read on every render, so it travels on request.
+ */
+export const TreeFrame = Schema.Struct({
+	t: Schema.Literals(["tree"]),
+	entries: Schema.Array(TreeEntry),
 });
 
 /** Text or thinking arriving before the message is appended. Keyed by the stream id. */
@@ -214,6 +222,7 @@ export const ServerFrame = Schema.Union([
 	BusyFrame,
 	DriftFrame,
 	SessionMetaFrame,
+	TreeFrame,
 ]);
 export type ServerFrame = typeof ServerFrame.Type;
 

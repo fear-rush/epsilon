@@ -56,7 +56,13 @@ describe("selectors", () => {
 	});
 
 	test("tree children are built in one pass, iteratively", () => {
-		const children = treeChildren(state);
+		const withTree = reduce(state, {
+			t: "tree",
+			entries: [
+				{ id: "u1", parentId: null, kind: "user", label: "run the tests", ts: 1_000, onPath: true },
+			],
+		});
+		const children = treeChildren(withTree);
 		expect(children.get("")).toEqual(["u1"]);
 		expect(children.get("u1")).toBeUndefined();
 	});

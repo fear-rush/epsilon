@@ -283,7 +283,13 @@
 			}
 		},
 		{
-			"files": ["test/setup.ts", "test/until.ts", "test/fixtures/**", "test/e2e/app.ts"],
+			"files": [
+				"test/setup.ts",
+				"test/until.ts",
+				"test/fixtures/**",
+				"test/e2e/app.ts",
+				"test/e2e/stub-model.ts"
+			],
 			"rules": {
 				"epsilon/no-real-sleep": "off"
 			}
@@ -306,7 +312,7 @@
 			}
 		},
 		{
-			"files": ["src/protocol/errors.ts", "src/backend/platform/errors.ts"],
+			"files": ["src/protocol/errors.ts", "src/backend/platform/errors.ts", "src/engine/errors.ts"],
 			"rules": {
 				"unicorn/throw-new-error": "off"
 			}
@@ -350,6 +356,28 @@
 			"rules": {
 				"anti-slop/no-runtime-typeof": "off",
 				"epsilon/effect-only-io": "off",
+				"typescript/no-unsafe-type-assertion": "off"
+			}
+		},
+		{
+			"files": ["src/engine/main.ts", "src/engine/translate.ts", "src/engine/ui.ts"],
+			"rules": {
+				"anti-slop/no-runtime-typeof": "off",
+				"anti-slop/no-unknown-parameters": "off",
+				"anti-slop/no-unsafe-dictionary-type": "off",
+				"typescript/no-unsafe-type-assertion": "off"
+			}
+		},
+		{
+			"files": ["src/engine/session.ts", "src/backend/engines/engine.ts"],
+			"rules": {
+				"typescript/no-this-alias": "off"
+			}
+		},
+		{
+			"files": ["test/fixtures/**"],
+			"rules": {
+				"anti-slop/no-chained-type-assertions": "off",
 				"typescript/no-unsafe-type-assertion": "off"
 			}
 		}

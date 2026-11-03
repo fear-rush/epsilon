@@ -1,11 +1,11 @@
 import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
-import { appendFileSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { appendFileSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { SessionManager } from "@earendil-works/pi-coding-agent";
 import { BunServices } from "@effect/platform-bun";
-import { Effect, Layer } from "effect";
+import { Deferred, Effect, Layer, Option, Stream } from "effect";
 
 const runEffect = Effect.runPromise;
 
@@ -32,7 +32,7 @@ const projectDir = join(root, "--tmp-project--");
 const indexPath = join(testPaths.scratch, "catalog", "index.sqlite");
 
 const meta = { formatVersion: 3, piVersion: "1.4.0", schemaVersion: "1" };
-const catalogLayer = Layer.provide(CatalogLive(indexPath, meta), BunServices.layer);
+const catalogLayer = Layer.provideMerge(CatalogLive(indexPath, meta), BunServices.layer);
 
 const fixtures = (): void => {
 	rmSync(root, { recursive: true, force: true });
@@ -237,3 +237,44 @@ test("makeCatalog builds on an existing connection", () => {
 	expect(catalog).toBeDefined();
 	db.close();
 });
+
+test("the watcher publishes a version after a file changes", async () => {
+	const directory = join(testPaths.scratch, "catalog-watch", "--project--");
+	mkdirSync(directory, { recursive: true });
+	const file = join(directory, "2026-01-01_s-watch.jsonl");
+	writeFileSync(file, linearSession("s-watch", directory, 3));
+	const version = await Effect.runPromise(
+		Effect.scoped(
+			Effect.gen(function* () {
+				const catalog = yield* Catalog;
+				yield* catalog.sync([directory]);
+				yield* catalog.watch([directory]);
+				const first = yield* Deferred.make<number>();
+				yield* Effect.forkScoped(
+					catalog.changes.pipe(
+						Stream.take(1),
+						Stream.runHead,
+						Effect.flatMap((value) =>
+							Option.isSome(value) ? Deferred.succeed(first, value.value) : Effect.void,
+						),
+					),
+				);
+				yield* Effect.sleep("20 millis");
+				appendFileSync(
+					file,
+					`${JSON.stringify({
+						id: "appended",
+						message: { content: [{ text: "after the watch", type: "text" }], role: "user" },
+						parentId: "e000002",
+						timestamp: "2026-01-01T00:01:00.000Z",
+						type: "message",
+					})}\n`,
+				);
+				return yield* Deferred.await(first).pipe(
+					Effect.timeoutOrElse({ duration: "2 seconds", orElse: () => Effect.succeed(0) }),
+				);
+			}).pipe(Effect.provide(catalogLayer)),
+		),
+	);
+	expect(version).toBeGreaterThan(0);
+}, 10_000);

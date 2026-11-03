@@ -22,6 +22,8 @@ export const Command = Schema.Union([
 	Schema.Struct({ t: Schema.Literals(["answerDialog"]), answer: DialogAnswer }),
 	/** Ask for the window before `before` (an entry id), for "load earlier messages". */
 	Schema.Struct({ t: Schema.Literals(["loadHistory"]), before: Schema.String }),
+	/** Ask for the flat branch tree; the answer is a `tree` frame to the asking tab. */
+	Schema.Struct({ t: Schema.Literals(["loadTree"]) }),
 	/** Re-open the runtime from the file after a foreign write. */
 	Schema.Struct({ t: Schema.Literals(["reloadFromDisk"]) }),
 ]);

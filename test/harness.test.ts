@@ -103,23 +103,34 @@ describe("fake engine", () => {
 	test("answers init and exits on shutdown", async () => {
 		const engine = startFakeEngine();
 		try {
-			await engine.waitFor("started");
-			engine.send({ type: "init", sessionId: "s1" });
+			engine.send({
+				cwd: "/tmp",
+				file: "/tmp/s1.jsonl",
+				homeDir: "/tmp",
+				place: null,
+				sessionId: "s1",
+				t: "init",
+				userHome: "/tmp",
+			});
 			const ready = await engine.waitFor("ready");
-			expect(ready["pid"]).toBe(engine.pid);
-			engine.send({ type: "echo", value: 7 });
-			const echo = await engine.waitFor("echo");
-			expect(echo["value"]).toBe(7);
+			expect(ready["sessionId"]).toBe("s1");
 		} finally {
-			engine.stop();
+			engine.send({ deadlineMs: 1000, t: "shutdown" });
 			await engine.exited;
 		}
 	});
 
-	test("exits with the code it was told to crash with", async () => {
-		const engine = startFakeEngine();
-		await engine.waitFor("started");
-		engine.send({ type: "crash" });
+	test("crashes with the code the mode names", async () => {
+		const engine = startFakeEngine("crash");
+		engine.send({
+			cwd: "/tmp",
+			file: "/tmp/s1.jsonl",
+			homeDir: "/tmp",
+			place: null,
+			sessionId: "s1",
+			t: "init",
+			userHome: "/tmp",
+		});
 		expect(await engine.exited).toBe(9);
 	});
 });

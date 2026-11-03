@@ -20,6 +20,9 @@ files directly and embeds its runtime. An upgrade is one commit, never a version
    file, and which readers resolve `getAgentDir()` themselves.
 5. **Update [pi-sdk.md](pi-sdk.md)** in the same commit. A trap that moved is a trap a
    future reader will trust.
-6. **Run everything:** `bun run check`, `bun run test:e2e`, `bun run bench`.
-7. **Refuse the upgrade** if the conformance test or an e2e flow fails for a reason you
+6. **Run the engine test** (`test/engine.test.ts`). It starts a real engine on a scratch
+   home with the stub model and a fake extension, so a moved `message_end` or
+   `bindExtensions` contract fails before a chat does.
+7. **Run everything:** `bun run check`, `bun run test:e2e`, `bun run bench`.
+8. **Refuse the upgrade** if the conformance test or an e2e flow fails for a reason you
    do not understand. Staying pinned is a supported state; a silently lossy index is not.

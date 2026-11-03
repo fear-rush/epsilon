@@ -29,7 +29,8 @@ production `bun run start` is one process serving the built page and the socket.
 ## Roots
 
 - `src/protocol/`: the one contract. Effect Schema for every wire shape, the RPC group,
-  `PROTOCOL_VERSION` as a schema hash, errors both sides see. Types only from pi.
+  an explicit `PROTOCOL_VERSION` checked against the frame list, errors both sides see.
+  Types only from pi.
 - `src/domain/`: pure rules both sides run (the conversation reducer and selectors,
   permission rules, path rules, formatting). No I/O, no services, no React.
 - `src/backend/`: sockets, the catalog, configuration features, the supervisor, and
@@ -70,8 +71,8 @@ view, built from the shared patterns.
 1. The page attaches to a session: `conversation.attach` returns a stream of frames.
 2. The registry either reuses the engine for that session or asks the supervisor to
    spawn one inside a scope. The engine builds its runtime from the session file.
-3. The engine sends a windowed snapshot (entry ids, flat tree, recent entries); older
-   pages arrive only when the transcript asks for them.
+3. The engine sends a windowed snapshot (entry ids, recent entries, notices); older
+   pages arrive when the transcript asks, and the flat tree when the picker opens.
 4. Commands go down the same socket as tagged values; extension dialogs come back as
    frames and their answers go back as commands.
 5. The reducer in `src/domain/` turns frames into state; the view renders state. A

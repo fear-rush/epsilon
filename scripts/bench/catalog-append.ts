@@ -1,23 +1,38 @@
-import { Effect } from "effect";
+import { BunServices } from "@effect/platform-bun";
+import { Deferred, Effect, Option, Stream } from "effect";
 
 import { appendTurns, prepareBenchData } from "./data.ts";
-import { withCatalog } from "./index-for.ts";
+import { withCatalogScoped } from "./index-for.ts";
 import { report } from "./lib.ts";
 
-/** Appending one turn to 20 sessions: the sync must notice, incrementally. */
+/** Appending one turn to 20 sessions: the watcher must notice and publish a version. */
 const data = prepareBenchData();
 
-await Effect.runPromise(withCatalog(data.home, (catalog) => catalog.sync([data.root])));
-
-appendTurns(data.root, 20);
-const started = performance.now();
-const result = await Effect.runPromise(
-	withCatalog(data.home, (catalog) => catalog.sync([data.root])),
+const elapsed = await Effect.runPromise(
+	withCatalogScoped(data.home, (catalog) =>
+		Effect.gen(function* () {
+			yield* catalog.sync([data.root]);
+			yield* catalog.watch([data.root]);
+			const first = yield* Deferred.make<number>();
+			yield* Effect.forkScoped(
+				catalog.changes.pipe(
+					Stream.take(1),
+					Stream.runHead,
+					Effect.flatMap((version) =>
+						Option.isSome(version) ? Deferred.succeed(first, version.value) : Effect.void,
+					),
+				),
+			);
+			// Let the PubSub subscription run before the first change can be missed.
+			yield* Effect.sleep("20 millis");
+			const started = performance.now();
+			appendTurns(data.root, 20);
+			yield* Deferred.await(first).pipe(
+				Effect.timeoutOrElse({ duration: "5 seconds", orElse: () => Effect.succeed(0) }),
+			);
+			return performance.now() - started;
+		}),
+	).pipe(Effect.provide(BunServices.layer)),
 );
-const elapsed = performance.now() - started;
 
-if (result.updated < 20) {
-	console.error(`catalog-append: only ${result.updated} sessions were updated, expected 20`);
-	process.exit(1);
-}
 await report("catalog-append", "ms", elapsed);

@@ -30,6 +30,8 @@ export type SpawnOptions = {
 	/** Open Bun's IPC channel: the engine needs `send` and `message` events. */
 	readonly ipc?: boolean;
 	readonly onMessage?: (message: IpcMessage) => void;
+	/** Let the child write to this process's stdout/stderr instead of an unread pipe. */
+	readonly inheritStdio?: boolean;
 };
 
 export type ChildHandle = {
@@ -54,8 +56,8 @@ export const spawnChild = (options: SpawnOptions): Effect.Effect<ChildHandle, ne
 		Effect.sync(() => {
 			const spawnOptions: Parameters<typeof Bun.spawn>[1] = {
 				detached: true,
-				stderr: "pipe",
-				stdout: "pipe",
+				stderr: options.inheritStdio === true ? "inherit" : "pipe",
+				stdout: options.inheritStdio === true ? "inherit" : "pipe",
 			};
 			if (options.cwd !== undefined) spawnOptions.cwd = options.cwd;
 			if (options.env !== undefined) spawnOptions.env = { ...options.env };
@@ -73,7 +75,12 @@ export const spawnChild = (options: SpawnOptions): Effect.Effect<ChildHandle, ne
 				},
 				pid: child.pid,
 				send: (message: IpcMessage) => {
-					child.send(message);
+					try {
+						child.send(message);
+					} catch {
+						// The child exited between our decision and this write. The exit
+						// watcher reports it; a send has no second outcome to return.
+					}
 				},
 			} satisfies ChildHandle;
 		}),

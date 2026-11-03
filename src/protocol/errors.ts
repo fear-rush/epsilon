@@ -35,6 +35,23 @@ export class CommandRefused extends Schema.TaggedError<
 	reason: Schema.String,
 }) {}
 
+/** The running-engine cap is reached and every engine is doing work. */
+export class EngineLimitReached extends Schema.TaggedError<
+	EngineLimitReached,
+	{ readonly brand: unique symbol }
+>()("EngineLimitReached", {
+	running: Schema.Finite,
+	max: Schema.Finite,
+}) {}
+
+/** One chat crashed three times in a minute, so it is not respawned automatically. */
+export class EngineCrashLoop extends Schema.TaggedError<
+	EngineCrashLoop,
+	{ readonly brand: unique symbol }
+>()("EngineCrashLoop", {
+	sessionId: Schema.String,
+}) {}
+
 /** A file Epsilon must read is unreadable, and the reason is worth showing. */
 export class FileUnreadable extends Schema.TaggedError<
 	FileUnreadable,

@@ -1,0 +1,240 @@
+import type {
+	AutocompleteProviderFactory,
+	ExtensionUIContext,
+	ExtensionWidgetOptions,
+	Theme,
+	ThemeBg,
+	ThemeColor,
+} from "@earendil-works/pi-coding-agent";
+import { Effect } from "effect";
+
+import type { DialogAnswer, DialogQuestion } from "#protocol/conversation/extui";
+
+import type { AskOptions, Dialogs } from "./dialogs.ts";
+
+/**
+ * pi's `ExtensionUIContext`, mapped onto the browser's dialogs and notices.
+ *
+ * This is the engine's Promise boundary, the way `src/app/runtime.ts` is the app's: pi
+ * hands extensions Promises, so this file runs the dialog Effect and answers with its
+ * value. Everywhere else in the engine yields Effects.
+ *
+ * A method with no wire yet is refused once per method with a notice, never silently
+ * dropped (AGENTS.md, "Every failure is visible"). The display half (status, widgets,
+ * working label, editor text) lands with the frame the page reads them from.
+ */
+
+export type UiHost = {
+	readonly ask: (question: DialogQuestion, options?: AskOptions) => Promise<DialogAnswer>;
+	readonly notice: (message: string, kind: "notice" | "warning" | "error") => void;
+	readonly editorText: () => string;
+	readonly addAutocompleteProvider: (factory: AutocompleteProviderFactory) => void;
+	readonly unsupported: (method: string) => void;
+	readonly toolsExpanded: () => boolean;
+	readonly setToolsExpanded: (expanded: boolean) => void;
+};
+
+type QuestionOptions = { readonly signal?: AbortSignal; readonly timeoutMs?: number };
+type MutableQuestionOptions = { signal?: AbortSignal; timeoutMs?: number };
+
+/** Only the options pi actually supplied; `exactOptionalPropertyTypes` is on. */
+const questionOptions = (opts?: {
+	readonly signal?: AbortSignal;
+	readonly timeout?: number;
+}): QuestionOptions => {
+	const answer: MutableQuestionOptions = {};
+	if (opts?.signal !== undefined) answer.signal = opts.signal;
+	if (opts?.timeout !== undefined) answer.timeoutMs = opts.timeout;
+	return answer;
+};
+
+export class UiBridge {
+	/** The composer's draft as the tab last reported it; empty until one attaches. */
+	private editor = "";
+	/** pi's session-wide tool-card expansion; pi's own default is collapsed. */
+	private expanded = false;
+	/** The autocomplete factories extensions registered, in pi's wrapping order. */
+	private wrappers: AutocompleteProviderFactory[] = [];
+	readonly host: UiHost;
+
+	constructor(dialogs: Dialogs, unsupported: (method: string) => void, notice: UiHost["notice"]) {
+		this.host = {
+			ask: (question, options) => Effect.runPromise(dialogs.ask(question, options)),
+			notice,
+			editorText: () => this.editor,
+			addAutocompleteProvider: (factory) => {
+				this.wrappers.push(factory);
+			},
+			unsupported,
+			toolsExpanded: () => this.expanded,
+			setToolsExpanded: (expanded) => {
+				this.expanded = expanded;
+			},
+		};
+	}
+
+	setEditorText(text: string): void {
+		this.editor = text;
+	}
+
+	get autocompleteProviders(): ReadonlyArray<AutocompleteProviderFactory> {
+		return this.wrappers;
+	}
+
+	/**
+	 * A new session binds its own extensions; the previous session's providers are gone
+	 * with it, so the chain starts empty (F8c).
+	 */
+	clearAutocompleteProviders(): void {
+		this.wrappers = [];
+	}
+}
+
+const answerSelection = (question: DialogQuestion, answer: DialogAnswer): string | undefined => {
+	if (question.kind !== "select" || answer.kind !== "select") return undefined;
+	return question.options[answer.index];
+};
+
+const asIs = (text: string): string => text;
+/** `fg` and `bg` take the colour first, so their text is the second argument. */
+const asIsColoured = (_colour: ThemeColor | ThemeBg, text: string): string => text;
+
+/**
+ * pi's `theme` singleton lives in a module its `exports` map does not expose, and
+ * `new Theme(...)` throws without pi's token tables. An extension only uses a theme to
+ * wrap text in terminal escapes, which the browser discards, so every member hands its
+ * text back unchanged. Throwing would kill the handler that read it.
+ */
+const headlessTheme: Pick<Theme, keyof Theme> = {
+	appearance: "dark",
+	// SAFETY: `colors` is only handed back to a colour method, which ignores it here.
+	colors: {} as Theme["colors"],
+	style: asIs,
+	fg: asIsColoured,
+	bg: asIsColoured,
+	bold: asIs,
+	italic: asIs,
+	underline: asIs,
+	inverse: asIs,
+	strikethrough: asIs,
+	getFgAnsi: () => "",
+	getBgAnsi: () => "",
+	getColorMode: () => "truecolor",
+	getThinkingBorderColor: () => asIs,
+	getBashModeBorderColor: () => asIs,
+};
+
+// SAFETY: `Theme` keeps private fields, so only a real instance is assignable to it.
+// Every public member above is a no-op that returns its text unchanged.
+const theme = headlessTheme as Theme;
+
+/** Map pi's `ExtensionUIContext` onto the browser's dialogs and notices. */
+export const createUiContext = (host: UiHost): ExtensionUIContext => ({
+	async select(title, options, opts) {
+		const question: DialogQuestion = {
+			id: crypto.randomUUID(),
+			kind: "select",
+			options,
+			title,
+		};
+		const answer = await host.ask(question, questionOptions(opts));
+		return answerSelection(question, answer);
+	},
+	async confirm(title, message, opts) {
+		const answer = await host.ask(
+			{ id: crypto.randomUUID(), kind: "confirm", message, title },
+			questionOptions(opts),
+		);
+		return answer.kind === "confirm" && answer.confirmed;
+	},
+	async input(title, placeholder, opts) {
+		const answer = await host.ask(
+			{ id: crypto.randomUUID(), kind: "input", placeholder, title },
+			questionOptions(opts),
+		);
+		return answer.kind === "input" ? answer.text : undefined;
+	},
+	// pi 1.4.0's `editor` takes no timeout or signal, and the wire has no editor dialog
+	// yet, so the extension gets no text instead of a question nobody can answer.
+	editor() {
+		host.unsupported("editor");
+		return Promise.resolve(undefined);
+	},
+	notify(message, type) {
+		host.notice(message, type === undefined || type === "info" ? "notice" : type);
+	},
+	setStatus() {
+		host.unsupported("setStatus");
+	},
+	setWidget(_key: string, _content: unknown, _options?: ExtensionWidgetOptions) {
+		// Neither text lines nor a pi-tui component has a frame yet.
+		host.unsupported("setWidget");
+	},
+	setTitle() {
+		host.unsupported("setTitle");
+	},
+	setEditorText() {
+		host.unsupported("setEditorText");
+	},
+	pasteToEditor() {
+		host.unsupported("pasteToEditor");
+	},
+	onTerminalInput() {
+		host.unsupported("onTerminalInput");
+		return () => undefined;
+	},
+	setWorkingMessage() {
+		host.unsupported("setWorkingMessage");
+	},
+	setWorkingVisible() {
+		host.unsupported("setWorkingVisible");
+	},
+	setWorkingIndicator() {
+		host.unsupported("setWorkingIndicator");
+	},
+	setHiddenThinkingLabel() {
+		host.unsupported("setHiddenThinkingLabel");
+	},
+	setFooter() {
+		host.unsupported("setFooter");
+	},
+	setHeader() {
+		host.unsupported("setHeader");
+	},
+	custom<T>(): Promise<T> {
+		host.unsupported("custom");
+		// SAFETY: `custom` has no browser equivalent, and the extension's caller reads
+		// the missing component as a cancellation.
+		return Promise.resolve(undefined as T);
+	},
+	getEditorText() {
+		return host.editorText();
+	},
+	addAutocompleteProvider(factory) {
+		host.addAutocompleteProvider(factory);
+	},
+	setEditorComponent() {
+		host.unsupported("setEditorComponent");
+	},
+	getEditorComponent() {
+		return undefined;
+	},
+	get theme() {
+		return theme;
+	},
+	getAllThemes() {
+		return [];
+	},
+	getTheme() {
+		return undefined;
+	},
+	setTheme() {
+		return { error: "Theme switching needs the terminal tab", success: false };
+	},
+	getToolsExpanded() {
+		return host.toolsExpanded();
+	},
+	setToolsExpanded(expanded) {
+		host.setToolsExpanded(expanded);
+	},
+});

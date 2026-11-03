@@ -116,6 +116,8 @@ export function toolResultEntry(
 	const message: MessageEntry["message"] = {
 		role: "toolResult",
 		toolCallId: options.toolCallId ?? `call-${id}`,
+		toolName: options.toolName ?? "bash",
+		isError: options.isError ?? false,
 		content: [{ type: "text", text: output }],
 	};
 	return {

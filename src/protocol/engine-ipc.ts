@@ -34,7 +34,8 @@ export const SupervisorToEngine = Schema.Union([
 	Schema.Struct({
 		t: Schema.Literals(["init"]),
 		sessionId: Schema.String,
-		file: Schema.String,
+		/** `null` for a chat pi has not written yet; the first message creates the file. */
+		file: Schema.NullOr(Schema.String),
 		cwd: Schema.String,
 		place: Schema.NullOr(Schema.String),
 		homeDir: Schema.String,
@@ -102,6 +103,15 @@ export const EngineToSupervisor = Schema.Union([
 		t: Schema.Literals(["fatal"]),
 		message: Schema.String,
 		stack: Schema.optional(Schema.String),
+	}),
+	/** Written to the parent's engine log; one process writes files. */
+	Schema.Struct({
+		t: Schema.Literals(["log"]),
+		level: Schema.Literals(["debug", "info", "warn", "error"]),
+		message: Schema.String,
+		fields: Schema.optional(
+			Schema.Record(Schema.String, Schema.Union([Schema.String, Schema.Finite, Schema.Boolean])),
+		),
 	}),
 	Schema.Struct({ t: Schema.Literals(["idle"]) }),
 ]);

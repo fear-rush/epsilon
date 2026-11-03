@@ -11,7 +11,7 @@ export const SOCKET_PATH = "/api/link";
  * mistake that would otherwise reach a stale tab. A schema hash was the plan's first idea;
  * Effect 4.1 has no stable JSON-schema writer, so the explicit list is the version.
  */
-export const PROTOCOL_VERSION = "2";
+export const PROTOCOL_VERSION = "3";
 
 export const frameTags = [
 	"snapshot",
@@ -26,6 +26,7 @@ export const frameTags = [
 	"busy",
 	"drift",
 	"sessionMeta",
+	"tree",
 ] as const;
 
 /** The first call on the socket: the client's version and the launch token. */

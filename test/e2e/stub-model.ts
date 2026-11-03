@@ -16,8 +16,14 @@ export type StubModel = {
 
 const sse = (chunk: unknown): string => `data: ${JSON.stringify(chunk)}\n\n`;
 
+export type StubOptions = {
+	/** Wait before the first chunk, so a test can tell "accepted" from "finished". */
+	readonly delayMs?: number;
+};
+
 export async function startStubModel(
 	replies: ReadonlyArray<string> = ["stub reply"],
+	options: StubOptions = {},
 ): Promise<StubModel> {
 	let next = 0;
 	const server = createServer((request, response) => {
@@ -34,35 +40,38 @@ export async function startStubModel(
 		}
 		const reply = replies[next % replies.length] ?? "stub reply";
 		next++;
-		response.writeHead(200, {
-			"cache-control": "no-cache",
-			connection: "keep-alive",
-			"content-type": "text/event-stream",
-		});
-		response.write(
-			sse({
-				choices: [{ delta: { role: "assistant" }, index: 0 }],
-				id: "stub",
-				object: "chat.completion.chunk",
-			}),
-		);
-		for (const word of reply.split(" ")) {
+		const delay = options.delayMs ?? 0;
+		setTimeout(() => {
+			response.writeHead(200, {
+				"cache-control": "no-cache",
+				connection: "keep-alive",
+				"content-type": "text/event-stream",
+			});
 			response.write(
 				sse({
-					choices: [{ delta: { content: `${word} ` }, index: 0 }],
+					choices: [{ delta: { role: "assistant" }, index: 0 }],
 					id: "stub",
 					object: "chat.completion.chunk",
 				}),
 			);
-		}
-		response.write(
-			sse({
-				choices: [{ delta: {}, finish_reason: "stop", index: 0 }],
-				id: "stub",
-				object: "chat.completion.chunk",
-			}),
-		);
-		response.end("data: [DONE]\n\n");
+			for (const word of reply.split(" ")) {
+				response.write(
+					sse({
+						choices: [{ delta: { content: `${word} ` }, index: 0 }],
+						id: "stub",
+						object: "chat.completion.chunk",
+					}),
+				);
+			}
+			response.write(
+				sse({
+					choices: [{ delta: {}, finish_reason: "stop", index: 0 }],
+					id: "stub",
+					object: "chat.completion.chunk",
+				}),
+			);
+			response.end("data: [DONE]\n\n");
+		}, delay);
 	});
 
 	await new Promise<void>((resolve) => {

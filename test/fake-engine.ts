@@ -6,6 +6,8 @@ import { until } from "./until.ts";
  * about.
  */
 
+export type FakeMode = "normal" | "silent" | "crash" | "ignore-shutdown";
+
 export type FakeEngine = {
 	readonly pid: number;
 	readonly exited: Promise<number>;
@@ -21,9 +23,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null;
 }
 
-export function startFakeEngine(): FakeEngine {
+export function startFakeEngine(mode: FakeMode = "normal"): FakeEngine {
 	const received: Record<string, unknown>[] = [];
-	const child = Bun.spawn(["bun", "run", fixture], {
+	const child = Bun.spawn([process.execPath, "run", fixture], {
+		env: {
+			FAKE_ENGINE_MODE: mode,
+			HOME: process.env["HOME"] ?? "/tmp",
+			PATH: process.env["PATH"] ?? "",
+			PI_CODING_AGENT_DIR: process.env["PI_CODING_AGENT_DIR"] ?? "/tmp",
+		},
 		ipc: (message: unknown) => {
 			if (isRecord(message)) received.push(message);
 		},
@@ -32,19 +40,30 @@ export function startFakeEngine(): FakeEngine {
 	});
 
 	return {
-		pid: child.pid,
 		exited: child.exited,
+		messages: () => received,
+		pid: child.pid,
 		send: (message) => child.send(message),
+		stop: () => child.kill(),
 		waitFor: async (type, deadline = 2000) => {
-			await until(() => received.some((message) => message["type"] === type), {
-				what: `fake engine message "${type}"`,
+			await until(() => received.some((message) => message["t"] === type), {
 				deadline,
+				what: `fake engine message "${type}"`,
 			});
-			const match = received.find((message) => message["type"] === type);
+			const match = received.find((message) => message["t"] === type);
 			if (match === undefined) throw new Error(`no "${type}" message`);
 			return match;
 		},
-		messages: () => received,
-		stop: () => child.kill(),
 	};
 }
+
+/** The spawn spec the supervisor needs to run this fake, as a real engine would run. */
+export const fakeSpec = (mode: FakeMode = "normal") => ({
+	command: [process.execPath, "run", fixture],
+	env: {
+		FAKE_ENGINE_MODE: mode,
+		HOME: process.env["HOME"] ?? "/tmp",
+		PATH: process.env["PATH"] ?? "",
+		PI_CODING_AGENT_DIR: process.env["PI_CODING_AGENT_DIR"] ?? "/tmp",
+	},
+});

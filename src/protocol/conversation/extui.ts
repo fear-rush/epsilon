@@ -38,6 +38,8 @@ export const DialogAnswer = Schema.Union([
 	}),
 	Schema.Struct({ id: Schema.String, kind: Schema.Literals(["select"]), index: Schema.Finite }),
 	Schema.Struct({ id: Schema.String, kind: Schema.Literals(["input"]), text: Schema.String }),
+	/** A timeout, an abort or a closed engine. pi's default for the question kind. */
+	Schema.Struct({ id: Schema.String, kind: Schema.Literals(["cancelled"]) }),
 ]);
 
 export type DialogAnswer = typeof DialogAnswer.Type;

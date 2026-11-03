@@ -70,11 +70,14 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				streaming: [],
 				tools,
 				notices: frame.notices,
-				tree: frame.tree,
+				// The tree is on demand; a resync of the same chat keeps the one it has.
+				tree: frame.sessionId === state.sessionId ? state.tree : [],
 				hasOlder: frame.hasOlder,
 				drift: undefined,
 			};
 		}
+		case "tree":
+			return { ...state, tree: frame.entries };
 		case "prepend":
 			return {
 				...state,

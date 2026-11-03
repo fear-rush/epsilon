@@ -1,8 +1,8 @@
 import type { Database } from "bun:sqlite";
 import { dirname } from "node:path";
 
-import { Context, Effect, Layer } from "effect";
-import type { FileSystem } from "effect";
+import { Context, Effect, FileSystem, Layer, PubSub, Stream } from "effect";
+import type { Scope } from "effect";
 
 import type { FileUnreadable } from "../platform/errors.ts";
 import { ensureDir, listJsonl, readRangeSync, readTextSync, statFile } from "../platform/files.ts";
@@ -41,6 +41,12 @@ export type CatalogApi = {
 	readonly sync: (roots: ReadonlyArray<string>) => Effect.Effect<SyncResult>;
 	readonly list: Effect.Effect<ReadonlyArray<StoredSummary>>;
 	readonly locate: (sessionId: string) => Effect.Effect<StoredSummary | undefined>;
+	/** A version per batch that changed rows; the sidebar refetches on it. */
+	readonly changes: Stream.Stream<number>;
+	/** Reconcile whenever these roots change, for the life of the caller's scope. */
+	readonly watch: (
+		roots: ReadonlyArray<string>,
+	) => Effect.Effect<void, never, FileSystem.FileSystem | Scope.Scope>;
 };
 
 export class Catalog extends Context.Service<Catalog, CatalogApi>()("epsilon/Catalog") {}
@@ -55,7 +61,12 @@ const headHash = (path: string): Effect.Effect<string | null> =>
 		Effect.orElseSucceed(() => null),
 	);
 
-export const makeCatalog = (db: Database): CatalogApi => {
+export const makeCatalog = (
+	db: Database,
+	onChanged: (version: number) => void = () => undefined,
+	changes: Stream.Stream<number> = Stream.empty,
+): CatalogApi => {
+	let version = 0;
 	const syncFile = (path: string): Effect.Effect<"added" | "updated" | null, FileUnreadable> =>
 		Effect.gen(function* () {
 			const stats = yield* statFile(path);
@@ -112,13 +123,34 @@ export const makeCatalog = (db: Database): CatalogApi => {
 					removed++;
 				}
 			}
+			if (added + removed + updated > 0) onChanged(++version);
 			return { added, removed, updated };
 		});
 
+	const watch = (
+		roots: ReadonlyArray<string>,
+	): Effect.Effect<void, never, FileSystem.FileSystem | Scope.Scope> =>
+		Effect.gen(function* () {
+			const fs = yield* FileSystem.FileSystem;
+			yield* Effect.forEach(
+				roots,
+				(root) =>
+					fs.watch(root, { recursive: true }).pipe(
+						Stream.debounce("50 millis"),
+						Stream.runForEach(() => sync(roots)),
+						Effect.ignoreCause,
+						Effect.forkScoped,
+					),
+				{ concurrency: 1 },
+			);
+		});
+
 	return {
+		changes,
 		list: Effect.sync(() => allRows(db)),
 		locate: (sessionId) => Effect.sync(() => allRows(db).find((row) => row.id === sessionId)),
 		sync,
+		watch,
 	};
 };
 
@@ -139,6 +171,13 @@ export const CatalogLive = (
 			// A home whose .epsilon folder cannot be created is a start-up failure, not a
 			// catalog error: there is nothing to fall back to.
 			yield* ensureDir(dirname(indexPath)).pipe(Effect.orDie);
-			return makeCatalog(openIndex(indexPath, meta));
+			const pubsub = yield* PubSub.unbounded<number>();
+			return makeCatalog(
+				openIndex(indexPath, meta),
+				(version) => {
+					PubSub.publishUnsafe(pubsub, version);
+				},
+				Stream.fromPubSub(pubsub),
+			);
 		}),
 	);

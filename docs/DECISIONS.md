@@ -88,8 +88,10 @@ Not: unbounded processes with an OS-level OOM as the limiter.
 ## Concurrent writers are detected, not prevented
 
 pi does not lock session files. One writer per session is enforced by Epsilon where it
-can: an advisory lock file for other Epsilon processes, and a watcher that compares size
-and mtime after each of its own appends.
+can: an advisory lock file for other Epsilon processes, and a poll every 250 ms that
+compares size and mtime against the last append the engine recorded. A mark queued just
+after a change gets a 50 ms settle before the change is called foreign, because pi
+persists a message after it notifies.
 
 A foreign append makes the chat read-only in Epsilon with a notice and a Reload action.
 A running turn is not aborted; its next append is refused with the same notice. Reload
@@ -101,6 +103,30 @@ the operator's other turn silently is not.
 Cost accepted: Epsilon cannot stop a terminal writer, so the contract is a notice.
 
 Not: rewriting pi's session manager. Blocking the file for other tools.
+
+## A command is acknowledged, not completed
+
+The engine answers a `prompt` when pi accepts it (`preflightResult`), not when the run
+ends. Run failures arrive later as notices and frames; a rejected prompt fails the
+command. The same reply carries steer and follow-up acceptance.
+
+Why: the old design awaited `prompt()`, so a slow `agent_settled` handler held the tab's
+command for as long as the handler ran (F6).
+
+Not: await the whole run and report its outcome as the command result. A tab that
+reloads mid-run already rebuilds from the session file.
+
+## The tree travels on demand
+
+The snapshot carries the window, notices and the session id; the flat branch tree is
+sent only when a tab asks (`loadTree`), as one `tree` frame. 50,000 rows in every
+snapshot would exceed the 2 MB frame budget and re-send what the picker already has.
+
+Why: the old snapshot held the whole transcript and a recursive tree, 46 MB for a 46 MB
+file (F5).
+
+Not: a recursive tree schema; a window that includes the tree; a tree endpoint separate
+from the conversation stream.
 
 ## Effect on the server, React on the page
 
@@ -250,11 +276,11 @@ A silent behaviour change there breaks chats in ways tests would otherwise miss.
 
 Not: a version range, or upgrading to pick up a feature mid-step.
 
-## Rollback is a tag, not a revert chain
+## Rollback is the previous commit
 
 `main` holds the last old commit; the rebuild is one branch with one commit per step. A
 step that fails its exit checks twice is reset to the previous step's commit and
-re-planned, not patched forward.
+re-planned, not patched forward. There are no tags; the branch history is the record.
 
 Why: rebuilding on a broken foundation is how plans quietly become patches.
 

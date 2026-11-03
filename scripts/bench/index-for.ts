@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 
 import { BunServices } from "@effect/platform-bun";
 import { Effect, Layer } from "effect";
+import type { FileSystem, Scope } from "effect";
 
 import { Catalog, CatalogLive } from "../../src/backend/catalog/catalog.ts";
 import type { CatalogApi } from "../../src/backend/catalog/catalog.ts";
@@ -11,7 +12,7 @@ import type { CatalogApi } from "../../src/backend/catalog/catalog.ts";
 const catalogLayer = (home: string): Layer.Layer<Catalog> => {
 	const indexPath = join(home, ".epsilon", "session-index.sqlite");
 	mkdirSync(dirname(indexPath), { recursive: true });
-	return Layer.provide(
+	return Layer.provideMerge(
 		CatalogLive(indexPath, { formatVersion: 3, piVersion: "1.4.0", schemaVersion: "1" }),
 		BunServices.layer,
 	);
@@ -25,3 +26,15 @@ export const withCatalog = <A, E>(
 		const catalog = yield* Catalog;
 		return yield* body(catalog);
 	}).pipe(Effect.provide(catalogLayer(home)));
+
+/** The same, with a scope for `watch`; the scope closes when the body returns. */
+export const withCatalogScoped = <A, E>(
+	home: string,
+	body: (catalog: CatalogApi) => Effect.Effect<A, E, Scope.Scope | FileSystem.FileSystem>,
+) =>
+	Effect.scoped(
+		Effect.gen(function* () {
+			const catalog = yield* Catalog;
+			return yield* body(catalog);
+		}).pipe(Effect.provide(catalogLayer(home))),
+	);

@@ -35,11 +35,24 @@ describe("frames", () => {
 			},
 			{ t: "dialogClosed", id: "d1" },
 			{ t: "sessionMeta", sessionId: "s1", title: "Renamed", model: "stub-model" },
+			{
+				t: "tree",
+				entries: [
+					{
+						id: "u1",
+						parentId: null,
+						kind: "user",
+						label: "run the tests",
+						ts: 1_000,
+						onPath: true,
+					},
+				],
+			},
 		];
 		// The version covers exactly the tags the socket can carry: adding a frame without
 		// naming it here means a stale tab would meet a frame it cannot decode.
 		expect(new Set(samples.map((sample) => sample.t))).toEqual(new Set(frameTags));
-		expect(PROTOCOL_VERSION).toBe("2");
+		expect(PROTOCOL_VERSION).toBe("3");
 		for (const sample of samples) expect(() => decodeServerFrame(sample)).not.toThrow();
 	});
 });
@@ -126,7 +139,6 @@ describe("reduce", () => {
 			sessionId: "s",
 			entries: [{ role: "user", id: "u2", parentId: "u1", ts: 2, text: "later", images: [] }],
 			hasOlder: true,
-			tree: [],
 			notices: [],
 		});
 		const older = reduce(snapshot, {
@@ -190,10 +202,10 @@ describe("reduce", () => {
 			sessionId: "long",
 			entries: [],
 			hasOlder: true,
-			tree,
 			notices: [],
 		});
-		expect(state.tree).toHaveLength(50_000);
-		expect(state.tree.at(-1)?.id).toBe("e49999");
+		const withTree = reduce(state, { t: "tree", entries: tree });
+		expect(withTree.tree).toHaveLength(50_000);
+		expect(withTree.tree.at(-1)?.id).toBe("e49999");
 	});
 });
