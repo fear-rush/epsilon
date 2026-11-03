@@ -353,6 +353,13 @@
 			}
 		},
 		{
+			"files": ["src/backend/config/mcp/entries.ts"],
+			"rules": {
+				"anti-slop/no-runtime-typeof": "off",
+				"effecttsgo/prefer-typed-schema-decoder": "off"
+			}
+		},
+		{
 			"files": ["src/engine/main.ts", "src/engine/translate.ts", "src/engine/ui.ts"],
 			"rules": {
 				"anti-slop/no-runtime-typeof": "off",

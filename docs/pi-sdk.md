@@ -677,12 +677,19 @@ Run /mcp to fix.
 A server appears only while it is `needs-auth` or `failed`; a `config:` line reports
 a `mcp.json` pi could not read, not a server. The list is complete for the moment it
 is sent, so the host replaces what it kept rather than merging into it, and `reload()`
-clears it before pi speaks again. `Epsilon` reads those lines in
-`src/backend/features/mcp/attention.ts` and shows `needs-sign-in` and `failed` per
-server; `disabled`, connected with its tool count and no-tool-yet come from the file
-and the tool inventory instead. `connected` is never claimed from the notice: a tool
-registered for the server is the proof, which is why a recovered server stops reading
-as failed without another notice.
+clears it before pi speaks again. The engine parses those lines in
+`src/domain/mcp/attention.ts` and reports them with the live tools, so the panel can
+show `needs-sign-in` and `failed` per server; `disabled`, connected with its tool count
+and no-tool-yet come from the file and the tool inventory instead. `connected` is never
+claimed from the notice: a tool registered for the server is the proof, which is why a
+recovered server stops reading as failed without another notice.
+
+The two files a connection leaves behind are readable without a token. A line of
+`mcp.log` is `<ISO time> [<server>] <level>: <text>`, and pi rotates it to `mcp.log.1`
+at 5 MB. `mcp-auth.json` keys a credential by `<namespace>|<url>`, or by the URL alone
+in older versions, so a detail pane can find one server's log tail and tell whether a
+sign-in is stored without ever reading the token. Epsilon reads those names in
+`src/backend/config/mcp/store.ts`.
 
 A settings write reaches the live engines through `session.reload()`, which emits
 `session_shutdown` (reason `reload`). The MCP extension closes every connection

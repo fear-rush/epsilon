@@ -6,6 +6,7 @@ import type {
 import type { FileSystem, Scope } from "effect";
 import { Deferred, Effect, Queue } from "effect";
 
+import type { McpAttention, McpEngineLive } from "#protocol/config/mcp";
 import type { Command } from "#protocol/conversation/commands";
 import type { DialogAnswer } from "#protocol/conversation/extui";
 import type {
@@ -19,6 +20,9 @@ import type {
 import type { EngineToSupervisor } from "#protocol/engine-ipc";
 import { CommandRefused } from "#protocol/errors";
 
+import { readMcpAttention } from "../domain/mcp/attention.ts";
+import { MCP_RESOURCE_TOOL_NAMES } from "../domain/mcp/tools.ts";
+import { withDefined } from "../domain/object.ts";
 import { bindEngineSession } from "./bindings.ts";
 import { dispatchCommand } from "./commands.ts";
 import type { CommandHost } from "./commands.ts";
@@ -133,6 +137,8 @@ export class EngineSession {
 	private readonly notices: Notice[] = [];
 	private readonly unsupported = new Set<string>();
 	private readonly toolEntries = new Map<string, string>();
+	/** The servers pi last reported a problem with, replaced by each attention notice. */
+	private mcpAttention = new Map<string, McpAttention>();
 	private streamId: string | undefined;
 	private driftReason: string | undefined;
 	private watcher: SessionWatcher | undefined;
@@ -324,7 +330,33 @@ export class EngineSession {
 				case "reload":
 					yield* self.reload();
 					return undefined;
-				case "mcpLive":
+				case "mcpLive": {
+					const all = agent.getAllTools();
+					const tools = all.flatMap((tool) => {
+						const namespace = tool.namespace;
+						if (namespace === undefined || !namespace.name.startsWith("mcp__")) return [];
+						return [
+							withDefined(
+								{
+									exposure: tool.exposure,
+									name: tool.name,
+									namespace: namespace.name,
+								},
+								"annotations",
+								tool.annotations,
+							),
+						];
+					});
+					return {
+						active: agent.getActiveToolNames(),
+						attention: [...self.mcpAttention].map(([name, attention]) => ({ attention, name })),
+						registered: self.runtime.registeredMcpServers,
+						resourceTools: MCP_RESOURCE_TOOL_NAMES.filter((name) =>
+							all.some((tool) => tool.name === name),
+						),
+						tools,
+					} satisfies McpEngineLive;
+				}
 				case "extensionSkills":
 				case "contextLive":
 					return yield* new CommandRefused({
@@ -494,6 +526,7 @@ export class EngineSession {
 				catch: (cause) => new CommandRefused({ command: "reload", reason: describe(cause) }),
 			});
 			self.ui.clearAutocompleteProviders();
+			self.mcpAttention.clear();
 			self.broadcast(sessionMeta(agent));
 		});
 	}
@@ -551,6 +584,7 @@ export class EngineSession {
 			};
 			self.runtime = yield* RuntimeHandle.open(input);
 			self.subscribe(self.runtime.session);
+			self.mcpAttention.clear();
 			yield* self.bind(self.runtime.session);
 			yield* self.ensureLock();
 			yield* self.watch();
@@ -587,6 +621,10 @@ export class EngineSession {
 	}
 
 	private notice(text: string, kind: NoticeKind): void {
+		// pi's MCP extension reports every server that needs attention in one notice, and
+		// a fresh one replaces the previous answer. Any other notice leaves it alone.
+		const attention = readMcpAttention(text);
+		if (attention !== undefined) this.mcpAttention = new Map(attention);
 		const notice: Notice = {
 			afterEntryId: null,
 			id: crypto.randomUUID(),
@@ -692,6 +730,7 @@ export class EngineSession {
 			self.ui.clearAutocompleteProviders();
 			self.streamId = undefined;
 			self.toolEntries.clear();
+			self.mcpAttention.clear();
 			yield* self
 				.bind(session)
 				.pipe(

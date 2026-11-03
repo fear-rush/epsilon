@@ -80,6 +80,29 @@ describe("engine registry", () => {
 		);
 	}, 10_000);
 
+	test("a read-only query reaches every live engine", async () => {
+		await run(
+			withEngines(4, (engines) =>
+				Effect.gen(function* () {
+					// Built before the chat exists: the effect must read the entries when it
+					// runs, because the MCP panel holds it from before any engine started.
+					const query = engines.queryAll("mcpLive");
+					yield* engines.attach({
+						cwd: "/tmp",
+						file: undefined,
+						place: null,
+						sessionId: "s-query",
+						tab: "tab",
+					});
+					const rows = yield* query;
+					expect(rows).toHaveLength(1);
+					expect(rows[0]?.sessionId).toBe("s-query");
+					expect(rows[0]?.result).toEqual({ kind: "mcpLive" });
+				}),
+			),
+		);
+	}, 10_000);
+
 	test("the cap is read at each attach, so a raised one applies without a restart (G2)", async () => {
 		await run(
 			Effect.gen(function* () {

@@ -73,6 +73,19 @@ describe("JsonDocument", () => {
 		});
 	});
 
+	test("reads a file with a byte-order mark, as pi's own readers do", async () => {
+		const marked = join(home, "marked.json");
+		mkdirSync(home, { recursive: true });
+		writeFileSync(marked, `\uFEFF${JSON.stringify({ futureKey: "keep me" }, null, 2)}\n`);
+		const value = await Effect.runPromise(
+			Effect.gen(function* () {
+				const document = yield* JsonDocument;
+				return yield* document.read(marked);
+			}).pipe(Effect.provide(layer)),
+		);
+		expect(value).toEqual({ futureKey: "keep me" });
+	});
+
 	test("refuses a file that is not JSON instead of overwriting it", async () => {
 		const broken = join(home, "broken.json");
 		writeFileSync(broken, "{ not json");

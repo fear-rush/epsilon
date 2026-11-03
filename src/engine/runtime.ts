@@ -44,12 +44,15 @@ type SwapListener = (session: AgentSession) => void;
 type ReasonBox = { current: SessionStartEvent["reason"] };
 
 const factoryFor =
-	(agentDir: string): CreateAgentSessionRuntimeFactory =>
+	(
+		agentDir: string,
+		onMcpServers: (names: ReadonlyArray<string>) => void,
+	): CreateAgentSessionRuntimeFactory =>
 	async ({ cwd, sessionManager, sessionStartEvent }): Promise<CreateAgentSessionRuntimeResult> => {
 		const services = await createAgentSessionServices({
 			agentDir,
 			cwd,
-			resourceLoaderOptions: { extensionFactories: builtinExtensions() },
+			resourceLoaderOptions: { extensionFactories: builtinExtensions(onMcpServers) },
 		});
 		const options: CreateAgentSessionFromServicesOptions = { services, sessionManager };
 		if (sessionStartEvent !== undefined) options.sessionStartEvent = sessionStartEvent;
@@ -67,10 +70,12 @@ export class RuntimeHandle {
 	private readonly reason: ReasonBox;
 	private readonly swaps = new Set<SwapListener>();
 	private readonly replacements = new Set<(replacement: Replacement) => void>();
+	private readonly mcpServers: Set<string>;
 
-	private constructor(runtime: AgentSessionRuntime, reason: ReasonBox) {
+	private constructor(runtime: AgentSessionRuntime, reason: ReasonBox, mcpServers: Set<string>) {
 		this.runtime = runtime;
 		this.reason = reason;
+		this.mcpServers = mcpServers;
 		this.runtime.setRebindSession((session) => {
 			for (const listener of Array.from(this.swaps)) listener(session);
 			return Promise.resolve();
@@ -80,7 +85,11 @@ export class RuntimeHandle {
 	static open(input: RuntimeInput): Effect.Effect<RuntimeHandle, EngineStartFailed> {
 		return Effect.gen(function* () {
 			const reason: ReasonBox = { current: "startup" };
-			const factory = factoryFor(input.agentDir);
+			const mcpServers = new Set<string>();
+			const factory = factoryFor(input.agentDir, (names) => {
+				mcpServers.clear();
+				for (const name of names) mcpServers.add(name);
+			});
 			const tracked: CreateAgentSessionRuntimeFactory = async (options) => {
 				reason.current = options.sessionStartEvent?.reason ?? "startup";
 				return factory(options);
@@ -95,7 +104,7 @@ export class RuntimeHandle {
 				catch: (cause) =>
 					new EngineStartFailed({ reason: describe(cause), sessionId: input.sessionId }),
 			});
-			return new RuntimeHandle(runtime, reason);
+			return new RuntimeHandle(runtime, reason, mcpServers);
 		});
 	}
 
@@ -122,6 +131,11 @@ export class RuntimeHandle {
 
 	get diagnostics(): ReadonlyArray<{ type: string; message: string }> {
 		return this.runtime.diagnostics;
+	}
+
+	/** The MCP servers other extensions registered, which `mcp.json` never lists. */
+	get registeredMcpServers(): ReadonlyArray<string> {
+		return [...this.mcpServers];
 	}
 
 	/** Run after every replacement, including one whose id did not change. */

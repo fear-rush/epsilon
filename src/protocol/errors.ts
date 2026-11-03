@@ -79,6 +79,18 @@ export class ProviderRefused extends Schema.TaggedError<
 	reason: Schema.String,
 }) {}
 
+/**
+ * An MCP edit Epsilon refused, with the sentence the page shows. `subject` is the server
+ * or the file the refusal is about, when one can be named.
+ */
+export class McpRefused extends Schema.TaggedError<McpRefused, { readonly brand: unique symbol }>()(
+	"McpRefused",
+	{
+		subject: Schema.optional(Schema.String),
+		reason: Schema.String,
+	},
+) {}
+
 /** A skill import Epsilon could not complete, with the sentence the page shows. */
 export class ImportFailed extends Schema.TaggedError<
 	ImportFailed,

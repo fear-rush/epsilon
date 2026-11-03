@@ -72,6 +72,14 @@ export type EnginesApi = {
 	) => Effect.Effect<A, E, R>;
 	readonly isRunning: (sessionId: string) => Effect.Effect<boolean>;
 	readonly running: Effect.Effect<ReadonlyArray<RunningEngine>>;
+	/**
+	 * A read-only query to every live engine, for a panel that describes what the open
+	 * chats can see. An engine that cannot answer is left out rather than failing the read;
+	 * its tabs show the failure in the chat itself.
+	 */
+	readonly queryAll: (
+		kind: QueryKind,
+	) => Effect.Effect<ReadonlyArray<{ readonly sessionId: string; readonly result: unknown }>>;
 };
 
 export class Engines extends Context.Service<Engines, EnginesApi>()("epsilon/Engines") {}
@@ -296,7 +304,33 @@ export const makeEngines = (options: {
 		})),
 	);
 
-	return { attach, close, detach, isRunning, running, withLock };
+	const queryAll: EnginesApi["queryAll"] = (kind) =>
+		// The entries are read when the effect runs: a caller may hold this effect from
+		// before any chat opened, as the MCP panel's layer does.
+		Effect.suspend(() =>
+			Effect.forEach(
+				entries().filter((entry) => !entry.closed),
+				(entry) =>
+					entry.engine
+						.request((id) => ({ id, kind, t: "query" }))
+						.pipe(
+							Effect.match({
+								onFailure: () => undefined,
+								onSuccess: (result) => ({ result, sessionId: entry.sessionId }),
+							}),
+						),
+				{ concurrency: "unbounded" },
+			),
+		).pipe(
+			Effect.map((rows) =>
+				rows.filter(
+					(row): row is { readonly sessionId: string; readonly result: unknown } =>
+						row !== undefined,
+				),
+			),
+		);
+
+	return { attach, close, detach, isRunning, queryAll, running, withLock };
 };
 
 /** The registry's answer to "does an engine hold this chat?", for the catalog (F1). */

@@ -45,6 +45,16 @@ export type JsonDocumentApi = {
 		options?: UpdateOptions,
 	) => Effect.Effect<JsonObject, FileUnreadable | FileUnwritable | NotJson | Locked>;
 	/**
+	 * Reads, changes and writes inside one lock. `change` may fail, so a feature can refuse
+	 * what it cannot parse without leaving the file half-written; the returned document is
+	 * written whole, so a key can be removed where `update`'s merge cannot.
+	 */
+	readonly edit: <E, R>(
+		path: string,
+		change: (current: JsonObject) => Effect.Effect<JsonObject, E, R>,
+		options?: UpdateOptions,
+	) => Effect.Effect<JsonObject, FileUnreadable | FileUnwritable | NotJson | Locked | E, R>;
+	/**
 	 * Replaces the document. A merge cannot delete a key, so a feature that removes one
 	 * (a provider, a server) builds the next document and writes it whole; the file is
 	 * still parsed first, so an unreadable one is refused rather than overwritten.
@@ -67,7 +77,9 @@ const parseDocument = (
 	if (text === undefined || text.trim() === "") return Effect.succeed({});
 	return Effect.try({
 		try: () => {
-			const parsed: unknown = JSON.parse(text);
+			// `trim` removes a byte-order mark, which pi's own readers strip and
+			// `JSON.parse` refuses; a file pi loads must not read as broken here.
+			const parsed: unknown = JSON.parse(text.trim());
 			if (!isJsonObject(parsed)) throw new Error("the document is not a JSON object");
 			return parsed;
 		},
@@ -122,15 +134,14 @@ export const JsonDocumentLive = Layer.effect(
 				return yield* parseDocument(path, Option.getOrUndefined(found));
 			}).pipe(Effect.provideService(FileSystem.FileSystem, fs));
 
-		const update: JsonDocumentApi["update"] = (path, change, options) =>
+		const edit: JsonDocumentApi["edit"] = (path, change, options) =>
 			Effect.gen(function* () {
 				const key = yield* fileKey(path);
 				const semaphore = yield* RcMap.get(locks, key);
-				const write = (): Effect.Effect<JsonObject, FileUnreadable | FileUnwritable | NotJson> =>
+				const write = () =>
 					Effect.gen(function* () {
 						const current = yield* read(path);
-						const next = mergeDeep(current, change(current));
-						// SAFETY: both arguments are JsonObject, so the merge returns one.
+						const next = yield* change(current);
 						yield* writeText(path, `${JSON.stringify(next, null, 2)}\n`).pipe(
 							Effect.provideService(FileSystem.FileSystem, fs),
 						);
@@ -141,23 +152,12 @@ export const JsonDocumentLive = Layer.effect(
 				);
 			}).pipe(Effect.scoped);
 
-		const replace: JsonDocumentApi["write"] = (path, document, options) =>
-			Effect.gen(function* () {
-				const key = yield* fileKey(path);
-				const semaphore = yield* RcMap.get(locks, key);
-				const write = (): Effect.Effect<JsonObject, FileUnreadable | FileUnwritable | NotJson> =>
-					Effect.gen(function* () {
-						yield* read(path);
-						yield* writeText(path, `${JSON.stringify(document, null, 2)}\n`).pipe(
-							Effect.provideService(FileSystem.FileSystem, fs),
-						);
-						return document;
-					});
-				return yield* semaphore.withPermits(1)(
-					options?.lock === "pi" ? withPiLock(path, write()) : write(),
-				);
-			}).pipe(Effect.scoped);
+		const update: JsonDocumentApi["update"] = (path, change, options) =>
+			edit(path, (current) => Effect.succeed(mergeDeep(current, change(current))), options);
 
-		return { read, update, write: replace };
+		const replace: JsonDocumentApi["write"] = (path, document, options) =>
+			edit(path, () => Effect.succeed(document), options);
+
+		return { edit, read, update, write: replace };
 	}),
 );

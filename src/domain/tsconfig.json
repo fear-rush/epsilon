@@ -4,6 +4,7 @@
 		"composite": true,
 		"declaration": true,
 		"emitDeclarationOnly": true,
+		"lib": ["es2025", "dom"],
 		"outDir": "../../dist/types/src/domain",
 		"tsBuildInfoFile": "../../dist/types/src/domain/tsbuildinfo"
 	},

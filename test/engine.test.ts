@@ -112,8 +112,9 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 				);
 				const tree = yield* engine.request((id) => ({ id, kind: "tree", t: "query" }));
 				const transcript = yield* engine.request((id) => ({ id, kind: "history", t: "query" }));
+				const live = yield* engine.request((id) => ({ id, kind: "mcpLive", t: "query" }));
 				yield* engine.stop(5_000);
-				return { acceptedIn, append, snapshot: snapshot.value, transcript, tree };
+				return { acceptedIn, append, live, snapshot: snapshot.value, transcript, tree };
 				// oxlint-disable-next-line effecttsgo/strict-effect-provide -- the test entry point builds the runtime
 			}).pipe(Effect.provide(BunServices.layer)),
 		);
@@ -131,6 +132,14 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 		}
 		expect(Array.isArray(result.tree)).toBe(true);
 		expect(result.transcript).toEqual(expect.objectContaining({ entries: expect.any(Array) }));
+		// A home with no MCP servers still answers the query: the shape is what a panel reads.
+		expect(result.live).toEqual({
+			active: expect.any(Array),
+			attention: [],
+			registered: [],
+			resourceTools: [],
+			tools: [],
+		});
 	} finally {
 		stub.stop();
 	}
