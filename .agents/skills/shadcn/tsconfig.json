@@ -1,0 +1,13 @@
+// The showcase assets are templates, not app code. Give the editor the client's
+// React types and `@/` alias so opening one does not create an inferred project.
+{
+	"extends": "../../../client/tsconfig.app.json",
+	"compilerOptions": {
+		"paths": {
+			"@/*": ["../../../client/src/*"],
+			"react": ["../../../client/node_modules/@types/react"],
+			"react/*": ["../../../client/node_modules/@types/react/*"]
+		}
+	},
+	"include": ["assets/**/*.ts", "assets/**/*.tsx"]
+}

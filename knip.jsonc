@@ -1,26 +1,13 @@
 {
+	// Step 0 has no code under src/ yet, so its roots and the dependency graph they
+	// would justify are absent on purpose. Step 1 adds test/, Step 2 adds src/.
 	"$schema": "./node_modules/knip/schema-jsonc.json",
-	// Agent skills and the vendored Oxlint plugin ship their own entry points.
-	"ignore": [".agents/**", "tools/oxlint/anti-slop/**"],
-	// shadcn files export every part of a component on purpose, and the CLI owns
-	// them, so only their whole-file unused state is reported.
-	"ignoreIssues": {
-		"client/src/components/ui/**": ["exports", "types"],
+	"entry": ["scripts/*.ts", "tools/oxlint/*/index.ts"],
+	"project": ["scripts/**/*.ts", "tools/oxlint/epsilon/**/*.ts", "src/app/**/*.css"],
+	"ignore": ["tools/oxlint/anti-slop/**"],
+	"rules": {
+		"dependencies": "off",
+		"devDependencies": "off",
 	},
-	// Used as the `tsr` binary by the client's routes:generate script, and by
-	// the manual socket checks.
-	"ignoreDependencies": ["@tanstack/router-cli"],
-	"ignoreBinaries": ["pgrep"],
-	"workspaces": {
-		"server": {
-			"entry": ["scripts/*.ts"],
-		},
-		"shared": {
-			"entry": ["scripts/*.ts"],
-		},
-		"client": {
-			// utils.ts is the shadcn CLI's utils alias target, not an app import.
-			"entry": ["index.html", "src/lib/utils.ts"],
-		},
-	},
+	"treatConfigHintsAsErrors": true,
 }

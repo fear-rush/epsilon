@@ -1,0 +1,20 @@
+{
+	"extends": "../tsconfig.base.json",
+	"compilerOptions": {
+		"composite": true,
+		"declaration": true,
+		"emitDeclarationOnly": true,
+		"outDir": "../dist/types/test",
+		"tsBuildInfoFile": "../dist/types/test/tsbuildinfo",
+		"types": ["bun"]
+	},
+	"include": ["**/*.ts", "**/*.tsx"],
+	"references": [
+		{
+			"path": "../src/protocol"
+		},
+		{
+			"path": "../src/domain"
+		}
+	]
+}

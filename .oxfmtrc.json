@@ -1,15 +1,12 @@
 {
-	"$schema": "./node_modules/oxfmt/configuration_schema.json",
 	"printWidth": 100,
 	"useTabs": true,
+	"sortImports": { "internalPattern": ["@/", "#protocol/", "#domain/"] },
+	"sortPackageJson": { "sortScripts": true },
+	"sortTailwindcss": { "functions": ["cn", "cva"], "stylesheet": "./src/app/index.css" },
 	"ignorePatterns": [
 		"**/dist/**",
-		"**/build/**",
-		"**/.turbo/**",
-		"**/routeTree.gen.ts",
-		"client/src/api/*.gen.ts",
-		"client/src/api/openapi.json",
-		"**/drizzle/**",
+		"src/app/routeTree.gen.ts",
 		"bun.lock",
 		".agent/**",
 		".agents/**",
@@ -21,6 +18,7 @@
 		".opencode/**",
 		".pi/**",
 		".roo/**",
+		".sandbox/**",
 		".windsurf/**",
 		"tools/oxlint/anti-slop/**"
 	]

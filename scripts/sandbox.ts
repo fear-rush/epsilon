@@ -45,7 +45,8 @@ export const linkSandbox = (): void => {
 		}
 		console.log(`dev: moved ${sandboxLink} -> ${sandboxRoot}`);
 	}
-	if (lstatSync(sandboxLink, { throwIfNoEntry: false })?.isSymbolicLink()) unlinkSync(sandboxLink);
+	if (lstatSync(sandboxLink, { throwIfNoEntry: false })?.isSymbolicLink() === true)
+		unlinkSync(sandboxLink);
 	symlinkSync(sandboxRoot, sandboxLink);
 };
 

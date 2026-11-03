@@ -1,9 +1,31 @@
 {
 	"$schema": "./node_modules/oxlint/configuration_schema.json",
-	"plugins": ["typescript", "react"],
+	"extends": ["./node_modules/@effect/tsgo/oxlint-presets/strict.json"],
+	"plugins": ["typescript", "unicorn", "oxc", "import", "react", "jsx-a11y", "promise", "node"],
+	"jsPlugins": [
+		"./tools/oxlint/anti-slop/index.ts",
+		"./tools/oxlint/anti-slop/effect/index.ts",
+		"./tools/oxlint/epsilon/index.ts"
+	],
 	"categories": {
-		"correctness": "error"
+		"correctness": "error",
+		"suspicious": "error"
 	},
+	"env": {
+		"es2026": true
+	},
+	"options": {
+		"typeAware": true
+	},
+	"ignorePatterns": [
+		"**/dist/**",
+		"**/node_modules/**",
+		"src/app/routeTree.gen.ts",
+		"tools/oxlint/anti-slop/**",
+		".agents/**",
+		".claude/**",
+		".sandbox/**"
+	],
 	"rules": {
 		"anti-slop/no-chained-type-assertions": "error",
 		"anti-slop/no-conditional-empty-object-spread": "error",
@@ -13,79 +35,140 @@
 		"anti-slop/no-reflect-apply": "error",
 		"anti-slop/no-reflect-get": "error",
 		"anti-slop/no-runtime-typeof": "error",
-		"anti-slop/no-unsafe-dictionary-type": "error",
 		"anti-slop/no-shape-in-symbol-names": "error",
 		"anti-slop/no-unknown-parameters": "error",
 		"anti-slop/no-unknown-returns": "error",
 		"anti-slop/no-unknown-type-aliases": "error",
+		"anti-slop/no-unsafe-dictionary-type": "error",
 		"anti-slop/no-widen-then-assert": "error",
-		"anti-slop/require-safety-comment-for-type-assertion": "error"
+		"anti-slop/require-safety-comment-for-type-assertion": "error",
+		"anti-slop-effect/no-service-constructor-imports": "error",
+		"epsilon/design-tokens": "error",
+		"epsilon/effect-only-io": "off",
+		"epsilon/no-feature-internals": "off",
+		"epsilon/no-real-sleep": "off",
+		"eslint/eqeqeq": "error",
+		"eslint/no-await-in-loop": "error",
+		"eslint/no-console": "error",
+		"eslint/no-else-return": "error",
+		"eslint/no-empty": "error",
+		"eslint/no-lonely-if": "error",
+		"eslint/no-negated-condition": "error",
+		"eslint/no-param-reassign": "error",
+		"eslint/no-promise-executor-return": "error",
+		"eslint/no-useless-rename": "error",
+		"eslint/no-var": "error",
+		"eslint/no-warning-comments": "error",
+		"eslint/object-shorthand": "error",
+		"eslint/prefer-const": "error",
+		"import/no-cycle": "error",
+		"import/no-duplicates": "error",
+		"import/no-self-import": "error",
+		"oxc/no-accumulating-spread": "error",
+		"oxc/no-map-spread": "error",
+		"react/jsx-boolean-value": "error",
+		"react/no-array-index-key": "error",
+		"react/no-danger": "error",
+		"react/no-unescaped-entities": "error",
+		"react/react-in-jsx-scope": "off",
+		"react/self-closing-comp": "error",
+		"typescript/await-thenable": "error",
+		"typescript/ban-ts-comment": "error",
+		"typescript/consistent-type-imports": "error",
+		"typescript/no-base-to-string": "error",
+		"typescript/no-deprecated": "error",
+		"typescript/no-explicit-any": "error",
+		"typescript/no-floating-promises": "error",
+		"typescript/no-import-type-side-effects": "error",
+		"typescript/no-inferrable-types": "error",
+		"typescript/no-misused-promises": "error",
+		"typescript/no-misused-spread": "error",
+		"typescript/no-non-null-assertion": "error",
+		"typescript/no-unnecessary-condition": "error",
+		"typescript/no-unnecessary-type-assertion": "error",
+		"typescript/no-unsafe-argument": "error",
+		"typescript/no-unsafe-assignment": "error",
+		"typescript/no-unsafe-call": "error",
+		"typescript/no-unsafe-member-access": "error",
+		"typescript/no-unsafe-return": "error",
+		"typescript/only-throw-error": "error",
+		"typescript/prefer-for-of": "error",
+		"typescript/prefer-nullish-coalescing": "error",
+		"typescript/prefer-optional-chain": "error",
+		"typescript/prefer-promise-reject-errors": "error",
+		"typescript/require-await": "error",
+		"typescript/restrict-template-expressions": "error",
+		"typescript/strict-boolean-expressions": "error",
+		"typescript/switch-exhaustiveness-check": [
+			"error",
+			{
+				"considerDefaultExhaustiveForUnions": true
+			}
+		],
+		"unicorn/no-typeof-undefined": "error",
+		"unicorn/prefer-array-find": "error",
+		"unicorn/prefer-at": "error",
+		"unicorn/prefer-node-protocol": "error",
+		"unicorn/prefer-set-has": "error",
+		"unicorn/prefer-string-replace-all": "error",
+		"unicorn/prefer-structured-clone": "error",
+		"unicorn/prefer-type-error": "error",
+		"unicorn/throw-new-error": "error"
 	},
-	"env": {
-		"es2026": true
-	},
-	"ignorePatterns": [
-		"**/dist/**",
-		"**/build/**",
-		"**/.turbo/**",
-		"**/routeTree.gen.ts",
-		"client/src/api/*.gen.ts",
-		"client/src/api/openapi.json",
-		"**/drizzle/**",
-		".agent/**",
-		".agents/**",
-		".claude/**",
-		".codex/**",
-		".continue/**",
-		".cursor/**",
-		".gemini/**",
-		".opencode/**",
-		".pi/**",
-		".roo/**",
-		".windsurf/**",
-		"tools/oxlint/anti-slop/**"
-	],
 	"overrides": [
 		{
-			"files": ["client/**/*.{ts,tsx}"],
-			"env": {
-				"browser": true
-			},
+			"files": ["**/*.test.ts", "**/*.test.tsx", "test/**"],
 			"rules": {
-				"react/rules-of-hooks": "error",
-				"react/exhaustive-deps": "warn",
-				"react/only-export-components": [
-					"warn",
+				"epsilon/no-real-sleep": "error",
+				"typescript/await-thenable": "off",
+				"typescript/no-unsafe-argument": "off",
+				"typescript/no-unsafe-assignment": "off",
+				"typescript/no-unsafe-call": "off",
+				"typescript/no-unsafe-member-access": "off",
+				"typescript/no-unsafe-return": "off",
+				"unicorn/consistent-function-scoping": "off"
+			}
+		},
+		{
+			"files": ["scripts/**"],
+			"rules": {
+				"eslint/no-console": "off"
+			}
+		},
+		{
+			"files": ["src/app/**"],
+			"rules": {
+				"epsilon/no-feature-internals": [
+					"error",
 					{
-						"allowConstantExport": true,
-						"allowExportNames": ["Route"]
+						"root": "src/app/features",
+						"aliasRoot": "src/app",
+						"open": ["settings/kit"]
 					}
 				]
 			}
 		},
 		{
-			"files": ["server/**/*.ts"],
-			"env": {
-				"node": true
-			},
-			"globals": {
-				"Bun": "readonly"
-			}
-		},
-		// Import boundaries (AGENTS.md, Invariants; docs/ARCHITECTURE.md). An override
-		// replaces the whole `no-restricted-imports` config of the files it matches,
-		// so each region below lists every pattern that applies to it.
-		{
-			// Only the pi platform wrapper and the conversation feature touch pi.
-			"files": ["**/*.{ts,tsx}"],
+			"files": ["src/protocol/**"],
 			"rules": {
 				"no-restricted-imports": [
 					"error",
 					{
 						"patterns": [
 							{
-								"group": ["@earendil-works/*"],
-								"message": "Import pi only in server/src/platform/pi.ts and server/src/features/conversation; elsewhere use their exports."
+								"group": [
+									"node:*",
+									"bun:*",
+									"react",
+									"react-dom",
+									"react/*",
+									"@earendil-works/*",
+									"#domain/*",
+									"#server/*",
+									"#engine/*",
+									"#app/*"
+								],
+								"message": "src/protocol is the wire format: only effect/schema and its own files."
 							}
 						]
 					}
@@ -93,24 +176,25 @@
 			}
 		},
 		{
-			"files": ["server/src/features/conversation/**/*.ts"],
-			"rules": { "no-restricted-imports": "off" }
-		},
-		{
-			// The platform never reaches up into features. platform/pi.ts may import pi.
-			"files": ["server/src/platform/**/*.ts"],
+			"files": ["src/domain/**"],
 			"rules": {
 				"no-restricted-imports": [
 					"error",
 					{
 						"patterns": [
 							{
-								"group": ["@earendil-works/*"],
-								"message": "Import pi only in server/src/platform/pi.ts and server/src/features/conversation; elsewhere use their exports."
-							},
-							{
-								"group": ["**/features/**"],
-								"message": "server/src/platform must not import from features; invert the dependency."
+								"group": [
+									"node:*",
+									"bun:*",
+									"react",
+									"react-dom",
+									"react/*",
+									"@earendil-works/*",
+									"#server/*",
+									"#engine/*",
+									"#app/*"
+								],
+								"message": "src/domain is pure: no runtime, framework or server imports."
 							}
 						]
 					}
@@ -118,15 +202,15 @@
 			}
 		},
 		{
-			"files": ["server/src/platform/pi.ts"],
+			"files": ["src/app/**"],
 			"rules": {
 				"no-restricted-imports": [
 					"error",
 					{
 						"patterns": [
 							{
-								"group": ["**/features/**"],
-								"message": "server/src/platform must not import from features; invert the dependency."
+								"group": ["node:*", "bun:*", "@earendil-works/*", "#server/*", "#engine/*"],
+								"message": "The browser bundle may not reach server or engine code."
 							}
 						]
 					}
@@ -134,20 +218,15 @@
 			}
 		},
 		{
-			// shared/ runs in the browser and on the server: no Node, React or Hono.
-			"files": ["shared/src/**/*.ts"],
+			"files": ["src/server/**"],
 			"rules": {
 				"no-restricted-imports": [
 					"error",
 					{
 						"patterns": [
 							{
-								"group": ["@earendil-works/*"],
-								"message": "shared/ may only import pi types, and only in shared/src/pi.ts."
-							},
-							{
-								"group": ["node:*", "react", "react-dom", "react/*", "hono", "hono/*"],
-								"message": "shared/ is browser-safe: no node:*, React or Hono."
+								"group": ["react", "react-dom", "react/*", "#app/*", "#engine/*"],
+								"message": "The server does not import the app or the engine."
 							}
 						]
 					}
@@ -155,20 +234,15 @@
 			}
 		},
 		{
-			// Replay tests read fixtures from disk.
-			"files": ["shared/src/**/*.test.ts"],
+			"files": ["src/engine/**"],
 			"rules": {
 				"no-restricted-imports": [
 					"error",
 					{
 						"patterns": [
 							{
-								"group": ["@earendil-works/*"],
-								"message": "shared/ may only import pi types, and only in shared/src/pi.ts."
-							},
-							{
-								"group": ["react", "react-dom", "react/*", "hono", "hono/*"],
-								"message": "shared/ is browser-safe: no React or Hono."
+								"group": ["react", "react-dom", "react/*", "#app/*", "#server/*"],
+								"message": "The engine does not import the app or the server."
 							}
 						]
 					}
@@ -176,98 +250,36 @@
 			}
 		},
 		{
-			"files": ["shared/src/pi.ts"],
+			"files": ["src/server/**", "src/engine/**"],
 			"rules": {
-				"no-restricted-imports": [
+				"epsilon/effect-only-io": "error"
+			}
+		},
+		{
+			"files": ["src/server/platform/**", "src/server/main.ts", "src/engine/main.ts"],
+			"rules": {
+				"epsilon/effect-only-io": "off"
+			}
+		},
+		{
+			"files": ["src/server/**"],
+			"rules": {
+				"epsilon/no-feature-internals": [
 					"error",
 					{
-						"patterns": [
-							{
-								"group": ["node:*", "react", "react-dom", "react/*", "hono", "hono/*"],
-								"message": "shared/ is browser-safe: no node:*, React or Hono."
-							},
-							{
-								"group": ["@earendil-works/*"],
-								"allowTypeImports": true,
-								"message": "shared/src/pi.ts imports pi as types only."
-							}
-						]
+						"root": "src/server/features",
+						"aliasRoot": "src/app",
+						"open": ["settings/kit"]
 					}
 				]
 			}
 		},
 		{
-			// The browser never imports the server or pi.
-			"files": ["client/src/**/*.{ts,tsx}"],
+			"files": ["tools/oxlint/**"],
 			"rules": {
-				"no-restricted-imports": [
-					"error",
-					{
-						"patterns": [
-							{
-								"group": ["@earendil-works/*"],
-								"message": "The browser never imports pi; use shared/ types."
-							},
-							{
-								"group": ["server", "server/*", "**/server/src/**", "@epsilon/server*"],
-								"message": "The browser never imports server code; use the generated API client and shared/."
-							}
-						]
-					}
-				]
-			}
-		},
-		{
-			// A feature is reached through its index.ts only. Settings aggregates the
-			// configuration features and so follows the same rule.
-			"files": ["server/src/features/**/*.ts"],
-			"rules": {
-				"anti-slop/no-feature-internals": ["error", { "root": "server/src/features" }]
-			}
-		},
-		{
-			// Client features do not import each other, except two settings files that
-			// are shared on purpose: the kit every settings section composes, and
-			// sections.ts, the one list the app menu in the sessions sidebar
-			// and the settings navigation both map.
-			"files": ["client/src/features/**/*.{ts,tsx}"],
-			"rules": {
-				"anti-slop/no-feature-internals": [
-					"error",
-					{
-						"root": "client/src/features",
-						"aliasRoot": "client/src",
-						"open": ["settings/kit", "settings/sections"]
-					}
-				]
-			}
-		},
-		{
-			// Class names use the design tokens (client/src/styles/tokens.css). Warn while
-			// the features migrate; components/ui (vendored) and styles are out of scope.
-			"files": [
-				"client/src/features/**/*.{ts,tsx}",
-				"client/src/components/patterns/**/*.{ts,tsx}"
-			],
-			"rules": {
-				"anti-slop/design-tokens": ["error", { "allow": ["grid-cols-[minmax(0,1fr)]"] }]
-			}
-		},
-		{
-			"files": ["client/src/components/ui/**/*.tsx"],
-			"rules": {
-				"react/only-export-components": "off",
-				// Registry components are vendored from ui.shadcn.com and updated by
-				// `shadcn add`, so local rewrites would be overwritten.
 				"anti-slop/no-runtime-typeof": "off",
-				"anti-slop/require-safety-comment-for-type-assertion": "off"
+				"anti-slop/no-unknown-parameters": "off"
 			}
-		}
-	],
-	"jsPlugins": [
-		{
-			"name": "anti-slop",
-			"specifier": "./tools/oxlint/anti-slop/index.ts"
 		}
 	]
 }

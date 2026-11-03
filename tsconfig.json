@@ -1,18 +1,11 @@
 {
-	"extends": "./tsconfig.base.json",
-	"compilerOptions": {
-		"noEmit": true,
-		"allowImportingTsExtensions": true,
-		"types": ["bun"]
-	},
-	"include": [
-		"scripts/**/*.ts",
-		"tools/**/*.ts",
-		"server/drizzle.config.ts",
-		"server/scripts/**/*.ts",
-		"shared/scripts/**/*.ts",
-		"server/src/**/*.test.ts",
-		"shared/src/**/*.test.ts"
-	],
-	"exclude": ["**/node_modules/**", "**/dist/**", "**/build/**", "**/.turbo/**"]
+	"files": [],
+	"references": [
+		{
+			"path": "scripts"
+		},
+		{
+			"path": "tools"
+		}
+	]
 }

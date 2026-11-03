@@ -1,32 +1,23 @@
 {
 	"compilerOptions": {
-		// Environment setup & latest features
-		"lib": ["ESNext", "DOM", "DOM.Iterable"],
-		"target": "ESNext",
-		"module": "ESNext",
-		"moduleDetection": "force",
-		"jsx": "react-jsx",
-		"allowJs": true,
-
-		// Module resolution
+		"allowUnreachableCode": false,
+		"allowUnusedLabels": false,
+		"erasableSyntaxOnly": true,
+		"exactOptionalPropertyTypes": true,
+		"lib": ["es2025"],
+		"module": "preserve",
 		"moduleResolution": "bundler",
-		"allowSyntheticDefaultImports": true,
-		"esModuleInterop": true,
-		"verbatimModuleSyntax": true,
-
-		// Strictness and best practices
-		"strict": true,
-		"forceConsistentCasingInFileNames": true,
 		"noFallthroughCasesInSwitch": true,
+		"noImplicitOverride": true,
+		"noImplicitReturns": true,
+		"noPropertyAccessFromIndexSignature": true,
 		"noUncheckedIndexedAccess": true,
-		"experimentalDecorators": true,
-
-		// Output control
+		"noUncheckedSideEffectImports": true,
 		"skipLibCheck": true,
-
-		// Dead-code checks: an unused local, parameter or private member is an error.
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
-		"noPropertyAccessFromIndexSignature": false
+		"strict": true,
+		"target": "es2025",
+		"useUnknownInCatchVariables": true,
+		"verbatimModuleSyntax": true,
+		"allowImportingTsExtensions": true
 	}
 }

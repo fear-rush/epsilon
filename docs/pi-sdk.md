@@ -7,7 +7,7 @@ and configures it through the same exports plus pi's documented files
 ([DECISIONS.md](DECISIONS.md), Configure in the dashboard).
 
 **Re-verify after every pi upgrade.** The sources of truth. Paths are relative to the
-pinned package, `server/node_modules/@earendil-works/pi-coding-agent`, which is the
+pinned package, `node_modules/@earendil-works/pi-coding-agent`, which is the
 copy epsilon drives. `pi` on `PATH` may be a different version, so grep the pinned
 package, not the installed CLI.
 
@@ -341,7 +341,7 @@ it with a record per provider: what pi reported, the question it waits on, and a
 abort signal, polled by the page. pi also narrates the loopback callback server it
 opens, which names a port the operator cannot act on, so those lines are dropped and
 the rest of what it reports is shown. Epsilon keeps that record in
-`server/src/features/providers/login.ts` and writes no `auth.json` of its own; pi
+`src/server/features/providers/login.ts` and writes no `auth.json` of its own; pi
 exports neither the store nor its cross-process lock.
 
 `models.json` is parsed with `ModelConfig.load()`, which is read-only. Its provider
@@ -472,7 +472,7 @@ The base URL is not interchangeable between families:
 - pi sets Google's `apiVersion` to empty when a `baseUrl` is present, so the base
   must include the version path (`https://generativelanguage.googleapis.com/v1beta`).
 
-`shared/src/providers/endpoints.ts` mirrors this table. The provider form's API
+`src/domain/providers/endpoints.ts` mirrors this table. The provider form's API
 picker labels each family with the path it appends, the base URL field names the
 request URL that results, and the model-list fetch reads `modelsPath` from the same
 list. A list that carries `supported_endpoints` (commandcode does) is read as a
@@ -658,7 +658,7 @@ A server appears only while it is `needs-auth` or `failed`; a `config:` line rep
 a `mcp.json` pi could not read, not a server. The list is complete for the moment it
 is sent, so the host replaces what it kept rather than merging into it, and `reload()`
 clears it before pi speaks again. `Epsilon` reads those lines in
-`server/src/features/mcp/attention.ts` and shows `needs-sign-in` and `failed` per
+`src/server/features/mcp/attention.ts` and shows `needs-sign-in` and `failed` per
 server; `disabled`, connected with its tool count and no-tool-yet come from the file
 and the tool inventory instead. `connected` is never claimed from the notice: a tool
 registered for the server is the proof, which is why a recovered server stops reading
@@ -694,7 +694,7 @@ returns `settingsManager.isProjectTrusted()`. `resolveProjectTrusted`,
 `emitProjectTrustEvent`, `getProjectTrustOptions` and `getProjectTrustParentPath` are
 private.
 
-An embedded engine does not run that resolution. `SettingsManager.create(cwd,
+The engine process does not run that resolution. `SettingsManager.create(cwd,
 agentDir)` starts at `projectTrusted = true` (`dist/core/settings-manager.js`), and
 nothing in `createAgentSession()` changes it. A host that builds an engine in a
 folder therefore loads that folder's `.pi` whatever `trust.json` says, unless it
@@ -719,7 +719,7 @@ What the SDK exports for that decision:
   the untrusted extension set first, calls back with the result, sets the decision
   and reloads the resources for it.
 
-Epsilon runs the chain in `server/src/features/projects/trust.ts`, over the store,
+Epsilon runs the chain in `src/server/features/projects/trust.ts`, over the store,
 `hasTrustRequiringProjectResources()`, `Extension.handlers` and the settings getter.
 The project page and every route that runs in a project use its answer with no
 extension set, so their answer comes from the store and the default.
@@ -778,7 +778,7 @@ Turborepo or the runtime.
   operations object is passed back in as the command's runner.
 - **`toJsonEvent` is not exported.** `package.json` exports only `.` and
   `./rpc-entry`; `dist/modes/json-event.js` is private. The host carries its own
-  copy of the transform in `server/src/features/conversation/engine.ts`.
+  copy of the transform in `src/engine/bindings.ts`.
 - **pi exposes no MCP connection state.** A connected server's tools appear in
   `session.getAllTools()` with `namespace.name === "mcp__<server>"` and, when the
   server sent hints, `annotations` (`readOnlyHint`, `destructiveHint`,
@@ -805,7 +805,7 @@ Turborepo or the runtime.
   server as registered with no tools. An extension that only wants to observe
   without that cost has to read `pi.getMcpServers()` on `session_start` alone and
   miss the registrations that happen later.
-- **The embedded engine trusts whatever folder it is given.** `SettingsManager.create`
+- **The engine trusts whatever folder it is given.** `SettingsManager.create`
   starts with `projectTrusted = true`, and nothing in `createAgentSession()` runs a
   trust decision, so `.pi/settings.json` and `.pi/mcp.json` load with an empty
   `trust.json`. The host must decide before it builds an engine. The SDK exports the
@@ -919,3 +919,32 @@ Turborepo or the runtime.
   retyping it (a dropped `[&>svg]:size-3.5` blew the checkbox tick up to 24px).
 - **A Base UI dialog mounted already open has no motion.** Mount closed and open on
   the next animation frame; close, wait for the transition, then unmount.
+
+- **pi does not redirect stdout, so stdout is not a protocol channel.**
+  `takeOverStdout()` — which sends `process.stdout.write` to stderr — is called only by
+  `modes/rpc/rpc-mode.js` and the CLI's `main.js`. The SDK path an engine uses does not
+  call it, so pi, its extensions and codemode may write to stdout at any moment. An
+  engine's protocol rides Bun IPC; logs go over IPC or stderr (`13-verified` item 23).
+- **`settings.json` is locked, with specific options.** `FileSettingsStorage.withLock`
+  takes `lockfile.lockSync(path, { realpath: false })`, retries 10 times with a 20 ms
+  synchronous spin, and only locks when the file exists or a write is produced
+  (`core/settings-manager.js:126-180`). A host taking the same lock must pass the same
+  path and options; use the async `lockfile.lock` so the spin never blocks the server
+  (`13-verified` item 2).
+- **A session file is not locked by pi.** `proper-lockfile` is used by the trust,
+  settings, auth, package-CLI and MCP-OAuth stores only; `session-manager.js` has no
+  lock. Two processes appending to one session is possible and undetected by pi
+  (`13-verified` item 15).
+- **A bash tool update is the whole accumulated output, not a delta.**
+  `tool_execution_update` carries `output.snapshot(...)`, tail-truncated to 2,000 lines
+  or 50 KB and throttled to one update per 100 ms (`core/tools/bash.js:180-195`,
+  `renderers/bash.js:15`). A host that wants deltas computes them itself
+  (`13-verified` item 4).
+- **A session line is `{ type, id, parentId, timestamp, message }` in that order.**
+  `appendMessage` builds the literal and `_persist` writes one `JSON.stringify` line
+  (`core/session-manager.js:812,827`). A reader that peeks at a line prefix may rely on
+  it; the conformance test guards it (`13-verified` item 3).
+- **`mcp.json` and `mcp-auth.json` take no directory argument.**
+  `extensions/mcp/index.js:1202` and `oauth.js:88` resolve `getAgentDir()` themselves, so
+  the only way to point them at another home is `PI_CODING_AGENT_DIR` in the process
+  environment. Every other reader accepts an explicit directory (`13-verified` item 16).
