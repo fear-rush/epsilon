@@ -117,7 +117,7 @@
 	},
 	"overrides": [
 		{
-			"files": ["**/*.test.ts", "**/*.test.tsx", "test/**"],
+			"files": ["**/*.test.ts", "**/*.test.tsx", "test/**", "**/*.e2e.ts"],
 			"rules": {
 				"epsilon/no-real-sleep": "error",
 				"typescript/await-thenable": "off",
@@ -279,6 +279,22 @@
 			"rules": {
 				"anti-slop/no-runtime-typeof": "off",
 				"anti-slop/no-unknown-parameters": "off"
+			}
+		},
+		{
+			"files": ["test/setup.ts", "test/until.ts", "test/fixtures/**", "test/e2e/app.ts"],
+			"rules": {
+				"epsilon/no-real-sleep": "off"
+			}
+		},
+		{
+			"files": ["test/**", "scripts/**"],
+			"rules": {
+				"anti-slop/no-known-value-widening": "off",
+				"anti-slop/no-runtime-typeof": "off",
+				"anti-slop/no-unknown-parameters": "off",
+				"anti-slop/no-unsafe-dictionary-type": "off",
+				"anti-slop/require-safety-comment-for-type-assertion": "off"
 			}
 		}
 	]

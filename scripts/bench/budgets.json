@@ -1,0 +1,9 @@
+{
+	"catalog-list": 20,
+	"catalog-cold": 1500,
+	"catalog-append": 100,
+	"open-window": 50,
+	"engine-spawn": 600,
+	"client-stream": 50,
+	"bundle-size": 250
+}

@@ -1,9 +1,14 @@
 {
-	// Step 0 has no code under src/ yet, so its roots and the dependency graph they
-	// would justify are absent on purpose. Step 1 adds test/, Step 2 adds src/.
+	// Step 0 had no code under src/. Dependency reporting turns on in Step 3, when the
+	// backend root first imports its pins.
 	"$schema": "./node_modules/knip/schema-jsonc.json",
-	"entry": ["scripts/*.ts", "tools/oxlint/*/index.ts"],
-	"project": ["scripts/**/*.ts", "tools/oxlint/epsilon/**/*.ts", "src/app/**/*.css"],
+	"entry": ["scripts/*.ts", "tools/oxlint/*/index.ts", "test/**/*.test.ts"],
+	"project": [
+		"test/**/*.ts",
+		"scripts/**/*.ts",
+		"tools/oxlint/epsilon/**/*.ts",
+		"src/app/**/*.css",
+	],
 	"ignore": ["tools/oxlint/anti-slop/**"],
 	"rules": {
 		"dependencies": "off",

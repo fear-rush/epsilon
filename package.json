@@ -11,6 +11,7 @@
 		"#protocol/*": "./src/protocol/*"
 	},
 	"scripts": {
+		"bench": "bun run scripts/bench/run.ts",
 		"build": "bun run routes:generate && vite build && bun build src/backend/main.ts src/engine/main.ts src/backend/catalog/worker.ts --target bun --outdir dist",
 		"check": "bun run format:check && bun run lint && bun run type-check && bun run dead-code && bun run test",
 		"dead-code": "knip --cycles",
@@ -26,6 +27,8 @@
 		"sandbox:clean": "bun run scripts/sandbox.ts clean",
 		"start": "bun dist/main.js",
 		"test": "bun test --timeout 5000",
+		"test:bounded": "bun run scripts/bounded.ts 180 -- bun test",
+		"test:e2e": "playwright test",
 		"test:tools": "bun test tools",
 		"type-check": "tsc -b"
 	},

@@ -1,2 +1,6 @@
 [install]
 exact = true
+
+[test]
+timeout = 5000
+preload = ["./test/setup.ts"]

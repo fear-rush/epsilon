@@ -8,13 +8,5 @@
 		"tsBuildInfoFile": "../dist/types/test/tsbuildinfo",
 		"types": ["bun"]
 	},
-	"include": ["**/*.ts", "**/*.tsx"],
-	"references": [
-		{
-			"path": "../src/protocol"
-		},
-		{
-			"path": "../src/domain"
-		}
-	]
+	"include": ["**/*.ts", "**/*.tsx"]
 }
