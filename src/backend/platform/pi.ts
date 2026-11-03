@@ -27,6 +27,11 @@ export type PiConfigApi = {
 	readonly settingsPath: Effect.Effect<string>;
 	/** pi's composed model catalog and credential store, built from this home. */
 	readonly models: Effect.Effect<ModelRuntime, RuntimeUnavailable>;
+	/**
+	 * A runtime with no `models.json`, so it knows only what pi ships. It answers "which
+	 * ids are built in" independent of this home's file (F8l).
+	 */
+	readonly builtinModels: Effect.Effect<ModelRuntime, RuntimeUnavailable>;
 };
 
 export class PiConfig extends Context.Service<PiConfig, PiConfigApi>()("epsilon/PiConfig") {}
@@ -52,7 +57,20 @@ export const PiConfigLive: Layer.Layer<PiConfig, never, AgentHome> = Layer.effec
 					reason: cause instanceof Error ? cause.message : String(cause),
 				}),
 		});
+		const builtinModels = Effect.tryPromise({
+			try: () =>
+				ModelRuntime.create({
+					authPath: join(home.agentDir, "auth.json"),
+					modelsPath: null,
+					refreshOnCreate: false,
+				}),
+			catch: (cause) =>
+				new RuntimeUnavailable({
+					reason: cause instanceof Error ? cause.message : String(cause),
+				}),
+		});
 		return {
+			builtinModels,
 			models,
 			settings: (cwd: string): Effect.Effect<SettingsManager> =>
 				Effect.sync(() => SettingsManager.create(cwd, home.agentDir)),

@@ -44,6 +44,16 @@ export type JsonDocumentApi = {
 		change: (current: JsonObject) => JsonObject,
 		options?: UpdateOptions,
 	) => Effect.Effect<JsonObject, FileUnreadable | FileUnwritable | NotJson | Locked>;
+	/**
+	 * Replaces the document. A merge cannot delete a key, so a feature that removes one
+	 * (a provider, a server) builds the next document and writes it whole; the file is
+	 * still parsed first, so an unreadable one is refused rather than overwritten.
+	 */
+	readonly write: (
+		path: string,
+		document: JsonObject,
+		options?: UpdateOptions,
+	) => Effect.Effect<JsonObject, FileUnreadable | FileUnwritable | NotJson | Locked>;
 };
 
 export class JsonDocument extends Context.Service<JsonDocument, JsonDocumentApi>()(
@@ -131,6 +141,23 @@ export const JsonDocumentLive = Layer.effect(
 				);
 			}).pipe(Effect.scoped);
 
-		return { read, update };
+		const replace: JsonDocumentApi["write"] = (path, document, options) =>
+			Effect.gen(function* () {
+				const key = yield* fileKey(path);
+				const semaphore = yield* RcMap.get(locks, key);
+				const write = (): Effect.Effect<JsonObject, FileUnreadable | FileUnwritable | NotJson> =>
+					Effect.gen(function* () {
+						yield* read(path);
+						yield* writeText(path, `${JSON.stringify(document, null, 2)}\n`).pipe(
+							Effect.provideService(FileSystem.FileSystem, fs),
+						);
+						return document;
+					});
+				return yield* semaphore.withPermits(1)(
+					options?.lock === "pi" ? withPiLock(path, write()) : write(),
+				);
+			}).pipe(Effect.scoped);
+
+		return { read, update, write: replace };
 	}),
 );

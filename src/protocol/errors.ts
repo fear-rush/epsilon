@@ -69,3 +69,12 @@ export class SettingRefused extends Schema.TaggedError<
 	key: Schema.String,
 	reason: Schema.String,
 }) {}
+
+/** A provider edit Epsilon refused, with the sentence the page shows. */
+export class ProviderRefused extends Schema.TaggedError<
+	ProviderRefused,
+	{ readonly brand: unique symbol }
+>()("ProviderRefused", {
+	providerId: Schema.String,
+	reason: Schema.String,
+}) {}
