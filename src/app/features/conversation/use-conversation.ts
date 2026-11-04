@@ -32,6 +32,8 @@ import { handOffDraft } from "./draft.ts";
  */
 export type Conversation = {
 	readonly state: ConversationState;
+	/** The first snapshot arrived; before that the chat is still opening. */
+	readonly loaded: boolean;
 	readonly writable: boolean;
 	readonly send: (text: string) => Promise<void>;
 	readonly answer: (answer: DialogAnswer) => Promise<void>;
@@ -115,6 +117,7 @@ export function useConversation(input: {
 	/** The engine's stream ended; the next command subscribes again and starts one. */
 	const stopped = useRef(false);
 	const [epoch, setEpoch] = useState(0);
+	const [loaded, setLoaded] = useState(false);
 	const [toolOpen, setToolOpen] = useState<ReadonlyMap<string, boolean>>(new Map());
 
 	// Commands are sent from event handlers, which read the latest rendered state here.
@@ -161,6 +164,7 @@ export function useConversation(input: {
 	const dispatch = useCallback(
 		(frame: ServerFrame) => {
 			if (frame.t === "prepend") loadingOlder.current = false;
+			if (frame.t === "snapshot") setLoaded(true);
 			// A fork's text belongs to the new chat; the page moves to it a frame later.
 			if (frame.t === "editorText" && frame.sessionId !== currentId.current) {
 				handOffDraft(frame.sessionId, frame.text);
@@ -350,6 +354,7 @@ export function useConversation(input: {
 		fork,
 		loadOlder,
 		loadTree,
+		loaded,
 		models,
 		navigateTree,
 		reload,

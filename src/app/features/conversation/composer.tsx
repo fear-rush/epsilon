@@ -30,7 +30,17 @@ export function Composer({
 	sessionId: string;
 	writable: boolean;
 }) {
+	// A fork's text belongs to the new chat; this composer only takes it under that id.
 	const [text, setText] = useState(() => takeHandedOffDraft(sessionId) ?? "");
+	const [handedTo, setHandedTo] = useState(sessionId);
+	// A fork's text belongs to the new chat; the route reaches it one render later.
+	if (handedTo !== sessionId) {
+		setHandedTo(sessionId);
+		const handed = takeHandedOffDraft(sessionId);
+		if (handed !== undefined) {
+			setText((current) => (current === "" ? handed : `${handed}\n\n${current}`));
+		}
+	}
 	const [failure, setFailure] = useState<Error | undefined>(undefined);
 	const [sending, setSending] = useState(false);
 	const applied = useRef<string | undefined>(undefined);

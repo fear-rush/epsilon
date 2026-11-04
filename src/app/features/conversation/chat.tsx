@@ -13,6 +13,7 @@ import { transcript } from "#domain/conversation/selectors";
 import type { ConversationState } from "#domain/conversation/state";
 import type { Notice as NoticeFrame } from "#protocol/conversation/frames";
 import { PaneBar } from "@/components/patterns/pane/pane-bar";
+import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ import { ProjectGate } from "./project-gate";
 import { Transcript, matchingRowIds } from "./transcript";
 import type { Jump } from "./transcript";
 import { useConversation } from "./use-conversation";
+import { ConversationWelcome } from "./welcome";
 
 /** Both dialogs are read-only until they are opened, so neither ships with the chat. */
 const SessionControls = lazy(() =>
@@ -66,9 +68,10 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 		void navigate({
 			params: { sessionId: state.sessionId },
 			replace: true,
+			search: place === null ? {} : { project: place },
 			to: "/sessions/$sessionId",
 		});
-	}, [state.sessionId, sessionId, navigate]);
+	}, [state.sessionId, sessionId, navigate, place]);
 
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
@@ -96,6 +99,18 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 	};
 
 	useReportStatus("chat", chatReport(state), () => void conversation.reload());
+
+	const empty = state.entries.length === 0 && state.streaming.length === 0;
+	const composer = (
+		<Composer
+			busy={state.busy}
+			draft={state.draft}
+			sessionId={sessionId}
+			writable={conversation.writable}
+			onAbort={conversation.abort}
+			onSend={send}
+		/>
+	);
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
@@ -196,30 +211,35 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 					</Button>
 				</div>
 			)}
-			{state.entries.length === 0 && state.streaming.length === 0 ? (
-				<p className="flex flex-1 items-center justify-center p-6 text-meta text-muted-foreground">
-					Opening the chat…
-				</p>
+			{conversation.loaded ? (
+				empty ? (
+					// A conversation opens on the box that starts it, not a card above a footer.
+					<ConversationWelcome
+						composer={composer}
+						place={place === null ? "chat" : "project"}
+						status={<ChatNotices notices={state.notices} />}
+					/>
+				) : (
+					<>
+						<Transcript
+							state={state}
+							onLoadOlder={() => void conversation.loadOlder()}
+							anchorFrom={anchorFrom}
+							onAnchored={() => setAnchorFrom(undefined)}
+							jump={jump}
+							toolOpen={conversation.toolOpen}
+							onToggleTool={conversation.toggleTool}
+						/>
+						<ChatNotices notices={state.notices} />
+						<div className="animate-enter-rise">{composer}</div>
+					</>
+				)
 			) : (
-				<Transcript
-					state={state}
-					onLoadOlder={() => void conversation.loadOlder()}
-					anchorFrom={anchorFrom}
-					onAnchored={() => setAnchorFrom(undefined)}
-					jump={jump}
-					toolOpen={conversation.toolOpen}
-					onToggleTool={conversation.toggleTool}
-				/>
+				// The engine is still starting; an empty transcript would be a lie.
+				<div className="flex min-h-0 flex-1 animate-enter-rise items-center justify-center">
+					<LoadingState label="Loading the session…" />
+				</div>
 			)}
-			<ChatNotices notices={state.notices} />
-			<Composer
-				busy={state.busy}
-				draft={state.draft}
-				sessionId={state.sessionId ?? sessionId}
-				writable={conversation.writable}
-				onAbort={conversation.abort}
-				onSend={send}
-			/>
 			<ConversationDialogs dialogs={state.dialogs} onAnswer={conversation.answer} />
 			<Suspense fallback={null}>
 				{controlsOpen && (

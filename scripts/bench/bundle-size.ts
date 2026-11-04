@@ -29,6 +29,7 @@ const repoRoot = join(import.meta.dirname, "../..");
 const outDir = mkdtempSync(join(tmpdir(), "epsilon-bench-bundle-"));
 
 /** The route component each page resolves to; the router plugin adds a query suffix. */
+const layoutRoute = "routes/_app/route.tsx";
 const homeRoute = "routes/_app/index.tsx";
 const sessionRoute = "routes/_app/sessions/$sessionId.tsx";
 
@@ -101,8 +102,14 @@ try {
 	]);
 
 	const manifest = await readManifest();
-	const home = await pageBytes(manifest, ["index.html", routeKey(manifest, homeRoute)]);
-	const session = await pageBytes(manifest, ["index.html", routeKey(manifest, sessionRoute)]);
+	// The shell is a route of its own and loads on every page, so it counts for both.
+	const layout = routeKey(manifest, layoutRoute);
+	const home = await pageBytes(manifest, ["index.html", layout, routeKey(manifest, homeRoute)]);
+	const session = await pageBytes(manifest, [
+		"index.html",
+		layout,
+		routeKey(manifest, sessionRoute),
+	]);
 
 	console.error(
 		`bundle-size: / ${kib(home)} KiB, /sessions/$id ${kib(session)} KiB, budget applies to each`,

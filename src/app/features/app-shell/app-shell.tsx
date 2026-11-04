@@ -1,47 +1,36 @@
 import { Outlet } from "@tanstack/react-router";
 
-import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
-import { StatusView } from "@/components/patterns/status/status-view";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SessionSidebar } from "@/features/sessions";
 import { useReadiness } from "@/status";
 
 import { NotReady } from "./not-ready";
 
 /**
- * The app surface: the chat column, and the page beside it.
+ * The session surface: the sidebar, and the page beside it behind the readiness gate.
  *
- * An Epsilon that cannot run a turn replaces the page with one notice; Settings is its own
- * surface and stays reachable, which is where the notice sends the reader. The page is kept
- * unmounted until readiness answers, so no chat starts an engine on an unconfigured home.
+ * Settings is its own full-page surface and never mounts this shell, so a page that
+ * cannot run a turn never starts an engine.
  */
 export function AppShell() {
 	const readiness = useReadiness();
+	const unsupported = readiness.data?.ready === false ? readiness.data : undefined;
 
 	return (
-		<div className="flex min-h-0 flex-1">
+		<SidebarProvider className="h-full min-h-0">
 			<SessionSidebar />
-			<main className="flex min-h-0 min-w-0 flex-1 flex-col">
-				<Gate readiness={readiness} />
-			</main>
-		</div>
+			<SidebarInset className="min-h-0 animate-enter-fade overflow-hidden">
+				{readiness.isPending ? (
+					<div className="flex flex-1 items-center justify-center">
+						<LoadingState label="Starting…" />
+					</div>
+				) : unsupported === undefined ? (
+					<Outlet />
+				) : (
+					<NotReady state={unsupported} />
+				)}
+			</SidebarInset>
+		</SidebarProvider>
 	);
-}
-
-function Gate({ readiness }: { readiness: ReturnType<typeof useReadiness> }) {
-	if (readiness.isPending) {
-		return (
-			<div className="flex flex-1 items-center justify-center">
-				<LoadingState label="Starting…" />
-			</div>
-		);
-	}
-	if (readiness.error !== null) return <ReadinessError error={readiness.error} />;
-	if (readiness.data.ready) return <Outlet />;
-	return <NotReady state={readiness.data} />;
-}
-
-function ReadinessError({ error }: { error: Error }) {
-	const view = errorView(error);
-	return <StatusView icon={view.icon} title={view.title} line={view.line} tone={view.tone} />;
 }

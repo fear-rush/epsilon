@@ -94,6 +94,35 @@ view, built from the shared patterns.
 Nothing important lives only in server memory or only in the browser. A state the code
 cannot represent is a visible notice, never silence.
 
+## UI rules that are not obvious from the code
+
+- Three client layers. `src/app/styles/` holds the tokens (`tokens.css`: layout sizes, gaps
+  by role, type roles, dialog sizes, motion) and the motion that is not a token entrance
+  (`motion.css`). `src/app/components/ui` is shadcn registry source.
+  `src/app/components/patterns` is what features compose. `components/editor` is the file
+  tree, markdown and highlighting.
+- Every column starts with a `PaneBar` (`h-bar`, the one rule columns share), so the
+  sidebar, a list and a chat share one line. One inset per column: bar title, search, a
+  group heading and a row's text start on the column's gutter.
+- A selection reveals with one `enter-rise`: a chat's rows and composer rise with the same
+  token. A pane bar's title and count drop in from above, and again when their text
+  changes.
+- Connection and version problems belong to the status line at the root and nowhere else.
+  A pane shows its own loading, empty and error states with `StatusView`.
+- A dialog is `DialogFrame size="sm|md|lg"`, with a fixed body height unless
+  `body="content"`; its content stays mounted while closed, so the transitions play.
+- Compose the installed shadcn components. Chat primitives (`Message`, `Trace`,
+  `CodeBlock`, `Marker`) mean something, so do not fake them with divs. Composition is
+  Base UI (`render={<Button />}`), never `asChild`.
+- Radius follows one ladder: `rounded-md` for rows and chips, `rounded-lg` for controls,
+  menus and code, `rounded-xl` for dialogs, panels and bordered lists, `rounded-2xl` for
+  message bubbles only, and `rounded-full` only for pills and circular icon buttons.
+- Colour carries state only (running, needs input, error, selected). Surfaces rest white;
+  a muted fill is a state.
+- Destructive actions use `variant="destructive"` and confirm in an `AlertDialog`.
+- Registry defaults are source; a local change in `components/ui` is explained where it
+  is made.
+
 ## File rules
 
 - A file is one concept read top to bottom. Private helpers and subcomponents stay in it.

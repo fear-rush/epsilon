@@ -11,8 +11,8 @@ test("a killed engine shows a notice and respawns on the next prompt", async ({ 
 	await page.getByRole("textbox", { name: /message/i }).press("Enter");
 	await expect(page.getByText("stub reply")).toBeVisible();
 
-	await page.getByRole("link", { name: /settings/i }).click();
-	await page.getByRole("link", { name: /diagnostics/i }).click();
+	await page.getByRole("button", { name: "App menu" }).click();
+	await page.getByRole("menuitem", { name: /diagnostics/i }).click();
 	await page
 		.getByRole("button", { name: /stop engine/i })
 		.first()

@@ -12,8 +12,8 @@ test("an empty home shows readiness, and a provider makes it ready", async ({ ap
 
 	await expect(page.getByRole("status")).toContainText(/not ready|no model/i);
 
-	await page.getByRole("link", { name: /settings/i }).click();
-	await page.getByRole("link", { name: /providers/i }).click();
+	await page.getByRole("button", { name: "App menu" }).click();
+	await page.getByRole("menuitem", { name: /providers/i }).click();
 	await page.getByRole("button", { name: /add provider/i }).click();
 	await page.getByLabel(/base url/i).fill(`${app.url}/v1`);
 	await page.getByLabel(/api key/i).fill("stub-key");
