@@ -51,6 +51,37 @@ export default defineConfig({
 			"/api": { changeOrigin: true, target: `http://127.0.0.1:${serverPort}`, ws: true },
 		},
 	},
-	build: { outDir: resolve(import.meta.dirname, "dist/app"), emptyOutDir: true },
-	codeSplitting: { groups: [] },
+	build: {
+		outDir: resolve(import.meta.dirname, "dist/app"),
+		emptyOutDir: true,
+		// Vendor chunks keep one library in one file, so a route change reuses it and a
+		// build does not rename it. Two libraries stay out on purpose: `@base-ui` is split
+		// between the shell and a chat's dialogs, so one group would load every dialog
+		// primitive on every page, and `lucide-react` is cheaper per route than one eager
+		// chunk holding every icon. `@tanstack/virtual-core` is transcript-only for the same
+		// reason.
+		rolldownOptions: {
+			output: {
+				codeSplitting: {
+					groups: [
+						{
+							name: "react",
+							priority: 40,
+							test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+						},
+						{
+							name: "effect",
+							priority: 30,
+							test: /node_modules[\\/](effect|@effect)[\\/]/,
+						},
+						{
+							name: "tanstack",
+							priority: 20,
+							test: /node_modules[\\/]@tanstack[\\/](react-router|router-core|history|store|react-store|query-core|react-query)[\\/]/,
+						},
+					],
+				},
+			},
+		},
+	},
 });

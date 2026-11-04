@@ -1,13 +1,7 @@
-import { lazy, memo, Suspense, useDeferredValue, useMemo } from "react";
-import ReactMarkdown, { type ExtraProps } from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { lazy, Suspense, useDeferredValue, useMemo } from "react";
 
-/** Code fences are the expensive part; a message without one never loads shiki. */
-const MarkdownCodeBlock = lazy(() => import("./markdown-code-block"));
-
-const components = { pre: MarkdownPre };
-/** Built once: a new array would make React Markdown reprocess every render. */
-const REMARK_PLUGINS = [remarkGfm];
+/** The parsing half, fetched when a message first renders. */
+const MarkdownBlock = lazy(() => import("./markdown-blocks"));
 
 /**
  * Assistant prose.
@@ -15,6 +9,9 @@ const REMARK_PLUGINS = [remarkGfm];
  * The text is split into top-level blocks (blank lines outside a fence), and each block is a
  * memoized Markdown render. While a reply grows, only its last block re-parses. The whole
  * value goes through `useDeferredValue`, so scrolling stays responsive during a long turn.
+ *
+ * The block renderer is a lazy chunk: the route never loads react-markdown for a chat with
+ * no rows, and the plain text stands in until the parser arrives.
  */
 export function Markdown({ children }: { children: string }) {
 	const deferred = useDeferredValue(children);
@@ -22,23 +19,16 @@ export function Markdown({ children }: { children: string }) {
 
 	return (
 		<div className="typeset typeset-chat max-w-full min-w-0 wrap-break-word">
-			{blocks.map((block, index) => (
-				// Blocks are positional within one message; they never reorder.
-				// oxlint-disable-next-line react/no-array-index-key
-				<MarkdownBlock key={index} text={block} />
-			))}
+			<Suspense fallback={<p className="whitespace-pre-wrap">{deferred}</p>}>
+				{blocks.map((block, index) => (
+					// Blocks are positional within one message; they never reorder.
+					// oxlint-disable-next-line react/no-array-index-key
+					<MarkdownBlock key={index} text={block} />
+				))}
+			</Suspense>
 		</div>
 	);
 }
-
-/** One top-level block. Memoized so an unchanged block is not parsed again. */
-const MarkdownBlock = memo(function MarkdownBlock({ text }: { text: string }) {
-	return (
-		<ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={components}>
-			{text}
-		</ReactMarkdown>
-	);
-});
 
 /**
  * Top-level blocks of a message: blank lines outside a code fence. A fence is opened by a
@@ -68,25 +58,4 @@ export function splitBlocks(text: string): ReadonlyArray<string> {
 
 	if (current.length > 0) blocks.push(current.join("\n"));
 	return blocks.filter((block) => block.trim() !== "");
-}
-
-// Fenced code arrives as <pre><code>, so read it from the hast node.
-function MarkdownPre({ node, children, ...props }: React.ComponentProps<"pre"> & ExtraProps) {
-	const element = node?.children[0];
-
-	if (element?.type !== "element" || element.tagName !== "code") {
-		return <pre {...props}>{children}</pre>;
-	}
-
-	const language = /language-([^\s,]+)/.exec(String(element.properties.className ?? ""))?.[1] ?? "";
-	const code = element.children
-		.map((child) => (child.type === "text" ? child.value : ""))
-		.join("")
-		.replace(/\n$/, "");
-
-	return (
-		<Suspense fallback={<pre {...props}>{code}</pre>}>
-			<MarkdownCodeBlock code={code} language={language} />
-		</Suspense>
-	);
 }
