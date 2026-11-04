@@ -256,6 +256,15 @@ function Row({
 		case "user":
 			return (
 				<div className="ml-auto w-fit max-w-xl rounded-xl bg-muted px-3 py-2">
+					{entry.images.map((image, index) => (
+						// An image in one message has no id of its own; its position in the message is it.
+						<img
+							key={index}
+							alt="attached"
+							className="mb-2 max-h-48 rounded-lg"
+							src={`data:${image.mimeType};base64,${image.data}`}
+						/>
+					))}
 					<p className="text-body whitespace-pre-wrap">{entry.text}</p>
 				</div>
 			);
@@ -323,12 +332,11 @@ function StreamingRow({ turn }: { turn: StreamingTurn }) {
 			{turn.blocks.map((block, index) =>
 				block === undefined ? null : block.kind === "thinking" ? (
 					// A streaming block is its index in the turn; it has no id of its own.
-					// oxlint-disable-next-line react/no-array-index-key
 					<p key={index} className="text-meta whitespace-pre-wrap text-muted-foreground">
 						{block.text}
 					</p>
 				) : (
-					// oxlint-disable-next-line react/no-array-index-key
+					// A text block is its index in the turn too.
 					<p key={index} className="whitespace-pre-wrap">
 						{block.text}
 					</p>

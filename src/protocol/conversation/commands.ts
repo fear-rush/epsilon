@@ -4,6 +4,51 @@ import { DialogAnswer } from "./extui.ts";
 import { ImageBlock } from "./frames.ts";
 import { ThinkingLevel } from "./session.ts";
 
+/** One prompt carries at most four images. */
+export const PROMPT_IMAGE_MAX = 4;
+
+/**
+ * The raw bytes one image may hold: 2 MB. pi resizes the image it receives anyway, so
+ * this is a memory bound, not a quality one.
+ */
+export const PROMPT_IMAGE_BYTES_MAX = 2 * 1024 * 1024;
+
+/** Base64 characters for some raw bytes: `ceil(bytes / 3) * 4`. */
+const base64Length = (bytes: number): number => Math.ceil(bytes / 3) * 4;
+
+/** `PROMPT_IMAGE_BYTES_MAX` as base64, which is what `data` may hold. */
+const PROMPT_IMAGE_BASE64_MAX = base64Length(PROMPT_IMAGE_BYTES_MAX);
+
+/** Every image of one prompt together: 12,000,000 base64 characters. */
+export const PROMPT_IMAGE_BASE64_TOTAL_MAX = 12_000_000;
+
+/** The base64 length of every image together, which is what one command carries. */
+export const promptImagesBase64Length = (images: ReadonlyArray<{ data: string }>): number =>
+	images.reduce((total, image) => total + image.data.length, 0);
+
+/**
+ * The images one message may carry. The caps are checked here so a bug in the composer
+ * cannot put a larger frame on the socket, and they are the same numbers the composer
+ * refuses a file with.
+ */
+const PromptImages = Schema.Array(ImageBlock).pipe(
+	Schema.check(Schema.isMaxLength(PROMPT_IMAGE_MAX)),
+	Schema.check(
+		Schema.makeFilter(
+			(images: ReadonlyArray<ImageBlock>) =>
+				images.every((image) => image.data.length <= PROMPT_IMAGE_BASE64_MAX),
+			{ message: `One image is over the ${PROMPT_IMAGE_BASE64_MAX} base64 characters limit` },
+		),
+	),
+	Schema.check(
+		Schema.makeFilter(
+			(images: ReadonlyArray<ImageBlock>) =>
+				promptImagesBase64Length(images) <= PROMPT_IMAGE_BASE64_TOTAL_MAX,
+			{ message: `Images together are over the ${PROMPT_IMAGE_BASE64_TOTAL_MAX} characters limit` },
+		),
+	),
+);
+
 /**
  * What the page asks the engine to do. A command carries its own tag, so a result can
  * name the command that failed instead of guessing from order.
@@ -12,7 +57,7 @@ const textCommand = (tag: "prompt" | "steer" | "followUp") =>
 	Schema.Struct({
 		t: Schema.Literals([tag]),
 		text: Schema.String,
-		images: Schema.optional(Schema.Array(ImageBlock)),
+		images: Schema.optional(PromptImages),
 	});
 
 export const Command = Schema.Union([

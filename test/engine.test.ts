@@ -227,3 +227,72 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 		stub.stop();
 	}
 }, 20_000);
+
+/** A 1×1 PNG: the smallest real image pi can read, used to prove the prompt's images. */
+const TINY_PNG =
+	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+test("a prompt's image reaches pi and comes back in the window", async () => {
+	const home = testPaths.agentHome;
+	const project = join(testPaths.scratch, "engine-image");
+	mkdirSync(project, { recursive: true });
+	const stub = await startStubModel(["stub reply"]);
+	writeStubModels(home, stub.baseUrl);
+	writeFileSync(
+		join(home, "settings.json"),
+		`${JSON.stringify({ defaultModel: "stub-model", defaultProvider: "stub" }, null, 2)}\n`,
+	);
+	const env: Record<string, string> = {};
+	for (const [key, value] of Object.entries(process.env)) if (value !== undefined) env[key] = value;
+	env["HOME"] = testPaths.sandboxHome;
+	env["PI_CODING_AGENT_DIR"] = home;
+
+	try {
+		const result = await Effect.runPromise(
+			Effect.gen(function* () {
+				const engine = yield* startEngine({
+					cwd: project,
+					file: undefined,
+					homeDir: home,
+					place: null,
+					sessionId: "s-image",
+					spec: {
+						command: [
+							process.execPath,
+							"run",
+							new URL("../src/engine/main.ts", import.meta.url).pathname,
+						],
+						env,
+					},
+					userHome: testPaths.sandboxHome,
+				});
+				yield* engine.attachTab("tab");
+				yield* frameOf(engine, (frame) => frame.t === "snapshot");
+				yield* control(engine, {
+					images: [{ data: TINY_PNG, mimeType: "image/png", type: "image" }],
+					t: "prompt",
+					text: "look at this",
+				});
+				const append = yield* frameOf(
+					engine,
+					(frame) => frame.t === "append" && frame.entry.role === "user",
+				);
+				yield* engine.stop(2_000);
+				return append;
+				// oxlint-disable-next-line effecttsgo/strict-effect-provide -- the test entry point builds the runtime
+			}).pipe(Effect.provide(BunServices.layer)),
+		);
+		if (Option.isNone(result)) throw new Error("the user entry was never appended");
+		if (result.value.t !== "append") throw new Error("not an append");
+		const entry = result.value.entry;
+		if (entry.role !== "user") throw new Error("not a user entry");
+		expect(entry.text).toBe("look at this");
+		// pi hands the model the image after its own processing, so the bytes may be
+		// re-encoded; the window is what proves the image survived the wire.
+		expect(entry.images).toHaveLength(1);
+		expect(entry.images[0]?.mimeType).toBe("image/png");
+		expect(entry.images[0]?.data.length).toBeGreaterThan(0);
+	} finally {
+		stub.stop();
+	}
+}, 20_000);

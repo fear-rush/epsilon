@@ -91,7 +91,7 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | [ ]  | `features/conversation/branch-rules.ts`              | 7     | **missing**                                   | `branchBlocked`                                               |
 | [x]  | `features/conversation/chat-bar.tsx`                 | 31    | `feat(conversation): main's chat bar`         |                                                               |
 | [ ]  | `features/conversation/compact-context-dialog.tsx`   | 78    | **missing**                                   | `CompactContextDialog`                                        |
-| [ ]  | `features/conversation/composer/attachments.tsx`     | 49    | **missing**                                   | `Attachment`, `AttachmentStrip`                               |
+| [x]  | `features/conversation/composer/attachments.tsx`     | 49    | `feat(conversation): the composer's images`   | `Attachment`, `AttachmentStrip`                               |
 | [ ]  | `features/conversation/composer/builtin-commands.ts` | 227   | **missing**                                   | `ComposerCommandContext`, `RouteTarget`, `runComposerCommand` |
 | [x]  | `features/conversation/composer/cache-warming.tsx`   | 50    | `feat(conversation): the composer's readings` | `CacheWarmingState`                                           |
 | [ ]  | `features/conversation/composer/composer.tsx`        | 669   | exists elsewhere (names found)                |                                                               |

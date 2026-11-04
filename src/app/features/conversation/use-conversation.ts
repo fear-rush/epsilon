@@ -7,7 +7,7 @@ import { emptyConversation } from "#domain/conversation/state";
 import type { ConversationState } from "#domain/conversation/state";
 import type { Command } from "#protocol/conversation/commands";
 import type { DialogAnswer } from "#protocol/conversation/extui";
-import type { ServerFrame } from "#protocol/conversation/frames";
+import type { ImageBlock, ServerFrame } from "#protocol/conversation/frames";
 import { ModelOptions, ToolsView } from "#protocol/conversation/session";
 import type { ModelOption, ThinkingLevel } from "#protocol/conversation/session";
 import { EngineStopped } from "#protocol/errors";
@@ -30,7 +30,7 @@ export type Conversation = {
 	/** The first snapshot arrived; before that the chat is still opening. */
 	readonly loaded: boolean;
 	readonly writable: boolean;
-	readonly send: (text: string) => Promise<void>;
+	readonly send: (text: string, images?: ReadonlyArray<ImageBlock>) => Promise<void>;
 	readonly answer: (answer: DialogAnswer) => Promise<void>;
 	readonly loadOlder: () => Promise<void>;
 	readonly reload: () => Promise<void>;
@@ -55,8 +55,8 @@ export type Conversation = {
 	readonly abortCompaction: () => Promise<void>;
 	readonly clearQueue: () => Promise<void>;
 	/** Join a run that is already going: steer it now, or wait for it to settle. */
-	readonly steer: (text: string) => Promise<void>;
-	readonly followUp: (text: string) => Promise<void>;
+	readonly steer: (text: string, images?: ReadonlyArray<ImageBlock>) => Promise<void>;
+	readonly followUp: (text: string, images?: ReadonlyArray<ImageBlock>) => Promise<void>;
 	readonly setCodingTools: (enabled: boolean) => Promise<void>;
 };
 
@@ -248,8 +248,8 @@ export function useConversation(input: {
 	);
 
 	const send = useCallback(
-		async (text: string) => {
-			await command({ images: undefined, t: "prompt", text });
+		async (text: string, images?: ReadonlyArray<ImageBlock>) => {
+			await command({ images, t: "prompt", text });
 		},
 		[command],
 	);
@@ -333,14 +333,14 @@ export function useConversation(input: {
 		await command({ t: "clearQueue" });
 	}, [command]);
 	const steer = useCallback(
-		async (text: string): Promise<void> => {
-			await command({ t: "steer", text });
+		async (text: string, images?: ReadonlyArray<ImageBlock>): Promise<void> => {
+			await command({ images, t: "steer", text });
 		},
 		[command],
 	);
 	const followUp = useCallback(
-		async (text: string): Promise<void> => {
-			await command({ t: "followUp", text });
+		async (text: string, images?: ReadonlyArray<ImageBlock>): Promise<void> => {
+			await command({ images, t: "followUp", text });
 		},
 		[command],
 	);

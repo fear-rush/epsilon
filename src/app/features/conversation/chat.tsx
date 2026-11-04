@@ -11,7 +11,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 
 import { transcript } from "#domain/conversation/selectors";
 import type { ConversationState } from "#domain/conversation/state";
-import type { Notice as NoticeFrame } from "#protocol/conversation/frames";
+import type { ImageBlock, Notice as NoticeFrame } from "#protocol/conversation/frames";
 import type { ModelOption } from "#protocol/conversation/session";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
@@ -105,10 +105,14 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 	const jump: Jump | undefined =
 		jumpId === undefined ? undefined : { id: jumpId, nonce: jumpNonce };
 
-	const send = async (text: string, behavior?: "steer" | "followUp"): Promise<void> => {
-		if (behavior === "steer") await conversation.steer(text);
-		else if (behavior === "followUp") await conversation.followUp(text);
-		else await conversation.send(text);
+	const send = async (
+		text: string,
+		behavior?: "steer" | "followUp",
+		images?: ReadonlyArray<ImageBlock>,
+	): Promise<void> => {
+		if (behavior === "steer") await conversation.steer(text, images);
+		else if (behavior === "followUp") await conversation.followUp(text, images);
+		else await conversation.send(text, images);
 		// The sent message scrolls to the top of the view; the reply grows below it (R9).
 		setAnchorFrom(transcript(state).length);
 	};
