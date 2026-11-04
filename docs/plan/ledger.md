@@ -114,7 +114,7 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | [x]  | `features/conversation/session-loader.tsx`           | 22    | `feat(conversation): where the chat runs` (in `session-header.tsx`) | `SessionLoader`                                               |
 | [ ]  | `features/conversation/session-view.tsx`             | 287   | **missing**                                                         | `SessionView`                                                 |
 | [ ]  | `features/conversation/store.ts`                     | 325   | **missing**                                                         | `ConversationSnapshot`, `ConversationStore`                   |
-| [ ]  | `features/conversation/tool-trace.tsx`               | 269   | **missing**                                                         | `ToolTrace`                                                   |
+| [x]  | `features/conversation/tool-trace.tsx`               | 269   | `feat(conversation): each tool's own trace`                         | `ToolTrace`                                                   |
 | [ ]  | `features/conversation/transcript.tsx`               | 318   | exists, changed (633 lines)                                         |                                                               |
 | [ ]  | `features/conversation/tree-dialog.tsx`              | 386   | **missing**                                                         | `SessionTreeDialog`, `TreeMove`                               |
 | [ ]  | `features/conversation/tree-filter.ts`               | 33    | **missing**                                                         | `filterTree`                                                  |

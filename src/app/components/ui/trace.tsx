@@ -22,7 +22,7 @@ function TraceLine({
 	status,
 	...props
 }: React.ComponentProps<"span"> & {
-	status?: "running" | "error" | "pending";
+	status?: "running" | "error" | "pending" | undefined;
 }) {
 	return (
 		<span

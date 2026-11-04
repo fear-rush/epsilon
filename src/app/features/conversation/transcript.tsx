@@ -3,12 +3,13 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { assistantText, assistantThinking, entryLabel } from "#domain/conversation/content";
 import { toolRunOf, transcript } from "#domain/conversation/selectors";
-import type { ConversationState, StreamingTurn, ToolRun } from "#domain/conversation/state";
+import type { ConversationState, StreamingTurn } from "#domain/conversation/state";
 import type { AssistantEntry, TranscriptEntry } from "#protocol/conversation/frames";
 import { Markdown } from "@/components/editor/markdown";
 import { toneText } from "@/components/patterns/status/status-tone";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+
+import { ToolTrace } from "./tool-trace";
 
 /**
  * The conversation.
@@ -298,8 +299,10 @@ function AssistantRow({
 }) {
 	const text = assistantText(entry);
 	const thinking = assistantThinking(entry);
+	// A message that only called tools still has a row: its calls are what it said.
+	const silent = text === "" && thinking === "" && !entry.blocks.some((b) => b.type === "toolCall");
 	return (
-		<div className={cn("grid gap-2", text === "" && thinking === "" && "hidden")}>
+		<div className={cn("grid gap-2", silent && "hidden")}>
 			{thinking !== "" && (
 				<details className="text-meta text-muted-foreground">
 					<summary className="cursor-pointer select-none">Thinking</summary>
@@ -313,11 +316,12 @@ function AssistantRow({
 			)}
 			{entry.blocks.map((block) =>
 				block.type === "toolCall" ? (
-					<ToolCard
+					<ToolTrace
 						key={block.toolCallId}
+						args={block.args}
 						name={block.toolName}
-						run={toolRunOf(state, block.toolCallId)}
 						open={toolOpen.get(block.toolCallId) ?? false}
+						run={toolRunOf(state, block.toolCallId)}
 						onToggle={() => onToggleTool(block.toolCallId)}
 					/>
 				) : null,
@@ -341,49 +345,6 @@ function StreamingRow({ turn }: { turn: StreamingTurn }) {
 						{block.text}
 					</p>
 				),
-			)}
-		</div>
-	);
-}
-
-function ToolCard({
-	name,
-	run,
-	open,
-	onToggle,
-}: {
-	name: string;
-	run: ToolRun | undefined;
-	open: boolean;
-	onToggle: () => void;
-}) {
-	const hasOutput = run !== undefined && run.output !== "";
-	return (
-		<div className="rounded-lg border bg-card px-3 py-2 text-meta">
-			<div className="flex items-center justify-between gap-2">
-				<span className="font-medium">{name}</span>
-				<span className={toneText(run?.status === "error" ? "danger" : "neutral")}>
-					{run?.status ?? "running"}
-					{run?.durationMs === undefined ? "" : ` · ${Math.round(run.durationMs)} ms`}
-				</span>
-			</div>
-			{hasOutput && (
-				<>
-					<Button
-						size="xs"
-						variant="ghost"
-						className="mt-1 px-0"
-						aria-expanded={open}
-						onClick={onToggle}
-					>
-						{open ? "Hide output" : "Show output"}
-					</Button>
-					{open && (
-						<pre className="mt-1 max-h-48 overflow-auto text-code break-words whitespace-pre-wrap text-muted-foreground">
-							{run.output}
-						</pre>
-					)}
-				</>
 			)}
 		</div>
 	);

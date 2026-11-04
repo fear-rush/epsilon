@@ -33,6 +33,7 @@ const toolFromDelta = (
 	entryId: frame.entryId,
 	args: existing?.args,
 	output: frame.output ?? existing?.output ?? "",
+	images: existing?.images ?? [],
 	status: frame.status,
 	durationMs: frame.durationMs ?? existing?.durationMs,
 });
@@ -46,6 +47,7 @@ const toolFromResult = (entry: ToolResultEntry, tools: ReadonlyArray<ToolRun>): 
 		entryId: existing?.entryId ?? entry.parentId ?? entry.id,
 		args: existing?.args,
 		output: entry.output,
+		images: entry.images,
 		status: entry.isError ? "error" : "ok",
 		durationMs: existing?.durationMs,
 	};

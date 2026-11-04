@@ -1,5 +1,5 @@
 import type { DialogQuestion, UiStatus } from "#protocol/conversation/extui";
-import type { Notice, TranscriptEntry, TreeEntry } from "#protocol/conversation/frames";
+import type { ImageBlock, Notice, TranscriptEntry, TreeEntry } from "#protocol/conversation/frames";
 import type { CommandOffer } from "#protocol/conversation/palette";
 import type { ThinkingLevel } from "#protocol/conversation/session";
 import type { CacheWarming, ContextUsage, SessionStats } from "#protocol/usage";
@@ -44,6 +44,8 @@ export type ToolRun = {
 	readonly entryId: string;
 	readonly args: unknown;
 	readonly output: string;
+	/** Images the tool returned, which its own card draws. */
+	readonly images: ReadonlyArray<ImageBlock>;
 	readonly status: "running" | "ok" | "error";
 	readonly durationMs: number | undefined;
 };

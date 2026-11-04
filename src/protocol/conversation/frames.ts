@@ -30,7 +30,11 @@ export const ToolCallBlock = Schema.Struct({
 	type: Schema.Literals(["toolCall"]),
 	toolCallId: Schema.String,
 	toolName: Schema.String,
-	args: Schema.Unknown,
+	/**
+	 * The model's arguments for the call, which are JSON; every tool decodes its own. pi
+	 * writes them on every call, but a file another writer left can lack them.
+	 */
+	args: Schema.optional(Schema.Json),
 });
 export const ImageBlock = Schema.Struct({
 	type: Schema.Literals(["image"]),

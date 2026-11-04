@@ -100,7 +100,7 @@ describe("frames", () => {
 		// The version covers exactly the tags the socket can carry: adding a frame without
 		// naming it here means a stale tab would meet a frame it cannot decode.
 		expect(new Set(samples.map((sample) => sample.t))).toEqual(new Set(frameTags));
-		expect(PROTOCOL_VERSION).toBe("12");
+		expect(PROTOCOL_VERSION).toBe("13");
 		for (const sample of samples) expect(() => decodeServerFrame(sample)).not.toThrow();
 	});
 });
@@ -226,6 +226,45 @@ describe("reduce", () => {
 			{ kind: "text", text: "ab" },
 			{ kind: "thinking", text: "hmm" },
 		]);
+	});
+
+	test("a tool result's images reach its run", () => {
+		const state = replay([
+			{
+				t: "append",
+				entry: {
+					id: "a1",
+					parentId: null,
+					role: "assistant",
+					ts: 1,
+					blocks: [
+						{
+							type: "toolCall",
+							toolCallId: "c1",
+							toolName: "read",
+							args: { path: "shot.png" },
+						},
+					],
+				},
+			},
+			{
+				t: "append",
+				entry: {
+					id: "t1",
+					parentId: "a1",
+					role: "toolResult",
+					ts: 2,
+					toolCallId: "c1",
+					toolName: "read",
+					isError: false,
+					output: "",
+					images: [{ type: "image", data: "AAA", mimeType: "image/png" }],
+				},
+			},
+		]);
+		expect(state.tools[0]?.images).toHaveLength(1);
+		expect(state.tools[0]?.images[0]?.mimeType).toBe("image/png");
+		expect(state.tools[0]?.status).toBe("ok");
 	});
 
 	test("tool deltas replace the output instead of appending it", () => {
