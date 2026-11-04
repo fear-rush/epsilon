@@ -118,10 +118,16 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 					kind: "extensionSkills",
 					t: "query",
 				}));
+				const contextLive = yield* engine.request((id) => ({
+					id,
+					kind: "contextLive",
+					t: "query",
+				}));
 				yield* engine.stop(5_000);
 				return {
 					acceptedIn,
 					append,
+					contextLive,
 					extensionSkills,
 					live,
 					snapshot: snapshot.value,
@@ -146,6 +152,11 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 		expect(Array.isArray(result.tree)).toBe(true);
 		expect(result.transcript).toEqual(expect.objectContaining({ entries: expect.any(Array) }));
 		expect(result.extensionSkills).toEqual({ skills: [] });
+		expect(result.contextLive).toMatchObject({
+			sessionId: "s-real",
+			systemPrompt: expect.any(String),
+			tools: { active: expect.any(Array), all: expect.any(Array) },
+		});
 		// A home with no MCP servers still answers the query: the shape is what a panel reads.
 		expect(result.live).toEqual({
 			active: expect.any(Array),

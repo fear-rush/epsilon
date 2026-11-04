@@ -365,6 +365,19 @@
 			}
 		},
 		{
+			"files": ["src/backend/config/providers/login.ts"],
+			"rules": {
+				"effecttsgo/abort-controller-in-effect": "off",
+				"effecttsgo/global-error-in-effect-failure": "off"
+			}
+		},
+		{
+			"files": ["src/backend/platform/pi.ts"],
+			"rules": {
+				"effecttsgo/run-effect-inside-effect": "off"
+			}
+		},
+		{
 			"files": ["src/backend/config/skills/frontmatter.ts"],
 			"rules": {
 				"typescript/no-unsafe-type-assertion": "off"

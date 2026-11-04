@@ -27,8 +27,9 @@ export const skillDescriptionProblem = (value: string): string | undefined => {
 /** The skill folder's own `SKILL.md`, or the one a skill's `filePath` names. */
 export const SKILL_FILE_NAME = "SKILL.md";
 
-/** pi marks a skill an extension discovered at runtime with this source prefix. */
+/** pi marks a skill or extension discovered at runtime with this source prefix. */
 export const EXTENSION_SKILL_SOURCE = "extension:";
+export const EXTENSION_RESOURCE_SOURCE = EXTENSION_SKILL_SOURCE;
 
 /** The opening fence of a `SKILL.md`; the match ends at the closing fence and newline. */
 export const SKILL_FENCE = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;

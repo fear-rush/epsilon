@@ -8,6 +8,7 @@ import { Deferred, Effect, Queue } from "effect";
 
 import type { McpAttention, McpEngineLive } from "#protocol/config/mcp";
 import type { ExtensionSkillsAnswer } from "#protocol/config/skills";
+import type { ContextEngineLive } from "#protocol/context";
 import type { Command } from "#protocol/conversation/commands";
 import type { DialogAnswer } from "#protocol/conversation/extui";
 import type {
@@ -372,11 +373,26 @@ export class EngineSession {
 						}));
 					return { skills } satisfies ExtensionSkillsAnswer;
 				}
-				case "contextLive":
-					return yield* new CommandRefused({
-						command: kind,
-						reason: "The context feature lands in step 6.",
-					});
+				case "contextLive": {
+					const usage = agent.getContextUsage();
+					return {
+						sessionId: agent.sessionId,
+						systemPrompt: agent.systemPrompt,
+						tools: {
+							active: agent.getActiveToolNames(),
+							all: agent.getAllTools().map((tool) =>
+								tool.namespace === undefined
+									? { description: tool.description, name: tool.name }
+									: {
+											description: tool.description,
+											name: tool.name,
+											namespace: tool.namespace.name,
+										},
+							),
+						},
+						...withDefined({}, "contextUsage", usage),
+					} satisfies ContextEngineLive;
+				}
 				case "export":
 					return yield* new CommandRefused({
 						command: "export",

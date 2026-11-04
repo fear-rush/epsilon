@@ -3,6 +3,68 @@ import { Rpc, RpcGroup } from "effect/rpc";
 
 import { ProviderRefused } from "../errors.ts";
 
+/** What pi can collect for a provider: an account, or a key it asks for itself. */
+export const ProviderLoginType = Schema.Literals(["api_key", "oauth"]);
+export type ProviderLoginType = typeof ProviderLoginType.Type;
+
+/** One question pi asked during a sign-in and cannot go on without. */
+export const ProviderLoginQuestion = Schema.Struct({
+	id: Schema.String,
+	/** Where the answer goes: a field, a hidden field, or one of `options`. */
+	kind: Schema.Literals(["text", "secret", "select", "manual_code"]),
+	message: Schema.String,
+	placeholder: Schema.optional(Schema.String),
+	/** The choices of a `select`; answering sends one of their ids. */
+	options: Schema.optional(
+		Schema.Array(
+			Schema.Struct({
+				id: Schema.String,
+				label: Schema.String,
+				description: Schema.optional(Schema.String),
+			}),
+		),
+	),
+});
+export type ProviderLoginQuestion = typeof ProviderLoginQuestion.Type;
+
+/** One thing pi reported while it worked. */
+export const ProviderLoginNotice = Schema.Struct({
+	message: Schema.String,
+	links: Schema.optional(
+		Schema.Array(Schema.Struct({ url: Schema.String, label: Schema.optional(Schema.String) })),
+	),
+});
+export type ProviderLoginNotice = typeof ProviderLoginNotice.Type;
+
+/**
+ * A sign-in as the browser can see it. The credential never travels: only what pi
+ * reports and what it is waiting for.
+ */
+export const ProviderLoginSnapshot = Schema.Struct({
+	providerId: Schema.String,
+	type: ProviderLoginType,
+	status: Schema.Literals(["running", "succeeded", "failed", "cancelled"]),
+	notices: Schema.Array(ProviderLoginNotice),
+	/** Where the operator finishes an account sign-in. */
+	authUrl: Schema.optional(
+		Schema.Struct({ url: Schema.String, instructions: Schema.optional(Schema.String) }),
+	),
+	/** A code to type on another device instead of following a link. */
+	deviceCode: Schema.optional(
+		Schema.Struct({
+			userCode: Schema.String,
+			verificationUri: Schema.String,
+			intervalSeconds: Schema.optional(Schema.Finite),
+			expiresInSeconds: Schema.optional(Schema.Finite),
+		}),
+	),
+	/** The question pi waits on, when it waits on one. */
+	question: Schema.optional(ProviderLoginQuestion),
+	/** One sentence when the sign-in did not succeed. */
+	error: Schema.optional(Schema.String),
+});
+export type ProviderLoginSnapshot = typeof ProviderLoginSnapshot.Type;
+
 /**
  * Settings → Providers: what pi composed, and the `models.json` entries Epsilon may edit.
  *
@@ -76,6 +138,25 @@ export const ProviderRpcs = RpcGroup.make(
 	}),
 	Rpc.make("config.providers.setApiKey", {
 		payload: { id: Schema.String, apiKey: Schema.String },
+		success: Schema.Void,
+		error: ProviderRefused,
+	}),
+);
+
+export const ProviderLoginRpcs = RpcGroup.make(
+	Rpc.make("config.providers.login", {
+		payload: { providerId: Schema.String, type: ProviderLoginType },
+		success: ProviderLoginSnapshot,
+		error: ProviderRefused,
+		stream: true,
+	}),
+	Rpc.make("config.providers.answerLogin", {
+		payload: { providerId: Schema.String, promptId: Schema.String, value: Schema.String },
+		success: Schema.Void,
+		error: ProviderRefused,
+	}),
+	Rpc.make("config.providers.cancelLogin", {
+		payload: { providerId: Schema.String },
 		success: Schema.Void,
 		error: ProviderRefused,
 	}),
