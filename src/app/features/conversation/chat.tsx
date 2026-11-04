@@ -38,6 +38,12 @@ const SessionControls = lazy(() =>
 const TreeDialog = lazy(() =>
 	import("./tree-dialog").then((module) => ({ default: module.TreeDialog })),
 );
+const ForkSessionDialog = lazy(() =>
+	import("./fork-dialog").then((module) => ({ default: module.ForkSessionDialog })),
+);
+const CompactContextDialog = lazy(() =>
+	import("./compact-context-dialog").then((module) => ({ default: module.CompactContextDialog })),
+);
 
 /**
  * One chat route. A new chat in a project folder passes through the trust gate first,
@@ -101,6 +107,8 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 		};
 	}, [loadModels]);
 	const [treeOpen, setTreeOpen] = useState(false);
+	const [forkOpen, setForkOpen] = useState(false);
+	const [compactOpen, setCompactOpen] = useState(false);
 
 	const matches = searching ? matchingRowIds(transcript(state), query) : [];
 	const jumpId = matches[cursor];
@@ -166,6 +174,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 			onAbort={conversation.abort}
 			onBash={conversation.bash}
 			onExport={conversation.exportSession}
+			onOpenFork={() => setForkOpen(true)}
 			onOpenTree={() => setTreeOpen(true)}
 			onReadContext={readContext}
 			onSend={send}
@@ -306,9 +315,38 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 			<ConversationDialogs dialogs={state.dialogs} onAnswer={conversation.answer} />
 			<Suspense fallback={null}>
 				{controlsOpen && (
-					<SessionControls conversation={conversation} onClose={() => setControlsOpen(false)} />
+					<SessionControls
+						conversation={conversation}
+						onClose={() => setControlsOpen(false)}
+						onCompact={() => {
+							setControlsOpen(false);
+							setCompactOpen(true);
+						}}
+						onFork={() => {
+							setControlsOpen(false);
+							setForkOpen(true);
+						}}
+					/>
 				)}
 				{treeOpen && <TreeDialog conversation={conversation} onClose={() => setTreeOpen(false)} />}
+				{forkOpen && (
+					<ForkSessionDialog
+						open
+						conversation={conversation}
+						onOpenChange={(next) => {
+							if (!next) setForkOpen(false);
+						}}
+					/>
+				)}
+				{compactOpen && (
+					<CompactContextDialog
+						open
+						onOpenChange={(next) => {
+							if (!next) setCompactOpen(false);
+						}}
+						onCompact={(instructions) => void conversation.compact(instructions)}
+					/>
+				)}
 			</Suspense>
 		</div>
 	);

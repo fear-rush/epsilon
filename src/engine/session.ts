@@ -498,7 +498,7 @@ export class EngineSession {
 			bash: (text, excludeFromContext) => this.bash(text, excludeFromContext),
 			cancelRetry: () => this.cancelRetry(),
 			clearQueue: () => this.clearQueue(),
-			compact: () => this.compact(),
+			compact: (instructions) => this.compact(instructions),
 			followUp: (text, images) => this.queued("followUp", text, images),
 			fork: (entryId, position) => this.fork(entryId, position),
 			loadHistory: (tab, before) => this.loadHistory(tab, before),

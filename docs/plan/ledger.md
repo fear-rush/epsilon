@@ -90,7 +90,7 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | [ ]  | `features/conversation/branch-items.tsx`             | 71    | **missing**                                                         | `BranchItems`                                                 |
 | [ ]  | `features/conversation/branch-rules.ts`              | 7     | **missing**                                                         | `branchBlocked`                                               |
 | [x]  | `features/conversation/chat-bar.tsx`                 | 31    | `feat(conversation): main's chat bar`                               |                                                               |
-| [ ]  | `features/conversation/compact-context-dialog.tsx`   | 78    | **missing**                                                         | `CompactContextDialog`                                        |
+| [x]  | `features/conversation/compact-context-dialog.tsx`   | 78    | `feat(conversation): the fork and compact dialogs`                  | `CompactContextDialog`                                        |
 | [x]  | `features/conversation/composer/attachments.tsx`     | 49    | `feat(conversation): the composer's images`                         | `Attachment`, `AttachmentStrip`                               |
 | [x]  | `features/conversation/composer/builtin-commands.ts` | 227   | `feat(conversation): the palette and its commands`                  | `ComposerCommandContext`, `RouteTarget`, `runComposerCommand` |
 | [x]  | `features/conversation/composer/cache-warming.tsx`   | 50    | `feat(conversation): the composer's readings`                       | `CacheWarmingState`                                           |
@@ -104,9 +104,9 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | [x]  | `features/conversation/cost.ts`                      | 6     | `feat(conversation): the composer's readings`                       |                                                               |
 | [ ]  | `features/conversation/dialogs.tsx`                  | 157   | **missing**                                                         | `ConfirmDialog`, `QuestionDialog`                             |
 | [x]  | `features/conversation/export-file.ts`               | 25    | `feat(conversation): the transcript as a file`                      | `downloadExport`                                              |
-| [ ]  | `features/conversation/fork-dialog.tsx`              | 129   | **missing**                                                         | `ForkSessionDialog`                                           |
+| [x]  | `features/conversation/fork-dialog.tsx`              | 129   | `feat(conversation): the fork and compact dialogs`                  | `ForkSessionDialog`                                           |
 | [ ]  | `features/conversation/new-chat.tsx`                 | 156   | exists, changed (163 lines)                                         |                                                               |
-| [ ]  | `features/conversation/pending-draft.ts`             | 18    | **missing**                                                         | `clearPendingDraft`, `pendingDraftOf`, `setPendingDraft`      |
+| [x]  | `features/conversation/pending-draft.ts`             | 18    | `draft.ts` (the engine hands the text across; no store draft)       | `—`                                                           |
 | [x]  | `features/conversation/run-status.tsx`               | 150   | `feat(conversation): the run status`                                |                                                               |
 | [x]  | `features/conversation/session-context-sentence.ts`  | 38    | `feat(conversation): the palette and its commands`                  | `contextSentence`                                             |
 | [ ]  | `features/conversation/session-controls.tsx`         | 163   | exists, changed (353 lines)                                         |                                                               |

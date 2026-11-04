@@ -128,6 +128,7 @@ export function Composer({
 	commands,
 	header,
 	onExport,
+	onOpenFork,
 	onOpenTree,
 	onReadContext,
 	onSetPermission,
@@ -159,6 +160,8 @@ export function Composer({
 	/** What the chat reads for its notices, `/copy` and `/session`. */
 	state: ConversationState;
 	onOpenTree: () => void;
+	/** Open the fork dialog from `/fork`. */
+	onOpenFork: () => void;
 	onReadContext: () => Promise<ContextView>;
 	/** pi's own exporter, through the engine that owns the session. */
 	onExport: (format: ExportFormat) => Promise<ExportedSession>;
@@ -300,6 +303,7 @@ export function Composer({
 		navigate: openRoute,
 		openModelMenu: () => setModelMenuOpen(true),
 		openThinkingMenu: () => setThinkingMenuOpen(true),
+		openFork: onOpenFork,
 		openTree: onOpenTree,
 		readContext: onReadContext,
 		setModel: onSetModel,

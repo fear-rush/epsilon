@@ -42,7 +42,7 @@ export type CommandHost = {
 	readonly setModel: (provider: string, modelId: string) => Effect.Effect<void, CommandRefused>;
 	readonly setThinking: (level: ThinkingLevel) => Effect.Effect<void, CommandRefused>;
 	readonly setTools: (names: ReadonlyArray<string>) => Effect.Effect<void, CommandRefused>;
-	readonly compact: () => Effect.Effect<void, CommandRefused>;
+	readonly compact: (instructions: string | undefined) => Effect.Effect<void, CommandRefused>;
 	readonly abortCompaction: () => Effect.Effect<void, CommandRefused>;
 	readonly setAutoCompaction: (enabled: boolean) => Effect.Effect<void, CommandRefused>;
 	readonly cancelRetry: () => Effect.Effect<void, CommandRefused>;
@@ -112,7 +112,7 @@ export const dispatchCommand = (
 		case "setTools":
 			return host.setTools(command.names);
 		case "compact":
-			return host.compact();
+			return host.compact(command.instructions);
 		case "abortCompaction":
 			return host.abortCompaction();
 		case "setAutoCompaction":

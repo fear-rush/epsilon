@@ -30,9 +30,13 @@ import type { Conversation } from "./use-conversation.ts";
 export function SessionControls({
 	conversation,
 	onClose,
+	onCompact,
+	onFork,
 }: {
 	conversation: Conversation;
 	onClose: () => void;
+	onCompact: () => void;
+	onFork: () => void;
 }) {
 	const { state } = conversation;
 	const loadModels = conversation.models;
@@ -239,8 +243,11 @@ export function SessionControls({
 					{failure !== undefined && <Notice error={failure} title="That did not take effect" />}
 				</div>
 				<DialogFooter>
-					<Button variant="outline" onClick={() => void run(conversation.compact())}>
-						Compact this chat
+					<Button variant="outline" onClick={onFork}>
+						Fork from a message…
+					</Button>
+					<Button variant="outline" onClick={onCompact}>
+						Compact context…
 					</Button>
 					<Button onClick={onClose}>Done</Button>
 				</DialogFooter>

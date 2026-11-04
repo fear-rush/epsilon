@@ -39,7 +39,7 @@ export type Conversation = {
 	readonly loadOlder: () => Promise<void>;
 	readonly reload: () => Promise<void>;
 	readonly abort: () => Promise<void>;
-	readonly compact: () => Promise<void>;
+	readonly compact: (instructions?: string) => Promise<void>;
 	readonly setModel: (provider: string, modelId: string) => Promise<void>;
 	readonly setThinking: (level: ThinkingLevel) => Promise<void>;
 	readonly setTools: (names: ReadonlyArray<string>) => Promise<void>;
@@ -150,9 +150,12 @@ export function useConversation(input: {
 		(frame: ServerFrame) => {
 			if (frame.t === "prepend") loadingOlder.current = false;
 			if (frame.t === "snapshot") setLoaded(true);
-			// A fork's text belongs to the new chat; the page moves to it a frame later.
+			// A fork's text belongs to the new chat, which is not this one yet: carry it
+			// across the route change and keep it out of this chat's draft, or the new
+			// composer would take the same text twice.
 			if (frame.t === "editorText" && frame.sessionId !== currentId.current) {
 				handOffDraft(frame.sessionId, frame.text);
+				return;
 			}
 			setState((previous) => {
 				const next = reduce(previous, frame);
@@ -278,7 +281,10 @@ export function useConversation(input: {
 
 	const reload = useCallback(async () => command({ t: "reloadFromDisk" }), [command]);
 	const abort = useCallback(async () => command({ t: "abort" }), [command]);
-	const compact = useCallback(async () => command({ t: "compact" }), [command]);
+	const compact = useCallback(
+		async (instructions?: string) => command({ instructions, t: "compact" }),
+		[command],
+	);
 	const setModel = useCallback(
 		async (provider: string, modelId: string) => command({ modelId, provider, t: "setModel" }),
 		[command],

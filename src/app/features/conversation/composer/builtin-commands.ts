@@ -30,6 +30,7 @@ export type ComposerCommandContext = {
 	readonly empty: boolean;
 	/** The page's own surfaces. */
 	readonly openTree: () => void;
+	readonly openFork: () => void;
 	readonly openModelMenu: () => void;
 	readonly openThinkingMenu: () => void;
 	readonly setModel: (provider: string, id: string) => void;
@@ -167,7 +168,11 @@ const HANDLERS: Partial<Record<ComposerCommandName, Handler>> = {
 	},
 	hotkeys: () =>
 		`Enter sends, and steers a run that is already going. ${shortcut("Enter")} waits for that run to settle, Shift+Enter adds a line, Esc stops the run, and / lists every command.`,
-	fork: () => "Fork from a message in the session tree: /tree opens it.",
+	fork: (_argument, { empty, openFork }) => {
+		if (empty) return "Fork needs a message first.";
+		openFork();
+		return undefined;
+	},
 	login: (argument, { navigate }) => {
 		const provider = argument.trim();
 		if (provider === "") {

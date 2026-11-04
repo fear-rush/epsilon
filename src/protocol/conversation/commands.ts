@@ -81,8 +81,11 @@ export const Command = Schema.Union([
 	Schema.Struct({ t: Schema.Literals(["setThinking"]), level: ThinkingLevel }),
 	/** Declare exactly these tools to the model, by name; unknown names are ignored. */
 	Schema.Struct({ t: Schema.Literals(["setTools"]), names: Schema.Array(Schema.String) }),
-	/** pi's manual compaction; it aborts a running turn first. */
-	Schema.Struct({ t: Schema.Literals(["compact"]) }),
+	/** pi's manual compaction; it aborts a running turn first. `instructions` shapes the summary. */
+	Schema.Struct({
+		t: Schema.Literals(["compact"]),
+		instructions: Schema.optional(Schema.String),
+	}),
 	/**
 	 * Copy the branch into a new session file. `before` cuts at a user message and hands
 	 * its text back; `at` clones up to the entry and includes it.
