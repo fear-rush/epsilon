@@ -1,5 +1,4 @@
 import { ChevronRightIcon, FileIcon, FolderIcon, Trash2Icon } from "lucide-react";
-import { useMemo } from "react";
 
 import { Tip } from "@/components/patterns/tip";
 import { Button } from "@/components/ui/button";
@@ -108,7 +107,7 @@ export function FileTree({
 	/** Paths listed but never deleted, such as the skill's own `SKILL.md`. */
 	protectedPaths?: readonly string[];
 }) {
-	const nodes = useMemo(() => build(files, folders, first), [files, folders, first]);
+	const nodes = build(files, folders, first);
 	return (
 		<ul className="grid min-w-0 gap-0.5" role="tree" aria-label="Files">
 			{nodes.map((node) => (

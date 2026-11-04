@@ -41,7 +41,14 @@ const launchToken = (): Plugin => ({
 
 export default defineConfig({
 	root: appRoot,
-	plugins: [router(), react(), tailwindcss(), launchToken()],
+	plugins: [
+		router(),
+		// React Compiler rewrites components so the hand-written `useMemo`/`useCallback` can
+		// go. `infer` compiles every component and hook; `annotation` would need a directive.
+		react({ compiler: { compilationMode: "infer" } }),
+		tailwindcss(),
+		launchToken(),
+	],
 	resolve: { alias: { "@": appRoot } },
 	server: {
 		proxy: {

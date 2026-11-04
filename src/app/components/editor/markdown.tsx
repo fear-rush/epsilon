@@ -1,4 +1,4 @@
-import { lazy, Suspense, useDeferredValue, useMemo } from "react";
+import { lazy, Suspense, useDeferredValue } from "react";
 
 /** The parsing half, fetched when a message first renders. */
 const MarkdownBlock = lazy(() => import("./markdown-blocks"));
@@ -15,7 +15,7 @@ const MarkdownBlock = lazy(() => import("./markdown-blocks"));
  */
 export function Markdown({ children }: { children: string }) {
 	const deferred = useDeferredValue(children);
-	const blocks = useMemo(() => splitBlocks(deferred), [deferred]);
+	const blocks = splitBlocks(deferred);
 
 	return (
 		<div className="typeset typeset-chat max-w-full min-w-0 wrap-break-word">

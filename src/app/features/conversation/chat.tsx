@@ -1,5 +1,5 @@
 import { ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useState } from "react";
 
 import { transcript } from "#domain/conversation/selectors";
 import type { ConversationState } from "#domain/conversation/state";
@@ -34,24 +34,16 @@ export function Chat({ sessionId, place }: { sessionId: string; place: string | 
 	const [jumpNonce, setJumpNonce] = useState(0);
 	const [anchorFrom, setAnchorFrom] = useState<number | undefined>(undefined);
 
-	const matches = useMemo(
-		() => (searching ? matchingRowIds(transcript(state), query) : []),
-		[searching, state, query],
-	);
+	const matches = searching ? matchingRowIds(transcript(state), query) : [];
 	const jumpId = matches[cursor];
-	const jump = useMemo<Jump | undefined>(
-		() => (jumpId === undefined ? undefined : { id: jumpId, nonce: jumpNonce }),
-		[jumpId, jumpNonce],
-	);
+	const jump: Jump | undefined =
+		jumpId === undefined ? undefined : { id: jumpId, nonce: jumpNonce };
 
-	const send = useCallback(
-		async (text: string) => {
-			await conversation.send(text);
-			// The sent message scrolls to the top of the view; the reply grows below it (R9).
-			setAnchorFrom(transcript(state).length);
-		},
-		[conversation, state],
-	);
+	const send = async (text: string): Promise<void> => {
+		await conversation.send(text);
+		// The sent message scrolls to the top of the view; the reply grows below it (R9).
+		setAnchorFrom(transcript(state).length);
+	};
 
 	const step = (by: 1 | -1): void => {
 		if (matches.length === 0) return;
