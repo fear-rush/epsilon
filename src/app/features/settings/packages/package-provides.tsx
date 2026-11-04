@@ -36,7 +36,7 @@ export function PackageProvides({
 		<section className="grid gap-card">
 			<h2 className="text-section">Provides</h2>
 			{toggle.error !== null && (
-				<Notice tone="error" title="The switch was not saved">
+				<Notice tone="danger" title="The switch was not saved">
 					{toggle.error.message}
 				</Notice>
 			)}

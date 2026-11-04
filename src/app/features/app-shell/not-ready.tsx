@@ -15,7 +15,7 @@ export function NotReady({ state }: { state: Extract<Readiness, { ready: false }
 	return (
 		<StatusView
 			icon={invalid ? CircleAlertIcon : TriangleAlertIcon}
-			tone={invalid ? "destructive" : "warning"}
+			tone={invalid ? "danger" : "warning"}
 			title={invalid ? "The agent configuration is broken" : "Epsilon cannot run a turn yet"}
 			line={`${state.detail} ${state.fix}`}
 			action={

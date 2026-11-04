@@ -51,7 +51,7 @@ export function SettingsGeneral() {
 		<DetailPage title="General">
 			<div className="grid gap-section">
 				{snapshot.providers.error !== undefined && (
-					<Notice tone="error">{snapshot.providers.error}</Notice>
+					<Notice tone="danger">{snapshot.providers.error}</Notice>
 				)}
 				<SettingsProblems problems={snapshot.settings.problems} />
 				<AppSection
@@ -75,7 +75,7 @@ export function SettingsGeneral() {
 function SettingsProblems({ problems }: { problems: ReadonlyArray<SettingsProblem> }) {
 	if (problems.length === 0) return null;
 	return (
-		<Notice tone="error" title="pi could not load a settings file">
+		<Notice tone="danger" title="pi could not load a settings file">
 			<ul className="grid gap-1">
 				{problems.map((problem) => (
 					<li key={`${problem.scope}:${problem.path ?? ""}`}>
@@ -166,12 +166,12 @@ function AppSection({
 				/>
 			</Row>
 			{defaults.error !== null && (
-				<Notice tone="error" title="The default model was not saved">
+				<Notice tone="danger" title="The default model was not saved">
 					{defaults.error.message}
 				</Notice>
 			)}
 			{engines.error !== null && (
-				<Notice tone="error" title="The engine count was not saved">
+				<Notice tone="danger" title="The engine count was not saved">
 					{engines.error.message}
 				</Notice>
 			)}

@@ -202,7 +202,7 @@ export function FolderDialog({
 					<p className="truncate font-mono text-meta text-muted-foreground">{pending.path}</p>
 					<TrustNotice status={pending} />
 					{(error !== undefined || trust.isError) && (
-						<Notice tone="error">{error ?? trust.error?.message}</Notice>
+						<Notice tone="danger">{error ?? trust.error?.message}</Notice>
 					)}
 				</div>
 			</DialogFrame>
@@ -410,7 +410,7 @@ export function FolderDialog({
 					</Field>
 				</FieldGroup>
 
-				{failure !== undefined && <Notice tone="error">{failure}</Notice>}
+				{failure !== undefined && <Notice tone="danger">{failure}</Notice>}
 			</div>
 		</DialogFrame>
 	);

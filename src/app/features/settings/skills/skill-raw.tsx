@@ -26,7 +26,7 @@ export function SkillRaw({ name, root }: { name: string; root: SkillRoot }) {
 	});
 
 	if (query.isPending) return <Notice tone="info">Reading the file…</Notice>;
-	if (query.error !== null) return <Notice tone="error">{query.error.message}</Notice>;
+	if (query.error !== null) return <Notice tone="danger">{query.error.message}</Notice>;
 
 	return (
 		<div className="grid gap-3">
@@ -38,7 +38,7 @@ export function SkillRaw({ name, root }: { name: string; root: SkillRoot }) {
 				onChange={setText}
 			/>
 			{save.error !== null && (
-				<Notice tone="error" title="The file was not saved">
+				<Notice tone="danger" title="The file was not saved">
 					{save.error.message}
 				</Notice>
 			)}

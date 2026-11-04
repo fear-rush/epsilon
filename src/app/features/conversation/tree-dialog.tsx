@@ -123,7 +123,7 @@ export function TreeDialog({
 					</div>
 				)}
 				{failure !== undefined && (
-					<Notice tone="error" title="The branch was not moved">
+					<Notice tone="danger" title="The branch was not moved">
 						{errorView(failure).line}
 					</Notice>
 				)}

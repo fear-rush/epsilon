@@ -140,9 +140,9 @@ function NewProvider() {
 						/>
 					</div>
 				</Section>
-				{error !== undefined && <Notice tone="error">{error}</Notice>}
+				{error !== undefined && <Notice tone="danger">{error}</Notice>}
 				{save.error !== null && (
-					<Notice tone="error" title="The provider was not saved">
+					<Notice tone="danger" title="The provider was not saved">
 						{save.error.message}
 					</Notice>
 				)}
@@ -319,14 +319,14 @@ function ProviderBody({ detail }: { detail: ProviderDetail }) {
 					<ModelsSection draft={draft} onChange={(models) => setDraft({ ...draft, models })} />
 				)}
 
-				{error !== undefined && <Notice tone="error">{error}</Notice>}
+				{error !== undefined && <Notice tone="danger">{error}</Notice>}
 				{save.error !== null && (
-					<Notice tone="error" title="The provider was not saved">
+					<Notice tone="danger" title="The provider was not saved">
 						{save.error.message}
 					</Notice>
 				)}
 				{saveKey.error !== null && (
-					<Notice tone="error" title="The key was not saved">
+					<Notice tone="danger" title="The key was not saved">
 						{saveKey.error.message}
 					</Notice>
 				)}

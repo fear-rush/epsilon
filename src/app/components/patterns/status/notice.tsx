@@ -3,21 +3,15 @@ import type { ReactNode } from "react";
 
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-/** The alert tones, each with its own icon. */
-export type NoticeTone = "error" | "warning" | "success" | "info";
+import type { Tone } from "./status-tone";
 
-const VARIANT = {
-	error: "destructive",
-	warning: "warning",
-	success: "success",
-	info: "info",
-} as const;
-
-const ICON = {
-	error: CircleAlertIcon,
-	warning: TriangleAlertIcon,
-	success: CircleCheckIcon,
-	info: InfoIcon,
+/** Each tone's icon and the alert variant that paints it. */
+const TONE = {
+	neutral: { icon: InfoIcon, variant: "default" },
+	info: { icon: InfoIcon, variant: "info" },
+	success: { icon: CircleCheckIcon, variant: "success" },
+	warning: { icon: TriangleAlertIcon, variant: "warning" },
+	danger: { icon: CircleAlertIcon, variant: "destructive" },
 } as const;
 
 /** An alert for something the user should read, with the icon its tone calls for. */
@@ -27,15 +21,15 @@ export function Notice({
 	action,
 	children,
 }: {
-	tone: NoticeTone;
+	tone: Tone;
 	title?: string;
 	/** One button on the right, such as "Use pi's catalog". */
 	action?: ReactNode;
 	children?: ReactNode;
 }) {
-	const Icon = ICON[tone];
+	const { icon: Icon, variant } = TONE[tone];
 	return (
-		<Alert variant={VARIANT[tone]}>
+		<Alert variant={variant}>
 			<Icon />
 			{title !== undefined && <AlertTitle>{title}</AlertTitle>}
 			{children !== undefined && <AlertDescription>{children}</AlertDescription>}

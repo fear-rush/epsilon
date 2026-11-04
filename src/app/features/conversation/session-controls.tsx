@@ -194,7 +194,7 @@ export function SessionControls({
 					</section>
 
 					{failure !== undefined && (
-						<Notice tone="error" title="That did not take effect">
+						<Notice tone="danger" title="That did not take effect">
 							{errorView(failure).line}
 						</Notice>
 					)}

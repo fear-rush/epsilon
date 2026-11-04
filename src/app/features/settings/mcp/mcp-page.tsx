@@ -84,12 +84,12 @@ export function SettingsMcp() {
 					</Notice>
 				))}
 				{setEnabled.error !== null && (
-					<Notice tone="error" title="The switch was not written">
+					<Notice tone="danger" title="The switch was not written">
 						{setEnabled.error.message}
 					</Notice>
 				)}
 				{remove.error !== null && (
-					<Notice tone="error" title="The server was not removed">
+					<Notice tone="danger" title="The server was not removed">
 						{remove.error.message}
 					</Notice>
 				)}

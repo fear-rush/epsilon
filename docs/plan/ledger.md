@@ -65,23 +65,23 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 
 ## S1 Feedback system (status line, route error, not found, notices, confirms)
 
-| Done | main file (`client/src/…`)                       | Lines | Branch today                   | Missing exports   |
-| ---- | ------------------------------------------------ | ----- | ------------------------------ | ----------------- |
-| [ ]  | `app/route-error.tsx`                            | 26    | exists elsewhere (names found) |                   |
-| [ ]  | `app/route-not-found.tsx`                        | 25    | exists elsewhere (names found) |                   |
-| [ ]  | `app/route-pending.tsx`                          | 10    | exists elsewhere (names found) |                   |
-| [ ]  | `components/patterns/dialog/confirm-dialogs.tsx` | 210   | exists, changed (8 lines)      |                   |
-| [ ]  | `components/patterns/status/app-banner.tsx`      | 38    | exists, changed (6 lines)      |                   |
-| [ ]  | `components/patterns/status/error-view.ts`       | 59    | exists, changed (51 lines)     |                   |
-| [ ]  | `components/patterns/status/inline-status.tsx`   | 23    | identical                      |                   |
-| [ ]  | `components/patterns/status/loading-state.tsx`   | 11    | exists, changed (15 lines)     |                   |
-| [ ]  | `components/patterns/status/notice.tsx`          | 45    | identical                      |                   |
-| [ ]  | `components/patterns/status/status-tone.ts`      | 15    | identical                      |                   |
-| [ ]  | `components/patterns/status/status-view.tsx`     | 34    | exists, changed (2 lines)      |                   |
-| [ ]  | `components/ui/alert-dialog.tsx`                 | 160   | exists, changed (8 lines)      |                   |
-| [ ]  | `components/ui/alert.tsx`                        | 77    | exists, changed (5 lines)      |                   |
-| [ ]  | `features/app-shell/app-health-banner.tsx`       | 32    | **missing**                    | `AppHealthBanner` |
-| [ ]  | `features/app-shell/use-app-health.ts`           | 39    | exists elsewhere (names found) |                   |
+| Done | main file (`client/src/…`)                       | Lines | Branch today                   | Missing exports         |
+| ---- | ------------------------------------------------ | ----- | ------------------------------ | ----------------------- |
+| [ ]  | `app/route-error.tsx`                            | 26    | exists elsewhere (names found) |                         |
+| [ ]  | `app/route-not-found.tsx`                        | 25    | exists elsewhere (names found) |                         |
+| [ ]  | `app/route-pending.tsx`                          | 10    | exists elsewhere (names found) |                         |
+| [ ]  | `components/patterns/dialog/confirm-dialogs.tsx` | 210   | exists, changed (8 lines)      |                         |
+| [x]  | `components/patterns/status/app-banner.tsx`      | 38    | deleted                        | replaced by `AppStatus` |
+| [ ]  | `components/patterns/status/error-view.ts`       | 59    | exists, changed (51 lines)     |                         |
+| [ ]  | `components/patterns/status/inline-status.tsx`   | 23    | identical                      |                         |
+| [ ]  | `components/patterns/status/loading-state.tsx`   | 11    | exists, changed (15 lines)     |                         |
+| [ ]  | `components/patterns/status/notice.tsx`          | 45    | identical                      |                         |
+| [ ]  | `components/patterns/status/status-tone.ts`      | 15    | identical                      |                         |
+| [ ]  | `components/patterns/status/status-view.tsx`     | 34    | exists, changed (2 lines)      |                         |
+| [ ]  | `components/ui/alert-dialog.tsx`                 | 160   | exists, changed (8 lines)      |                         |
+| [ ]  | `components/ui/alert.tsx`                        | 77    | exists, changed (5 lines)      |                         |
+| [x]  | `features/app-shell/app-health-banner.tsx`       | 32    | **missing**                    | replaced by `AppStatus` |
+| [ ]  | `features/app-shell/use-app-health.ts`           | 39    | exists elsewhere (names found) |                         |
 
 ## S2 Chat (session view, composer, transcript, branches, dialogs)
 

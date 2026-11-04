@@ -3,11 +3,11 @@ import type { LucideIcon } from "lucide-react";
 
 import { PageOutOfDate, ServerUnreachable } from "@/core/errors";
 
-import type { StatusTone } from "./status-tone";
+import type { Tone } from "./status-tone";
 
 /** What a pane says about a failed read. */
 export type ErrorView = {
-	tone: StatusTone;
+	tone: Tone;
 	title: string;
 	line: string;
 	icon: LucideIcon;
@@ -38,7 +38,7 @@ export function errorView(error: Error): ErrorView {
 		};
 	}
 	return {
-		tone: "destructive",
+		tone: "danger",
 		title: "Could not read this",
 		line: error.message,
 		icon: CircleAlertIcon,
@@ -47,7 +47,7 @@ export function errorView(error: Error): ErrorView {
 
 /** The view for something that is not there, which is an answer rather than a failure. */
 export const notFoundView = (what: string): ErrorView => ({
-	tone: "muted",
+	tone: "neutral",
 	title: `${what} not found`,
 	line: "It may have been removed since this page was opened.",
 	icon: FileQuestionIcon,

@@ -298,16 +298,16 @@ export function SessionSidebar() {
 				)}
 				{sessions.data?.pinsProblem !== undefined && (
 					<div className="px-pane">
-						<Notice tone="error">{sessions.data.pinsProblem}</Notice>
+						<Notice tone="danger">{sessions.data.pinsProblem}</Notice>
 					</div>
 				)}
 			</SidebarContent>
 
 			{pinChat.error !== null || projectTrust.error !== null ? (
 				<div className="grid animate-enter-rise gap-2 px-pane pb-pane">
-					{pinChat.error !== null && <Notice tone="error">{pinChat.error.message}</Notice>}
+					{pinChat.error !== null && <Notice tone="danger">{pinChat.error.message}</Notice>}
 					{projectTrust.error !== null && (
-						<Notice tone="error">{projectTrust.error.message}</Notice>
+						<Notice tone="danger">{projectTrust.error.message}</Notice>
 					)}
 				</div>
 			) : undefined}

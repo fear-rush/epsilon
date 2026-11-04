@@ -117,7 +117,7 @@ export function SettingsProjects() {
 					)}
 				</Section>
 				{trust.error !== null && (
-					<Notice tone="error" title="The trust decision was not saved">
+					<Notice tone="danger" title="The trust decision was not saved">
 						{errorView(trust.error).line}
 					</Notice>
 				)}

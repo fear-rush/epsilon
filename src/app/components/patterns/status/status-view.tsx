@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { toneText } from "./status-tone";
-import type { StatusTone } from "./status-tone";
+import type { Tone } from "./status-tone";
 
 /**
  * The one centred state of a pane: loading, empty, error, offline or not found.
@@ -12,13 +12,13 @@ export function StatusView({
 	icon: Icon,
 	title,
 	line,
-	tone = "muted",
+	tone = "neutral",
 	action,
 }: {
 	icon: LucideIcon;
 	title: string;
 	line?: string;
-	tone?: StatusTone;
+	tone?: Tone;
 	action?: ReactNode;
 }) {
 	return (

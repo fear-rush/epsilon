@@ -277,7 +277,7 @@ function ChatNotices({ notices }: { notices: ReadonlyArray<NoticeFrame> }) {
 			{recent.map((notice) => (
 				<Notice
 					key={notice.id}
-					tone={notice.kind === "error" ? "error" : notice.kind === "warning" ? "warning" : "info"}
+					tone={notice.kind === "error" ? "danger" : notice.kind === "warning" ? "warning" : "info"}
 					title={notice.text}
 				/>
 			))}

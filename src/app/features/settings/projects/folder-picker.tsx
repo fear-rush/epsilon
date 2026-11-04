@@ -123,7 +123,7 @@ function PickerDialog({
 						</Button>
 					</form>
 					{create.error !== null && (
-						<Notice tone="error" title="The folder was not created">
+						<Notice tone="danger" title="The folder was not created">
 							{errorView(create.error).line}
 						</Notice>
 					)}
@@ -161,7 +161,7 @@ function FolderList({
 }) {
 	if (error !== null) {
 		return (
-			<Notice tone="error" title="This folder cannot be read">
+			<Notice tone="danger" title="This folder cannot be read">
 				{errorView(error).line}
 			</Notice>
 		);

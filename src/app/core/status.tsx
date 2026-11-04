@@ -12,6 +12,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 
+import type { Tone } from "@/components/patterns/status/status-tone";
 import { Button } from "@/components/ui/button";
 import { call, link } from "@/core/runtime";
 import { cn } from "@/lib/cn";
@@ -43,7 +44,7 @@ export function useReadiness() {
 
 export type StatusValue = {
 	readonly text: string;
-	readonly tone: "warning" | "destructive";
+	readonly tone: Tone;
 	/** The label of the button that fixes it, when the reporter knows one. */
 	readonly action?: string;
 };
@@ -131,10 +132,13 @@ export function useAppHealth(): AppHealth {
 	return current.socket === "open" ? "ok" : "reconnecting";
 }
 
-const TONE = {
-	destructive: "border-destructive/40 bg-destructive/5 text-destructive",
+const TONE: Record<Tone, string> = {
+	neutral: "border-border bg-muted/40 text-muted-foreground",
+	info: "border-info/40 bg-info/10 text-info",
+	success: "border-success/40 bg-success/10 text-success",
 	warning: "border-warning/40 bg-warning/5 text-warning-foreground",
-} as const;
+	danger: "border-destructive/40 bg-destructive/5 text-destructive",
+};
 
 /**
  * The one status line above every surface.
@@ -151,7 +155,7 @@ export function AppStatus() {
 
 	if (health === "stale") {
 		return (
-			<Strip tone="destructive" action={<Reload />}>
+			<Strip tone="danger" action={<Reload />}>
 				Epsilon was updated. Reload to continue.
 			</Strip>
 		);
@@ -200,7 +204,7 @@ function Strip({
 	action,
 	children,
 }: {
-	tone: keyof typeof TONE;
+	tone: Tone;
 	action?: ReactNode;
 	children: ReactNode;
 }) {

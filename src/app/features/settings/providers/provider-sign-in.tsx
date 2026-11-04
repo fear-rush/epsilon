@@ -104,7 +104,7 @@ export function ProviderSignIn({
 							</Notice>
 						))}
 						{snapshot.error !== undefined && (
-							<Notice tone="error" title="The sign-in failed">
+							<Notice tone="danger" title="The sign-in failed">
 								{snapshot.error}
 							</Notice>
 						)}
@@ -150,7 +150,7 @@ export function ProviderSignIn({
 					</>
 				)}
 				{failure !== undefined && (
-					<Notice tone="error" title="The sign-in stopped">
+					<Notice tone="danger" title="The sign-in stopped">
 						{failure}
 					</Notice>
 				)}

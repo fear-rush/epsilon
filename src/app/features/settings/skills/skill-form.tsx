@@ -132,14 +132,14 @@ export function SkillForm({
 			}
 		>
 			<div className="grid gap-section">
-				{view?.message !== undefined && <Notice tone="error">{view.message}</Notice>}
+				{view?.message !== undefined && <Notice tone="danger">{view.message}</Notice>}
 				{(view?.warnings ?? []).map((warning) => (
 					<Notice key={warning} tone="warning">
 						{warning}
 					</Notice>
 				))}
 				{file?.parseError !== undefined && (
-					<Notice tone="error" title="The frontmatter does not parse">
+					<Notice tone="danger" title="The frontmatter does not parse">
 						{file.parseError} Only the Raw tab can edit this file.
 					</Notice>
 				)}
@@ -149,7 +149,7 @@ export function SkillForm({
 					</Notice>
 				))}
 				{save.error !== null && (
-					<Notice tone="error" title="The skill was not saved">
+					<Notice tone="danger" title="The skill was not saved">
 						{save.error.message}
 					</Notice>
 				)}

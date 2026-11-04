@@ -129,7 +129,7 @@ export function PackageDetail({ scope, source }: { scope: PackageView["scope"]; 
 				{entry.installedPath !== undefined && <Row title="Install path">{entry.installedPath}</Row>}
 			</Section>
 			{update.error !== null && (
-				<Notice tone="error" title="The update failed">
+				<Notice tone="danger" title="The update failed">
 					{update.error.message}
 				</Notice>
 			)}

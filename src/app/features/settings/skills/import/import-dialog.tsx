@@ -182,12 +182,12 @@ function ImportBody({ onOpenChange }: { onOpenChange: (open: boolean) => void })
 				)}
 				{picked !== undefined && <Notice tone="info">{picked}</Notice>}
 				{failure !== undefined && (
-					<Notice tone="error" title="The files could not be read">
+					<Notice tone="danger" title="The files could not be read">
 						{failure}
 					</Notice>
 				)}
 				{im.stage.error !== null && (
-					<Notice tone="error" title="The source could not be staged">
+					<Notice tone="danger" title="The source could not be staged">
 						{im.stage.error.message}
 					</Notice>
 				)}
@@ -343,7 +343,7 @@ function Review({
 					</label>
 				)}
 				{im.commit.error !== null && (
-					<Notice tone="error" title="The import was not installed">
+					<Notice tone="danger" title="The import was not installed">
 						{im.commit.error.message}
 					</Notice>
 				)}

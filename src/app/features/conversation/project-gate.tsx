@@ -90,7 +90,7 @@ export function ProjectGate({ folder, children }: { folder: string; children: Re
 					</Notice>
 				))}
 				{trust.error !== null && (
-					<Notice tone="error" title="The folder was not trusted">
+					<Notice tone="danger" title="The folder was not trusted">
 						{errorView(trust.error).line}
 					</Notice>
 				)}

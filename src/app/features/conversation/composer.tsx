@@ -71,7 +71,7 @@ export function Composer({
 		<div className="border-t p-pane">
 			<div className="mx-auto grid w-full max-w-content gap-2">
 				{failure !== undefined && (
-					<Notice tone="error" title="The message was not sent">
+					<Notice tone="danger" title="The message was not sent">
 						{failure.message}
 					</Notice>
 				)}

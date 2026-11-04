@@ -2,16 +2,16 @@ import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { toneText } from "./status-tone";
-import type { StatusTone } from "./status-tone";
+import type { Tone } from "./status-tone";
 
 /** A small inline line with an icon, for a status beside a control. */
 export function InlineStatus({
 	icon: Icon,
-	tone = "muted",
+	tone = "neutral",
 	children,
 }: {
 	icon: LucideIcon;
-	tone?: StatusTone;
+	tone?: Tone;
 	children: ReactNode;
 }) {
 	return (

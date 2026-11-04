@@ -26,7 +26,7 @@ export function SkillViewer({ path }: { path: string }) {
 							.pi/skills and .agents/skills.
 						</Notice>
 						{doc.parseError !== undefined && (
-							<Notice tone="error" title="The frontmatter does not parse">
+							<Notice tone="danger" title="The frontmatter does not parse">
 								{doc.parseError}
 							</Notice>
 						)}
