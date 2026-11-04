@@ -9,7 +9,7 @@
 import { CornerUpLeftIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import type { TreeEntry } from "#protocol/conversation/frames";
+import type { SnapshotTreeNode } from "#domain/conversation/tree";
 import { DialogFrame } from "@/components/patterns/dialog-frame";
 import { errorView } from "@/components/patterns/status/error-view";
 import { InlineStatus } from "@/components/patterns/status/inline-status";
@@ -19,9 +19,23 @@ import { Button } from "@/components/ui/button";
 
 import type { Conversation } from "./use-conversation.ts";
 
-/** The messages of the tree a fork may start from: user entries, in the order pi keeps. */
-const userMessagesOf = (tree: ReadonlyArray<TreeEntry>): ReadonlyArray<TreeEntry> =>
-	tree.filter((entry) => entry.kind === "user");
+/** The first line of a message, so every row in the list stays one line tall. */
+const firstLine = (text: string): string => text.trimStart().split("\n")[0] ?? "";
+
+/** The user messages of the whole tree, in tree order: what pi's fork picker offers. */
+const userMessagesOf = (
+	nodes: ReadonlyArray<SnapshotTreeNode>,
+): ReadonlyArray<{ entryId: string; text: string }> => {
+	const messages: { entryId: string; text: string }[] = [];
+	const walk = (list: ReadonlyArray<SnapshotTreeNode>): void => {
+		for (const node of list) {
+			if (node.kind === "user") messages.push({ entryId: node.entryId, text: node.text });
+			walk(node.children);
+		}
+	};
+	walk(nodes);
+	return messages;
+};
 
 export function ForkSessionDialog({
 	open,
@@ -37,30 +51,32 @@ export function ForkSessionDialog({
 	const [problem, setProblem] = useState<string | undefined>(undefined);
 	const [loaded, setLoaded] = useState(false);
 
-	// The tree is read when the dialog opens, the same read the branch picker makes.
+	// The tree is read when the dialog opens, the same read the branch picker makes. The
+	// dialog stays mounted while closed, so the read is gated on `open`, not on mounting.
 	useEffect(() => {
 		let cancelled = false;
 		const load = async (): Promise<void> => {
 			try {
 				await loadTree();
-				if (!cancelled) setLoaded(true);
+				if (cancelled) return;
+				setProblem(undefined);
+				setLoaded(true);
 			} catch (cause) {
-				if (!cancelled) {
-					setProblem(errorView(cause instanceof Error ? cause : new Error(String(cause))).line);
-				}
+				if (cancelled) return;
+				setProblem(errorView(cause instanceof Error ? cause : new Error(String(cause))).line);
 			}
 		};
-		void load();
+		if (open) void load();
 		return () => {
 			cancelled = true;
 		};
-	}, [loadTree]);
+	}, [open, loadTree]);
 
-	const forkFrom = async (entry: TreeEntry): Promise<void> => {
+	const forkFrom = async (message: { entryId: string; text: string }): Promise<void> => {
 		setPending(true);
 		setProblem(undefined);
 		try {
-			await conversation.fork(entry.id, "before");
+			await conversation.fork(message.entryId, "before");
 			onOpenChange(false);
 		} catch (cause) {
 			setProblem(errorView(cause instanceof Error ? cause : new Error(String(cause))).line);
@@ -71,15 +87,21 @@ export function ForkSessionDialog({
 
 	const messages = userMessagesOf(conversation.state.tree);
 
+	/** A close forgets the last read, so the next opening waits for its own. */
+	const change = (next: boolean): void => {
+		if (!next) setLoaded(false);
+		onOpenChange(next);
+	};
+
 	return (
 		<DialogFrame
 			open={open}
-			onOpenChange={onOpenChange}
+			onOpenChange={change}
 			size="md"
 			title="Fork from a message"
 			description="The new chat holds this chat up to just before the message you pick, and that message's text waits in the box. This chat stays as it is."
 			footer={
-				<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+				<Button type="button" variant="outline" onClick={() => change(false)}>
 					Cancel
 				</Button>
 			}
@@ -96,7 +118,7 @@ export function ForkSessionDialog({
 				<div className="flex flex-col">
 					{messages.map((message, index) => (
 						<button
-							key={message.id}
+							key={message.entryId}
 							type="button"
 							disabled={pending}
 							className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-body hover:bg-muted disabled:opacity-50"
@@ -105,7 +127,9 @@ export function ForkSessionDialog({
 							<span className="w-6 shrink-0 text-right text-meta text-muted-foreground tabular-nums">
 								{index + 1}
 							</span>
-							<span className="min-w-0 flex-1 truncate">{message.label || "No text"}</span>
+							<span className="min-w-0 flex-1 truncate">
+								{firstLine(message.text) || "No text"}
+							</span>
 						</button>
 					))}
 				</div>

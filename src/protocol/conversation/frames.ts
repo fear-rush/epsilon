@@ -84,26 +84,44 @@ export type ToolResultEntry = typeof ToolResultEntry.Type;
 export const TranscriptEntry = Schema.Union([UserEntry, AssistantEntry, ToolResultEntry]);
 export type TranscriptEntry = typeof TranscriptEntry.Type;
 
-/** What the tree picker needs per row. `onPath` marks the root-to-leaf path. */
-export const TreeEntryKind = Schema.Literals([
-	"user",
-	"assistant",
-	"toolResult",
-	"compaction",
-	"branchSummary",
-	"sessionInfo",
-	"other",
-]);
+/** The five kinds pi's picker names a row by. */
+export const TreeRowKind = Schema.Literals(["user", "assistant", "summary", "tool", "settings"]);
 
-export const TreeEntry = Schema.Struct({
-	id: Schema.String,
+/**
+ * One pickable row of the branch tree, flat.
+ *
+ * The wire carries rows, not a tree: a 50,000-entry chat must not recurse through a
+ * nested schema, and the tree is read when the picker opens, not in every snapshot
+ * (DECISIONS.md, "The tree travels on demand"). `parentId` is the nearest row that is
+ * also kept, so a dropped bookkeeping entry promotes its children instead of hiding
+ * them; the page rebuilds main's nested shape from these rows.
+ */
+export const TreeRow = Schema.Struct({
+	entryId: Schema.String,
 	parentId: Schema.NullOr(Schema.String),
-	kind: TreeEntryKind,
-	label: Schema.String,
-	ts: Schema.Finite,
-	onPath: Schema.Boolean,
+	kind: TreeRowKind,
+	/** Whole text for a user message, which goes back in the box; a preview otherwise. */
+	text: Schema.String,
+	/** pi hides an assistant entry with no text unless it is where the chat stands. */
+	hasText: Schema.Boolean,
+	/** pi's own label on the entry, from the session file. */
+	label: Schema.optional(Schema.String),
+	/** The entry is on the branch the transcript shows. */
+	active: Schema.Boolean,
+	/** The last point of the active branch: where the chat stands. */
+	current: Schema.Boolean,
 });
-export type TreeEntry = typeof TreeEntry.Type;
+export type TreeRow = typeof TreeRow.Type;
+
+/** pi's five tree filters, in the order its own selector cycles through them. */
+export const TreeFilterMode = Schema.Literals([
+	"default",
+	"no-tools",
+	"user-only",
+	"labeled-only",
+	"all",
+]);
+export type TreeFilterMode = typeof TreeFilterMode.Type;
 
 export const NoticeKind = Schema.Literals(["notice", "warning", "error", "compaction", "retry"]);
 export type NoticeKind = typeof NoticeKind.Type;
@@ -154,7 +172,7 @@ export const SnapshotFrame = Schema.Struct({
  */
 export const TreeFrame = Schema.Struct({
 	t: Schema.Literals(["tree"]),
-	entries: Schema.Array(TreeEntry),
+	rows: Schema.Array(TreeRow),
 });
 
 /** Text or thinking arriving before the message is appended. Keyed by the stream id. */
@@ -252,6 +270,8 @@ export const SessionMetaFrame = Schema.Struct({
 	codingTools: Schema.optional(Schema.Boolean),
 	/** The thinking levels pi offers for the current model, as the model picker shows them. */
 	thinkingLevels: Schema.optional(Schema.Array(ThinkingLevel)),
+	/** pi's default tree filter, from `settings.json`. */
+	treeFilterMode: Schema.optional(TreeFilterMode),
 	/** What `/` offers: the built-in table, pi's commands, templates and skills. */
 	commands: Schema.optional(Schema.Array(CommandOffer)),
 });

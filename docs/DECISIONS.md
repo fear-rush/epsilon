@@ -128,8 +128,29 @@ snapshot would exceed the 2 MB frame budget and re-send what the picker already 
 Why: the old snapshot held the whole transcript and a recursive tree, 46 MB for a 46 MB
 file (F5).
 
+Each row carries what main's picker needs (`kind`, `text`, `hasText`, `label`, `active`,
+`current`), and a row pi's default view hides names its nearest kept ancestor as
+`parentId`. The reducer nests them in one pass when the frame arrives, so the wire stays
+non-recursive and main's filter and tree dialog port unchanged.
+
 Not: a recursive tree schema; a window that includes the tree; a tree endpoint separate
 from the conversation stream.
+
+## Moves and copies are pi's own
+
+`/tree` moves pi's leaf inside the same session file; `/fork` copies the history before a
+chosen message into a new file; `/clone` is the same copy taken where the chat stands. All
+three are pi's operations reached as engine commands, and the page follows the new session
+id the replacement broadcasts. A tree label is pi's `label` entry and the tree filter is
+pi's `treeFilterMode` setting, so a terminal using the same home shows the same labels and
+the same filter.
+
+Why: main copied sessions through an HTTP route and kept the tree filter in the browser.
+Neither is needed when the engine owns the session, and a browser-side filter would
+disagree with pi's own picker.
+
+Not: a copy route beside the one command boundary; a tree filter stored in Epsilon's own
+settings.
 
 ## The composer's readings travel as their own frame
 

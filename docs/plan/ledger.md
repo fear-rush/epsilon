@@ -46,11 +46,11 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | [x]  | chat `clear_queue`                                                            | S2        | `feat(conversation): the run controls`                                              |
 | [x]  | chat `set_label`                                                              | S2        | `feat(conversation): the run controls`                                              |
 | [x]  | chat `set_hide_thinking`                                                      | S2        | `feat(conversation): the run controls`                                              |
-| [ ]  | chat `set_tree_filter_mode`                                                   | S2        | verify (a setting exists in general)                                                |
-| [ ]  | chat `reload`, `reload_session`                                               | S2        | verify (`reloadFromDisk`)                                                           |
+| [x]  | chat `set_tree_filter_mode`                                                   | S2        | `feat(conversation): the branch rows` (`setTreeFilterMode`)                         |
+| [x]  | chat `reload`, `reload_session`                                               | S2        | verified: `/reload` is pi's, `reloadFromDisk` is `reload_session`                   |
 | [x]  | chat `set_coding_tools`                                                       | S2        | `feat(conversation): the composer menus`                                            |
 | [x]  | `POST /api/sessions/{id}/export`                                              | S2        | `feat(conversation): the transcript as a file` (`conversation.query` kind `export`) |
-| [ ]  | `POST /api/sessions/{id}/clone`                                               | S2        | verify                                                                              |
+| [x]  | `POST /api/sessions/{id}/clone`                                               | S2        | `feat(conversation): the branch rows` (`clone`, pi's fork at the leaf)              |
 | [ ]  | `POST /api/sessions/{id}/move`                                                | S3        | verify                                                                              |
 | [ ]  | `DELETE /api/projects/sessions` (delete a project's chats)                    | S3        | **missing**                                                                         |
 | [ ]  | `PUT /api/settings/mcp/default-tool`                                          | S4        | **missing**                                                                         |
@@ -87,8 +87,8 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 
 | Done | main file (`client/src/…`)                           | Lines | Branch today                                                        | Missing exports                                               |
 | ---- | ---------------------------------------------------- | ----- | ------------------------------------------------------------------- | ------------------------------------------------------------- |
-| [ ]  | `features/conversation/branch-items.tsx`             | 71    | **missing**                                                         | `BranchItems`                                                 |
-| [ ]  | `features/conversation/branch-rules.ts`              | 7     | **missing**                                                         | `branchBlocked`                                               |
+| [x]  | `features/conversation/branch-items.tsx`             | 71    | `feat(conversation): the branch rows`                               | `BranchItems`                                                 |
+| [x]  | `features/conversation/branch-rules.ts`              | 7     | `feat(conversation): the branch rows`                               | `branchBlocked`                                               |
 | [x]  | `features/conversation/chat-bar.tsx`                 | 31    | `feat(conversation): main's chat bar`                               |                                                               |
 | [x]  | `features/conversation/compact-context-dialog.tsx`   | 78    | `feat(conversation): the fork and compact dialogs`                  | `CompactContextDialog`                                        |
 | [x]  | `features/conversation/composer/attachments.tsx`     | 49    | `feat(conversation): the composer's images`                         | `Attachment`, `AttachmentStrip`                               |
@@ -109,16 +109,16 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | [x]  | `features/conversation/pending-draft.ts`             | 18    | `draft.ts` (the engine hands the text across; no store draft)       | `—`                                                           |
 | [x]  | `features/conversation/run-status.tsx`               | 150   | `feat(conversation): the run status`                                |                                                               |
 | [x]  | `features/conversation/session-context-sentence.ts`  | 38    | `feat(conversation): the palette and its commands`                  | `contextSentence`                                             |
-| [ ]  | `features/conversation/session-controls.tsx`         | 163   | exists, changed (353 lines)                                         |                                                               |
+| [x]  | `features/conversation/session-controls.tsx`         | 163   | `feat(conversation): the branch rows` (the bar hosts it until S3)   |                                                               |
 | [ ]  | `features/conversation/session-header.tsx`           | 194   | partial: `ComposerPlace`, `PlaceBadge` (S3 holds `SessionHeader`)   | `SessionHeader`                                               |
 | [x]  | `features/conversation/session-loader.tsx`           | 22    | `feat(conversation): where the chat runs` (in `session-header.tsx`) | `SessionLoader`                                               |
 | [ ]  | `features/conversation/session-view.tsx`             | 287   | **missing**                                                         | `SessionView`                                                 |
 | [ ]  | `features/conversation/store.ts`                     | 325   | **missing**                                                         | `ConversationSnapshot`, `ConversationStore`                   |
 | [x]  | `features/conversation/tool-trace.tsx`               | 269   | `feat(conversation): each tool's own trace`                         | `ToolTrace`                                                   |
 | [ ]  | `features/conversation/transcript.tsx`               | 318   | exists, changed (633 lines)                                         |                                                               |
-| [ ]  | `features/conversation/tree-dialog.tsx`              | 386   | **missing**                                                         | `SessionTreeDialog`, `TreeMove`                               |
-| [ ]  | `features/conversation/tree-filter.ts`               | 33    | **missing**                                                         | `filterTree`                                                  |
-| [ ]  | `features/conversation/use-branching.tsx`            | 114   | **missing**                                                         | `useBranching`                                                |
+| [x]  | `features/conversation/tree-dialog.tsx`              | 386   | `feat(conversation): the branch rows`                               | `SessionTreeDialog`, `TreeMove`                               |
+| [x]  | `features/conversation/tree-filter.ts`               | 33    | `feat(conversation): the branch rows` (with main's test)            | `filterTree`                                                  |
+| [x]  | `features/conversation/use-branching.tsx`            | 114   | `feat(conversation): the branch rows` (the engine hands the text)   | `useBranching`                                                |
 | [ ]  | `features/conversation/use-conversation.ts`          | 58    | exists, changed (403 lines)                                         |                                                               |
 | [ ]  | `features/conversation/welcome.tsx`                  | 29    | exists, changed (17 lines)                                          |                                                               |
 | [ ]  | `features/projects/continue-session.tsx`             | 61    | **missing**                                                         | `ContinueSession`                                             |

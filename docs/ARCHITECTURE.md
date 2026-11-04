@@ -80,10 +80,11 @@ view, built from the shared patterns.
 2. The registry either reuses the engine for that session or asks the supervisor to
    spawn one inside a scope. The engine builds its runtime from the session file.
 3. The engine sends a windowed snapshot (entry ids, recent entries, notices); older
-   pages arrive when the transcript asks, and the flat tree when the picker opens. The
-   composer's readings (pi's context usage, the session's totals, the cache warmer) follow
-   the snapshot and again whenever pi's numbers change, and the keyed statuses extensions
-   set travel as a `statuses` frame.
+   pages arrive when the transcript asks. The flat tree arrives when the picker opens,
+   and the reducer nests it so the picker draws main's shape. The composer's readings
+   (pi's context usage, the session's totals, the cache warmer) follow the snapshot and
+   again whenever pi's numbers change, and the keyed statuses extensions set travel as a
+   `statuses` frame.
 4. Commands go down the same socket as tagged values; extension dialogs come back as
    frames and their answers go back as commands. A prompt whose text starts with a name in
    the built-in table is answered by the engine before pi, so a `/compact` never reaches

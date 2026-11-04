@@ -9,7 +9,8 @@ import type {
 	Notice,
 	ServerFrame,
 	TranscriptEntry,
-	TreeEntry,
+	TreeFilterMode,
+	TreeRow,
 } from "#protocol/conversation/frames";
 import type { CommandOffer } from "#protocol/conversation/palette";
 import type { ThinkingLevel } from "#protocol/conversation/session";
@@ -18,7 +19,7 @@ import type { CacheWarming, SessionStats } from "#protocol/usage";
 import { BUILTIN_COMMANDS, builtinCommand } from "../domain/conversation/commands.ts";
 import { withDefined } from "../domain/object.ts";
 import { hasCodingTools } from "./tools.ts";
-import { flatTree, transcriptOf } from "./translate.ts";
+import { positionEntry, transcriptOf, treeRowsOf } from "./translate.ts";
 
 /**
  * What a tab receives when it attaches: a window of the branch, not the whole file.
@@ -113,10 +114,12 @@ export const noticesOf = (sessionManager: SessionManager): Notice[] => {
 	return notices;
 };
 
-/** The branch tree, flat, with the branch the page shows marked. */
-export const treeOf = (sessionManager: SessionManager): TreeEntry[] => {
-	const onPath = new Set(sessionManager.getBranch().map((entry) => entry.id));
-	return flatTree(sessionManager.getTree(), onPath);
+/** The branch tree, flat, with the branch the page shows marked and its position found. */
+export const treeOf = (sessionManager: SessionManager): TreeRow[] => {
+	const branch = sessionManager.getBranch();
+	const active = new Set(branch.map((entry) => entry.id));
+	const currentId = [...branch].toReversed().find(positionEntry)?.id;
+	return treeRowsOf(sessionManager.getTree(), active, currentId);
 };
 
 type MutableSessionMeta = {
@@ -131,6 +134,7 @@ type MutableSessionMeta = {
 	codingTools?: boolean;
 	hideThinking?: boolean;
 	thinkingLevels?: ThinkingLevel[];
+	treeFilterMode?: TreeFilterMode;
 	commands?: CommandOffer[];
 };
 
@@ -251,6 +255,7 @@ export const sessionMeta = (agent: AgentSession): Extract<ServerFrame, { t: "ses
 		codingTools: hasCodingTools(agent),
 		commands: commandsOf(agent),
 		hideThinking: agent.settingsManager.getHideThinkingBlock(),
+		treeFilterMode: agent.settingsManager.getTreeFilterMode(),
 		sessionId: agent.sessionId,
 		t: "sessionMeta",
 		thinking: agent.thinkingLevel,

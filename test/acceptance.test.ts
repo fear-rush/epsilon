@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { Clock, Effect, Exit, FileSystem, Scope, Schema } from "effect";
 
-import { TreeEntry } from "#protocol/conversation/frames";
+import { TreeRow } from "#protocol/conversation/frames";
 
 import { startEngine, type RemoteEngine } from "../src/backend/conversation/engine.ts";
 import { makeEngines } from "../src/backend/conversation/registry.ts";
@@ -194,9 +194,10 @@ describe("acceptance", () => {
 					return value;
 				}),
 			);
-			const entries = Schema.decodeUnknownSync(Schema.Array(TreeEntry))(tree);
-			expect(entries.length).toBeGreaterThanOrEqual(50_000);
-			expect(entries.some((entry) => entry.id === "e049999")).toBe(true);
+			const rows = Schema.decodeUnknownSync(Schema.Array(TreeRow))(tree);
+			expect(rows.length).toBeGreaterThanOrEqual(50_000);
+			expect(rows.some((row) => row.entryId === "e049999")).toBe(true);
+			expect(rows.some((row) => row.current)).toBe(true);
 		} finally {
 			stub.stop();
 		}

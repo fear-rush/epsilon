@@ -39,6 +39,23 @@ const isCopy = (text: string): boolean => {
 	);
 };
 
+/**
+ * The entities a JSX apostrophe or quote becomes: the branch writes `&apos;` because its
+ * lint refuses a bare one, and parity compares the words a reader sees, not the source.
+ */
+const ENTITIES: Record<string, string> = {
+	"&amp;": "&",
+	"&apos;": "'",
+	"&gt;": ">",
+	"&lt;": "<",
+	"&nbsp;": " ",
+	"&quot;": '"',
+	"&#39;": "'",
+};
+
+const decoded = (text: string): string =>
+	text.replaceAll(/&(?:amp|apos|gt|lt|nbsp|quot|#39);/g, (entity) => ENTITIES[entity] ?? entity);
+
 type Surface = { classes: Set<string>; copy: Set<string> };
 
 const read = (source: string): Surface => {
@@ -55,7 +72,7 @@ const read = (source: string): Surface => {
 		else if (isCopy(text)) copy.add(text.trim());
 	}
 	for (const match of withoutImports.matchAll(/>([^<>{}]+)</g)) {
-		const text = (match[1] ?? "").replaceAll(/\s+/g, " ").trim();
+		const text = decoded((match[1] ?? "").replaceAll(/\s+/g, " ")).trim();
 		if (text !== "" && isCopy(text)) copy.add(text);
 	}
 	return { classes, copy };

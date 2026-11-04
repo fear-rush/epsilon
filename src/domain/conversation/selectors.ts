@@ -46,23 +46,6 @@ export function isWritable(state: ConversationState): boolean {
 	return state.drift === undefined;
 }
 
-/** Children of one tree row, iteratively: a 50,000-entry chat must not recurse. */
-export function treeChildren(state: ConversationState): ReadonlyMap<string, ReadonlyArray<string>> {
-	const children = new Map<string, string[]>();
-	const roots: string[] = [];
-	for (const entry of state.tree) {
-		if (entry.parentId === null) {
-			roots.push(entry.id);
-			continue;
-		}
-		const siblings = children.get(entry.parentId);
-		if (siblings === undefined) children.set(entry.parentId, [entry.id]);
-		else siblings.push(entry.id);
-	}
-	children.set("", roots);
-	return children;
-}
-
 /** The assistant text a collapsed row shows, or the notice that stands in for one. */
 export function lastAssistantText(state: ConversationState): string | undefined {
 	const last = state.entries.findLast(

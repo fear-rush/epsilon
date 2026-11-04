@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { BunServices } from "@effect/platform-bun";
@@ -20,6 +20,12 @@ const command = (engine: RemoteEngine, text: string) =>
 
 const frameOf = (engine: RemoteEngine, match: (frame: ServerFrame) => boolean, tab = "tab") =>
 	engine.frames(tab).pipe(Stream.filter(match), Stream.take(1), Stream.runHead);
+
+/** The one frame a test waits for; a missing one is the failure the test is looking for. */
+const required = (option: Option.Option<ServerFrame>): ServerFrame => {
+	if (Option.isNone(option)) throw new Error("no frame matched");
+	return option.value;
+};
 
 /** One of the chat's own controls, sent the way the page sends it. */
 const control = (engine: RemoteEngine, next: Command) =>
@@ -428,4 +434,67 @@ test("built-in commands are answered here, never by the model", async () => {
 	expect(Option.isSome(result.afterNew)).toBe(true);
 	expect(Option.isSome(result.defaultMode)).toBe(true);
 	expect(Option.isSome(result.yolo)).toBe(true);
+}, 20_000);
+
+test("a tree label and filter are pi's own, and a clone is a new session", async () => {
+	const home = join(testPaths.scratch, "engine-tree-home");
+	const project = join(testPaths.scratch, "engine-tree");
+	const sessions = join(testPaths.scratch, "engine-tree-sessions");
+	mkdirSync(home, { recursive: true });
+	mkdirSync(project, { recursive: true });
+	const file = writeSession(sessions, "s-tree", linearSession("s-tree", project, 3));
+	const env: Record<string, string> = {};
+	for (const [key, value] of Object.entries(process.env)) if (value !== undefined) env[key] = value;
+	env["HOME"] = testPaths.sandboxHome;
+	env["PI_CODING_AGENT_DIR"] = home;
+
+	const result = await Effect.runPromise(
+		Effect.gen(function* () {
+			const engine = yield* startEngine({
+				cwd: project,
+				file,
+				homeDir: home,
+				place: null,
+				sessionId: "s-tree",
+				spec: {
+					command: [
+						process.execPath,
+						"run",
+						new URL("../src/engine/main.ts", import.meta.url).pathname,
+					],
+					env,
+				},
+				userHome: testPaths.sandboxHome,
+			});
+			yield* engine.attachTab("tab");
+			yield* frameOf(engine, (frame) => frame.t === "snapshot");
+			yield* control(engine, { entryId: "e000000", label: "Important", t: "setTreeLabel" });
+			const tree = required(yield* frameOf(engine, (frame) => frame.t === "tree"));
+			yield* control(engine, { mode: "labeled-only", t: "setTreeFilterMode" });
+			const filtered = required(
+				yield* frameOf(
+					engine,
+					(frame) => frame.t === "sessionMeta" && frame.treeFilterMode === "labeled-only",
+				),
+			);
+			yield* control(engine, { t: "clone" });
+			const copied = required(
+				yield* frameOf(engine, (frame) => frame.t === "snapshot" && frame.sessionId !== "s-tree"),
+			);
+			yield* engine.stop(2_000);
+			return { copied, filtered, tree };
+			// oxlint-disable-next-line effecttsgo/strict-effect-provide -- the test entry point builds the runtime
+		}).pipe(Effect.provide(BunServices.layer)),
+	);
+	const { copied, filtered, tree } = result;
+	if (tree.t !== "tree") throw new Error("the label wrote no tree frame");
+	expect(tree.rows.find((row) => row.entryId === "e000000")?.label).toBe("Important");
+	if (filtered.t !== "sessionMeta") throw new Error("the filter wrote no session meta frame");
+	// pi's own file is what a terminal reads, which is why the write goes through its setter.
+	const settings = Schema.decodeUnknownSync(
+		Schema.Struct({ treeFilterMode: Schema.optional(Schema.String) }),
+	)(JSON.parse(readFileSync(join(home, "settings.json"), "utf8")));
+	expect(settings.treeFilterMode).toBe("labeled-only");
+	if (copied.t !== "snapshot") throw new Error("the clone opened no other session");
+	expect(copied.entries.map((entry) => entry.role)).toEqual(["user", "assistant", "toolResult"]);
 }, 20_000);

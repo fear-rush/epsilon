@@ -1,13 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
-import {
-	ChevronDownIcon,
-	ChevronUpIcon,
-	GitBranchIcon,
-	SearchIcon,
-	SlidersHorizontalIcon,
-	XIcon,
-} from "lucide-react";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { transcript } from "#domain/conversation/selectors";
 import type { ConversationState } from "#domain/conversation/state";
@@ -25,25 +18,13 @@ import { Composer } from "./composer";
 import { ConversationDialogs } from "./dialogs";
 import { ProjectGate } from "./project-gate";
 import { RunStatus } from "./run-status";
+import { SessionControls } from "./session-controls";
 import { ComposerPlace, PlaceBadge, SessionLoader } from "./session-header";
 import { Transcript, matchingRowIds } from "./transcript";
 import type { Jump } from "./transcript";
+import { useBranching } from "./use-branching";
 import { useConversation } from "./use-conversation";
 import { ConversationWelcome } from "./welcome";
-
-/** Both dialogs are read-only until they are opened, so neither ships with the chat. */
-const SessionControls = lazy(() =>
-	import("./session-controls").then((module) => ({ default: module.SessionControls })),
-);
-const TreeDialog = lazy(() =>
-	import("./tree-dialog").then((module) => ({ default: module.TreeDialog })),
-);
-const ForkSessionDialog = lazy(() =>
-	import("./fork-dialog").then((module) => ({ default: module.ForkSessionDialog })),
-);
-const CompactContextDialog = lazy(() =>
-	import("./compact-context-dialog").then((module) => ({ default: module.CompactContextDialog })),
-);
 
 /**
  * One chat route. A new chat in a project folder passes through the trust gate first,
@@ -88,7 +69,6 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 	const [cursor, setCursor] = useState(0);
 	const [jumpNonce, setJumpNonce] = useState(0);
 	const [anchorFrom, setAnchorFrom] = useState<number | undefined>(undefined);
-	const [controlsOpen, setControlsOpen] = useState(false);
 	const loadModels = conversation.models;
 	const [models, setModels] = useState<ReadonlyArray<ModelOption>>([]);
 	useEffect(() => {
@@ -106,9 +86,16 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 			cancelled = true;
 		};
 	}, [loadModels]);
-	const [treeOpen, setTreeOpen] = useState(false);
-	const [forkOpen, setForkOpen] = useState(false);
-	const [compactOpen, setCompactOpen] = useState(false);
+
+	const empty = state.entries.length === 0 && state.streaming.length === 0;
+	const { blocked, cloning, openTree, openFork, clone, dialogs } = useBranching({
+		busy: state.busy,
+		conversation,
+		empty,
+		filterMode: state.treeFilterMode,
+		isCompacting: state.compacting,
+		tree: state.tree,
+	});
 
 	const matches = searching ? matchingRowIds(transcript(state), query) : [];
 	const jumpId = matches[cursor];
@@ -135,7 +122,6 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 
 	useReportStatus("chat", chatReport(state), () => void conversation.reload());
 
-	const empty = state.entries.length === 0 && state.streaming.length === 0;
 	/** The rows above the composer change with a queue or a run state, never with a token. */
 	const runStatus = (
 		<RunStatus
@@ -174,8 +160,10 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 			onAbort={conversation.abort}
 			onBash={conversation.bash}
 			onExport={conversation.exportSession}
-			onOpenFork={() => setForkOpen(true)}
-			onOpenTree={() => setTreeOpen(true)}
+			blocked={blocked}
+			onClone={clone}
+			onOpenFork={openFork}
+			onOpenTree={openTree}
 			onReadContext={readContext}
 			onSend={send}
 			onSetCodingTools={(enabled) => void conversation.setCodingTools(enabled)}
@@ -193,22 +181,19 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 				actions={
 					<div className="flex items-center gap-2">
 						{place !== null && <PlaceBadge path={place} />}
-						<Button
-							size="icon-sm"
-							variant="ghost"
-							aria-label="Branch tree"
-							onClick={() => setTreeOpen(true)}
-						>
-							<GitBranchIcon />
-						</Button>
-						<Button
-							size="icon-sm"
-							variant="ghost"
-							aria-label="Session settings"
-							onClick={() => setControlsOpen(true)}
-						>
-							<SlidersHorizontalIcon />
-						</Button>
+						<SessionControls
+							autoCompaction={state.autoCompaction}
+							autoRetry={state.autoRetry}
+							blocked={blocked}
+							cloning={cloning}
+							conversation={conversation}
+							empty={empty}
+							hideThinkingBlock={state.hideThinking}
+							isCompacting={state.compacting}
+							onClone={clone}
+							onFork={openFork}
+							onTree={openTree}
+						/>
 						<Button
 							size="icon-sm"
 							variant="ghost"
@@ -313,41 +298,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 				<SessionLoader />
 			)}
 			<ConversationDialogs dialogs={state.dialogs} onAnswer={conversation.answer} />
-			<Suspense fallback={null}>
-				{controlsOpen && (
-					<SessionControls
-						conversation={conversation}
-						onClose={() => setControlsOpen(false)}
-						onCompact={() => {
-							setControlsOpen(false);
-							setCompactOpen(true);
-						}}
-						onFork={() => {
-							setControlsOpen(false);
-							setForkOpen(true);
-						}}
-					/>
-				)}
-				{treeOpen && <TreeDialog conversation={conversation} onClose={() => setTreeOpen(false)} />}
-				{forkOpen && (
-					<ForkSessionDialog
-						open
-						conversation={conversation}
-						onOpenChange={(next) => {
-							if (!next) setForkOpen(false);
-						}}
-					/>
-				)}
-				{compactOpen && (
-					<CompactContextDialog
-						open
-						onOpenChange={(next) => {
-							if (!next) setCompactOpen(false);
-						}}
-						onCompact={(instructions) => void conversation.compact(instructions)}
-					/>
-				)}
-			</Suspense>
+			{dialogs}
 		</div>
 	);
 }

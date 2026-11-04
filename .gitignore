@@ -8,6 +8,7 @@ dist/
 src/app/routeTree.gen.ts
 
 # Test and dev artefacts
+.turbo/
 test-results/
 playwright-report/
 *.log

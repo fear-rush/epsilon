@@ -3,7 +3,7 @@ import type { FileSystem, Scope } from "effect";
 
 import type { Command } from "#protocol/conversation/commands";
 import type { DialogAnswer } from "#protocol/conversation/extui";
-import type { ImageBlock } from "#protocol/conversation/frames";
+import type { ImageBlock, TreeFilterMode } from "#protocol/conversation/frames";
 import type { ThinkingLevel } from "#protocol/conversation/session";
 import { CommandRefused } from "#protocol/errors";
 
@@ -38,7 +38,24 @@ export type CommandHost = {
 	readonly loadTree: (
 		tab: string,
 	) => Effect.Effect<void, CommandRefused, FileSystem.FileSystem | Scope.Scope>;
-	readonly navigateTree: (targetId: string) => Effect.Effect<void, CommandRefused>;
+	readonly navigateTree: (
+		targetId: string,
+		options: {
+			readonly summarize?: boolean | undefined;
+			readonly customInstructions?: string | undefined;
+			readonly replaceInstructions?: boolean | undefined;
+		},
+	) => Effect.Effect<void, CommandRefused>;
+	/** Label one tree row in the session file; a missing label clears it. */
+	readonly setTreeLabel: (
+		tab: string,
+		entryId: string,
+		label: string | undefined,
+	) => Effect.Effect<void, CommandRefused>;
+	/** pi's tree filter setting, written through its own setter. */
+	readonly setTreeFilterMode: (mode: TreeFilterMode) => Effect.Effect<void, CommandRefused>;
+	/** Copy the active branch into a new session file. */
+	readonly clone: () => Effect.Effect<void, CommandRefused>;
 	readonly setModel: (provider: string, modelId: string) => Effect.Effect<void, CommandRefused>;
 	readonly setThinking: (level: ThinkingLevel) => Effect.Effect<void, CommandRefused>;
 	readonly setTools: (names: ReadonlyArray<string>) => Effect.Effect<void, CommandRefused>;
@@ -104,7 +121,17 @@ export const dispatchCommand = (
 		case "loadTree":
 			return host.loadTree(tab);
 		case "navigateTree":
-			return host.navigateTree(command.targetId);
+			return host.navigateTree(command.targetId, command);
+		case "setTreeLabel": {
+			// A label is a row in the session file, so a foreign write refuses it too.
+			const refusal = writeRefusal(host, "setTreeLabel");
+			if (refusal !== undefined) return Effect.fail(refusal);
+			return host.setTreeLabel(tab, command.entryId, command.label);
+		}
+		case "setTreeFilterMode":
+			return host.setTreeFilterMode(command.mode);
+		case "clone":
+			return host.clone();
 		case "setModel":
 			return host.setModel(command.provider, command.modelId);
 		case "setThinking":

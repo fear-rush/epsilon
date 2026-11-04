@@ -127,9 +127,11 @@ export function Composer({
 	codingTools,
 	commands,
 	header,
+	blocked,
 	onExport,
 	onOpenFork,
 	onOpenTree,
+	onClone,
 	onReadContext,
 	onSetPermission,
 	onSuggest,
@@ -156,12 +158,16 @@ export function Composer({
 	commands: ReadonlyArray<CommandOffer>;
 	/** Drawn above the box, inside its column: where this conversation runs. */
 	header: ReactNode;
+	/** Why pi refuses a branch action right now; undefined when it is possible. */
+	blocked: string | undefined;
 
 	/** What the chat reads for its notices, `/copy` and `/session`. */
 	state: ConversationState;
 	onOpenTree: () => void;
 	/** Open the fork dialog from `/fork`. */
 	onOpenFork: () => void;
+	/** Copy this chat from `/clone`. */
+	onClone: () => void;
 	onReadContext: () => Promise<ContextView>;
 	/** pi's own exporter, through the engine that owns the session. */
 	onExport: (format: ExportFormat) => Promise<ExportedSession>;
@@ -297,6 +303,8 @@ export function Composer({
 	 * a command is rare, and a stale handler would act on the previous render's state.
 	 */
 	const commandContext = (): ComposerCommandContext => ({
+		blocked,
+		clone: onClone,
 		empty,
 		exportChat: onExport,
 		models,

@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 import { DialogAnswer } from "./extui.ts";
-import { ImageBlock } from "./frames.ts";
+import { ImageBlock, TreeFilterMode } from "./frames.ts";
 import { ThinkingLevel } from "./session.ts";
 
 /** One prompt carries at most four images. */
@@ -70,8 +70,30 @@ export const Command = Schema.Union([
 	Schema.Struct({ t: Schema.Literals(["loadHistory"]), before: Schema.String }),
 	/** Ask for the flat branch tree; the answer is a `tree` frame to the asking tab. */
 	Schema.Struct({ t: Schema.Literals(["loadTree"]) }),
-	/** Move the leaf inside the same file; a user entry moves it to that entry's parent. */
-	Schema.Struct({ t: Schema.Literals(["navigateTree"]), targetId: Schema.String }),
+	/**
+	 * Move the leaf inside the same file; a user entry moves it to that entry's parent.
+	 * `summarize` writes a summary of the branch being left, shaped by the instructions.
+	 */
+	Schema.Struct({
+		t: Schema.Literals(["navigateTree"]),
+		targetId: Schema.String,
+		summarize: Schema.optional(Schema.Boolean),
+		customInstructions: Schema.optional(Schema.String),
+		replaceInstructions: Schema.optional(Schema.Boolean),
+	}),
+	/**
+	 * Label one entry as pi's own tree labels it; a missing or empty label clears it. The
+	 * label is a `label` entry in the session file, so a terminal shows the same one.
+	 */
+	Schema.Struct({
+		t: Schema.Literals(["setTreeLabel"]),
+		entryId: Schema.String,
+		label: Schema.optional(Schema.String),
+	}),
+	/** pi's default tree filter, written through its setter so a terminal reads the same. */
+	Schema.Struct({ t: Schema.Literals(["setTreeFilterMode"]), mode: TreeFilterMode }),
+	/** Copy the active branch into a new session file; this chat's own file stays as it is. */
+	Schema.Struct({ t: Schema.Literals(["clone"]) }),
 	/** Switch the model by pi's own provider and model ids. */
 	Schema.Struct({
 		t: Schema.Literals(["setModel"]),

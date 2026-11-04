@@ -14,7 +14,8 @@ import type {
 	NoticeKind,
 	ServerFrame,
 	StreamingBlockKind,
-	TreeEntry,
+	TreeFilterMode,
+	TreeRow,
 } from "#protocol/conversation/frames";
 import type { ThinkingLevel } from "#protocol/conversation/session";
 import type { EngineToSupervisor, SupervisorToEngine } from "#protocol/engine-ipc";
@@ -383,7 +384,7 @@ export class EngineSession {
 					});
 				}
 				case "tree":
-					return treeOf(agent.sessionManager) satisfies ReadonlyArray<TreeEntry>;
+					return treeOf(agent.sessionManager) satisfies ReadonlyArray<TreeRow>;
 				case "reload":
 					yield* self.reload();
 					return undefined;
@@ -498,12 +499,13 @@ export class EngineSession {
 			bash: (text, excludeFromContext) => this.bash(text, excludeFromContext),
 			cancelRetry: () => this.cancelRetry(),
 			clearQueue: () => this.clearQueue(),
+			clone: () => this.clone(),
 			compact: (instructions) => this.compact(instructions),
 			followUp: (text, images) => this.queued("followUp", text, images),
 			fork: (entryId, position) => this.fork(entryId, position),
 			loadHistory: (tab, before) => this.loadHistory(tab, before),
 			loadTree: (tab) => Effect.sync(() => this.sendTree(tab)),
-			navigateTree: (targetId) => this.navigateTree(targetId),
+			navigateTree: (targetId, options) => this.navigateTree(targetId, options),
 			prompt: (text, images) => this.promptOrBuiltin(text, images),
 			setAutoCompaction: (enabled) => this.setAutoCompaction(enabled),
 			setAutoRetry: (enabled) => this.setAutoRetry(enabled),
@@ -511,6 +513,8 @@ export class EngineSession {
 			setHideThinking: (hidden) => this.setHideThinking(hidden),
 			setLabel: (label) => this.setLabel(label),
 			setModel: (provider, modelId) => this.setModel(provider, modelId),
+			setTreeLabel: (tab, entryId, label) => this.setTreeLabel(tab, entryId, label),
+			setTreeFilterMode: (mode) => this.setTreeFilterMode(mode),
 			setThinking: (level) => this.setThinking(level),
 			setTools: (names) => this.setTools(names),
 			reloadFromDisk: () => this.reloadFromDisk(),
@@ -860,6 +864,31 @@ export class EngineSession {
 	 * selected is the message the operator may send next, as with a tree move.
 	 */
 	private fork(entryId: string, position: "before" | "at"): Effect.Effect<void, CommandRefused> {
+		return this.copy(entryId, position, "fork");
+	}
+
+	/**
+	 * `/clone`: the same copy, taken where the chat stands, so this chat's own file stays
+	 * as it is and the new one is the conversation up to here.
+	 */
+	private clone(): Effect.Effect<void, CommandRefused> {
+		const leaf = this.runtime.session.sessionManager.getLeafId();
+		if (leaf === null) {
+			return Effect.fail(
+				new CommandRefused({
+					command: "clone",
+					reason: "This chat has no message to clone yet.",
+				}),
+			);
+		}
+		return this.copy(leaf, "at", "clone");
+	}
+
+	private copy(
+		entryId: string,
+		position: "before" | "at",
+		command: "fork" | "clone",
+	): Effect.Effect<void, CommandRefused> {
 		const self = this;
 		return this.runtime
 			.replace((runtime) => runtime.fork(entryId, { position }))
@@ -867,7 +896,10 @@ export class EngineSession {
 				Effect.flatMap((result) => {
 					if (result.cancelled) {
 						return Effect.fail(
-							new CommandRefused({ command: "fork", reason: "An extension cancelled the fork." }),
+							new CommandRefused({
+								command,
+								reason: `An extension cancelled the ${command}.`,
+							}),
 						);
 					}
 					return Effect.sync(() => {
@@ -884,7 +916,7 @@ export class EngineSession {
 				Effect.mapError((error) =>
 					error instanceof CommandRefused
 						? error
-						: new CommandRefused({ command: "fork", reason: error.reason }),
+						: new CommandRefused({ command, reason: error.reason }),
 				),
 			);
 	}
@@ -904,11 +936,27 @@ export class EngineSession {
 	 * which is the next message the operator may send; the page puts it back in the
 	 * composer. The branch is session-wide, so every tab receives the new window.
 	 */
-	private navigateTree(targetId: string): Effect.Effect<void, CommandRefused> {
+	private navigateTree(
+		targetId: string,
+		options: {
+			readonly summarize?: boolean | undefined;
+			readonly customInstructions?: string | undefined;
+			readonly replaceInstructions?: boolean | undefined;
+		},
+	): Effect.Effect<void, CommandRefused> {
 		const self = this;
 		const agent = this.runtime.session;
+		const piOptions = withDefined(
+			withDefined(
+				{ summarize: options.summarize ?? false },
+				"customInstructions",
+				options.customInstructions,
+			),
+			"replaceInstructions",
+			options.replaceInstructions,
+		);
 		return Effect.tryPromise({
-			try: () => agent.navigateTree(targetId),
+			try: () => agent.navigateTree(targetId, piOptions),
 			catch: (cause) => new CommandRefused({ command: "navigateTree", reason: describe(cause) }),
 		}).pipe(
 			Effect.flatMap((result) => {
@@ -956,8 +1004,48 @@ export class EngineSession {
 		return Effect.void;
 	}
 
+	/**
+	 * pi's own label on one tree row: a `label` entry in the session file, so the file and
+	 * a terminal show the same one. The tab that asked reads the tree again, because the
+	 * tree travels on request rather than in every snapshot.
+	 */
+	private setTreeLabel(
+		tab: string,
+		entryId: string,
+		label: string | undefined,
+	): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		const manager = this.runtime.session.sessionManager;
+		const trimmed = label?.trim();
+		return Effect.try({
+			try: () =>
+				manager.appendLabelChange(
+					entryId,
+					trimmed === undefined || trimmed === "" ? undefined : trimmed,
+				),
+			catch: (cause) => new CommandRefused({ command: "setTreeLabel", reason: describe(cause) }),
+		}).pipe(Effect.andThen(Effect.sync(() => self.sendTree(tab))));
+	}
+
+	/**
+	 * pi's tree filter, the `treeFilterMode` setting a terminal's picker reads too. The
+	 * write is flushed before the broadcast, so a reader on the next line sees it.
+	 */
+	private setTreeFilterMode(mode: TreeFilterMode): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		const agent = this.runtime.session;
+		return Effect.tryPromise({
+			try: async () => {
+				agent.settingsManager.setTreeFilterMode(mode);
+				await agent.settingsManager.flush();
+			},
+			catch: (cause) =>
+				new CommandRefused({ command: "setTreeFilterMode", reason: describe(cause) }),
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+	}
+
 	private sendTree(tab: string): void {
-		this.frames.to({ tab }, { entries: treeOf(this.runtime.session.sessionManager), t: "tree" });
+		this.frames.to({ tab }, { rows: treeOf(this.runtime.session.sessionManager), t: "tree" });
 	}
 
 	private reload(): Effect.Effect<void, CommandRefused> {

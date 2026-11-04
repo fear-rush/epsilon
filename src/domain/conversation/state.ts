@@ -1,8 +1,15 @@
 import type { DialogQuestion, UiStatus } from "#protocol/conversation/extui";
-import type { ImageBlock, Notice, TranscriptEntry, TreeEntry } from "#protocol/conversation/frames";
+import type {
+	ImageBlock,
+	Notice,
+	TranscriptEntry,
+	TreeFilterMode,
+} from "#protocol/conversation/frames";
 import type { CommandOffer } from "#protocol/conversation/palette";
 import type { ThinkingLevel } from "#protocol/conversation/session";
 import type { CacheWarming, ContextUsage, SessionStats } from "#protocol/usage";
+
+import type { SnapshotTreeNode } from "./tree.ts";
 
 /** Text or thinking that has streamed but has no entry yet. */
 export type StreamingBlock = { readonly kind: "text" | "thinking"; readonly text: string };
@@ -68,7 +75,10 @@ export type ConversationState = {
 	readonly tools: ReadonlyArray<ToolRun>;
 	readonly notices: ReadonlyArray<Notice>;
 	readonly dialogs: ReadonlyArray<DialogQuestion>;
-	readonly tree: ReadonlyArray<TreeEntry>;
+	/** The branch tree, nested as the picker draws it; read when the picker opens. */
+	readonly tree: ReadonlyArray<SnapshotTreeNode>;
+	/** pi's default tree filter, from its own settings file. */
+	readonly treeFilterMode: TreeFilterMode;
 	readonly busy: boolean;
 	readonly compacting: boolean;
 	readonly retrying: boolean;
@@ -108,6 +118,7 @@ export const emptyConversation: ConversationState = {
 	notices: [],
 	dialogs: [],
 	tree: [],
+	treeFilterMode: "default",
 	busy: false,
 	compacting: false,
 	retrying: false,

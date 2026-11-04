@@ -5,12 +5,13 @@ import { reduce } from "#domain/conversation/reduce";
 import { isWritable } from "#domain/conversation/selectors";
 import { emptyConversation } from "#domain/conversation/state";
 import type { ConversationState } from "#domain/conversation/state";
+import { withDefined } from "#domain/object";
 import type { PermissionMode } from "#domain/permission/rules";
 import type { Command } from "#protocol/conversation/commands";
 import { ExportedSession } from "#protocol/conversation/export";
 import type { ExportFormat } from "#protocol/conversation/export";
 import type { DialogAnswer } from "#protocol/conversation/extui";
-import type { ImageBlock, ServerFrame } from "#protocol/conversation/frames";
+import type { ImageBlock, ServerFrame, TreeFilterMode } from "#protocol/conversation/frames";
 import { AutocompleteReply } from "#protocol/conversation/palette";
 import { ModelOptions, ToolsView } from "#protocol/conversation/session";
 import type { ModelOption, ThinkingLevel } from "#protocol/conversation/session";
@@ -43,7 +44,11 @@ export type Conversation = {
 	readonly setModel: (provider: string, modelId: string) => Promise<void>;
 	readonly setThinking: (level: ThinkingLevel) => Promise<void>;
 	readonly setTools: (names: ReadonlyArray<string>) => Promise<void>;
-	readonly navigateTree: (targetId: string) => Promise<void>;
+	readonly navigateTree: (targetId: string, options?: TreeMoveOptions) => Promise<void>;
+	readonly setTreeLabel: (entryId: string, label: string | undefined) => Promise<void>;
+	readonly setTreeFilterMode: (mode: TreeFilterMode) => Promise<void>;
+	/** Copy the active branch into a new session file and follow it there. */
+	readonly clone: () => Promise<void>;
 	readonly fork: (entryId: string, position: "before" | "at") => Promise<void>;
 	/** Ask the engine for the tree; the answer arrives as a frame and lands in state. */
 	readonly loadTree: () => Promise<void>;
@@ -62,12 +67,24 @@ export type Conversation = {
 	readonly steer: (text: string, images?: ReadonlyArray<ImageBlock>) => Promise<void>;
 	readonly followUp: (text: string, images?: ReadonlyArray<ImageBlock>) => Promise<void>;
 	readonly setCodingTools: (enabled: boolean) => Promise<void>;
+	readonly setAutoCompaction: (enabled: boolean) => Promise<void>;
+	readonly setAutoRetry: (enabled: boolean) => Promise<void>;
+	readonly setHideThinking: (hidden: boolean) => Promise<void>;
 	/** What an extension's autocomplete providers suggest at the caret. */
 	readonly suggest: (text: string, cursor: number) => Promise<AutocompleteReply>;
 	/** Switch the permission mode through the bundled extension's own command. */
 	readonly setPermission: (mode: PermissionMode) => Promise<void>;
 	/** pi's own exporter, through the engine that owns the session. */
 	readonly exportSession: (format: ExportFormat) => Promise<ExportedSession>;
+	/** Show a failure this tab caused itself where a refused command appears. */
+	readonly report: (text: string) => void;
+};
+
+/** What a tree move may do to the branch it leaves. */
+export type TreeMoveOptions = {
+	readonly summarize?: boolean;
+	readonly customInstructions?: string;
+	readonly replaceInstructions?: boolean;
 };
 
 /** How long a message waits for the chat to open before it is refused. */
@@ -298,9 +315,30 @@ export function useConversation(input: {
 		[command],
 	);
 	const navigateTree = useCallback(
-		async (targetId: string) => command({ t: "navigateTree", targetId }),
+		async (targetId: string, options: TreeMoveOptions = {}) =>
+			command(
+				withDefined(
+					withDefined(
+						withDefined({ t: "navigateTree" as const, targetId }, "summarize", options.summarize),
+						"customInstructions",
+						options.customInstructions,
+					),
+					"replaceInstructions",
+					options.replaceInstructions,
+				),
+			),
 		[command],
 	);
+	const setTreeLabel = useCallback(
+		async (entryId: string, label: string | undefined) =>
+			command(withDefined({ t: "setTreeLabel" as const, entryId }, "label", label)),
+		[command],
+	);
+	const setTreeFilterMode = useCallback(
+		async (mode: TreeFilterMode) => command({ mode, t: "setTreeFilterMode" }),
+		[command],
+	);
+	const clone = useCallback(async () => command({ t: "clone" }), [command]);
 	const fork = useCallback(
 		async (entryId: string, position: "before" | "at") => command({ entryId, position, t: "fork" }),
 		[command],
@@ -390,6 +428,25 @@ export function useConversation(input: {
 		},
 		[command],
 	);
+	const setAutoCompaction = useCallback(
+		async (enabled: boolean): Promise<void> => {
+			await command({ enabled, t: "setAutoCompaction" });
+		},
+		[command],
+	);
+	const setAutoRetry = useCallback(
+		async (enabled: boolean): Promise<void> => {
+			await command({ enabled, t: "setAutoRetry" });
+		},
+		[command],
+	);
+	const setHideThinking = useCallback(
+		async (hidden: boolean): Promise<void> => {
+			await command({ hidden, t: "setHideThinking" });
+		},
+		[command],
+	);
+	const report = useCallback((text: string) => dispatch(notice(text)), [dispatch]);
 	const toggleTool = useCallback((toolCallId: string) => {
 		setToolOpen((previous) => {
 			const next = new Map(previous);
@@ -406,6 +463,7 @@ export function useConversation(input: {
 		bash,
 		cancelRetry,
 		clearQueue,
+		clone,
 		compact,
 		fork,
 		loadOlder,
@@ -414,6 +472,7 @@ export function useConversation(input: {
 		models,
 		navigateTree,
 		reload,
+		report,
 		send,
 		setModel,
 		setThinking,
@@ -421,8 +480,13 @@ export function useConversation(input: {
 		state,
 		steer,
 		followUp,
+		setAutoCompaction,
+		setAutoRetry,
 		setCodingTools,
+		setHideThinking,
 		setPermission,
+		setTreeLabel,
+		setTreeFilterMode,
 		exportSession,
 		suggest,
 		toggleTool,

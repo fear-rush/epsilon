@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { decodeServerFrame } from "#protocol/conversation/frames";
-import type { ServerFrame, TreeEntry } from "#protocol/conversation/frames";
+import type { ServerFrame, TreeRow } from "#protocol/conversation/frames";
 import { frameTags, PROTOCOL_VERSION } from "#protocol/rpc";
 
 import { bashTurnFrames } from "../../../test/fixtures/conversation/bash-turn.ts";
@@ -85,14 +85,15 @@ describe("frames", () => {
 			{ t: "editorText", sessionId: "s1", text: "the message a move undid", nonce: "n1" },
 			{
 				t: "tree",
-				entries: [
+				rows: [
 					{
-						id: "u1",
+						entryId: "u1",
 						parentId: null,
 						kind: "user",
-						label: "run the tests",
-						ts: 1_000,
-						onPath: true,
+						text: "run the tests",
+						hasText: true,
+						active: true,
+						current: true,
 					},
 				],
 			},
@@ -100,7 +101,7 @@ describe("frames", () => {
 		// The version covers exactly the tags the socket can carry: adding a frame without
 		// naming it here means a stale tab would meet a frame it cannot decode.
 		expect(new Set(samples.map((sample) => sample.t))).toEqual(new Set(frameTags));
-		expect(PROTOCOL_VERSION).toBe("14");
+		expect(PROTOCOL_VERSION).toBe("15");
 		for (const sample of samples) expect(() => decodeServerFrame(sample)).not.toThrow();
 	});
 });
@@ -346,9 +347,11 @@ describe("reduce", () => {
 			sessionId: "s1",
 			thinking: "high",
 			tools: ["bash"],
+			treeFilterMode: "labeled-only",
 		});
 		expect(meta.thinking).toBe("high");
 		expect(meta.activeTools).toEqual(["bash"]);
+		expect(meta.treeFilterMode).toBe("labeled-only");
 		const drafted = reduce(meta, {
 			t: "editorText",
 			sessionId: "s1",
@@ -358,16 +361,17 @@ describe("reduce", () => {
 		expect(drafted.draft).toEqual({ nonce: "n1", text: "back to here" });
 	});
 
-	test("a 50,000-entry flat tree reduces without recursion", () => {
-		const tree: TreeEntry[] = [];
+	test("a 50,000-row tree nests without recursion", () => {
+		const rows: TreeRow[] = [];
 		for (let index = 0; index < 50_000; index++) {
-			tree.push({
-				id: `e${index}`,
+			rows.push({
+				entryId: `e${index}`,
 				parentId: index === 0 ? null : `e${index - 1}`,
 				kind: "user",
-				label: `entry ${index}`,
-				ts: index,
-				onPath: true,
+				text: `entry ${index}`,
+				hasText: true,
+				active: true,
+				current: index === 49_999,
 			});
 		}
 		const state = reduce(emptyConversation, {
@@ -377,8 +381,18 @@ describe("reduce", () => {
 			hasOlder: true,
 			notices: [],
 		});
-		const withTree = reduce(state, { t: "tree", entries: tree });
-		expect(withTree.tree).toHaveLength(50_000);
-		expect(withTree.tree.at(-1)?.id).toBe("e49999");
+		const withTree = reduce(state, { t: "tree", rows });
+		// The chain is one root with 49,999 children under it. Walking it by hand keeps
+		// this test off the stack, which is the property the nesting has to hold.
+		let node = withTree.tree[0];
+		let depth = 1;
+		while (node?.children[0] !== undefined) {
+			node = node.children[0];
+			depth += 1;
+		}
+		expect(withTree.tree).toHaveLength(1);
+		expect(depth).toBe(50_000);
+		expect(node?.entryId).toBe("e49999");
+		expect(node?.current).toBe(true);
 	});
 });

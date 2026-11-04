@@ -11,6 +11,7 @@ import {
 	withNotice,
 } from "./events.ts";
 import type { ConversationState, ToolRun } from "./state.ts";
+import { buildTree } from "./tree.ts";
 
 /**
  * `reduce(state, frame)`: the one place that turns socket frames into what the page shows.
@@ -79,7 +80,7 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 			};
 		}
 		case "tree":
-			return { ...state, tree: frame.entries };
+			return { ...state, tree: buildTree(frame.rows) };
 		case "prepend":
 			return {
 				...state,
@@ -174,6 +175,7 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				hideThinking: frame.hideThinking ?? state.hideThinking,
 				codingTools: frame.codingTools ?? state.codingTools,
 				thinkingLevels: frame.thinkingLevels ?? state.thinkingLevels,
+				treeFilterMode: frame.treeFilterMode ?? state.treeFilterMode,
 				commands: frame.commands ?? state.commands,
 			};
 		case "editorText":

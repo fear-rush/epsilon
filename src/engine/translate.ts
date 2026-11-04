@@ -8,8 +8,10 @@ import type {
 	AssistantBlock,
 	ImageBlock,
 	TranscriptEntry,
-	TreeEntry,
+	TreeRow,
 } from "#protocol/conversation/frames";
+
+import { withDefined } from "../domain/object.ts";
 
 /**
  * pi's session entries, transcribed into the wire's rows.
@@ -172,72 +174,144 @@ export const toolCallsOf = (
 		.map((block) => ({ id: block.toolCallId, name: block.toolName }));
 };
 
-const firstLine = (text: string): string => text.split("\n", 1)[0] ?? "";
+/** How much of a reply or a summary a tree row shows; a user message keeps its whole text. */
+const PREVIEW_LENGTH = 160;
 
-const kindOf = (entry: SessionEntry): TreeEntry["kind"] => {
-	if (entry.type === "message") {
-		const role = entry.message.role;
-		if (role === "user" || role === "assistant" || role === "toolResult") return role;
-		return "other";
-	}
-	if (entry.type === "compaction") return "compaction";
-	if (entry.type === "branch_summary") return "branchSummary";
-	if (entry.type === "session_info") return "sessionInfo";
-	return "other";
+/** One line of a text, so a row stays small however long the message is. */
+const previewOf = (text: string): string => {
+	const line = text.trim().replaceAll(/\s+/g, " ");
+	return line.length > PREVIEW_LENGTH ? `${line.slice(0, PREVIEW_LENGTH)}…` : line;
 };
 
-const labelOf = (entry: SessionEntry): string => {
+/** The entries that make up the chat's position; a bookkeeping entry is not one. */
+export const positionEntry = (entry: SessionEntry): boolean =>
+	entry.type === "branch_summary" ||
+	entry.type === "compaction" ||
+	(entry.type === "message" &&
+		(entry.message.role === "user" || entry.message.role === "assistant"));
+
+/** A preview for an entry the default filter hides and `all` shows. */
+const bookkeepingText = (entry: SessionEntry): string | undefined => {
 	switch (entry.type) {
-		case "message": {
-			const message = entry.message;
-			if (message.role === "user") {
-				return firstLine(textOf(message.content)).slice(0, 200) || "User";
-			}
-			if (message.role === "assistant") {
-				const text = message.content
-					.filter((block) => block.type === "text")
-					.map((block) => block.text)
-					.join(" ");
-				return firstLine(text).slice(0, 200) || "Assistant";
-			}
-			if (message.role === "toolResult") return message.toolName;
-			return message.role;
-		}
-		case "compaction":
-			return "Compaction";
-		case "branch_summary":
-			return "Branch summary";
-		case "session_info":
-			return entry.name ?? "Session";
+		case "label":
+			return entry.label === undefined ? "Label removed" : `Label: ${entry.label}`;
+		case "context_edit":
+			return "Context edited";
 		case "custom":
-			return entry.customType;
+			return `Custom: ${entry.customType}`;
+		case "model_change":
+			return `Model: ${entry.provider}/${entry.modelId}`;
+		case "thinking_level_change":
+			return `Thinking: ${entry.thinkingLevel}`;
+		case "session_info":
+			return entry.name === undefined ? "Session name cleared" : `Renamed: ${entry.name}`;
 		default:
-			return entry.type;
+			return undefined;
 	}
 };
 
-/** One flat tree row. `onPath` is whether the entry is on the branch the page shows. */
-export const treeRowOf = (entry: SessionEntry, onPath: boolean): TreeEntry => ({
-	id: entry.id,
-	parentId: entry.parentId,
-	kind: kindOf(entry),
-	label: labelOf(entry),
-	ts: tsOf(entry.timestamp),
-	onPath,
-});
+type TreeRowBase = Omit<TreeRow, "parentId">;
+type RowOf = Omit<TreeRowBase, "label" | "active" | "current">;
 
-/** pi's tree, flattened in one pass: 50,000 rows must not recurse. */
-export const flatTree = (
+/**
+ * One pickable row, or undefined when pi keeps the entry out of the picker (a usage
+ * record, an extension's own entry). A spent assistant reply still counts as text when it
+ * failed, so an error is never a row the picker hides.
+ */
+const rowOf = (entry: SessionEntry): RowOf | undefined => {
+	if (entry.type === "message" && entry.message.role === "user") {
+		return { entryId: entry.id, hasText: true, kind: "user", text: textOf(entry.message.content) };
+	}
+	if (entry.type === "message" && entry.message.role === "assistant") {
+		const message = entry.message;
+		const text = message.content.map((part) => (part.type === "text" ? part.text : "")).join("");
+		const thinking = message.content
+			.map((part) => (part.type === "thinking" ? part.thinking : ""))
+			.join("");
+		const tools = message.content.flatMap((part) => (part.type === "toolCall" ? [part.name] : []));
+		// A file another version wrote may hold no stop reason at all; "not a stop" would
+		// then read as a failure, and the default filter would show a row it hides.
+		const stopReason: unknown = message.stopReason;
+		const failed =
+			message.errorMessage !== undefined ||
+			(typeof stopReason === "string" && stopReason !== "stop" && stopReason !== "toolUse");
+		const body = text.trim();
+		const thought = thinking.trim();
+		return {
+			entryId: entry.id,
+			hasText: body !== "" || failed,
+			kind: "assistant",
+			text:
+				body === ""
+					? thought === ""
+						? tools.length > 0
+							? `Tool call: ${tools.join(", ")}`
+							: previewOf(message.errorMessage ?? "No text")
+						: previewOf(thought)
+					: previewOf(body),
+		};
+	}
+	if (entry.type === "branch_summary" || entry.type === "compaction") {
+		return { entryId: entry.id, hasText: true, kind: "summary", text: previewOf(entry.summary) };
+	}
+	if (entry.type === "message" && entry.message.role === "toolResult") {
+		const output = textOf(entry.message.content);
+		return {
+			entryId: entry.id,
+			hasText: true,
+			kind: "tool",
+			text: previewOf(
+				output.trim() === "" ? entry.message.toolName : `${entry.message.toolName}: ${output}`,
+			),
+		};
+	}
+	const text = bookkeepingText(entry);
+	return text === undefined
+		? undefined
+		: { entryId: entry.id, hasText: true, kind: "settings", text };
+};
+
+/**
+ * pi's tree rows, flat and in tree order: 50,000 entries must not recurse. A row pi's
+ * picker hides promotes its children to the nearest row that stays, so a hidden
+ * bookkeeping entry never takes a whole branch with it.
+ */
+export const treeRowsOf = (
 	nodes: ReadonlyArray<SessionTreeNode>,
-	onPath: ReadonlySet<string>,
-): TreeEntry[] => {
-	const rows: TreeEntry[] = [];
-	const stack = [...nodes];
+	active: ReadonlySet<string>,
+	currentId: string | undefined,
+): TreeRow[] => {
+	type Frame = { readonly node: SessionTreeNode; readonly parentId: string | null };
+	const rows: TreeRow[] = [];
+	const stack: Frame[] = [];
+	for (let index = nodes.length - 1; index >= 0; index -= 1) {
+		const node = nodes[index];
+		if (node !== undefined) stack.push({ node, parentId: null });
+	}
 	while (stack.length > 0) {
-		const node = stack.pop();
-		if (node === undefined) break;
-		rows.push(treeRowOf(node.entry, onPath.has(node.entry.id)));
-		for (const child of node.children) stack.push(child);
+		const frame = stack.pop();
+		if (frame === undefined) break;
+		const entry = frame.node.entry;
+		const row = rowOf(entry);
+		if (row !== undefined) {
+			rows.push(
+				withDefined(
+					{
+						...row,
+						parentId: frame.parentId,
+						active: active.has(entry.id),
+						current: entry.id === currentId,
+					},
+					"label",
+					frame.node.label,
+				),
+			);
+		}
+		const kept = row === undefined ? frame.parentId : entry.id;
+		for (let index = frame.node.children.length - 1; index >= 0; index -= 1) {
+			const child = frame.node.children[index];
+			if (child !== undefined) stack.push({ node: child, parentId: kept });
+		}
 	}
 	return rows;
 };

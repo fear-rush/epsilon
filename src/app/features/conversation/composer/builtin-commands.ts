@@ -28,9 +28,12 @@ export type ComposerCommandContext = {
 	readonly thinkingLevels: ReadonlyArray<ThinkingLevel>;
 	/** A chat with no message has nothing to fork, move to or copy yet. */
 	readonly empty: boolean;
+	/** Why pi refuses a branch action right now; undefined when it is possible. */
+	readonly blocked: string | undefined;
 	/** The page's own surfaces. */
 	readonly openTree: () => void;
 	readonly openFork: () => void;
+	readonly clone: () => void;
 	readonly openModelMenu: () => void;
 	readonly openThinkingMenu: () => void;
 	readonly setModel: (provider: string, id: string) => void;
@@ -96,7 +99,10 @@ const HANDLERS: Partial<Record<ComposerCommandName, Handler>> = {
 		setModel(match.provider, match.id);
 		return undefined;
 	},
-	tree: (_argument, { empty, openTree }) => {
+	tree: (_argument, { blocked, empty, openTree }) => {
+		if (blocked !== undefined) return blocked;
+		// The tree itself is read when the dialog opens, so an empty list here only means
+		// no read has happened yet; the chat's messages are what this command needs.
 		if (empty) return "The session tree has no message yet. Send one first.";
 		openTree();
 		return undefined;
@@ -168,9 +174,16 @@ const HANDLERS: Partial<Record<ComposerCommandName, Handler>> = {
 	},
 	hotkeys: () =>
 		`Enter sends, and steers a run that is already going. ${shortcut("Enter")} waits for that run to settle, Shift+Enter adds a line, Esc stops the run, and / lists every command.`,
-	fork: (_argument, { empty, openFork }) => {
+	fork: (_argument, { blocked, empty, openFork }) => {
+		if (blocked !== undefined) return blocked;
 		if (empty) return "Fork needs a message first.";
 		openFork();
+		return undefined;
+	},
+	clone: (_argument, { blocked, clone, empty }) => {
+		if (blocked !== undefined) return blocked;
+		if (empty) return "Clone needs a message first.";
+		clone();
 		return undefined;
 	},
 	login: (argument, { navigate }) => {

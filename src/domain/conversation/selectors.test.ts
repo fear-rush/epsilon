@@ -12,7 +12,6 @@ import {
 	toolRunOf,
 	toolRunsFor,
 	transcript,
-	treeChildren,
 } from "./selectors.ts";
 import { emptyConversation } from "./state.ts";
 
@@ -53,17 +52,5 @@ describe("selectors", () => {
 	test("a chat is writable until it drifts", () => {
 		expect(isWritable(state)).toBe(true);
 		expect(isWritable(reduce(state, { t: "drift", reason: "changed elsewhere" }))).toBe(false);
-	});
-
-	test("tree children are built in one pass, iteratively", () => {
-		const withTree = reduce(state, {
-			t: "tree",
-			entries: [
-				{ id: "u1", parentId: null, kind: "user", label: "run the tests", ts: 1_000, onPath: true },
-			],
-		});
-		const children = treeChildren(withTree);
-		expect(children.get("")).toEqual(["u1"]);
-		expect(children.get("u1")).toBeUndefined();
 	});
 });
