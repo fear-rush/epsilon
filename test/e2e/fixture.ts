@@ -16,6 +16,8 @@ import type { StubModel } from "./stub-model.ts";
  */
 export type Fixtures = {
 	readonly agentHome: string;
+	/** The one folder the picker may open, so a spec's projects stay off the real disk. */
+	readonly projectsRoot: string;
 	readonly stub: StubModel;
 	readonly app: RunningApp;
 };
@@ -53,14 +55,23 @@ export const test = base.extend<Fixtures & Options>({
 		await use(home);
 	},
 	// oxlint-disable-next-line no-empty-pattern -- Playwright requires the destructuring form
+	projectsRoot: async ({}, use) => {
+		const root = mkdtempSync(join(tmpdir(), "epsilon-e2e-projects-"));
+		await use(root);
+	},
+	// oxlint-disable-next-line no-empty-pattern -- Playwright requires the destructuring form
 	stub: async ({}, use) => {
 		const stub = await startStubModel();
 		await use(stub);
 		stub.stop();
 	},
-	app: async ({ agentHome, stub, withModel }, use) => {
+	app: async ({ agentHome, projectsRoot, stub, withModel }, use) => {
 		if (withModel) writeStubModels(agentHome, stub.baseUrl);
-		const app = await launchEpsilon({ home: agentHome, port: await freePort() });
+		const app = await launchEpsilon({
+			home: agentHome,
+			port: await freePort(),
+			projectsRoot,
+		});
 		await use(app);
 		app.stop();
 	},

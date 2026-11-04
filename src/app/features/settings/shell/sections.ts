@@ -6,6 +6,7 @@
 import {
 	ActivityIcon,
 	BookOpenIcon,
+	FolderTreeIcon,
 	PackageIcon,
 	PlugIcon,
 	ServerIcon,
@@ -17,6 +18,7 @@ import type { ComponentType } from "react";
 /** The section paths, as a union so a typo is a type error, not a dead link. */
 export type SettingsPath =
 	| "/settings/general"
+	| "/settings/projects"
 	| "/settings/providers"
 	| "/settings/mcp"
 	| "/settings/context"
@@ -42,6 +44,7 @@ export const SETTINGS_GROUPS: { label: string; items: SettingsSection[] }[] = [
 	{
 		label: "Resources",
 		items: [
+			{ to: "/settings/projects", label: "Projects", icon: FolderTreeIcon },
 			{ to: "/settings/mcp", label: "MCP servers", icon: ServerIcon },
 			{ to: "/settings/context", label: "Context", icon: BookOpenIcon },
 			{ to: "/settings/skills", label: "Skills", icon: SparklesIcon },

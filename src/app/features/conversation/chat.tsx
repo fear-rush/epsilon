@@ -12,9 +12,23 @@ import { useReportStatus } from "@/status";
 
 import { Composer } from "./composer";
 import { ConversationDialogs } from "./dialogs";
+import { ProjectGate } from "./project-gate";
 import { Transcript, matchingRowIds } from "./transcript";
 import type { Jump } from "./transcript";
 import { useConversation } from "./use-conversation";
+
+/**
+ * One chat route. A new chat in a project folder passes through the trust gate first,
+ * because Epsilon starts no engine before the folder's answer exists.
+ */
+export function Chat({ sessionId, place }: { sessionId: string; place: string | null }) {
+	if (place === null) return <Conversation place={null} sessionId={sessionId} />;
+	return (
+		<ProjectGate folder={place}>
+			<Conversation place={place} sessionId={sessionId} />
+		</ProjectGate>
+	);
+}
 
 /**
  * One chat: the bar, the transcript, an in-chat search, the extension's questions and the
@@ -24,7 +38,7 @@ import { useConversation } from "./use-conversation";
  * to the app's status line rather than drawn here; the engine's notices, which are about a
  * turn, stay beside the transcript.
  */
-export function Chat({ sessionId, place }: { sessionId: string; place: string | null }) {
+function Conversation({ sessionId, place }: { sessionId: string; place: string | null }) {
 	const conversation = useConversation({ place, sessionId });
 	const { state } = conversation;
 

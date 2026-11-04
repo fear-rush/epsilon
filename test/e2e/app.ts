@@ -25,6 +25,8 @@ export type LaunchOptions = {
 	readonly home: string;
 	readonly port?: number;
 	readonly token?: string;
+	/** The folder the picker may open, as the dev sandbox bounds it. */
+	readonly projectsRoot?: string;
 };
 
 const stopChild = (child: ChildProcess): void => {
@@ -34,20 +36,24 @@ const stopChild = (child: ChildProcess): void => {
 export async function launchEpsilon({
 	home,
 	port = 4789,
+	projectsRoot,
 	token = crypto.randomUUID(),
 }: LaunchOptions): Promise<RunningApp> {
 	const url = `http://127.0.0.1:${port}`;
 
+	const env: NodeJS.ProcessEnv = {
+		...process.env,
+		EPSILON_AGENT_HOME: home,
+		EPSILON_PORT: String(port),
+		EPSILON_TOKEN: token,
+		PI_CODING_AGENT_DIR: home,
+	};
+	if (projectsRoot !== undefined) env["EPSILON_PROJECTS_ROOT"] = projectsRoot;
+
 	const spawnServer = (): ChildProcess =>
 		spawn("bun", ["dist/backend/main.js"], {
 			cwd: new URL("../..", import.meta.url).pathname,
-			env: {
-				...process.env,
-				EPSILON_AGENT_HOME: home,
-				EPSILON_PORT: String(port),
-				EPSILON_TOKEN: token,
-				PI_CODING_AGENT_DIR: home,
-			},
+			env,
 			stdio: "inherit",
 		});
 
