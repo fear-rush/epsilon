@@ -20,16 +20,16 @@ as evidence (measurements, the verification spike).
 
 ## Read by task
 
-| You are about to                               | Read first                                                |
-| ---------------------------------------------- | --------------------------------------------------------- |
-| do any work on this branch                     | [plan/README.md](plan/README.md)                          |
-| touch anything pi                              | [pi-sdk.md](pi-sdk.md)                                    |
-| write server, engine or runtime code           | [effect.md](effect.md)                                    |
-| port a screen from `main`                      | [plan/03-port.md](plan/03-port.md)                        |
-| show an error, warning, empty or loading state | [plan/02-feedback.md](plan/02-feedback.md)                |
-| add or move a file                             | [ARCHITECTURE.md, File rules](ARCHITECTURE.md#file-rules) |
-| propose an option that sounds obvious          | [DECISIONS.md](DECISIONS.md), in case it was rejected     |
-| upgrade pi                                     | [pi-sdk.md, Upgrading pi](pi-sdk.md#upgrading-pi)         |
+| You are about to                               | Read first                                                              |
+| ---------------------------------------------- | ----------------------------------------------------------------------- |
+| do any work on this branch                     | [plan/README.md](plan/README.md)                                        |
+| touch anything pi                              | [pi-sdk.md](pi-sdk.md)                                                  |
+| write server, engine or runtime code           | [effect.md](effect.md)                                                  |
+| port a screen from `main`                      | [plan/03-port.md](plan/03-port.md)                                      |
+| show an error, warning, empty or loading state | [ARCHITECTURE.md, Feedback surfaces](ARCHITECTURE.md#feedback-surfaces) |
+| add or move a file                             | [ARCHITECTURE.md, File rules](ARCHITECTURE.md#file-rules)               |
+| propose an option that sounds obvious          | [DECISIONS.md](DECISIONS.md), in case it was rejected                   |
+| upgrade pi                                     | [pi-sdk.md, Upgrading pi](pi-sdk.md#upgrading-pi)                       |
 
 ## Writing docs agents can follow
 

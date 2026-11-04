@@ -19,7 +19,7 @@ Work on the first phase that is not done. Inside a phase, take the first unticke
 | #   | Phase                                                 | File                                             | Status                                                                                     |
 | --- | ----------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------ |
 | 1   | Structure: one name per concept, rename and move only | [01-structure.md](01-structure.md)               | done: `refactor(structure): one name per concept in every root`                            |
-| 2   | Feedback system                                       | [02-feedback.md](02-feedback.md)                 | not started                                                                                |
+| 2   | Feedback system                                       | [02-feedback.md](02-feedback.md)                 | done; screenshots not taken (owner's call)                                                 |
 | 3   | Port `main` 1:1, slice by slice                       | [03-port.md](03-port.md), [ledger.md](ledger.md) | not started (settings General, Packages, Skills, Providers partly ported before this plan) |
 | 4   | Safety checks still open                              | [04-safety.md](04-safety.md)                     | partly done                                                                                |
 | 5   | Merge                                                 | below                                            | not started                                                                                |

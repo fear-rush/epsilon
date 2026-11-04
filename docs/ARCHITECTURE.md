@@ -69,8 +69,7 @@ view, built from the shared patterns.
    returns the schema'd value or one of the declared tagged errors.
 4. The client renders the value, or maps the error to a view through `errorView`, which has
    words for every tagged error the protocol declares: a new tag does not type-check until
-   it does. The rest of the feedback surfaces are
-   [plan/02-feedback.md](plan/02-feedback.md).
+   it does. The surfaces and their rules are [below](#feedback-surfaces).
 5. A write invalidates through a pushed stream (`settings.changes`, `sessions.changes`),
    never a timer; a provider sign-in streams its progress on `settings.providers.login`.
    React Query is the cache, not the source of truth.
@@ -115,8 +114,6 @@ cannot represent is a visible notice, never silence.
 - A selection reveals with one `enter-rise`: a chat's rows and composer rise with the same
   token. A pane bar's title and count drop in from above, and again when their text
   changes.
-- Connection and version problems belong to the status line at the root and nowhere else.
-  A pane shows its own loading, empty and error states with `StatusView`.
 - A dialog is `DialogFrame size="sm|md|lg"`, with a fixed body height unless
   `body="content"`; its content stays mounted while closed, so the transitions play.
 - Compose the installed shadcn components. Chat primitives (`Message`, `Trace`,
@@ -136,6 +133,45 @@ cannot represent is a visible notice, never silence.
   animation frame; close, wait for the transition, then unmount.
 - Registry defaults are source; a local change in `components/ui` is explained where it
   is made.
+
+### Feedback surfaces
+
+Choose by the scope of what the message is about. A feature never invents its own.
+
+| Scope                             | Surface                                                                                                                                                                        | Examples                                                                          |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| The whole app                     | the status line: `AppStatus` in `src/app/core/status.tsx`, fed by `useReportStatus`                                                                                            | server unreachable, page out of date, no model ready, a chat that cannot continue |
+| A route crashed or does not exist | `RouteError`, `RouteNotFound` on `StatusView`, inside the shell: `errorComponent` and `notFoundComponent` on the `_app` and `settings` layouts; the router's defaults are last | a render throws, an address nothing serves                                        |
+| A pane's own read                 | `StatusView`: loading, empty, failed, not found                                                                                                                                | the provider list failed to read, no skills yet                                   |
+| A section, form or card           | `Notice` at the top of what it is about                                                                                                                                        | save refused, pi could not parse `settings.json`, a project overrides this server |
+| Beside one control                | `InlineStatus`                                                                                                                                                                 | Saved, Checking…, connection test failed                                          |
+| One field                         | shadcn `FieldError` under the field                                                                                                                                            | "Use a whole number."                                                             |
+| A chat turn                       | the transcript's error entry and `RunStatus`                                                                                                                                   | the model refused, retrying in 4 s, compaction failed                             |
+| Before a destructive action       | `confirm-dialogs` (`AlertDialog`), `variant="destructive"`                                                                                                                     | delete a chat, remove a provider                                                  |
+
+- **One tone vocabulary**: `Tone = "neutral" | "info" | "success" | "warning" | "danger"`
+  in `src/app/components/patterns/status/status-tone.ts`, taken by `StatusView`, `Notice`,
+  `InlineStatus` and the status line.
+- **One translator**: `errorView(error)` in `src/app/components/patterns/status/error-view.ts`
+  returns `{ tone, title, line, icon }` and switches exhaustively on the protocol's tagged
+  errors, whose union is derived from `src/protocol/errors.ts`, so a new tag does not
+  type-check until it has words. `StatusView` and `Notice` take `error={…}`, and an
+  explicit title may name the action more precisely. Features never render
+  `error.message`. A failure the page names itself is a tagged error in
+  `src/app/core/errors.ts`, so it has words too.
+- **No toasts.** A message that disappears is a failure nobody saw (invariant 10).
+  Success is the changed UI; where the change is not visible, the form shows
+  `InlineStatus` "Saved".
+- **Spinners**: a waiting pane or section shows `LoadingState`. A bare `Spinner` lives
+  only inside a pending `Button`.
+- **Words**: the title says what did not happen ("Couldn't save the provider", "Couldn't
+  read MCP servers"), not "Error" or "Failed:". Something missing is "Session not found".
+  The line gives the reason in pi's words when there is one, then what to do. No stack
+  traces, error tags or JSON in the UI; they go to the log and Diagnostics.
+- **Colour only through the surfaces.** Files under `src/app/features/` and
+  `src/app/routes/` do not import `@/components/ui/alert` and do not write
+  `text-destructive`, `text-warning`, `text-success`, `text-info` or their `bg-`/`border-`
+  forms; `epsilon/feedback-surfaces` enforces it.
 
 ## File rules
 

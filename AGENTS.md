@@ -19,7 +19,7 @@ Then read what your task needs ([docs/README.md](docs/README.md) has the full ta
 | touch anything pi                              | [docs/pi-sdk.md](docs/pi-sdk.md)                                   |
 | write server, engine or runtime code           | [docs/effect.md](docs/effect.md)                                   |
 | port a screen from `main`                      | [docs/plan/03-port.md](docs/plan/03-port.md)                       |
-| show an error, warning, empty or loading state | [docs/plan/02-feedback.md](docs/plan/02-feedback.md)               |
+| show an error, warning, empty or loading state | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#feedback-surfaces)     |
 | add or move a file                             | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#file-rules)            |
 | propose an option that sounds obvious          | [docs/DECISIONS.md](docs/DECISIONS.md) (it may have been rejected) |
 

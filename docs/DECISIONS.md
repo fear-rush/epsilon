@@ -261,7 +261,7 @@ An app-wide problem goes to the status line, a crashed route to a route error in
 shell, a pane's state to `StatusView`, a section's message to `Notice`, a control's
 result to `InlineStatus`, a field's to `FieldError`, a turn's to the transcript. One tone
 vocabulary, one error translator (`errorView`), no toasts. The rules are in
-[plan/02-feedback.md](plan/02-feedback.md) until they land in ARCHITECTURE.md.
+[ARCHITECTURE.md, Feedback surfaces](ARCHITECTURE.md#feedback-surfaces).
 
 Why: `main` had three tone vocabularies, raw alerts, full-page route errors and ad hoc
 red text, so the same failure looked different on each page.

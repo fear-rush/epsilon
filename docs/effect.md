@@ -57,10 +57,10 @@ export const CatalogLive = Layer.effect(
   notice.
 - Bugs are defects: `Effect.die` or `Effect.orDie`. They are logged with a span and
   shown as one generic notice.
-- A wire error is declared in `src/protocol/` and handled exhaustively by the client's
-  `errorView`, so adding one breaks the client build until it is shown. Not yet true:
-  `errorView` still has a generic fallback; [plan/02-feedback.md](plan/02-feedback.md)
-  makes it exhaustive.
+- A wire error is declared in `src/protocol/` and handled by the client's `errorView`,
+  whose union is derived from that module, so adding one breaks the client build until it
+  has words. A failure that is not one of them is a bug and gets one generic notice, never
+  a raw message.
 
 ## Time
 
