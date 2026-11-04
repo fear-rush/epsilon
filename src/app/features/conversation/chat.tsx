@@ -12,13 +12,13 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { transcript } from "#domain/conversation/selectors";
 import type { ConversationState } from "#domain/conversation/state";
 import type { Notice as NoticeFrame } from "#protocol/conversation/frames";
-import { PaneBar } from "@/components/patterns/pane/pane-bar";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useReportStatus } from "@/core/status";
 
+import { ChatBar } from "./chat-bar";
 import { Composer } from "./composer";
 import { ConversationDialogs } from "./dialogs";
 import { ProjectGate } from "./project-gate";
@@ -114,15 +114,8 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
-			<PaneBar
+			<ChatBar
 				title={state.title ?? "New chat"}
-				meta={
-					state.model === undefined
-						? undefined
-						: state.thinking === undefined
-							? state.model
-							: `${state.model} · ${state.thinking}`
-				}
 				actions={
 					<div className="flex items-center gap-2">
 						<Button

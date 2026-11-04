@@ -37,7 +37,17 @@ test("the session controls switch model, thinking and tools, and compact refuses
 	await expect(dialog.getByText(/nothing to compact/i)).toBeVisible();
 
 	await dialog.getByRole("button", { name: "Done" }).click();
-	await expect(page.getByText(/stub-model-2 · high/)).toBeVisible();
+	// main's bar carries the title, not the model; the switches' state is read in the dialog.
+	await page.getByRole("button", { name: "Session settings" }).click();
+	const reopened = page.getByRole("dialog");
+	await expect(reopened.getByRole("button", { name: /Stub Model Two/ })).toHaveAttribute(
+		"aria-pressed",
+		"true",
+	);
+	await expect(reopened.getByRole("button", { name: "high", exact: true })).toHaveAttribute(
+		"aria-pressed",
+		"true",
+	);
 });
 
 /** A tree move stays in the same file: the leaf goes back and the message returns. */
