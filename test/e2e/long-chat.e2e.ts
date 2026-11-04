@@ -14,7 +14,7 @@ test("a 5,000-entry chat scrolls to the top without a jump", async ({ agentHome,
 		.getByRole("link", { name: /long|project/i })
 		.first()
 		.click();
-	const transcript = page.getByRole("log");
+	const transcript = page.getByRole("feed");
 	await expect(transcript).toBeVisible();
 
 	const anchorText = await transcript.evaluate((node) => node.textContent?.slice(0, 40) ?? "");

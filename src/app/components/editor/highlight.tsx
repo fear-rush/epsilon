@@ -120,6 +120,29 @@ export async function loadHighlighter(language: string) {
 	};
 }
 
+type Highlighter = NonNullable<Awaited<ReturnType<typeof loadHighlighter>>>;
+
+/** One code block's tokens, kept so a remount does not highlight it again. */
+type Highlighted = {
+	readonly lines: React.ReactNode[];
+	readonly state?: Parameters<Highlighter["highlight"]>[1];
+	readonly text: string;
+};
+
+const CACHE_LIMIT = 50;
+const cache = new Map<string, Highlighted>();
+
+const cacheKey = (language: string, code: string): string => `${language}\u0000${code}`;
+
+/** Oldest out first: a long chat must not keep every code block it ever showed. */
+const remember = (key: string, value: Highlighted): void => {
+	cache.delete(key);
+	cache.set(key, value);
+	if (cache.size <= CACHE_LIMIT) return;
+	const oldest = cache.keys().next().value;
+	if (oldest !== undefined) cache.delete(oldest);
+};
+
 export function useHighlightedCode(value: string, language: string) {
 	// A trailing newline would render as an extra empty line.
 	const code = value.endsWith("\n") ? value.slice(0, -1) : value;
@@ -158,7 +181,14 @@ export function useHighlightedCode(value: string, language: string) {
 		state?: Parameters<NonNullable<typeof highlighter>["highlight"]>[1];
 	}>({ highlighter: null, text: "", lines: [] });
 
+	const key = cacheKey(language, code);
 	let next = done;
+
+	// A block that was on screen before mounts with its tokens already built.
+	const cached = cache.get(key);
+	if (highlighter !== null && next.highlighter === null && cached !== undefined) {
+		next = { highlighter, lines: cached.lines, state: cached.state, text: cached.text };
+	}
 
 	if (next.highlighter !== highlighter || !code.startsWith(next.text)) {
 		next = { highlighter, text: "", lines: [] };
@@ -178,6 +208,9 @@ export function useHighlightedCode(value: string, language: string) {
 	}
 
 	if (next !== done) {
+		if (next.highlighter !== null && next.text !== "") {
+			remember(key, { lines: next.lines, state: next.state, text: next.text });
+		}
 		setDone(next);
 	}
 

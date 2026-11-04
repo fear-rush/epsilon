@@ -34,6 +34,9 @@ export type Conversation = {
 	readonly loadOlder: () => Promise<void>;
 	readonly reload: () => Promise<void>;
 	readonly abort: () => Promise<void>;
+	/** Which tool cards are open, kept above the rows so unmounting one does not forget it. */
+	readonly toolOpen: ReadonlyMap<string, boolean>;
+	readonly toggleTool: (toolCallId: string) => void;
 };
 
 /** How long a message waits for the chat to open before it is refused. */
@@ -98,6 +101,7 @@ export function useConversation(input: {
 	/** The engine's stream ended; the next command subscribes again and starts one. */
 	const stopped = useRef(false);
 	const [epoch, setEpoch] = useState(0);
+	const [toolOpen, setToolOpen] = useState<ReadonlyMap<string, boolean>>(new Map());
 
 	// Commands are sent from event handlers, which read the latest rendered state here.
 	useEffect(() => {
@@ -267,6 +271,23 @@ export function useConversation(input: {
 
 	const reload = useCallback(async () => command({ t: "reloadFromDisk" }), [command]);
 	const abort = useCallback(async () => command({ t: "abort" }), [command]);
+	const toggleTool = useCallback((toolCallId: string) => {
+		setToolOpen((previous) => {
+			const next = new Map(previous);
+			next.set(toolCallId, previous.get(toolCallId) !== true);
+			return next;
+		});
+	}, []);
 
-	return { abort, answer, loadOlder, reload, send, state, writable: isWritable(state) };
+	return {
+		abort,
+		answer,
+		loadOlder,
+		reload,
+		send,
+		state,
+		toggleTool,
+		toolOpen,
+		writable: isWritable(state),
+	};
 }
