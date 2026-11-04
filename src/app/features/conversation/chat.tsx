@@ -1,5 +1,12 @@
-import { ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon } from "lucide-react";
-import { useState } from "react";
+import {
+	ChevronDownIcon,
+	ChevronUpIcon,
+	GitBranchIcon,
+	SearchIcon,
+	SlidersHorizontalIcon,
+	XIcon,
+} from "lucide-react";
+import { lazy, Suspense, useState } from "react";
 
 import { transcript } from "#domain/conversation/selectors";
 import type { ConversationState } from "#domain/conversation/state";
@@ -16,6 +23,14 @@ import { ProjectGate } from "./project-gate";
 import { Transcript, matchingRowIds } from "./transcript";
 import type { Jump } from "./transcript";
 import { useConversation } from "./use-conversation";
+
+/** Both dialogs are read-only until they are opened, so neither ships with the chat. */
+const SessionControls = lazy(() =>
+	import("./session-controls").then((module) => ({ default: module.SessionControls })),
+);
+const TreeDialog = lazy(() =>
+	import("./tree-dialog").then((module) => ({ default: module.TreeDialog })),
+);
 
 /**
  * One chat route. A new chat in a project folder passes through the trust gate first,
@@ -47,6 +62,8 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 	const [cursor, setCursor] = useState(0);
 	const [jumpNonce, setJumpNonce] = useState(0);
 	const [anchorFrom, setAnchorFrom] = useState<number | undefined>(undefined);
+	const [controlsOpen, setControlsOpen] = useState(false);
+	const [treeOpen, setTreeOpen] = useState(false);
 
 	const matches = searching ? matchingRowIds(transcript(state), query) : [];
 	const jumpId = matches[cursor];
@@ -71,9 +88,31 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 		<div className="flex min-h-0 flex-1 flex-col">
 			<PaneBar
 				title={state.title ?? "New chat"}
-				meta={state.model}
+				meta={
+					state.model === undefined
+						? undefined
+						: state.thinking === undefined
+							? state.model
+							: `${state.model} · ${state.thinking}`
+				}
 				actions={
 					<div className="flex items-center gap-2">
+						<Button
+							size="icon-sm"
+							variant="ghost"
+							aria-label="Branch tree"
+							onClick={() => setTreeOpen(true)}
+						>
+							<GitBranchIcon />
+						</Button>
+						<Button
+							size="icon-sm"
+							variant="ghost"
+							aria-label="Session settings"
+							onClick={() => setControlsOpen(true)}
+						>
+							<SlidersHorizontalIcon />
+						</Button>
 						<Button
 							size="icon-sm"
 							variant="ghost"
@@ -162,11 +201,18 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 			<ChatNotices notices={state.notices} />
 			<Composer
 				busy={state.busy}
+				draft={state.draft}
 				writable={conversation.writable}
 				onAbort={conversation.abort}
 				onSend={send}
 			/>
 			<ConversationDialogs dialogs={state.dialogs} onAnswer={conversation.answer} />
+			<Suspense fallback={null}>
+				{controlsOpen && (
+					<SessionControls conversation={conversation} onClose={() => setControlsOpen(false)} />
+				)}
+				{treeOpen && <TreeDialog conversation={conversation} onClose={() => setTreeOpen(false)} />}
+			</Suspense>
 		</div>
 	);
 }

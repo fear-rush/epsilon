@@ -4,6 +4,7 @@ import type { FileSystem, Scope } from "effect";
 import type { Command } from "#protocol/conversation/commands";
 import type { DialogAnswer } from "#protocol/conversation/extui";
 import type { ImageBlock } from "#protocol/conversation/frames";
+import type { ThinkingLevel } from "#protocol/conversation/session";
 import { CommandRefused } from "#protocol/errors";
 
 /**
@@ -37,6 +38,11 @@ export type CommandHost = {
 	readonly loadTree: (
 		tab: string,
 	) => Effect.Effect<void, CommandRefused, FileSystem.FileSystem | Scope.Scope>;
+	readonly navigateTree: (targetId: string) => Effect.Effect<void, CommandRefused>;
+	readonly setModel: (provider: string, modelId: string) => Effect.Effect<void, CommandRefused>;
+	readonly setThinking: (level: ThinkingLevel) => Effect.Effect<void, CommandRefused>;
+	readonly setTools: (names: ReadonlyArray<string>) => Effect.Effect<void, CommandRefused>;
+	readonly compact: () => Effect.Effect<void, CommandRefused>;
 	readonly reloadFromDisk: () => Effect.Effect<
 		void,
 		CommandRefused,
@@ -82,6 +88,16 @@ export const dispatchCommand = (
 			return host.loadHistory(tab, command.before);
 		case "loadTree":
 			return host.loadTree(tab);
+		case "navigateTree":
+			return host.navigateTree(command.targetId);
+		case "setModel":
+			return host.setModel(command.provider, command.modelId);
+		case "setThinking":
+			return host.setThinking(command.level);
+		case "setTools":
+			return host.setTools(command.names);
+		case "compact":
+			return host.compact();
 		case "reloadFromDisk":
 			return host.reloadFromDisk();
 		default: {

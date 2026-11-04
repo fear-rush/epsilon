@@ -34,7 +34,15 @@ describe("frames", () => {
 				question: { kind: "confirm", id: "d1", title: "Continue?", message: undefined },
 			},
 			{ t: "dialogClosed", id: "d1" },
-			{ t: "sessionMeta", sessionId: "s1", title: "Renamed", model: "stub-model" },
+			{
+				t: "sessionMeta",
+				sessionId: "s1",
+				title: "Renamed",
+				model: "stub-model",
+				thinking: "high",
+				tools: ["bash", "read"],
+			},
+			{ t: "editorText", text: "the message a move undid", nonce: "n1" },
 			{
 				t: "tree",
 				entries: [
@@ -52,7 +60,7 @@ describe("frames", () => {
 		// The version covers exactly the tags the socket can carry: adding a frame without
 		// naming it here means a stale tab would meet a frame it cannot decode.
 		expect(new Set(samples.map((sample) => sample.t))).toEqual(new Set(frameTags));
-		expect(PROTOCOL_VERSION).toBe("3");
+		expect(PROTOCOL_VERSION).toBe("4");
 		for (const sample of samples) expect(() => decodeServerFrame(sample)).not.toThrow();
 	});
 });
@@ -183,6 +191,19 @@ describe("reduce", () => {
 		expect(drifted.drift).toContain("outside Epsilon");
 		const reloaded = reduce(drifted, frameAt(bashTurnFrames, 0));
 		expect(reloaded.drift).toBeUndefined();
+	});
+
+	test("sessionMeta carries the controls, and editorText becomes the draft", () => {
+		const meta = reduce(emptyConversation, {
+			t: "sessionMeta",
+			sessionId: "s1",
+			thinking: "high",
+			tools: ["bash"],
+		});
+		expect(meta.thinking).toBe("high");
+		expect(meta.activeTools).toEqual(["bash"]);
+		const drafted = reduce(meta, { t: "editorText", text: "back to here", nonce: "n1" });
+		expect(drafted.draft).toEqual({ nonce: "n1", text: "back to here" });
 	});
 
 	test("a 50,000-entry flat tree reduces without recursion", () => {

@@ -6,6 +6,7 @@ import type {
 	TranscriptEntry,
 	TreeEntry,
 } from "#protocol/conversation/frames";
+import type { ThinkingLevel } from "#protocol/conversation/session";
 
 import { flatTree, transcriptOf } from "./translate.ts";
 
@@ -113,12 +114,20 @@ type MutableSessionMeta = {
 	t: "sessionMeta";
 	title?: string;
 	model?: string;
+	thinking?: ThinkingLevel;
+	tools?: string[];
 };
 
+/** What the page needs to draw the session controls, from pi's own state. */
 export const sessionMeta = (agent: AgentSession): Extract<ServerFrame, { t: "sessionMeta" }> => {
 	const title = agent.sessionManager.getSessionName();
 	const model = agent.model === undefined ? undefined : `${agent.model.provider}/${agent.model.id}`;
-	const frame: MutableSessionMeta = { sessionId: agent.sessionId, t: "sessionMeta" };
+	const frame: MutableSessionMeta = {
+		sessionId: agent.sessionId,
+		t: "sessionMeta",
+		thinking: agent.thinkingLevel,
+		tools: agent.getActiveToolNames(),
+	};
 	if (title !== undefined) frame.title = title;
 	if (model !== undefined) frame.model = model;
 	return frame;

@@ -1,5 +1,6 @@
 import type { DialogQuestion } from "#protocol/conversation/extui";
 import type { Notice, TranscriptEntry, TreeEntry } from "#protocol/conversation/frames";
+import type { ThinkingLevel } from "#protocol/conversation/session";
 
 /** Text or thinking that has streamed but has no entry yet. */
 export type StreamingBlock = { readonly kind: "text" | "thinking"; readonly text: string };
@@ -33,6 +34,11 @@ export type ConversationState = {
 	readonly sessionId: string | undefined;
 	readonly title: string | undefined;
 	readonly model: string | undefined;
+	readonly thinking: ThinkingLevel | undefined;
+	/** The tools pi declares to the model now, by name. */
+	readonly activeTools: ReadonlyArray<string>;
+	/** Text pi put back in the composer; the nonce marks a new insertion. */
+	readonly draft: { readonly text: string; readonly nonce: string } | undefined;
 	readonly entries: ReadonlyArray<TranscriptEntry>;
 	readonly streaming: ReadonlyArray<StreamingTurn>;
 	readonly tools: ReadonlyArray<ToolRun>;
@@ -53,6 +59,9 @@ export const emptyConversation: ConversationState = {
 	sessionId: undefined,
 	title: undefined,
 	model: undefined,
+	thinking: undefined,
+	activeTools: [],
+	draft: undefined,
 	entries: [],
 	streaming: [],
 	tools: [],

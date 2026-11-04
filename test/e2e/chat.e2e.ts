@@ -13,6 +13,8 @@ test("a prompt streams a reply and the chat survives a reload", async ({ app, pa
 	await composer.press("Enter");
 
 	await expect(page.getByText("stub reply")).toBeVisible();
+	// The engine's own first write is not a foreign one: the chat stays writable.
+	await expect(page.getByText(/changed outside Epsilon/)).toHaveCount(0);
 
 	await page.reload();
 	await expect(page.getByRole("link", { name: /hello there|new chat/i })).toBeVisible();

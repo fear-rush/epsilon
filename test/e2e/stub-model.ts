@@ -178,7 +178,20 @@ export async function startStubModel(
 }
 
 /** Writes the `models.json` an agent home needs to reach the stub. */
-export function writeStubModels(agentHome: string, baseUrl: string): void {
+export type StubModelEntry = {
+	readonly id: string;
+	readonly name: string;
+	/** pi offers thinking levels only for a reasoning model. */
+	readonly reasoning?: boolean;
+};
+
+const defaultModels: ReadonlyArray<StubModelEntry> = [{ id: "stub-model", name: "Stub Model" }];
+
+export function writeStubModels(
+	agentHome: string,
+	baseUrl: string,
+	models: ReadonlyArray<StubModelEntry> = defaultModels,
+): void {
 	mkdirSync(agentHome, { recursive: true });
 	writeFileSync(
 		join(agentHome, "models.json"),
@@ -190,7 +203,7 @@ export function writeStubModels(agentHome: string, baseUrl: string): void {
 						baseUrl,
 						api: "openai-completions",
 						apiKey: "stub-key",
-						models: [{ id: "stub-model", name: "Stub Model" }],
+						models,
 					},
 				},
 			},

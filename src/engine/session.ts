@@ -19,6 +19,7 @@ import type {
 	StreamingBlockKind,
 	TreeEntry,
 } from "#protocol/conversation/frames";
+import type { ThinkingLevel } from "#protocol/conversation/session";
 import type { EngineToSupervisor } from "#protocol/engine-ipc";
 import { CommandRefused } from "#protocol/errors";
 
@@ -44,8 +45,8 @@ import {
 import { appendedEntry, entryForMessage, toolCallsOf, toolTextOf } from "./translate.ts";
 import { UiBridge } from "./ui.ts";
 
-/** A session line's id, which is what says who wrote it. */
-const EntryLine = Schema.Struct({ id: Schema.String });
+/** A session line's id and type: the header has an id too, and it is not an entry. */
+const EntryLine = Schema.Struct({ id: Schema.String, type: Schema.String });
 import { acquireSessionLock, startWatcher } from "./watcher.ts";
 import type { SessionLock, SessionWatcher } from "./watcher.ts";
 
@@ -318,6 +319,12 @@ export class EngineSession {
 							name: tool.name,
 						})),
 					};
+				case "models":
+					return agent.modelRuntime.getModels().map((model) => ({
+						id: model.id,
+						name: model.name,
+						provider: model.provider,
+					}));
 				case "systemPrompt":
 					return agent.systemPrompt;
 				case "history": {
@@ -438,10 +445,15 @@ export class EngineSession {
 			abort: () => this.abort(),
 			answerDialog: (answer) => this.dialogs.answer(answer),
 			drift: this.driftReason,
+			compact: () => this.compact(),
 			followUp: (text, images) => this.queued("followUp", text, images),
 			loadHistory: (tab, before) => this.loadHistory(tab, before),
 			loadTree: (tab) => Effect.sync(() => this.sendTree(tab)),
+			navigateTree: (targetId) => this.navigateTree(targetId),
 			prompt: (text, images) => this.prompt(text, images),
+			setModel: (provider, modelId) => this.setModel(provider, modelId),
+			setThinking: (level) => this.setThinking(level),
+			setTools: (names) => this.setTools(names),
 			reloadFromDisk: () => this.reloadFromDisk(),
 			steer: (text, images) => this.queued("steer", text, images),
 		};
@@ -515,6 +527,92 @@ export class EngineSession {
 			try: () => agent.abort(),
 			catch: (cause) => new CommandRefused({ command: "abort", reason: describe(cause) }),
 		}).pipe(Effect.asVoid);
+	}
+
+	/**
+	 * pi's own model switch. The model is looked up in the runtime's composition first, so
+	 * an id the operator typed cannot reach a provider pi never composed.
+	 */
+	private setModel(provider: string, modelId: string): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		const agent = this.runtime.session;
+		const model = agent.modelRuntime.getModel(provider, modelId);
+		if (model === undefined) {
+			return Effect.fail(
+				new CommandRefused({
+					command: "setModel",
+					reason: `pi does not know the model ${provider}/${modelId}.`,
+				}),
+			);
+		}
+		return Effect.tryPromise({
+			try: () => agent.setModel(model),
+			catch: (cause) => new CommandRefused({ command: "setModel", reason: describe(cause) }),
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+	}
+
+	private setThinking(level: ThinkingLevel): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		const agent = this.runtime.session;
+		return Effect.try({
+			try: () => agent.setThinkingLevel(level),
+			catch: (cause) => new CommandRefused({ command: "setThinking", reason: describe(cause) }),
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+	}
+
+	/** pi ignores an unknown or hidden tool name, so the broadcast carries the real set. */
+	private setTools(names: ReadonlyArray<string>): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		const agent = this.runtime.session;
+		return Effect.try({
+			try: () => agent.setActiveToolsByName([...names]),
+			catch: (cause) => new CommandRefused({ command: "setTools", reason: describe(cause) }),
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+	}
+
+	/** pi's manual compaction: it aborts a running turn first and refuses a tiny session. */
+	private compact(): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		const agent = this.runtime.session;
+		return Effect.tryPromise({
+			try: () => agent.compact(),
+			catch: (cause) => new CommandRefused({ command: "compact", reason: describe(cause) }),
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+	}
+
+	/**
+	 * Move the leaf inside this file. pi answers the text of a user message it moved past,
+	 * which is the next message the operator may send; the page puts it back in the
+	 * composer. The branch is session-wide, so every tab receives the new window.
+	 */
+	private navigateTree(targetId: string): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		const agent = this.runtime.session;
+		return Effect.tryPromise({
+			try: () => agent.navigateTree(targetId),
+			catch: (cause) => new CommandRefused({ command: "navigateTree", reason: describe(cause) }),
+		}).pipe(
+			Effect.flatMap((result) => {
+				if (result.cancelled) {
+					return Effect.fail(
+						new CommandRefused({
+							command: "navigateTree",
+							reason: "The branch change was cancelled.",
+						}),
+					);
+				}
+				return Effect.sync(() => {
+					if (result.editorText !== undefined) {
+						self.frames.to("all", {
+							nonce: crypto.randomUUID(),
+							text: result.editorText,
+							t: "editorText",
+						});
+					}
+					self.broadcastAll();
+				});
+			}),
+		);
 	}
 
 	private loadHistory(tab: string, before: string): Effect.Effect<void, CommandRefused> {
@@ -753,6 +851,8 @@ export class EngineSession {
 					Schema.decodeEffect(Schema.fromJsonString(EntryLine))(line),
 				);
 				if (Option.isNone(id)) return true;
+				// The header is this manager's own first line; it carries an id but is not an entry.
+				if (id.value.type === "session") continue;
 				if (self.runtime.session.sessionManager.getEntry(id.value.id) === undefined) return false;
 			}
 			return true;

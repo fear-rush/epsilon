@@ -40,6 +40,9 @@ export const PinsLive: Layer.Layer<Pins, never, AgentHome | JsonDocument> = Laye
 			}
 			const decoded = Schema.decodeUnknownOption(PinsFile)(outcome.value);
 			if (Option.isNone(decoded)) {
+				// A fresh home reads as `{}`: no key means no pins, not a broken file. A present
+				// key of the wrong type is a file Epsilon did not write.
+				if (!("sessions" in outcome.value)) return { ids: new Set<string>(), problem: undefined };
 				return {
 					ids: new Set<string>(),
 					problem: `Pinned chats in ${path} are not the shape Epsilon writes; the list shows none.`,

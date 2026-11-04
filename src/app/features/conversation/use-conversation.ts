@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { reduce } from "#domain/conversation/reduce";
@@ -8,6 +8,8 @@ import type { ConversationState } from "#domain/conversation/state";
 import type { Command } from "#protocol/conversation/commands";
 import type { DialogAnswer } from "#protocol/conversation/extui";
 import type { ServerFrame } from "#protocol/conversation/frames";
+import { ModelOptions, ToolsView } from "#protocol/conversation/session";
+import type { ModelOption, ThinkingLevel } from "#protocol/conversation/session";
 import {
 	CommandRefused,
 	EngineLimitReached,
@@ -34,6 +36,15 @@ export type Conversation = {
 	readonly loadOlder: () => Promise<void>;
 	readonly reload: () => Promise<void>;
 	readonly abort: () => Promise<void>;
+	readonly compact: () => Promise<void>;
+	readonly setModel: (provider: string, modelId: string) => Promise<void>;
+	readonly setThinking: (level: ThinkingLevel) => Promise<void>;
+	readonly setTools: (names: ReadonlyArray<string>) => Promise<void>;
+	readonly navigateTree: (targetId: string) => Promise<void>;
+	/** Ask the engine for the tree; the answer arrives as a frame and lands in state. */
+	readonly loadTree: () => Promise<void>;
+	readonly models: () => Promise<ReadonlyArray<ModelOption>>;
+	readonly tools: () => Promise<ToolsView>;
 	/** Which tool cards are open, kept above the rows so unmounting one does not forget it. */
 	readonly toolOpen: ReadonlyMap<string, boolean>;
 	readonly toggleTool: (toolCallId: string) => void;
@@ -271,6 +282,48 @@ export function useConversation(input: {
 
 	const reload = useCallback(async () => command({ t: "reloadFromDisk" }), [command]);
 	const abort = useCallback(async () => command({ t: "abort" }), [command]);
+	const compact = useCallback(async () => command({ t: "compact" }), [command]);
+	const setModel = useCallback(
+		async (provider: string, modelId: string) => command({ modelId, provider, t: "setModel" }),
+		[command],
+	);
+	const setThinking = useCallback(
+		async (level: ThinkingLevel) => command({ level, t: "setThinking" }),
+		[command],
+	);
+	const setTools = useCallback(
+		async (names: ReadonlyArray<string>) => command({ names: [...names], t: "setTools" }),
+		[command],
+	);
+	const navigateTree = useCallback(
+		async (targetId: string) => command({ t: "navigateTree", targetId }),
+		[command],
+	);
+	const loadTree = useCallback(async () => command({ t: "loadTree" }), [command]);
+
+	/** A read-only question to the engine; the answer is decoded by its own schema. */
+	const ask = useCallback(
+		async (kind: "models" | "tools") => {
+			const name = stopped.current ? await reattach() : await tabFor();
+			return call((client) =>
+				client["conversation.query"]({
+					kind,
+					sessionId: currentId.current,
+					tab: name,
+				}),
+			);
+		},
+		[reattach, tabFor],
+	);
+	const models = useCallback(
+		async (): Promise<ReadonlyArray<ModelOption>> =>
+			Schema.decodeUnknownSync(ModelOptions)(await ask("models")),
+		[ask],
+	);
+	const tools = useCallback(
+		async (): Promise<ToolsView> => Schema.decodeUnknownSync(ToolsView)(await ask("tools")),
+		[ask],
+	);
 	const toggleTool = useCallback((toolCallId: string) => {
 		setToolOpen((previous) => {
 			const next = new Map(previous);
@@ -282,12 +335,20 @@ export function useConversation(input: {
 	return {
 		abort,
 		answer,
+		compact,
 		loadOlder,
+		loadTree,
+		models,
+		navigateTree,
 		reload,
 		send,
+		setModel,
+		setThinking,
+		setTools,
 		state,
 		toggleTool,
 		toolOpen,
+		tools,
 		writable: isWritable(state),
 	};
 }

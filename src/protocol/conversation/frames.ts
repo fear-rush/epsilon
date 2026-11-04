@@ -1,5 +1,7 @@
 import { Schema } from "effect";
 
+import { ThinkingLevel } from "./session.ts";
+
 /**
  * What the engine sends the page about one chat.
  *
@@ -207,6 +209,19 @@ export const SessionMetaFrame = Schema.Struct({
 	sessionId: Schema.String,
 	title: Schema.optional(Schema.String),
 	model: Schema.optional(Schema.String),
+	thinking: Schema.optional(ThinkingLevel),
+	/** The tools declared to the model now, by name. */
+	tools: Schema.optional(Schema.Array(Schema.String)),
+});
+
+/**
+ * Text pi put back in the composer, such as the user message a tree move restored. The
+ * nonce tells the page this is a new insertion, not the draft it reported itself.
+ */
+export const EditorTextFrame = Schema.Struct({
+	t: Schema.Literals(["editorText"]),
+	text: Schema.String,
+	nonce: Schema.String,
 });
 
 export const ServerFrame = Schema.Union([
@@ -222,6 +237,7 @@ export const ServerFrame = Schema.Union([
 	BusyFrame,
 	DriftFrame,
 	SessionMetaFrame,
+	EditorTextFrame,
 	TreeFrame,
 ]);
 export type ServerFrame = typeof ServerFrame.Type;

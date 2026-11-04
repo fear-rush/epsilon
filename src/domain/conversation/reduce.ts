@@ -139,7 +139,11 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				sessionId: frame.sessionId,
 				title: frame.title ?? state.title,
 				model: frame.model ?? state.model,
+				thinking: frame.thinking ?? state.thinking,
+				activeTools: frame.tools ?? state.activeTools,
 			};
+		case "editorText":
+			return { ...state, draft: { nonce: frame.nonce, text: frame.text } };
 		default: {
 			// Every frame is handled above; a new one must add a case, not fall through.
 			const unreachable: never = frame;

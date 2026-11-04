@@ -66,7 +66,12 @@ export const test = base.extend<Fixtures & Options>({
 		stub.stop();
 	},
 	app: async ({ agentHome, projectsRoot, stub, withModel }, use) => {
-		if (withModel) writeStubModels(agentHome, stub.baseUrl);
+		if (withModel) {
+			writeStubModels(agentHome, stub.baseUrl, [
+				{ id: "stub-model", name: "Stub Model" },
+				{ id: "stub-model-2", name: "Stub Model Two", reasoning: true },
+			]);
+		}
 		const app = await launchEpsilon({
 			home: agentHome,
 			port: await freePort(),

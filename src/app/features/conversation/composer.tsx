@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
@@ -15,16 +15,27 @@ export function Composer({
 	onSend,
 	onAbort,
 	busy,
+	draft,
 	writable,
 }: {
 	onSend: (text: string) => Promise<void>;
 	onAbort: () => Promise<void>;
 	busy: boolean;
+	/** Text pi put back, such as the message a tree move undid. */
+	draft: { readonly text: string; readonly nonce: string } | undefined;
 	writable: boolean;
 }) {
 	const [text, setText] = useState("");
 	const [failure, setFailure] = useState<Error | undefined>(undefined);
 	const [sending, setSending] = useState(false);
+	const applied = useRef<string | undefined>(undefined);
+
+	// pi's own editor puts a restored message in front of what is already typed.
+	useEffect(() => {
+		if (draft === undefined || applied.current === draft.nonce) return;
+		applied.current = draft.nonce;
+		setText((current) => (current === "" ? draft.text : `${draft.text}\n\n${current}`));
+	}, [draft]);
 
 	const send = useCallback(async () => {
 		const trimmed = text.trim();

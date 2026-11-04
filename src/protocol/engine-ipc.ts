@@ -17,6 +17,7 @@ import { ServerFrame } from "./conversation/frames.ts";
 
 export const QueryKind = Schema.Literals([
 	"tools",
+	"models",
 	"systemPrompt",
 	"mcpLive",
 	"extensionSkills",
