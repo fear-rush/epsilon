@@ -43,3 +43,14 @@ export const DialogAnswer = Schema.Union([
 ]);
 
 export type DialogAnswer = typeof DialogAnswer.Type;
+
+/**
+ * One line an extension put in the status rail, keyed so a later update replaces it.
+ * The rail is every extension's row except the permission mode's, which the composer's
+ * own menu draws.
+ */
+export const UiStatus = Schema.Struct({
+	key: Schema.String,
+	text: Schema.String,
+});
+export type UiStatus = typeof UiStatus.Type;

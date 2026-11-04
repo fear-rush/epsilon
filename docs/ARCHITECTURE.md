@@ -82,7 +82,8 @@ view, built from the shared patterns.
 3. The engine sends a windowed snapshot (entry ids, recent entries, notices); older
    pages arrive when the transcript asks, and the flat tree when the picker opens. The
    composer's readings (pi's context usage, the session's totals, the cache warmer) follow
-   the snapshot and again whenever pi's numbers change.
+   the snapshot and again whenever pi's numbers change, and the keyed statuses extensions
+   set travel as a `statuses` frame.
 4. Commands go down the same socket as tagged values; extension dialogs come back as
    frames and their answers go back as commands. A prompt whose text starts with a name in
    the built-in table is answered by the engine before pi, so a `/compact` never reaches

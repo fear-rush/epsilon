@@ -168,6 +168,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 			onReadContext={readContext}
 			onSend={send}
 			onSetCodingTools={(enabled) => void conversation.setCodingTools(enabled)}
+			onSetPermission={(mode) => void conversation.setPermission(mode)}
 			onSetModel={(provider, modelId) => void conversation.setModel(provider, modelId)}
 			onSetThinking={(level) => void conversation.setThinking(level)}
 			onSuggest={conversation.suggest}

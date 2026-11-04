@@ -1,4 +1,4 @@
-import type { DialogQuestion } from "#protocol/conversation/extui";
+import type { DialogQuestion, UiStatus } from "#protocol/conversation/extui";
 import type { Notice, TranscriptEntry, TreeEntry } from "#protocol/conversation/frames";
 import type { CommandOffer } from "#protocol/conversation/palette";
 import type { ThinkingLevel } from "#protocol/conversation/session";
@@ -74,6 +74,8 @@ export type ConversationState = {
 	readonly bash: BashRun;
 	/** What pi reports about the session: the window, its totals and the cache warmer. */
 	readonly readings: Readings | undefined;
+	/** One line per extension that set a keyed status; the permission mode has its own menu. */
+	readonly statuses: ReadonlyArray<UiStatus>;
 	/** pi's automatic behaviours, which its own settings file owns. */
 	readonly autoCompaction: boolean;
 	readonly autoRetry: boolean;
@@ -110,6 +112,7 @@ export const emptyConversation: ConversationState = {
 	queue: { followUp: [], steering: [] },
 	bash: { command: "", output: "", running: false },
 	readings: undefined,
+	statuses: [],
 	autoCompaction: false,
 	autoRetry: false,
 	hideThinking: false,

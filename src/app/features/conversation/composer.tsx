@@ -5,6 +5,8 @@ import type { ChangeEvent, KeyboardEvent } from "react";
 
 import { parseBuiltinCommand } from "#domain/conversation/commands";
 import type { ConversationState } from "#domain/conversation/state";
+import { PERMISSION_STATUS_KEY } from "#domain/permission/rules";
+import type { PermissionMode } from "#domain/permission/rules";
 import {
 	PROMPT_IMAGE_BASE64_TOTAL_MAX,
 	PROMPT_IMAGE_BYTES_MAX,
@@ -36,6 +38,7 @@ import { ContextMeter } from "./composer/context-meter";
 import { ModelMenu } from "./composer/model-menu";
 import { Palette } from "./composer/palette";
 import type { PaletteEntry } from "./composer/palette";
+import { PermissionMenu } from "./composer/permission-menu";
 import { ThinkingMenu } from "./composer/thinking-menu";
 import { ToolsMenu } from "./composer/tools-menu";
 import { takeHandedOffDraft } from "./draft.ts";
@@ -124,6 +127,7 @@ export function Composer({
 	commands,
 	onOpenTree,
 	onReadContext,
+	onSetPermission,
 	onSuggest,
 }: {
 	onSend: (text: string, behavior?: Behavior, images?: ReadonlyArray<ImageBlock>) => Promise<void>;
@@ -150,6 +154,8 @@ export function Composer({
 	state: ConversationState;
 	onOpenTree: () => void;
 	onReadContext: () => Promise<ContextView>;
+	/** The bundled permission extension's mode, through its own `/permission` command. */
+	onSetPermission: (mode: PermissionMode) => void;
 	/** An extension's providers answer what the draft suggests at the caret. */
 	onSuggest: (text: string, cursor: number) => Promise<AutocompleteReply>;
 }) {
@@ -439,6 +445,10 @@ export function Composer({
 		setNotice(undefined);
 	};
 
+	// Every keyed status an extension set, except the permission mode: the footer's menu
+	// already draws that one, in the browser's words rather than the extension's.
+	const rail = state.statuses.filter((status) => status.key !== PERMISSION_STATUS_KEY);
+
 	const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
 		if (paletteOpen) {
 			if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -476,6 +486,15 @@ export function Composer({
 	return (
 		<div className="border-t p-3">
 			<div ref={surfaceRef} className="mx-auto w-full max-w-4xl">
+				{rail.length > 0 && (
+					<div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-1 pb-1 text-meta text-muted-foreground">
+						{rail.map((status) => (
+							<span key={status.key} data-status-key={status.key} className="min-w-0 truncate">
+								{status.text}
+							</span>
+						))}
+					</div>
+				)}
 				{failure !== undefined && (
 					<div className="pb-2">
 						<Notice error={failure} title="The message was not sent" />
@@ -564,6 +583,10 @@ export function Composer({
 								onSelect={onSetThinking}
 							/>
 							<ToolsMenu codingTools={codingTools} onSelect={onSetCodingTools} />
+							<PermissionMenu
+								statuses={[...state.statuses]}
+								onSelect={(mode) => onSetPermission(mode)}
+							/>
 							{busy && (
 								<Tip label="Stop the run">
 									<InputGroupButton

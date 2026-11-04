@@ -351,6 +351,12 @@ test("built-in commands are answered here, never by the model", async () => {
 			});
 			yield* engine.attachTab("tab");
 			yield* frameOf(engine, (frame) => frame.t === "snapshot");
+			// The bundled permission extension reports its mode as a keyed status; a tab
+			// that attaches later reads it from the snapshot's frames.
+			const defaultMode = yield* frameOf(
+				engine,
+				(frame) => frame.t === "statuses" && frame.statuses.some((s) => s.text === "perm:ask"),
+			);
 			// A browser-surface name is answered with pi's own refusal, and the transcript
 			// does not grow: nothing was sent to the model.
 			yield* control(engine, { t: "prompt", text: "/model" });
@@ -375,8 +381,14 @@ test("built-in commands are answered here, never by the model", async () => {
 				engine,
 				(frame) => frame.t === "sessionMeta" && frame.sessionId !== "s-imported",
 			);
+			// An extension command switches the mode, and the new status reaches every tab.
+			yield* control(engine, { t: "prompt", text: "/permission yolo" });
+			const yolo = yield* frameOf(
+				engine,
+				(frame) => frame.t === "statuses" && frame.statuses.some((s) => s.text === "perm:yolo"),
+			);
 			yield* engine.stop(2_000);
-			return { afterImport, afterNew, history, named, notice };
+			return { afterImport, afterNew, defaultMode, history, named, notice, yolo };
 			// oxlint-disable-next-line effecttsgo/strict-effect-provide -- the test entry point builds the runtime
 		}).pipe(Effect.provide(BunServices.layer)),
 	);
@@ -395,4 +407,6 @@ test("built-in commands are answered here, never by the model", async () => {
 	expect(Option.isSome(result.named)).toBe(true);
 	expect(Option.isSome(result.afterImport)).toBe(true);
 	expect(Option.isSome(result.afterNew)).toBe(true);
+	expect(Option.isSome(result.defaultMode)).toBe(true);
+	expect(Option.isSome(result.yolo)).toBe(true);
 }, 20_000);

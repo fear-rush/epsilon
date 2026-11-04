@@ -5,6 +5,7 @@ import { reduce } from "#domain/conversation/reduce";
 import { isWritable } from "#domain/conversation/selectors";
 import { emptyConversation } from "#domain/conversation/state";
 import type { ConversationState } from "#domain/conversation/state";
+import type { PermissionMode } from "#domain/permission/rules";
 import type { Command } from "#protocol/conversation/commands";
 import type { DialogAnswer } from "#protocol/conversation/extui";
 import type { ImageBlock, ServerFrame } from "#protocol/conversation/frames";
@@ -61,6 +62,8 @@ export type Conversation = {
 	readonly setCodingTools: (enabled: boolean) => Promise<void>;
 	/** What an extension's autocomplete providers suggest at the caret. */
 	readonly suggest: (text: string, cursor: number) => Promise<AutocompleteReply>;
+	/** Switch the permission mode through the bundled extension's own command. */
+	readonly setPermission: (mode: PermissionMode) => Promise<void>;
 };
 
 /** How long a message waits for the chat to open before it is refused. */
@@ -365,6 +368,12 @@ export function useConversation(input: {
 		},
 		[command],
 	);
+	const setPermission = useCallback(
+		async (mode: PermissionMode): Promise<void> => {
+			await command({ t: "prompt", text: `/permission ${mode}` });
+		},
+		[command],
+	);
 	const toggleTool = useCallback((toolCallId: string) => {
 		setToolOpen((previous) => {
 			const next = new Map(previous);
@@ -397,6 +406,7 @@ export function useConversation(input: {
 		steer,
 		followUp,
 		setCodingTools,
+		setPermission,
 		suggest,
 		toggleTool,
 		toolOpen,

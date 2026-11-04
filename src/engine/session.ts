@@ -165,6 +165,8 @@ export class EngineSession {
 	/** Names already reported, so a rebind does not repeat the same shadowing notice. */
 	private readonly reportedShadowed = new Set<string>();
 	private readonly toolEntries = new Map<string, string>();
+	/** The keyed statuses extensions set and have not cleared, in the order they first did. */
+	private readonly statuses = new Map<string, string>();
 	/** The servers pi last reported a problem with, replaced by each attention notice. */
 	private mcpAttention = new Map<string, McpAttention>();
 	private streamId: string | undefined;
@@ -202,6 +204,7 @@ export class EngineSession {
 			this.dialogs,
 			(method) => this.unsupportedMethod(method),
 			(message, kind) => this.notice(message, kind),
+			(key, text) => this.setStatus(key, text),
 		);
 	}
 
@@ -1051,6 +1054,7 @@ export class EngineSession {
 		this.frames.to(to, frame);
 		this.frames.to(to, sessionMeta(agent));
 		this.frames.to(to, readingsOf(agent));
+		this.frames.to(to, this.statusesFrame());
 		// The snapshot carries the warmer's reading, so its timer is armed here too: a chat
 		// that opens while a warm is scheduled sees the bar change when pi warms it.
 		Queue.offerUnsafe(this.events, { kind: "arm" });
@@ -1087,6 +1091,21 @@ export class EngineSession {
 
 	private sendBash(): void {
 		this.broadcast(this.bashFrame());
+	}
+
+	/** Every keyed status an extension holds, so a late tab sees the current rail. */
+	private statusesFrame(): Extract<ServerFrame, { t: "statuses" }> {
+		return {
+			statuses: [...this.statuses].map(([key, text]) => ({ key, text })),
+			t: "statuses",
+		};
+	}
+
+	/** One extension status, or its removal; the whole short list goes to every tab. */
+	private setStatus(key: string, text: string | undefined): void {
+		if (text === undefined) this.statuses.delete(key);
+		else this.statuses.set(key, text);
+		this.frames.to("all", this.statusesFrame());
 	}
 
 	/** The composer's readings now, and the warmer's timer re-armed from pi's answer. */

@@ -155,6 +155,8 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 					stats: frame.stats,
 				},
 			};
+		case "statuses":
+			return { ...state, statuses: frame.statuses };
 		case "drift":
 			return { ...state, drift: frame.reason };
 		case "sessionMeta":

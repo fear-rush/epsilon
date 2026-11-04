@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 
 import { CacheWarming, ContextUsage, SessionStats } from "../usage.ts";
+import { UiStatus } from "./extui.ts";
 import { CommandOffer } from "./palette.ts";
 import { ThinkingLevel } from "./session.ts";
 
@@ -217,6 +218,15 @@ export const QueueFrame = Schema.Struct({
 	followUp: Schema.Array(Schema.String),
 });
 
+/**
+ * Every extension status the engine holds, keyed by what set it. An extension updates its
+ * own line with `setStatus`, so the whole short list travels and the page replaces it.
+ */
+export const StatusesFrame = Schema.Struct({
+	t: Schema.Literals(["statuses"]),
+	statuses: Schema.Array(UiStatus),
+});
+
 /** Something outside Epsilon wrote the session file; the chat is read-only until reloaded. */
 export const DriftFrame = Schema.Struct({
 	t: Schema.Literals(["drift"]),
@@ -281,6 +291,7 @@ export const ServerFrame = Schema.Union([
 	QueueFrame,
 	BashFrame,
 	DriftFrame,
+	StatusesFrame,
 	SessionMetaFrame,
 	ReadingsFrame,
 	EditorTextFrame,

@@ -20,8 +20,8 @@ import type { AskOptions, Dialogs } from "./dialogs.ts";
  * value. Everywhere else in the engine yields Effects.
  *
  * A method with no wire yet is refused once per method with a notice, never silently
- * dropped (AGENTS.md, "Every failure is visible"). The display half (status, widgets,
- * working label, editor text) lands with the frame the page reads them from.
+ * dropped (AGENTS.md, "Every failure is visible"). Keyed statuses have a frame; widgets,
+ * the working label and the editor text do not yet.
  */
 
 export type UiHost = {
@@ -29,6 +29,8 @@ export type UiHost = {
 	readonly notice: (message: string, kind: "notice" | "warning" | "error") => void;
 	readonly editorText: () => string;
 	readonly addAutocompleteProvider: (factory: AutocompleteProviderFactory) => void;
+	/** One keyed status line, or its removal when `text` is undefined. */
+	readonly setStatus: (key: string, text: string | undefined) => void;
 	readonly unsupported: (method: string) => void;
 	readonly toolsExpanded: () => boolean;
 	readonly setToolsExpanded: (expanded: boolean) => void;
@@ -57,7 +59,12 @@ export class UiBridge {
 	private wrappers: AutocompleteProviderFactory[] = [];
 	readonly host: UiHost;
 
-	constructor(dialogs: Dialogs, unsupported: (method: string) => void, notice: UiHost["notice"]) {
+	constructor(
+		dialogs: Dialogs,
+		unsupported: (method: string) => void,
+		notice: UiHost["notice"],
+		setStatus: UiHost["setStatus"],
+	) {
 		this.host = {
 			ask: (question, options) => Effect.runPromise(dialogs.ask(question, options)),
 			notice,
@@ -65,6 +72,7 @@ export class UiBridge {
 			addAutocompleteProvider: (factory) => {
 				this.wrappers.push(factory);
 			},
+			setStatus,
 			unsupported,
 			toolsExpanded: () => this.expanded,
 			setToolsExpanded: (expanded) => {
@@ -163,8 +171,8 @@ export const createUiContext = (host: UiHost): ExtensionUIContext => ({
 	notify(message, type) {
 		host.notice(message, type === undefined || type === "info" ? "notice" : type);
 	},
-	setStatus() {
-		host.unsupported("setStatus");
+	setStatus(key, text) {
+		host.setStatus(key, text);
 	},
 	setWidget(_key: string, _content: unknown, _options?: ExtensionWidgetOptions) {
 		// Neither text lines nor a pi-tui component has a frame yet.
