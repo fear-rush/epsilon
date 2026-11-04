@@ -220,6 +220,8 @@ export const SessionMetaFrame = Schema.Struct({
  */
 export const EditorTextFrame = Schema.Struct({
 	t: Schema.Literals(["editorText"]),
+	/** The chat the text belongs to: a fork's text is for the new file, not the old one. */
+	sessionId: Schema.String,
 	text: Schema.String,
 	nonce: Schema.String,
 });

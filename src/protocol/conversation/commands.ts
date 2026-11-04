@@ -38,6 +38,15 @@ export const Command = Schema.Union([
 	Schema.Struct({ t: Schema.Literals(["setTools"]), names: Schema.Array(Schema.String) }),
 	/** pi's manual compaction; it aborts a running turn first. */
 	Schema.Struct({ t: Schema.Literals(["compact"]) }),
+	/**
+	 * Copy the branch into a new session file. `before` cuts at a user message and hands
+	 * its text back; `at` clones up to the entry and includes it.
+	 */
+	Schema.Struct({
+		t: Schema.Literals(["fork"]),
+		entryId: Schema.String,
+		position: Schema.optional(Schema.Literals(["before", "at"])),
+	}),
 	/** Re-open the runtime from the file after a foreign write. */
 	Schema.Struct({ t: Schema.Literals(["reloadFromDisk"]) }),
 ]);

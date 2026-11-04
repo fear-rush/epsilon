@@ -42,7 +42,7 @@ describe("frames", () => {
 				thinking: "high",
 				tools: ["bash", "read"],
 			},
-			{ t: "editorText", text: "the message a move undid", nonce: "n1" },
+			{ t: "editorText", sessionId: "s1", text: "the message a move undid", nonce: "n1" },
 			{
 				t: "tree",
 				entries: [
@@ -60,7 +60,7 @@ describe("frames", () => {
 		// The version covers exactly the tags the socket can carry: adding a frame without
 		// naming it here means a stale tab would meet a frame it cannot decode.
 		expect(new Set(samples.map((sample) => sample.t))).toEqual(new Set(frameTags));
-		expect(PROTOCOL_VERSION).toBe("4");
+		expect(PROTOCOL_VERSION).toBe("5");
 		for (const sample of samples) expect(() => decodeServerFrame(sample)).not.toThrow();
 	});
 });
@@ -202,7 +202,12 @@ describe("reduce", () => {
 		});
 		expect(meta.thinking).toBe("high");
 		expect(meta.activeTools).toEqual(["bash"]);
-		const drafted = reduce(meta, { t: "editorText", text: "back to here", nonce: "n1" });
+		const drafted = reduce(meta, {
+			t: "editorText",
+			sessionId: "s1",
+			text: "back to here",
+			nonce: "n1",
+		});
 		expect(drafted.draft).toEqual({ nonce: "n1", text: "back to here" });
 	});
 

@@ -19,6 +19,8 @@ import {
 } from "#protocol/errors";
 import { call, keepSubscribed, runStream } from "@/runtime";
 
+import { handOffDraft } from "./draft.ts";
+
 /**
  * One open chat: the frames the engine sends, reduced into what the page shows, plus the
  * few commands the page can send back.
@@ -41,6 +43,7 @@ export type Conversation = {
 	readonly setThinking: (level: ThinkingLevel) => Promise<void>;
 	readonly setTools: (names: ReadonlyArray<string>) => Promise<void>;
 	readonly navigateTree: (targetId: string) => Promise<void>;
+	readonly fork: (entryId: string, position: "before" | "at") => Promise<void>;
 	/** Ask the engine for the tree; the answer arrives as a frame and lands in state. */
 	readonly loadTree: () => Promise<void>;
 	readonly models: () => Promise<ReadonlyArray<ModelOption>>;
@@ -158,6 +161,10 @@ export function useConversation(input: {
 	const dispatch = useCallback(
 		(frame: ServerFrame) => {
 			if (frame.t === "prepend") loadingOlder.current = false;
+			// A fork's text belongs to the new chat; the page moves to it a frame later.
+			if (frame.t === "editorText" && frame.sessionId !== currentId.current) {
+				handOffDraft(frame.sessionId, frame.text);
+			}
 			setState((previous) => {
 				const next = reduce(previous, frame);
 				currentId.current = next.sessionId ?? sessionId;
@@ -299,6 +306,10 @@ export function useConversation(input: {
 		async (targetId: string) => command({ t: "navigateTree", targetId }),
 		[command],
 	);
+	const fork = useCallback(
+		async (entryId: string, position: "before" | "at") => command({ entryId, position, t: "fork" }),
+		[command],
+	);
 	const loadTree = useCallback(async () => command({ t: "loadTree" }), [command]);
 
 	/** A read-only question to the engine; the answer is decoded by its own schema. */
@@ -336,6 +347,7 @@ export function useConversation(input: {
 		abort,
 		answer,
 		compact,
+		fork,
 		loadOlder,
 		loadTree,
 		models,

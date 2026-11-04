@@ -52,8 +52,31 @@ test("the tree dialog moves the branch and restores the message", async ({ app, 
 
 	await page.getByRole("button", { name: "Branch tree" }).click();
 	const dialog = page.getByRole("dialog");
-	await dialog.getByRole("button", { name: /branch me/ }).click();
+	await dialog.getByRole("button", { name: /^branch me user$/ }).click();
 
 	await expect(composer).toHaveValue("branch me");
 	await expect(page.getByText("stub reply")).toHaveCount(0);
+});
+
+/** A fork writes a new session file; the page follows the id the file now carries. */
+test("a fork copies the branch into a new chat", async ({ app, page }) => {
+	await page.goto(app.url);
+	await page.getByRole("button", { name: /new chat/i }).click();
+
+	const composer = page.getByRole("textbox", { name: /message/i });
+	await composer.fill("fork me");
+	await composer.press("Enter");
+	await expect(page.getByText("stub reply")).toBeVisible();
+
+	const before = page.url();
+	await page.getByRole("button", { name: "Branch tree" }).click();
+	await page
+		.getByRole("dialog")
+		.getByRole("button", { name: /Fork from fork me/ })
+		.click();
+
+	await expect(page).not.toHaveURL(before);
+	await expect(page).toHaveURL(/\/sessions\/[0-9a-f-]{36}$/);
+	await expect(page.getByText("stub reply")).toHaveCount(0);
+	await expect(page.getByRole("textbox", { name: /message/i })).toHaveValue("fork me");
 });

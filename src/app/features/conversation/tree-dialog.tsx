@@ -1,3 +1,4 @@
+import { GitForkIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { TreeEntry } from "#protocol/conversation/frames";
@@ -58,6 +59,18 @@ export function TreeDialog({
 		}
 	};
 
+	/** A fork is a new session file; the engine re-keys and the page follows the new id. */
+	const fork = async (entry: TreeEntry): Promise<void> => {
+		setPicking(entry.id);
+		try {
+			await conversation.fork(entry.id, "before");
+			onClose();
+		} catch (cause) {
+			setPicking(undefined);
+			setFailure(cause instanceof Error ? cause : new Error(String(cause)));
+		}
+	};
+
 	return (
 		<Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
 			<DialogContent className="sm:max-w-xl">
@@ -76,21 +89,36 @@ export function TreeDialog({
 							<p className="p-2 text-meta text-muted-foreground">This chat has no entries yet.</p>
 						)}
 						{rows.map(({ depth, entry }) => (
-							<Button
-								key={entry.id}
-								className="justify-start gap-2"
-								disabled={picking !== undefined}
-								size="sm"
-								variant={entry.onPath ? "secondary" : "ghost"}
-								onClick={() => void pick(entry)}
-							>
-								<span className="truncate" style={{ paddingInlineStart: `${depth * 0.75}rem` }}>
-									{entry.label}
-								</span>
-								<Badge className="ml-auto shrink-0" variant={entry.onPath ? "default" : "outline"}>
-									{entry.kind}
-								</Badge>
-							</Button>
+							<div key={entry.id} className="flex items-center gap-1">
+								<Button
+									className="min-w-0 flex-1 justify-start gap-2"
+									disabled={picking !== undefined}
+									size="sm"
+									variant={entry.onPath ? "secondary" : "ghost"}
+									onClick={() => void pick(entry)}
+								>
+									<span className="truncate" style={{ paddingInlineStart: `${depth * 0.75}rem` }}>
+										{entry.label}
+									</span>
+									<Badge
+										className="ml-auto shrink-0"
+										variant={entry.onPath ? "default" : "outline"}
+									>
+										{entry.kind}
+									</Badge>
+								</Button>
+								{entry.kind === "user" && (
+									<Button
+										aria-label={`Fork from ${entry.label}`}
+										disabled={picking !== undefined}
+										size="icon-sm"
+										variant="ghost"
+										onClick={() => void fork(entry)}
+									>
+										<GitForkIcon />
+									</Button>
+								)}
+							</div>
 						))}
 					</div>
 				)}

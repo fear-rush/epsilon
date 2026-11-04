@@ -447,6 +447,7 @@ export class EngineSession {
 			drift: this.driftReason,
 			compact: () => this.compact(),
 			followUp: (text, images) => this.queued("followUp", text, images),
+			fork: (entryId, position) => this.fork(entryId, position),
 			loadHistory: (tab, before) => this.loadHistory(tab, before),
 			loadTree: (tab) => Effect.sync(() => this.sendTree(tab)),
 			navigateTree: (targetId) => this.navigateTree(targetId),
@@ -570,6 +571,41 @@ export class EngineSession {
 		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
 	}
 
+	/**
+	 * pi copies the branch into a new session file. The replacement re-keys the engine and
+	 * the swap broadcasts the new window, so the page follows the new id. The text pi
+	 * selected is the message the operator may send next, as with a tree move.
+	 */
+	private fork(entryId: string, position: "before" | "at"): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		return this.runtime
+			.replace((runtime) => runtime.fork(entryId, { position }))
+			.pipe(
+				Effect.flatMap((result) => {
+					if (result.cancelled) {
+						return Effect.fail(
+							new CommandRefused({ command: "fork", reason: "An extension cancelled the fork." }),
+						);
+					}
+					return Effect.sync(() => {
+						if (result.selectedText !== undefined) {
+							self.frames.to("all", {
+								nonce: crypto.randomUUID(),
+								sessionId: self.runtime.session.sessionId,
+								text: result.selectedText,
+								t: "editorText",
+							});
+						}
+					});
+				}),
+				Effect.mapError((error) =>
+					error instanceof CommandRefused
+						? error
+						: new CommandRefused({ command: "fork", reason: error.reason }),
+				),
+			);
+	}
+
 	/** pi's manual compaction: it aborts a running turn first and refuses a tiny session. */
 	private compact(): Effect.Effect<void, CommandRefused> {
 		const self = this;
@@ -605,6 +641,7 @@ export class EngineSession {
 					if (result.editorText !== undefined) {
 						self.frames.to("all", {
 							nonce: crypto.randomUUID(),
+							sessionId: self.runtime.session.sessionId,
 							text: result.editorText,
 							t: "editorText",
 						});

@@ -4,6 +4,8 @@ import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
+import { takeHandedOffDraft } from "./draft.ts";
+
 /**
  * The one input of a chat.
  *
@@ -16,6 +18,7 @@ export function Composer({
 	onAbort,
 	busy,
 	draft,
+	sessionId,
 	writable,
 }: {
 	onSend: (text: string) => Promise<void>;
@@ -23,9 +26,11 @@ export function Composer({
 	busy: boolean;
 	/** Text pi put back, such as the message a tree move undid. */
 	draft: { readonly text: string; readonly nonce: string } | undefined;
+	/** The chat this box writes to, so a fork's text follows its new file. */
+	sessionId: string;
 	writable: boolean;
 }) {
-	const [text, setText] = useState("");
+	const [text, setText] = useState(() => takeHandedOffDraft(sessionId) ?? "");
 	const [failure, setFailure] = useState<Error | undefined>(undefined);
 	const [sending, setSending] = useState(false);
 	const applied = useRef<string | undefined>(undefined);

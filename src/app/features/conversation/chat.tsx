@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import {
 	ChevronDownIcon,
 	ChevronUpIcon,
@@ -6,7 +7,7 @@ import {
 	SlidersHorizontalIcon,
 	XIcon,
 } from "lucide-react";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 
 import { transcript } from "#domain/conversation/selectors";
 import type { ConversationState } from "#domain/conversation/state";
@@ -56,6 +57,18 @@ export function Chat({ sessionId, place }: { sessionId: string; place: string | 
 function Conversation({ sessionId, place }: { sessionId: string; place: string | null }) {
 	const conversation = useConversation({ place, sessionId });
 	const { state } = conversation;
+	const navigate = useNavigate();
+
+	// A fork writes a new file and a new id. The old id is only an alias while the engine
+	// lives, so the page moves to the id the file now carries.
+	useEffect(() => {
+		if (state.sessionId === undefined || state.sessionId === sessionId) return;
+		void navigate({
+			params: { sessionId: state.sessionId },
+			replace: true,
+			to: "/sessions/$sessionId",
+		});
+	}, [state.sessionId, sessionId, navigate]);
 
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
@@ -202,6 +215,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 			<Composer
 				busy={state.busy}
 				draft={state.draft}
+				sessionId={state.sessionId ?? sessionId}
 				writable={conversation.writable}
 				onAbort={conversation.abort}
 				onSend={send}

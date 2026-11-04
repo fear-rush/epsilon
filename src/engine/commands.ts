@@ -43,6 +43,10 @@ export type CommandHost = {
 	readonly setThinking: (level: ThinkingLevel) => Effect.Effect<void, CommandRefused>;
 	readonly setTools: (names: ReadonlyArray<string>) => Effect.Effect<void, CommandRefused>;
 	readonly compact: () => Effect.Effect<void, CommandRefused>;
+	readonly fork: (
+		entryId: string,
+		position: "before" | "at",
+	) => Effect.Effect<void, CommandRefused>;
 	readonly reloadFromDisk: () => Effect.Effect<
 		void,
 		CommandRefused,
@@ -98,6 +102,8 @@ export const dispatchCommand = (
 			return host.setTools(command.names);
 		case "compact":
 			return host.compact();
+		case "fork":
+			return host.fork(command.entryId, command.position ?? "before");
 		case "reloadFromDisk":
 			return host.reloadFromDisk();
 		default: {
