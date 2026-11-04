@@ -1,26 +1,27 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { StatusView } from "@/components/patterns/status/status-view";
 import { Button } from "@/components/ui/button";
 
 /**
  * What a page shows when a render throws. Without it the router's own screen is the only
  * thing between a bug and a blank page, and the product's language is lost.
+ *
+ * Mounted on each layout, so the shell around the page stays while the page itself is
+ * replaced.
  */
 export function RouteError({ error, reset }: ErrorComponentProps) {
+	// What is thrown is not always an Error, and the translator needs one. A render crash has
+	// no named cause, so its words are the translator's own; the page's job is the retry.
+	const failure = error instanceof Error ? error : new Error("A route failed to render.");
 	return (
-		<div className="flex min-h-full items-center justify-center p-6">
-			<Alert variant="destructive" className="max-w-lg">
-				<AlertTitle>This page stopped</AlertTitle>
-				<AlertDescription>
-					<p className="break-words whitespace-pre-wrap">
-						{error instanceof Error ? error.message : String(error)}
-					</p>
-					<Button variant="outline" onClick={reset}>
-						Try again
-					</Button>
-				</AlertDescription>
-			</Alert>
-		</div>
+		<StatusView
+			error={failure}
+			action={
+				<Button variant="outline" onClick={reset}>
+					Try again
+				</Button>
+			}
+		/>
 	);
 }

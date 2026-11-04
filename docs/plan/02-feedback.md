@@ -50,7 +50,7 @@ Choose by the scope of what the message is about. A feature never invents its ow
       line and `AppBanner` (if still used) take it.
 - [x] `errorView`: exhaustive over the protocol's tagged errors, with the words above;
       `StatusView` and `Notice` accept `error`.
-- [ ] `RouteError`, `RouteNotFound`, `RoutePending` on `StatusView`, mounted per layout
+- [x] `RouteError`, `RouteNotFound`, `RoutePending` on `StatusView`, mounted per layout
       inside the shell.
 - [ ] `epsilon/feedback-surfaces` in `tools/oxlint/epsilon/rules/`, with tests in
       `tools/oxlint/epsilon/rules.test.ts`, enforcing the colour and import rule.

@@ -67,9 +67,9 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 
 | Done | main file (`client/src/…`)                       | Lines | Branch today                   | Missing exports         |
 | ---- | ------------------------------------------------ | ----- | ------------------------------ | ----------------------- |
-| [ ]  | `app/route-error.tsx`                            | 26    | exists elsewhere (names found) |                         |
-| [ ]  | `app/route-not-found.tsx`                        | 25    | exists elsewhere (names found) |                         |
-| [ ]  | `app/route-pending.tsx`                          | 10    | exists elsewhere (names found) |                         |
+| [x]  | `app/route-error.tsx`                            | 26    | on `StatusView`, per layout    |                         |
+| [x]  | `app/route-not-found.tsx`                        | 25    | on `StatusView`, per layout    |                         |
+| [x]  | `app/route-pending.tsx`                          | 10    | per layout (`LoadingState`)    |                         |
 | [ ]  | `components/patterns/dialog/confirm-dialogs.tsx` | 210   | exists, changed (8 lines)      |                         |
 | [x]  | `components/patterns/status/app-banner.tsx`      | 38    | deleted                        | replaced by `AppStatus` |
 | [ ]  | `components/patterns/status/error-view.ts`       | 59    | exists, changed (51 lines)     |                         |
