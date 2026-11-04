@@ -13,6 +13,7 @@ export const ProvidersHandlersLive = ProviderRpcs.toLayer(
 		const providers = yield* ProvidersService;
 		return {
 			"config.providers.list": () => providers.list,
+			"config.providers.models": () => providers.models,
 			"config.providers.remove": ({ id }) => providers.remove(id),
 			"config.providers.save": (input) => providers.save(input),
 			"config.providers.setApiKey": ({ id, apiKey }) => providers.setApiKey(id, apiKey),

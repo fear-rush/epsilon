@@ -1,176 +1,180 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CircleCheckIcon } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
-import { Pane } from "@/components/patterns/pane/pane";
-import { PaneBar } from "@/components/patterns/pane/pane-bar";
-import { PaneBody } from "@/components/patterns/pane/pane-body";
-import { FieldStack } from "@/components/patterns/section/field-stack";
+import type { SettingsProblem } from "#protocol/config/general";
+import { DetailPage } from "@/components/patterns/pane/detail-page";
 import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";
 import { errorView } from "@/components/patterns/status/error-view";
+import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
+import { StatusView } from "@/components/patterns/status/status-view";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { agentHomeQuery } from "@/queries";
 import { call } from "@/runtime";
 
+import { useModels, useSettings, useSettingsRefresh } from "../queries.ts";
+import { ModelPicker } from "./model-picker.tsx";
+import { SettingsForm } from "./settings-form.tsx";
+
 /**
- * Settings → General.
- *
- * Two files, shown on one page and never merged: Epsilon's own knobs live in
- * `<home>/.epsilon/settings.json`, and pi's keys are read through pi's own resolution, so
- * the scope beside each row is what pi would use for a chat in this home.
+ * General: whether Epsilon can run a turn, where its home is, which model a new session
+ * starts on, Epsilon's own knobs, and every pi setting the dashboard can change.
  */
-
-const epsilonQuery = {
-	queryKey: ["config", "general", "epsilon"],
-	queryFn: ({ signal }: { signal: AbortSignal }) =>
-		call((client) => client["config.general.read"](), { signal }),
-};
-
-const piSettingsQuery = {
-	queryKey: ["config", "general", "settings", null],
-	queryFn: ({ signal }: { signal: AbortSignal }) =>
-		call((client) => client["config.general.settings"]({ folder: null }), { signal }),
-};
-
 export function SettingsGeneral() {
-	const epsilon = useQuery(epsilonQuery);
-	const piSettings = useQuery(piSettingsQuery);
+	const query = useSettings();
+	const models = useModels();
+	const home = useQuery(agentHomeQuery);
+
+	if (query.isPending) {
+		return (
+			<DetailPage title="General">
+				<LoadingState label="Reading the agent home…" />
+			</DetailPage>
+		);
+	}
+	if (query.error !== null) {
+		return (
+			<DetailPage title="General">
+				<StatusView {...errorView(query.error)} />
+			</DetailPage>
+		);
+	}
+
+	const snapshot = query.data;
+	const sorted = [...(models.data?.models ?? [])].toSorted((left, right) =>
+		`${left.provider}/${left.name}`.localeCompare(`${right.provider}/${right.name}`),
+	);
 
 	return (
-		<Pane className="flex-1">
-			<PaneBar title="General" />
-			<PaneBody page>
-				{epsilon.error !== null && <Problem error={epsilon.error} />}
-				{piSettings.error !== null && <Problem error={piSettings.error} />}
-
-				<Section
-					title="Epsilon"
-					description="Kept in this dashboard's own settings file, never in pi's."
-				>
-					{epsilon.data === undefined ? (
-						<Row title="Reading…" />
-					) : (
-						<>
-							{epsilon.data.problems.map((problem) => (
-								<Row
-									key={problem.path ?? problem.message}
-									title="A settings file Epsilon could not use"
-									description={problem.message}
-								>
-									<Badge variant="warning">{problem.path ?? "no path"}</Badge>
-								</Row>
-							))}
-							<MaxRunning value={epsilon.data.settings.maxRunning} />
-						</>
-					)}
-				</Section>
-
-				<Section
-					title="pi settings"
-					description="Resolved by pi: a project file wins over the home file, which wins over pi's default."
-				>
-					{piSettings.data === undefined ? (
-						<Row title="Reading…" />
-					) : (
-						<>
-							<Row title="Default model" description="What a new chat starts with.">
-								<span className="text-body text-muted-foreground">
-									{piSettings.data.defaultModel === null
-										? "unset"
-										: `${piSettings.data.defaultModel.provider} / ${piSettings.data.defaultModel.modelId}`}
-								</span>
-							</Row>
-							{piSettings.data.problems.map((problem) => (
-								<Row
-									key={`${problem.scope}:${problem.path ?? problem.message}`}
-									title={`pi could not load the ${problem.scope} settings file`}
-									description={problem.message}
-								/>
-							))}
-							{piSettings.data.rows.map((row) => (
-								<Row
-									key={row.key}
-									title={row.key}
-									description={row.error ?? "Set where the scope says."}
-								>
-									<code className="text-code text-muted-foreground">
-										{row.value === null ? "unset" : JSON.stringify(row.value)}
-									</code>
-									<Badge variant="outline">{row.scope}</Badge>
-									{row.terminalOnly && <Badge variant="ghost">terminal</Badge>}
-								</Row>
-							))}
-						</>
-					)}
-				</Section>
-			</PaneBody>
-		</Pane>
+		<DetailPage title="General">
+			<div className="grid gap-section">
+				{snapshot.providers.error !== undefined && (
+					<Notice tone="error">{snapshot.providers.error}</Notice>
+				)}
+				<SettingsProblems problems={snapshot.settings.problems} />
+				<AppSection
+					home={home.data}
+					maxRunning={snapshot.epsilon.settings.maxRunning}
+					models={sorted}
+					ready={snapshot.readiness.ready}
+					selected={
+						snapshot.settings.defaultModel === null
+							? ""
+							: `${snapshot.settings.defaultModel.provider}/${snapshot.settings.defaultModel.modelId}`
+					}
+				/>
+				<SettingsForm models={sorted} settings={snapshot.settings.rows} />
+			</div>
+		</DetailPage>
 	);
 }
 
-function Problem({ error }: { error: Error }) {
-	const view = errorView(error);
+/** pi records a settings file it could not load and ignores it; a default is never a choice. */
+function SettingsProblems({ problems }: { problems: ReadonlyArray<SettingsProblem> }) {
+	if (problems.length === 0) return null;
 	return (
-		<Notice tone={view.tone === "destructive" ? "error" : "warning"} title={view.title}>
-			{view.line}
+		<Notice tone="error" title="pi could not load a settings file">
+			<ul className="grid gap-1">
+				{problems.map((problem) => (
+					<li key={`${problem.scope}:${problem.path ?? ""}`}>
+						<code>{problem.path ?? `${problem.scope} settings`}</code>: {problem.message}
+					</li>
+				))}
+			</ul>
+			<p>pi ignores that file until it parses.</p>
 		</Notice>
 	);
 }
 
-function MaxRunning({ value }: { value: number }) {
-	const queryClient = useQueryClient();
-	const save = useMutation({
-		mutationFn: (maxRunning: number) =>
-			call((client) => client["config.general.setMaxRunning"]({ maxRunning })),
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["config"] }),
+function AppSection({
+	home,
+	maxRunning,
+	models,
+	ready,
+	selected,
+}: {
+	home: string | undefined;
+	maxRunning: number;
+	models: ReadonlyArray<{ provider: string; id: string; name: string }>;
+	ready: boolean;
+	selected: string;
+}) {
+	const refresh = useSettingsRefresh();
+	const defaults = useMutation({
+		mutationFn: (input: { provider: string; modelId: string }) =>
+			call((client) => client["config.general.setDefaultModel"](input)),
+		onSuccess: refresh,
 	});
-
-	const submit = (event: React.SyntheticEvent<HTMLFormElement>): void => {
-		event.preventDefault();
-		const raw = new FormData(event.currentTarget).get("maxRunning");
-		if (raw === null) return;
-		const maxRunning = Number(raw);
-		if (!Number.isInteger(maxRunning) || maxRunning < 1) return;
-		save.mutate(maxRunning);
+	const engines = useMutation({
+		mutationFn: (value: number) =>
+			call((client) => client["config.general.setMaxRunning"]({ maxRunning: value })),
+		onSuccess: refresh,
+	});
+	const [draft, setDraft] = useState(String(maxRunning));
+	const commit = (): void => {
+		const next = Number(draft.trim());
+		if (Number.isInteger(next) && next > 0 && next !== maxRunning) engines.mutate(next);
+		else setDraft(String(maxRunning));
 	};
 
 	return (
-		<>
-			<form onSubmit={submit}>
-				<Section description="How many chats may run at once before an idle one is closed. A busy chat is never closed.">
-					<FieldStack>
-						<Field>
-							<FieldLabel htmlFor="max-running">Running chats</FieldLabel>
-							<div className="flex items-center gap-2">
-								<Input
-									id="max-running"
-									name="maxRunning"
-									type="number"
-									min={1}
-									defaultValue={value}
-									className="w-24"
-								/>
-								<Button type="submit" size="sm" disabled={save.isPending}>
-									Save
-								</Button>
-								{!save.isPending && save.isSuccess && (
-									<span className="inline-flex items-center gap-1 text-meta text-muted-foreground">
-										<CircleCheckIcon className="size-4" aria-hidden />
-										Saved
-									</span>
-								)}
-							</div>
-							<FieldDescription>
-								Epsilon closes the least recently used idle engine to stay under this.
-							</FieldDescription>
-						</Field>
-					</FieldStack>
-				</Section>
-			</form>
-			{save.error !== null && <Problem error={save.error} />}
-		</>
+		<Section title="App">
+			<Row
+				title="Status"
+				description={
+					ready ? `${models.length} models can run a turn.` : "No provider can run a turn yet."
+				}
+			>
+				<Badge variant={ready ? "secondary" : "warning"}>
+					{ready ? "Ready" : "Not configured"}
+				</Badge>
+			</Row>
+			<Row stacked title="Agent home">
+				<code className="w-full rounded-md bg-muted pad-item text-code break-all">
+					{home ?? "…"}
+				</code>
+			</Row>
+			<Row
+				stacked
+				title="Default model"
+				description={selected === "" ? "No default set." : undefined}
+			>
+				<ModelPicker
+					id="default-model"
+					models={models}
+					selected={selected}
+					disabled={defaults.isPending || models.length === 0}
+					onPick={(model) => defaults.mutate({ modelId: model.id, provider: model.provider })}
+				/>
+			</Row>
+			<Row
+				title="Chat engines"
+				description="How many chats may hold an engine at once; the registry evicts an idle one over this."
+			>
+				<Input
+					aria-label="Chat engines"
+					className="w-20"
+					inputMode="numeric"
+					value={draft}
+					onBlur={commit}
+					onChange={(event) => setDraft(event.target.value)}
+					onKeyDown={(event) => {
+						if (event.key === "Enter") event.currentTarget.blur();
+					}}
+				/>
+			</Row>
+			{defaults.error !== null && (
+				<Notice tone="error" title="The default model was not saved">
+					{defaults.error.message}
+				</Notice>
+			)}
+			{engines.error !== null && (
+				<Notice tone="error" title="The engine count was not saved">
+					{engines.error.message}
+				</Notice>
+			)}
+		</Section>
 	);
 }

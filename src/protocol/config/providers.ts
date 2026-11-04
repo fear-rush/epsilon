@@ -101,6 +101,19 @@ export const ProvidersView = Schema.Struct({
 });
 export type ProvidersView = typeof ProvidersView.Type;
 
+/** One model pi composed, as a picker lists it. Credentials are not part of it. */
+export const ProviderModelView = Schema.Struct({
+	provider: Schema.String,
+	id: Schema.String,
+	name: Schema.String,
+});
+export type ProviderModelView = typeof ProviderModelView.Type;
+
+export const ProviderModelsView = Schema.Struct({
+	models: Schema.Array(ProviderModelView),
+});
+export type ProviderModelsView = typeof ProviderModelsView.Type;
+
 /** The model fields the provider dialog writes; every other field of a model survives. */
 export const ProviderModelInput = Schema.Struct({
 	id: Schema.String,
@@ -125,6 +138,9 @@ export type ProviderInput = typeof ProviderInput.Type;
 export const ProviderRpcs = RpcGroup.make(
 	Rpc.make("config.providers.list", {
 		success: ProvidersView,
+	}),
+	Rpc.make("config.providers.models", {
+		success: ProviderModelsView,
 	}),
 	Rpc.make("config.providers.save", {
 		payload: ProviderInput,

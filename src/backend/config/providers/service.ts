@@ -1,6 +1,11 @@
 import { Context, Effect, Layer, Option, Ref } from "effect";
 
-import type { ProviderInput, ProviderRow, ProvidersView } from "#protocol/config/providers";
+import type {
+	ProviderInput,
+	ProviderModelsView,
+	ProviderRow,
+	ProvidersView,
+} from "#protocol/config/providers";
 import type { ProviderRefused } from "#protocol/errors";
 
 import type { RuntimeUnavailable } from "../../platform/errors.ts";
@@ -21,6 +26,7 @@ import type { ProvidersStoreApi } from "./store.ts";
 
 export type ProvidersServiceApi = {
 	readonly list: Effect.Effect<ProvidersView>;
+	readonly models: Effect.Effect<ProviderModelsView>;
 	readonly save: (input: ProviderInput) => Effect.Effect<void, ProviderRefused>;
 	readonly remove: (id: string) => Effect.Effect<void, ProviderRefused>;
 	readonly setApiKey: (id: string, apiKey: string) => Effect.Effect<void, ProviderRefused>;
@@ -108,8 +114,24 @@ export const makeProvidersService = (deps: {
 				: { error, providers: rowsOf(runtime, builtin, custom) };
 		});
 
+		const models: Effect.Effect<ProviderModelsView> = deps.runtime.pipe(
+			Effect.map((runtime) => ({
+				models: runtime.getModels().map((model) => ({
+					id: model.id,
+					name: model.name,
+					provider: model.provider,
+				})),
+			})),
+			Effect.catchTag("RuntimeUnavailable", (error) =>
+				deps.log
+					.write("error", "pi could not compose the model catalog", { reason: error.reason })
+					.pipe(Effect.as({ models: [] })),
+			),
+		);
+
 		return {
 			list,
+			models,
 			remove: deps.store.remove,
 			save: deps.store.save,
 			setApiKey: deps.store.setApiKey,

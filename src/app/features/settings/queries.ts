@@ -42,6 +42,15 @@ export const useSettingsRefresh = (): (() => void) => {
 	}, [queryClient]);
 };
 
+/** Every model pi composed, for the default-model picker and the settings controls. */
+export const useModels = () => {
+	return useQuery({
+		queryKey: [...settingsKeys.all, "models"],
+		queryFn: ({ signal }) => call((client) => client["config.providers.models"](), { signal }),
+		staleTime: SETTINGS_STALE_MS,
+	});
+};
+
 /** What one declared package provides, as pi resolves it. */
 export const usePackageResources = (source: string, scope: PackageScope) => {
 	const project = useSettingsProject();
