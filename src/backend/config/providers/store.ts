@@ -1,7 +1,7 @@
 import { Context, Effect, Layer, Schema } from "effect";
 
 import { isBaseUrl, isProviderApi, isProviderId } from "#domain/providers/rules";
-import type { ProviderInput } from "#protocol/config/providers";
+import type { ProviderInput, ProviderStored } from "#protocol/config/providers";
 import { ProviderRefused } from "#protocol/errors";
 
 import { AgentHome } from "../../platform/agent-home.ts";
@@ -9,6 +9,7 @@ import type { FileUnreadable, FileUnwritable, Locked, NotJson } from "../../plat
 import { JsonDocument } from "../../platform/json-document.ts";
 import type { JsonDocumentApi, JsonObject } from "../../platform/json-document.ts";
 import { isJsonObject } from "../../platform/patch.ts";
+import type { JsonValue } from "../../platform/patch.ts";
 
 /**
  * `models.json`: the file the dashboard edits for custom providers.
@@ -27,6 +28,8 @@ import { isJsonObject } from "../../platform/patch.ts";
 export type ProvidersStoreApi = {
 	/** The provider ids `models.json` declares, which are the ones this page may edit. */
 	readonly customIds: Effect.Effect<ReadonlySet<string>>;
+	/** The stored entry's editable fields, with the key reduced to its form. */
+	readonly read: (id: string) => Effect.Effect<ProviderStored, ProviderRefused>;
 	readonly save: (input: ProviderInput) => Effect.Effect<void, ProviderRefused>;
 	readonly remove: (id: string) => Effect.Effect<void, ProviderRefused>;
 	readonly setApiKey: (id: string, apiKey: string) => Effect.Effect<void, ProviderRefused>;
@@ -92,6 +95,22 @@ const checked = (input: ProviderInput): Effect.Effect<ProviderInput, ProviderRef
 const checkedId = (id: string): Effect.Effect<string, ProviderRefused> =>
 	isProviderId(id) ? Effect.succeed(id) : Effect.fail(refusal(id, "That is not a provider id."));
 
+/** A stored key's form; the value itself never leaves the file. */
+const keyForm = (value: JsonValue | undefined): ProviderStored["apiKeyForm"] => {
+	if (!Schema.is(Schema.String)(value)) return undefined;
+	if (value.startsWith("$")) return "environment";
+	if (value.startsWith("!")) return "command";
+	return "literal";
+};
+
+/** The stored fields, built one at a time so an absent one stays absent. */
+type StoredFields = {
+	name?: string;
+	baseUrl?: string;
+	api?: string;
+	apiKeyForm?: ProviderStored["apiKeyForm"];
+};
+
 export const makeProvidersStore = (deps: {
 	readonly document: JsonDocumentApi;
 	readonly path: string;
@@ -104,6 +123,26 @@ export const makeProvidersStore = (deps: {
 			NotJson: () => Effect.succeed(new Set<string>()),
 		}),
 	);
+
+	const read = (id: string): Effect.Effect<ProviderStored, ProviderRefused> =>
+		Effect.flatMap(checkedId(id), (valid) =>
+			deps.document.read(deps.path).pipe(
+				guarded(valid),
+				Effect.map((document) => {
+					const entry = entryOf(providersOf(document), valid);
+					const name = entry["name"];
+					const baseUrl = entry["baseUrl"];
+					const api = entry["api"];
+					const form = keyForm(entry["apiKey"]);
+					const stored: StoredFields = {};
+					if (Schema.is(Schema.String)(name)) stored.name = name;
+					if (Schema.is(Schema.String)(baseUrl)) stored.baseUrl = baseUrl;
+					if (Schema.is(Schema.String)(api)) stored.api = api;
+					if (form !== undefined) stored.apiKeyForm = form;
+					return stored;
+				}),
+			),
+		);
 
 	const save = (input: ProviderInput): Effect.Effect<void, ProviderRefused> =>
 		Effect.flatMap(checked(input), (valid) =>
@@ -159,7 +198,7 @@ export const makeProvidersStore = (deps: {
 				.pipe(guarded(valid)),
 		);
 
-	return { customIds, remove, save, setApiKey };
+	return { customIds, read, remove, save, setApiKey };
 };
 
 export const ProvidersStoreLive: Layer.Layer<ProvidersStore, never, AgentHome | JsonDocument> =

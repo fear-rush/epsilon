@@ -14,6 +14,7 @@ export const ProvidersHandlersLive = ProviderRpcs.toLayer(
 		return {
 			"config.providers.list": () => providers.list,
 			"config.providers.models": () => providers.models,
+			"config.providers.read": ({ id }) => providers.read(id),
 			"config.providers.remove": ({ id }) => providers.remove(id),
 			"config.providers.save": (input) => providers.save(input),
 			"config.providers.setApiKey": ({ id, apiKey }) => providers.setApiKey(id, apiKey),

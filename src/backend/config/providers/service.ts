@@ -1,12 +1,13 @@
 import { Context, Effect, Layer, Option, Ref } from "effect";
 
 import type {
+	ProviderDetail,
 	ProviderInput,
 	ProviderModelsView,
 	ProviderRow,
 	ProvidersView,
 } from "#protocol/config/providers";
-import type { ProviderRefused } from "#protocol/errors";
+import { ProviderRefused } from "#protocol/errors";
 
 import type { RuntimeUnavailable } from "../../platform/errors.ts";
 import { Log } from "../../platform/log.ts";
@@ -27,6 +28,7 @@ import type { ProvidersStoreApi } from "./store.ts";
 export type ProvidersServiceApi = {
 	readonly list: Effect.Effect<ProvidersView>;
 	readonly models: Effect.Effect<ProviderModelsView>;
+	readonly read: (id: string) => Effect.Effect<ProviderDetail, ProviderRefused>;
 	readonly save: (input: ProviderInput) => Effect.Effect<void, ProviderRefused>;
 	readonly remove: (id: string) => Effect.Effect<void, ProviderRefused>;
 	readonly setApiKey: (id: string, apiKey: string) => Effect.Effect<void, ProviderRefused>;
@@ -35,6 +37,13 @@ export type ProvidersServiceApi = {
 export class ProvidersService extends Context.Service<ProvidersService, ProvidersServiceApi>()(
 	"epsilon/ProvidersService",
 ) {}
+
+/** The auth row built a field at a time, so an absent label stays absent. */
+type MutableAuth = {
+	configured: boolean;
+	source?: string;
+	label?: string;
+};
 
 const rowsOf = (
 	runtime: ModelRuntime,
@@ -129,9 +138,51 @@ export const makeProvidersService = (deps: {
 			),
 		);
 
+		const read: ProvidersServiceApi["read"] = (id) =>
+			Effect.gen(function* () {
+				const runtime = yield* deps.runtime.pipe(
+					Effect.mapError(
+						(error) =>
+							new ProviderRefused({
+								providerId: id,
+								reason: `pi could not compose its catalog: ${error.reason}`,
+							}),
+					),
+				);
+				const provider = runtime.getProviders().find((entry) => entry.id === id);
+				if (provider === undefined) {
+					return yield* new ProviderRefused({ providerId: id, reason: `pi does not know ${id}` });
+				}
+				const stored = yield* deps.store.read(id);
+				const auth = runtime.getProviderAuthStatus(id);
+				const authRow: MutableAuth = { configured: auth.configured };
+				if (auth.source !== undefined) authRow.source = auth.source;
+				if (auth.label !== undefined) authRow.label = auth.label;
+				return {
+					auth: authRow,
+					builtin: (yield* builtinIds.pipe(
+						Effect.match({
+							onFailure: () => new Set<string>(),
+							onSuccess: (ids) => ids,
+						}),
+					)).has(id),
+					custom: (yield* deps.store.customIds).has(id),
+					id,
+					models: runtime.getModels(id).map((model) => ({
+						contextWindow: model.contextWindow,
+						id: model.id,
+						maxTokens: model.maxTokens,
+						name: model.name,
+					})),
+					name: provider.name,
+					stored: Object.keys(stored).length === 0 ? null : stored,
+				} satisfies ProviderDetail;
+			});
+
 		return {
 			list,
 			models,
+			read,
 			remove: deps.store.remove,
 			save: deps.store.save,
 			setApiKey: deps.store.setApiKey,

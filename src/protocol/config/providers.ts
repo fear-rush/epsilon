@@ -123,6 +123,29 @@ export const ProviderModelInput = Schema.Struct({
 });
 export type ProviderModelInput = typeof ProviderModelInput.Type;
 
+/** The stored `models.json` fields the editor may prefill. The key is never carried. */
+export const ProviderStored = Schema.Struct({
+	name: Schema.optional(Schema.String),
+	baseUrl: Schema.optional(Schema.String),
+	api: Schema.optional(Schema.String),
+	/** How a key is stored: a literal, `$NAME`, `!command`, or absent. Never its value. */
+	apiKeyForm: Schema.optional(Schema.Literals(["literal", "environment", "command"])),
+});
+export type ProviderStored = typeof ProviderStored.Type;
+
+/** One provider as the editor needs it: pi's row, the stored entry, and its models. */
+export const ProviderDetail = Schema.Struct({
+	id: Schema.String,
+	name: Schema.String,
+	builtin: Schema.Boolean,
+	custom: Schema.Boolean,
+	/** The `models.json` entry's editable fields, or null when pi ships it alone. */
+	stored: Schema.NullOr(ProviderStored),
+	models: Schema.Array(ProviderModelInput),
+	auth: ProviderAuth,
+});
+export type ProviderDetail = typeof ProviderDetail.Type;
+
 export const ProviderInput = Schema.Struct({
 	id: Schema.String,
 	name: Schema.String,
@@ -141,6 +164,11 @@ export const ProviderRpcs = RpcGroup.make(
 	}),
 	Rpc.make("config.providers.models", {
 		success: ProviderModelsView,
+	}),
+	Rpc.make("config.providers.read", {
+		payload: { id: Schema.String },
+		success: ProviderDetail,
+		error: ProviderRefused,
 	}),
 	Rpc.make("config.providers.save", {
 		payload: ProviderInput,
