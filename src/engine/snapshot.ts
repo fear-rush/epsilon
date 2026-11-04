@@ -116,6 +116,9 @@ type MutableSessionMeta = {
 	model?: string;
 	thinking?: ThinkingLevel;
 	tools?: string[];
+	autoCompaction?: boolean;
+	autoRetry?: boolean;
+	hideThinking?: boolean;
 };
 
 /** What the page needs to draw the session controls, from pi's own state. */
@@ -123,6 +126,9 @@ export const sessionMeta = (agent: AgentSession): Extract<ServerFrame, { t: "ses
 	const title = agent.sessionManager.getSessionName();
 	const model = agent.model === undefined ? undefined : `${agent.model.provider}/${agent.model.id}`;
 	const frame: MutableSessionMeta = {
+		autoCompaction: agent.autoCompactionEnabled,
+		autoRetry: agent.autoRetryEnabled,
+		hideThinking: agent.settingsManager.getHideThinkingBlock(),
 		sessionId: agent.sessionId,
 		t: "sessionMeta",
 		thinking: agent.thinkingLevel,

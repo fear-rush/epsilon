@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { Clock, Effect, Option, Stream } from "effect";
 
+import type { Command } from "#protocol/conversation/commands";
 import type { ServerFrame } from "#protocol/conversation/frames";
 
 import { startEngine } from "../src/backend/conversation/engine.ts";
@@ -16,8 +17,12 @@ import { testPaths } from "./setup.ts";
 const command = (engine: RemoteEngine, text: string) =>
 	engine.request((id) => ({ command: { t: "prompt", text }, id, t: "command", tab: "tab" }));
 
-const frameOf = (engine: RemoteEngine, match: (frame: ServerFrame) => boolean) =>
-	engine.frames("tab").pipe(Stream.filter(match), Stream.take(1), Stream.runHead);
+const frameOf = (engine: RemoteEngine, match: (frame: ServerFrame) => boolean, tab = "tab") =>
+	engine.frames(tab).pipe(Stream.filter(match), Stream.take(1), Stream.runHead);
+
+/** One of the chat's own controls, sent the way the page sends it. */
+const control = (engine: RemoteEngine, next: Command) =>
+	engine.request((id) => ({ command: next, id, t: "command", tab: "tab" }));
 
 test("a session that already has entries opens with a window of them", async () => {
 	const home = testPaths.agentHome;
@@ -123,6 +128,18 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 					kind: "contextLive",
 					t: "query",
 				}));
+				// The run controls go through pi: a new tab's opening frames are the answer it
+				// wrote. Read them once: a stream that stops mid-chunk drops the frames it
+				// pulled and did not use, so one filtered read per frame can lose the next.
+				yield* control(engine, { t: "setLabel", label: "Renamed" });
+				yield* control(engine, { t: "setAutoCompaction", enabled: false });
+				yield* control(engine, { t: "setAutoRetry", enabled: false });
+				yield* control(engine, { t: "setHideThinking", hidden: true });
+				yield* control(engine, { t: "clearQueue" });
+				yield* engine.attachTab("tab2");
+				const opening = [...(yield* engine.frames("tab2").pipe(Stream.take(4), Stream.runCollect))];
+				const meta = opening.find((frame) => frame.t === "sessionMeta");
+				const queue = opening.find((frame) => frame.t === "queue");
 				yield* engine.stop(5_000);
 				return {
 					acceptedIn,
@@ -130,6 +147,8 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 					contextLive,
 					extensionSkills,
 					live,
+					meta,
+					queue,
 					snapshot: snapshot.value,
 					transcript,
 					tree,
@@ -142,6 +161,13 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 		if (result.append.value.t !== "append") throw new Error("not an append");
 		expect(result.snapshot.entries).toHaveLength(0);
 		expect(result.acceptedIn).toBeLessThan(2_000);
+		if (result.meta === undefined) throw new Error("no session meta");
+		expect(result.meta.title).toBe("Renamed");
+		expect(result.meta.autoCompaction).toBe(false);
+		expect(result.meta.autoRetry).toBe(false);
+		expect(result.meta.hideThinking).toBe(true);
+		if (result.queue === undefined) throw new Error("no queue frame");
+		expect(result.queue).toEqual({ followUp: [], steering: [], t: "queue" });
 		const entry = result.append.value.entry;
 		expect(entry.role).toBe("assistant");
 		if (entry.role === "assistant") {

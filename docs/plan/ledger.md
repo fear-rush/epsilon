@@ -37,29 +37,29 @@ What main's UI calls that the branch has no call or command for. Add each one in
 slice that needs it, through `src/protocol/` and a handler (AGENTS.md, "Add to a root").
 Rows marked _verify_ may exist under another name: find it before adding one.
 
-| Done | main                                                                          | For slice | Branch today                         |
-| ---- | ----------------------------------------------------------------------------- | --------- | ------------------------------------ |
-| [ ]  | chat `bash`, `abort_bash`                                                     | S2        | **missing**                          |
-| [ ]  | chat `autocomplete`                                                           | S2        | **missing**                          |
-| [ ]  | chat `cancel_retry`, `set_auto_retry`                                         | S2        | **missing**                          |
-| [ ]  | chat `set_auto_compaction`, `abort_compaction`                                | S2        | **missing**                          |
-| [ ]  | chat `clear_queue`                                                            | S2        | **missing**                          |
-| [ ]  | chat `set_label`                                                              | S2        | **missing**                          |
-| [ ]  | chat `set_hide_thinking`                                                      | S2        | **missing**                          |
-| [ ]  | chat `set_tree_filter_mode`                                                   | S2        | verify (a setting exists in general) |
-| [ ]  | chat `reload`, `reload_session`                                               | S2        | verify (`reloadFromDisk`)            |
-| [ ]  | chat `set_coding_tools`                                                       | S2        | verify (`setTools`)                  |
-| [ ]  | `POST /api/sessions/{id}/export`                                              | S2        | **missing**                          |
-| [ ]  | `POST /api/sessions/{id}/clone`                                               | S2        | verify                               |
-| [ ]  | `POST /api/sessions/{id}/move`                                                | S3        | verify                               |
-| [ ]  | `DELETE /api/projects/sessions` (delete a project's chats)                    | S3        | **missing**                          |
-| [ ]  | `PUT /api/settings/mcp/default-tool`                                          | S4        | **missing**                          |
-| [ ]  | `POST /api/settings/mcp/command`                                              | S4        | **missing**                          |
-| [ ]  | `POST /api/settings/providers/test`                                           | S5        | **missing**                          |
-| [ ]  | `POST /api/settings/providers/{id}/logout` (through `ModelRuntime.logout()`)  | S5        | **missing**                          |
-| [ ]  | `POST /api/settings/skills/folders/link`, `…/unlink`                          | S6        | verify                               |
-| [ ]  | `GET /api/settings/skills/listed-files`, `POST …/listed-file`, `PUT …/listed` | S6        | verify                               |
-| [ ]  | `PUT /api/settings/skills/paths`, `DELETE …/paths`                            | S6        | verify                               |
+| Done | main                                                                          | For slice | Branch today                           |
+| ---- | ----------------------------------------------------------------------------- | --------- | -------------------------------------- |
+| [ ]  | chat `bash`, `abort_bash`                                                     | S2        | **missing**                            |
+| [ ]  | chat `autocomplete`                                                           | S2        | **missing**                            |
+| [x]  | chat `cancel_retry`, `set_auto_retry`                                         | S2        | `feat(conversation): the run controls` |
+| [x]  | chat `set_auto_compaction`, `abort_compaction`                                | S2        | `feat(conversation): the run controls` |
+| [x]  | chat `clear_queue`                                                            | S2        | `feat(conversation): the run controls` |
+| [x]  | chat `set_label`                                                              | S2        | `feat(conversation): the run controls` |
+| [x]  | chat `set_hide_thinking`                                                      | S2        | `feat(conversation): the run controls` |
+| [ ]  | chat `set_tree_filter_mode`                                                   | S2        | verify (a setting exists in general)   |
+| [ ]  | chat `reload`, `reload_session`                                               | S2        | verify (`reloadFromDisk`)              |
+| [ ]  | chat `set_coding_tools`                                                       | S2        | verify (`setTools`)                    |
+| [ ]  | `POST /api/sessions/{id}/export`                                              | S2        | **missing**                            |
+| [ ]  | `POST /api/sessions/{id}/clone`                                               | S2        | verify                                 |
+| [ ]  | `POST /api/sessions/{id}/move`                                                | S3        | verify                                 |
+| [ ]  | `DELETE /api/projects/sessions` (delete a project's chats)                    | S3        | **missing**                            |
+| [ ]  | `PUT /api/settings/mcp/default-tool`                                          | S4        | **missing**                            |
+| [ ]  | `POST /api/settings/mcp/command`                                              | S4        | **missing**                            |
+| [ ]  | `POST /api/settings/providers/test`                                           | S5        | **missing**                            |
+| [ ]  | `POST /api/settings/providers/{id}/logout` (through `ModelRuntime.logout()`)  | S5        | **missing**                            |
+| [ ]  | `POST /api/settings/skills/folders/link`, `…/unlink`                          | S6        | verify                                 |
+| [ ]  | `GET /api/settings/skills/listed-files`, `POST …/listed-file`, `PUT …/listed` | S6        | verify                                 |
+| [ ]  | `PUT /api/settings/skills/paths`, `DELETE …/paths`                            | S6        | verify                                 |
 
 ## Client files
 

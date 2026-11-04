@@ -49,5 +49,18 @@ export const Command = Schema.Union([
 	}),
 	/** Re-open the runtime from the file after a foreign write. */
 	Schema.Struct({ t: Schema.Literals(["reloadFromDisk"]) }),
+	/** pi's automatic compaction, written through its own settings so a terminal agrees. */
+	Schema.Struct({ t: Schema.Literals(["setAutoCompaction"]), enabled: Schema.Boolean }),
+	Schema.Struct({ t: Schema.Literals(["setAutoRetry"]), enabled: Schema.Boolean }),
+	/** Stop the retry pi is waiting to make; the failed turn is already over. */
+	Schema.Struct({ t: Schema.Literals(["cancelRetry"]) }),
+	/** Stop the compaction pi is running. */
+	Schema.Struct({ t: Schema.Literals(["abortCompaction"]) }),
+	/** Drop what pi holds for the next turn; pi hands the text back for the composer. */
+	Schema.Struct({ t: Schema.Literals(["clearQueue"]) }),
+	/** pi's own hide-thinking setting, so a terminal sees what the dashboard chose. */
+	Schema.Struct({ t: Schema.Literals(["setHideThinking"]), hidden: Schema.Boolean }),
+	/** The chat's display name, which pi records in the session file. */
+	Schema.Struct({ t: Schema.Literals(["setLabel"]), label: Schema.String }),
 ]);
 export type Command = typeof Command.Type;

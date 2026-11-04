@@ -43,6 +43,14 @@ export type CommandHost = {
 	readonly setThinking: (level: ThinkingLevel) => Effect.Effect<void, CommandRefused>;
 	readonly setTools: (names: ReadonlyArray<string>) => Effect.Effect<void, CommandRefused>;
 	readonly compact: () => Effect.Effect<void, CommandRefused>;
+	readonly abortCompaction: () => Effect.Effect<void, CommandRefused>;
+	readonly setAutoCompaction: (enabled: boolean) => Effect.Effect<void, CommandRefused>;
+	readonly cancelRetry: () => Effect.Effect<void, CommandRefused>;
+	readonly setAutoRetry: (enabled: boolean) => Effect.Effect<void, CommandRefused>;
+	/** Empty pi's queue and put its text back in the composer. */
+	readonly clearQueue: () => Effect.Effect<void, CommandRefused>;
+	readonly setHideThinking: (hidden: boolean) => Effect.Effect<void, CommandRefused>;
+	readonly setLabel: (label: string) => Effect.Effect<void, CommandRefused>;
 	readonly fork: (
 		entryId: string,
 		position: "before" | "at",
@@ -102,6 +110,24 @@ export const dispatchCommand = (
 			return host.setTools(command.names);
 		case "compact":
 			return host.compact();
+		case "abortCompaction":
+			return host.abortCompaction();
+		case "setAutoCompaction":
+			return host.setAutoCompaction(command.enabled);
+		case "cancelRetry":
+			return host.cancelRetry();
+		case "setAutoRetry":
+			return host.setAutoRetry(command.enabled);
+		case "clearQueue":
+			return host.clearQueue();
+		case "setHideThinking":
+			return host.setHideThinking(command.hidden);
+		case "setLabel": {
+			// The name is written into the session file, so a foreign write refuses it too.
+			const refusal = writeRefusal(host, "setLabel");
+			if (refusal !== undefined) return Effect.fail(refusal);
+			return host.setLabel(command.label);
+		}
 		case "fork":
 			return host.fork(command.entryId, command.position ?? "before");
 		case "reloadFromDisk":

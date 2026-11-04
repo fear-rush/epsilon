@@ -41,7 +41,16 @@ describe("frames", () => {
 				model: "stub-model",
 				thinking: "high",
 				tools: ["bash", "read"],
+				autoCompaction: false,
+				autoRetry: true,
+				hideThinking: true,
 			},
+			{
+				t: "queue",
+				steering: ["stop and use the tests"],
+				followUp: ["then commit"],
+			},
+			{ t: "busy", busy: true, compacting: true, retrying: true },
 			{ t: "editorText", sessionId: "s1", text: "the message a move undid", nonce: "n1" },
 			{
 				t: "tree",
@@ -60,7 +69,7 @@ describe("frames", () => {
 		// The version covers exactly the tags the socket can carry: adding a frame without
 		// naming it here means a stale tab would meet a frame it cannot decode.
 		expect(new Set(samples.map((sample) => sample.t))).toEqual(new Set(frameTags));
-		expect(PROTOCOL_VERSION).toBe("5");
+		expect(PROTOCOL_VERSION).toBe("6");
 		for (const sample of samples) expect(() => decodeServerFrame(sample)).not.toThrow();
 	});
 });
@@ -75,6 +84,28 @@ describe("reduce", () => {
 		expect(state.tools[0]?.output).toContain("README.md");
 		expect(state.tools[0]?.durationMs).toBe(41);
 		expect(state.busy).toBe(false);
+	});
+
+	test("carries the run controls pi holds: the queue, a retry and the meta flags", () => {
+		const frames: ReadonlyArray<ServerFrame> = [
+			{ t: "queue", steering: ["steer"], followUp: ["follow"] },
+			{ t: "busy", busy: true, compacting: false, retrying: true },
+			{
+				t: "sessionMeta",
+				sessionId: "s1",
+				autoCompaction: false,
+				autoRetry: true,
+				hideThinking: true,
+			},
+		];
+		const state = frames.reduce(reduce, emptyConversation);
+
+		expect(state.queue).toEqual({ steering: ["steer"], followUp: ["follow"] });
+		expect(state.retrying).toBe(true);
+		expect(state.busy).toBe(true);
+		expect(state.autoCompaction).toBe(false);
+		expect(state.autoRetry).toBe(true);
+		expect(state.hideThinking).toBe(true);
 	});
 
 	test("replaces the streaming row when its entry arrives", () => {

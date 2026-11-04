@@ -196,6 +196,15 @@ export const BusyFrame = Schema.Struct({
 	t: Schema.Literals(["busy"]),
 	busy: Schema.Boolean,
 	compacting: Schema.optional(Schema.Boolean),
+	/** pi is waiting out a failed request and will try it again. */
+	retrying: Schema.optional(Schema.Boolean),
+});
+
+/** What pi holds for the next turn, in the order pi will send it. */
+export const QueueFrame = Schema.Struct({
+	t: Schema.Literals(["queue"]),
+	steering: Schema.Array(Schema.String),
+	followUp: Schema.Array(Schema.String),
 });
 
 /** Something outside Epsilon wrote the session file; the chat is read-only until reloaded. */
@@ -212,6 +221,9 @@ export const SessionMetaFrame = Schema.Struct({
 	thinking: Schema.optional(ThinkingLevel),
 	/** The tools declared to the model now, by name. */
 	tools: Schema.optional(Schema.Array(Schema.String)),
+	autoCompaction: Schema.optional(Schema.Boolean),
+	autoRetry: Schema.optional(Schema.Boolean),
+	hideThinking: Schema.optional(Schema.Boolean),
 });
 
 /**
@@ -237,6 +249,7 @@ export const ServerFrame = Schema.Union([
 	DialogFrame,
 	DialogClosedFrame,
 	BusyFrame,
+	QueueFrame,
 	DriftFrame,
 	SessionMetaFrame,
 	EditorTextFrame,

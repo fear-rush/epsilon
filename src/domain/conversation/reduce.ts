@@ -130,7 +130,17 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 		case "dialogClosed":
 			return { ...state, dialogs: state.dialogs.filter((dialog) => dialog.id !== frame.id) };
 		case "busy":
-			return { ...state, busy: frame.busy, compacting: frame.compacting ?? false };
+			return {
+				...state,
+				busy: frame.busy,
+				compacting: frame.compacting ?? false,
+				retrying: frame.retrying ?? false,
+			};
+		case "queue":
+			return {
+				...state,
+				queue: { followUp: frame.followUp, steering: frame.steering },
+			};
 		case "drift":
 			return { ...state, drift: frame.reason };
 		case "sessionMeta":
@@ -141,6 +151,9 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				model: frame.model ?? state.model,
 				thinking: frame.thinking ?? state.thinking,
 				activeTools: frame.tools ?? state.activeTools,
+				autoCompaction: frame.autoCompaction ?? state.autoCompaction,
+				autoRetry: frame.autoRetry ?? state.autoRetry,
+				hideThinking: frame.hideThinking ?? state.hideThinking,
 			};
 		case "editorText":
 			return { ...state, draft: { nonce: frame.nonce, text: frame.text } };

@@ -445,6 +445,9 @@ export class EngineSession {
 			abort: () => this.abort(),
 			answerDialog: (answer) => this.dialogs.answer(answer),
 			drift: this.driftReason,
+			abortCompaction: () => this.abortCompaction(),
+			cancelRetry: () => this.cancelRetry(),
+			clearQueue: () => this.clearQueue(),
 			compact: () => this.compact(),
 			followUp: (text, images) => this.queued("followUp", text, images),
 			fork: (entryId, position) => this.fork(entryId, position),
@@ -452,6 +455,10 @@ export class EngineSession {
 			loadTree: (tab) => Effect.sync(() => this.sendTree(tab)),
 			navigateTree: (targetId) => this.navigateTree(targetId),
 			prompt: (text, images) => this.prompt(text, images),
+			setAutoCompaction: (enabled) => this.setAutoCompaction(enabled),
+			setAutoRetry: (enabled) => this.setAutoRetry(enabled),
+			setHideThinking: (hidden) => this.setHideThinking(hidden),
+			setLabel: (label) => this.setLabel(label),
 			setModel: (provider, modelId) => this.setModel(provider, modelId),
 			setThinking: (level) => this.setThinking(level),
 			setTools: (names) => this.setTools(names),
@@ -523,11 +530,104 @@ export class EngineSession {
 	}
 
 	private abort(): Effect.Effect<void, CommandRefused> {
+		const self = this;
 		const agent = this.runtime.session;
-		return Effect.tryPromise({
-			try: () => agent.abort(),
-			catch: (cause) => new CommandRefused({ command: "abort", reason: describe(cause) }),
-		}).pipe(Effect.asVoid);
+		return Effect.sync(() => self.takeQueue()).pipe(
+			Effect.andThen(
+				Effect.tryPromise({
+					try: () => agent.abort(),
+					catch: (cause) => new CommandRefused({ command: "abort", reason: describe(cause) }),
+				}),
+			),
+			Effect.andThen(Effect.sync(() => self.sendQueue())),
+			Effect.asVoid,
+		);
+	}
+
+	/**
+	 * Empty pi's queue and put its text back in the composer, which is what pi's own editor
+	 * does when a run is stopped.
+	 */
+	private clearQueue(): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		return Effect.sync(() => {
+			self.takeQueue();
+			self.sendQueue();
+		});
+	}
+
+	private takeQueue(): void {
+		const queue = this.runtime.session.clearQueue();
+		this.restoreQueue(queue);
+	}
+
+	/** pi's editor joins the prompts it dropped with a blank line, in front of the draft. */
+	private restoreQueue(queue: {
+		readonly steering: ReadonlyArray<string>;
+		readonly followUp: ReadonlyArray<string>;
+	}): void {
+		const text = [...queue.steering, ...queue.followUp].join("\n\n");
+		if (text === "") return;
+		this.broadcast({
+			nonce: crypto.randomUUID(),
+			sessionId: this.runtime.session.sessionId,
+			text,
+			t: "editorText",
+		});
+	}
+
+	/** pi's setting writers, so a terminal reading the same home sees the same choice. */
+	private setAutoCompaction(enabled: boolean): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		const agent = this.runtime.session;
+		return Effect.try({
+			try: () => agent.setAutoCompactionEnabled(enabled),
+			catch: (cause) =>
+				new CommandRefused({ command: "setAutoCompaction", reason: describe(cause) }),
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+	}
+
+	private setAutoRetry(enabled: boolean): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		const agent = this.runtime.session;
+		return Effect.try({
+			try: () => agent.setAutoRetryEnabled(enabled),
+			catch: (cause) => new CommandRefused({ command: "setAutoRetry", reason: describe(cause) }),
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+	}
+
+	private setHideThinking(hidden: boolean): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		const agent = this.runtime.session;
+		return Effect.try({
+			try: () => agent.settingsManager.setHideThinkingBlock(hidden),
+			catch: (cause) => new CommandRefused({ command: "setHideThinking", reason: describe(cause) }),
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+	}
+
+	private setLabel(label: string): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		const agent = this.runtime.session;
+		return Effect.try({
+			try: () => agent.setSessionName(label),
+			catch: (cause) => new CommandRefused({ command: "setLabel", reason: describe(cause) }),
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+	}
+
+	private abortCompaction(): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		return Effect.try({
+			try: () => self.runtime.session.abortCompaction(),
+			catch: (cause) => new CommandRefused({ command: "abortCompaction", reason: describe(cause) }),
+		}).pipe(Effect.andThen(Effect.sync(() => self.sendStatus())));
+	}
+
+	private cancelRetry(): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		return Effect.try({
+			try: () => self.runtime.session.abortRetry(),
+			catch: (cause) => new CommandRefused({ command: "cancelRetry", reason: describe(cause) }),
+		}).pipe(Effect.andThen(Effect.sync(() => self.sendStatus())));
 	}
 
 	/**
@@ -774,6 +874,22 @@ export class EngineSession {
 		};
 		this.frames.to(tab === undefined ? "all" : { tab }, frame);
 		this.frames.to(tab === undefined ? "all" : { tab }, sessionMeta(agent));
+		if (tab === undefined) this.sendQueue();
+		else this.frames.to({ tab }, this.queueFrame());
+	}
+
+	/** Where a tab sends a prompt for the running turn, and what pi will send next. */
+	private queueFrame(): Extract<ServerFrame, { t: "queue" }> {
+		const agent = this.runtime.session;
+		return {
+			followUp: [...agent.getFollowUpMessages()],
+			steering: [...agent.getSteeringMessages()],
+			t: "queue",
+		};
+	}
+
+	private sendQueue(): void {
+		this.broadcast(this.queueFrame());
 	}
 
 	private broadcastAll(): void {
@@ -824,6 +940,7 @@ export class EngineSession {
 		this.frames.to("all", {
 			busy: agent.isStreaming || this.toolRunning > 0,
 			compacting: agent.isCompacting,
+			retrying: agent.isRetrying,
 			t: "busy",
 		});
 		if (this.shutdownRequested && !this.isBusy) this.onShutdown();
@@ -1067,13 +1184,18 @@ export class EngineSession {
 					self.broadcast({ busy: self.runtime.session.isStreaming, compacting: false, t: "busy" });
 					return;
 				case "auto_retry_start":
+					// The reason stays in the notice until the run status row can carry it.
 					self.notice(`Retrying the request: ${event.errorMessage}`, "retry");
+					self.sendStatus();
+					return;
+				case "auto_retry_end":
+					self.sendStatus();
 					return;
 				case "session_info_changed":
 					self.broadcast(sessionMeta(self.runtime.session));
 					return;
 				case "queue_update":
-					self.sendStatus();
+					self.sendQueue();
 					return;
 				default:
 					return;

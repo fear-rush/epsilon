@@ -15,6 +15,12 @@ export type StreamingTurn = {
 };
 
 /** A tool call and what it has produced so far, keyed by pi's own tool call id. */
+/** What pi holds for the next turn: steering messages and follow-ups, in pi's order. */
+export type Queue = {
+	readonly steering: ReadonlyArray<string>;
+	readonly followUp: ReadonlyArray<string>;
+};
+
 export type ToolRun = {
 	readonly toolCallId: string;
 	readonly toolName: string;
@@ -47,6 +53,12 @@ export type ConversationState = {
 	readonly tree: ReadonlyArray<TreeEntry>;
 	readonly busy: boolean;
 	readonly compacting: boolean;
+	readonly retrying: boolean;
+	readonly queue: Queue;
+	/** pi's automatic behaviours, which its own settings file owns. */
+	readonly autoCompaction: boolean;
+	readonly autoRetry: boolean;
+	readonly hideThinking: boolean;
 	readonly hasOlder: boolean;
 	/** Set when the session file changed outside Epsilon; the chat is read-only until reload. */
 	readonly drift: string | undefined;
@@ -70,6 +82,11 @@ export const emptyConversation: ConversationState = {
 	tree: [],
 	busy: false,
 	compacting: false,
+	retrying: false,
+	queue: { followUp: [], steering: [] },
+	autoCompaction: false,
+	autoRetry: false,
+	hideThinking: false,
 	hasOlder: false,
 	drift: undefined,
 };
