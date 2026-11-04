@@ -1,11 +1,16 @@
-import { Spinner } from "@/components/ui/spinner";
+import { Loader2Icon } from "lucide-react";
 
-/** A spinner with its label, for a read in flight. */
+/**
+ * A spinner with its label, for a read in flight.
+ *
+ * The spinner is decorative here: the page's one live region is the app's status line, and
+ * a second `role="status"` would talk over it.
+ */
 export function LoadingState({ label }: { label: string }) {
 	return (
-		<output className="flex items-center gap-2 text-meta text-muted-foreground">
-			<Spinner />
+		<p className="flex items-center gap-2 text-meta text-muted-foreground">
+			<Loader2Icon className="size-4 animate-spin" aria-hidden />
 			{label}
-		</output>
+		</p>
 	);
 }

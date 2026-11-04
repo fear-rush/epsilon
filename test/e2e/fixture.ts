@@ -20,6 +20,11 @@ export type Fixtures = {
 	readonly app: RunningApp;
 };
 
+export type Options = {
+	/** A home with a model, written before the server starts. An onboarding test opts out. */
+	readonly withModel: boolean;
+};
+
 /**
  * A port nothing else holds. Playwright runs files in separate workers, so one fixed port
  * would make two tests share a server and one test's stop kill another test's page.
@@ -40,7 +45,8 @@ const freePort = (): Promise<number> =>
 		});
 	});
 
-export const test = base.extend<Fixtures>({
+export const test = base.extend<Fixtures & Options>({
+	withModel: [true, { option: true }],
 	// oxlint-disable-next-line no-empty-pattern -- Playwright requires the destructuring form
 	agentHome: async ({}, use) => {
 		const home = mkdtempSync(join(tmpdir(), "epsilon-e2e-"));
@@ -52,8 +58,8 @@ export const test = base.extend<Fixtures>({
 		await use(stub);
 		stub.stop();
 	},
-	app: async ({ agentHome, stub }, use) => {
-		writeStubModels(agentHome, stub.baseUrl);
+	app: async ({ agentHome, stub, withModel }, use) => {
+		if (withModel) writeStubModels(agentHome, stub.baseUrl);
 		const app = await launchEpsilon({ home: agentHome, port: await freePort() });
 		await use(app);
 		app.stop();

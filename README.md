@@ -2,9 +2,10 @@
 
 A web dashboard for the `pi` coding agent on your machine.
 
-> Under rebuild. The server, the socket runtime and the configuration services are in
-> place, and the page runs on them: an overview of the agent home and a settings surface.
-> The conversation screen is the next step (see `AGENTS.md` and `docs/ARCHITECTURE.md`).
+> Under rebuild. The server, the socket runtime and the chat are in place: a session
+> sidebar, a virtualized transcript, the composer, extension dialogs and the engine's own
+> notices. General, Providers and Diagnostics are written; the other settings sections and
+> the ask-the-user tool are next (see `AGENTS.md` and `docs/ARCHITECTURE.md`).
 
 ## Run it
 

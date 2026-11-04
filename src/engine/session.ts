@@ -3,8 +3,8 @@ import type {
 	AgentSessionEvent,
 	PromptOptions,
 } from "@earendil-works/pi-coding-agent";
-import type { FileSystem, Scope } from "effect";
-import { Deferred, Effect, Queue } from "effect";
+import type { Scope } from "effect";
+import { Deferred, Effect, FileSystem, Option, Queue, Schema } from "effect";
 
 import type { McpAttention, McpEngineLive } from "#protocol/config/mcp";
 import type { ExtensionSkillsAnswer } from "#protocol/config/skills";
@@ -43,6 +43,9 @@ import {
 } from "./snapshot.ts";
 import { appendedEntry, entryForMessage, toolCallsOf, toolTextOf } from "./translate.ts";
 import { UiBridge } from "./ui.ts";
+
+/** A session line's id, which is what says who wrote it. */
+const EntryLine = Schema.Struct({ id: Schema.String });
 import { acquireSessionLock, startWatcher } from "./watcher.ts";
 import type { SessionLock, SessionWatcher } from "./watcher.ts";
 
@@ -722,7 +725,37 @@ export class EngineSession {
 			self.watcher = yield* startWatcher({
 				file: () => self.runtime.file ?? self.input.file,
 				onForeign: (reason) => self.foreign(reason),
+				ownWrite: (from) => self.ownWrite(from),
 			});
+		});
+	}
+
+	/**
+	 * Whether every entry written after byte `from` is one this engine wrote.
+	 *
+	 * The session manager holds the entries this engine added; an id it does not know was
+	 * appended by someone else, even when an own write followed it in the same window.
+	 * A line that does not parse yet is a write in progress: the next tick reads it whole.
+	 */
+	private ownWrite(from: number): Effect.Effect<boolean, never, FileSystem.FileSystem> {
+		const self = this;
+		return Effect.gen(function* () {
+			const file = self.runtime.file ?? self.input.file;
+			if (file === undefined) return true;
+			const fs = yield* FileSystem.FileSystem;
+			const bytes = yield* fs.readFile(file).pipe(Effect.orElseSucceed(() => new Uint8Array()));
+			const appended = new TextDecoder().decode(bytes.subarray(from));
+			for (const line of appended.split("\n")) {
+				if (line.trim() === "") continue;
+				// A JSON string decoded through the schema: a line still being written fails
+				// here, and the next tick reads it whole.
+				const id = yield* Effect.option(
+					Schema.decodeEffect(Schema.fromJsonString(EntryLine))(line),
+				);
+				if (Option.isNone(id)) return true;
+				if (self.runtime.session.sessionManager.getEntry(id.value.id) === undefined) return false;
+			}
+			return true;
 		});
 	}
 
@@ -834,7 +867,6 @@ export class EngineSession {
 							: { entry, t: "append" };
 					self.frames.to("all", frame);
 					if (entry.role === "assistant") self.streamId = undefined;
-					self.watcher?.markOwn();
 					yield* self.ensureLock();
 					self.sendStatus();
 					return;
@@ -843,16 +875,13 @@ export class EngineSession {
 					if (event.entry.type === "session_info") {
 						self.broadcast(sessionMeta(self.runtime.session));
 					}
-					self.watcher?.markOwn();
 					return;
 				case "agent_start":
 					self.sendStatus();
 					return;
 				case "agent_end":
-					self.watcher?.markOwn();
 					return;
 				case "agent_settled":
-					self.watcher?.markOwn();
 					self.broadcastAll();
 					if (self.runtime.file !== undefined) {
 						yield* self.ensureLock();

@@ -1,5 +1,8 @@
 import { expect, test } from "./fixture.ts";
 
+// The point of this flow is a home with nothing configured, so no stub model is written.
+test.use({ withModel: false });
+
 /**
  * Flow 1: an empty home reports what is missing, and adding the stub provider makes it
  * ready. Landing: step 6 (readiness) with step 8 (settings UI).

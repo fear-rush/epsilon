@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { SectionPending } from "@/features/settings/shell/section-pending";
+import { SettingsProviders } from "@/features/settings/providers/providers";
 
 export const Route = createFileRoute("/settings/providers")({
 	head: () => ({ meta: [{ title: "Providers · Settings" }] }),
-	component: () => <SectionPending title="Providers" />,
+	component: SettingsProviders,
 });

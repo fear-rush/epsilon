@@ -1,6 +1,6 @@
 import { hostname } from "node:os";
 
-import { Effect, FileSystem, Option, Queue, Ref, Schema } from "effect";
+import { Effect, FileSystem, Option, Ref, Schema } from "effect";
 import type { Scope } from "effect";
 
 import { EngineRefused } from "./errors.ts";
@@ -115,13 +115,18 @@ export const acquireSessionLock = (
 export type WatcherOptions = {
 	/** The session file, read every tick: pi creates it on the first message. */
 	readonly file: () => string | undefined;
+	/**
+	 * Whether every entry written after byte `from` belongs to this engine.
+	 *
+	 * The engine knows its own entries, so it can answer exactly where a size cannot: a
+	 * foreign append followed by one of its own no longer looks like an own write.
+	 */
+	readonly ownWrite: (from: number) => Effect.Effect<boolean, never, FileSystem.FileSystem>;
 	/** A write this engine did not make. Called once per change. */
 	readonly onForeign: (reason: string) => void;
 };
 
 export type SessionWatcher = {
-	/** Call after an append the engine made, so its own write is not foreign. */
-	readonly markOwn: () => void;
 	readonly stop: () => void;
 };
 
@@ -133,30 +138,25 @@ export const startWatcher = (
 	options: WatcherOptions,
 ): Effect.Effect<SessionWatcher, never, FileSystem.FileSystem | Scope.Scope> =>
 	Effect.gen(function* () {
-		const marks = yield* Queue.unbounded<void>();
 		const stamp = yield* Ref.make<Stamp | undefined>(undefined);
 		let stopped = false;
 		const tick = (file: string): Effect.Effect<void, never, FileSystem.FileSystem> =>
 			Effect.gen(function* () {
-				// Own appends are recorded first: a mark that was queued before this tick
-				// names the write the stat below is about to see.
-				yield* Queue.takeAll(marks);
 				const next = yield* stampOf(file);
 				const previous = yield* Ref.get(stamp);
-				if (next === undefined) return;
+				if (next === undefined) {
+					// A new chat's file does not exist yet. Start from empty so the whole first
+					// write is checked: a turn can finish before the first stat ever succeeds.
+					if (previous === undefined) yield* Ref.set(stamp, { mtimeMs: 0, size: 0 });
+					return;
+				}
 				if (previous === undefined) {
 					yield* Ref.set(stamp, next);
 					return;
 				}
 				if (!sameStamp(previous, next)) {
-					// pi persists a message after it notifies, so this engine's own mark can
-					// arrive a few milliseconds after the write. Give it that window before
-					// calling the change foreign; a real second writer is still there after.
-					yield* Effect.sleep("50 millis");
-					const marksAfter = yield* Queue.takeAll(marks);
-					const settled = yield* stampOf(file);
-					yield* Ref.set(stamp, settled ?? next);
-					if (marksAfter.length > 0 || !sameStamp(next, settled)) return;
+					yield* Ref.set(stamp, next);
+					if (yield* options.ownWrite(previous.size)) return;
 					options.onForeign(`The file changed at ${next.size} bytes, not by this engine.`);
 				}
 			});
@@ -165,7 +165,7 @@ export const startWatcher = (
 				if (stopped) return;
 				const file = options.file();
 				if (file === undefined) {
-					yield* Queue.takeAll(marks);
+					// Nothing to follow yet; pi creates the file on the first message.
 				} else {
 					yield* tick(file);
 				}
@@ -174,9 +174,6 @@ export const startWatcher = (
 		});
 		yield* Effect.forkScoped(loop.pipe(Effect.ignoreCause));
 		return {
-			markOwn: () => {
-				Queue.offerUnsafe(marks, undefined);
-			},
 			stop: () => {
 				stopped = true;
 			},

@@ -20,7 +20,7 @@ export function NotReady({ state }: { state: Extract<Readiness, { ready: false }
 			line={`${state.detail} ${state.fix}`}
 			action={
 				<Link to="/settings/providers" className={buttonVariants()}>
-					Open Settings
+					Providers
 				</Link>
 			}
 		/>

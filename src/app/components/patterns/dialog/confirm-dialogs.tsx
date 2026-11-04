@@ -1,4 +1,5 @@
 import { Block } from "@tanstack/react-router";
+import { Loader2Icon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -13,7 +14,6 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Spinner } from "@/components/ui/spinner";
 
 /**
  * A new entry is a route with a draft, so leaving it needs its own exit. The
@@ -169,7 +169,7 @@ export function DeleteDialog({
 				<AlertDialogFooter>
 					<AlertDialogCancel>Cancel</AlertDialogCancel>
 					<AlertDialogAction variant="destructive" disabled={pending} onClick={onConfirm}>
-						{pending && <Spinner data-icon="inline-start" />}
+						{pending && <Loader2Icon data-icon="inline-start" aria-hidden />}
 						{confirmLabel}
 					</AlertDialogAction>
 				</AlertDialogFooter>
