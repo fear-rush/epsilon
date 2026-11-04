@@ -98,4 +98,43 @@ describe("epsilon plugin", () => {
 		expect(output).toContain("../sessions/store.ts");
 		expect(output).not.toContain("../sessions/index.ts");
 	});
+
+	test("feedback-surfaces refuses the alert banner and a state colour a feature painted", () => {
+		const output = lint(
+			{
+				rule: "feedback-surfaces",
+				source: [
+					'import { Alert } from "@/components/ui/alert";',
+					'import { cn } from "@/lib/cn";',
+					"",
+					'export const tone = cn("text-destructive", "dark:hover:border-warning/40");',
+					"export const banner = Alert;",
+				].join("\n"),
+			},
+			"surfaces",
+		);
+
+		expect(output).toContain("@/components/ui/alert");
+		expect(output).toContain("text-destructive");
+		expect(output).toContain("dark:hover:border-warning/40");
+	});
+
+	test("feedback-surfaces allows the surfaces, semantic tokens and alert-dialog", () => {
+		const output = lint(
+			{
+				rule: "feedback-surfaces",
+				source: [
+					'import { Notice } from "@/components/patterns/status/notice";',
+					'import { AlertDialog } from "@/components/ui/alert-dialog";',
+					'import { cn } from "@/lib/cn";',
+					"",
+					'export const text = cn("text-muted-foreground", "bg-background", "border-border");',
+					"export const ui = [Notice, AlertDialog];",
+				].join("\n"),
+			},
+			"surfaces-clean",
+		);
+
+		expect(output).not.toContain("feedback-surfaces");
+	});
 });

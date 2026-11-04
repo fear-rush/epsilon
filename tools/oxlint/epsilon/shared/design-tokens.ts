@@ -1,5 +1,7 @@
 /** Pure matching for the `design-tokens` rule: which Tailwind classes step outside the tokens. */
 
+import { splitClasses, stripVariants } from "./classes.ts";
+
 export type TokenCategory = "bracket" | "palette" | "textSize" | "spacing";
 
 export type TokenViolation = {
@@ -37,24 +39,6 @@ const textRoles = {
 
 /** A role lookup that tolerates a class the type scale does not name. */
 const textRolesByKey = new Map<string, string>(Object.entries(textRoles));
-
-/** Split on whitespace, keeping bracketed groups (which may hold spaces as underscores only) whole. */
-function splitClasses(text: string): string[] {
-	return text.split(/\s+/).filter((part) => part !== "");
-}
-
-/** The utility after its variant prefixes; colons inside brackets belong to a variant or value. */
-function stripVariants(token: string): string {
-	let depth = 0;
-	let start = 0;
-	for (let index = 0; index < token.length; index++) {
-		const char = token[index];
-		if (char === "[" || char === "(") depth++;
-		else if (char === "]" || char === ")") depth--;
-		else if (char === ":" && depth === 0) start = index + 1;
-	}
-	return token.slice(start);
-}
 
 function nearestStep(value: number): number {
 	let best = spacingSteps[0] ?? 0;

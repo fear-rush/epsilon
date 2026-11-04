@@ -7,7 +7,7 @@ import { Notice } from "@/components/patterns/status/notice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -290,11 +290,11 @@ function Review({
 								<span className="text-meta text-muted-foreground">
 									{candidate.description === "" ? "No description" : candidate.description}
 								</span>
-								{candidate.errors.map((issue) => (
-									<span key={issue.code} className="text-meta text-destructive">
-										{issue.message}
-									</span>
-								))}
+								{candidate.errors.length > 0 && (
+									<FieldError
+										errors={candidate.errors.map((issue) => ({ message: issue.message }))}
+									/>
+								)}
 							</span>
 						</label>
 					))}

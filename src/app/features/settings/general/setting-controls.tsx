@@ -94,9 +94,7 @@ type CompactionOverride = {
 /** A value the panel cannot draw, said out loud instead of shown as blank. */
 function UnreadableValue({ value }: { value: SettingValue }) {
 	return (
-		<span className="text-meta text-destructive">
-			{`pi holds ${JSON.stringify(value)}, which this panel cannot show.`}
-		</span>
+		<FieldError>{`pi holds ${JSON.stringify(value)}, which this panel cannot show.`}</FieldError>
 	);
 }
 

@@ -52,7 +52,7 @@ Choose by the scope of what the message is about. A feature never invents its ow
       `StatusView` and `Notice` accept `error`.
 - [x] `RouteError`, `RouteNotFound`, `RoutePending` on `StatusView`, mounted per layout
       inside the shell.
-- [ ] `epsilon/feedback-surfaces` in `tools/oxlint/epsilon/rules/`, with tests in
+- [x] `epsilon/feedback-surfaces` in `tools/oxlint/epsilon/rules/`, with tests in
       `tools/oxlint/epsilon/rules.test.ts`, enforcing the colour and import rule.
 - [ ] Move every existing feature on the branch onto the surfaces until the new rule
       passes.

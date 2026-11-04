@@ -32,6 +32,7 @@ import { errorView } from "@/components/patterns/status/error-view";
 import { InlineStatus } from "@/components/patterns/status/inline-status";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
+import { toneText } from "@/components/patterns/status/status-tone";
 import { StatusView } from "@/components/patterns/status/status-view";
 import { Tip } from "@/components/patterns/tip";
 import { Button } from "@/components/ui/button";
@@ -445,7 +446,10 @@ function ProjectGroup({
 					<span className="truncate">{project.name}</span>
 					{!project.trusted && (
 						<Tip label="Not trusted yet">
-							<ShieldAlertIcon aria-label="Not trusted" className="size-4 shrink-0 text-warning" />
+							<ShieldAlertIcon
+								aria-label="Not trusted"
+								className={toneText("warning", "size-4 shrink-0")}
+							/>
 						</Tip>
 					)}
 				</CollapsibleTrigger>

@@ -13,6 +13,7 @@ import { CollapsibleSection } from "@/components/patterns/section/collapsible-se
 import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";
 import { Notice } from "@/components/patterns/status/notice";
+import { FieldError } from "@/components/ui/field";
 import { call } from "@/core/runtime";
 
 import { useSettingsRefresh } from "../queries.ts";
@@ -152,7 +153,7 @@ function Control({
 	onChange: (value: SettingValue) => void;
 }) {
 	if (row.error !== undefined) {
-		return <span className="text-meta text-destructive">{row.error}</span>;
+		return <FieldError>{row.error}</FieldError>;
 	}
 	const seedOf = (key: string): number | undefined => {
 		const value = settings.find((setting) => setting.key === key)?.value;

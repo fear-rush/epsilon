@@ -6,6 +6,7 @@ import { toolRunOf, transcript } from "#domain/conversation/selectors";
 import type { ConversationState, StreamingTurn, ToolRun } from "#domain/conversation/state";
 import type { AssistantEntry, TranscriptEntry } from "#protocol/conversation/frames";
 import { Markdown } from "@/components/editor/markdown";
+import { toneText } from "@/components/patterns/status/status-tone";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
@@ -353,9 +354,7 @@ function ToolCard({
 		<div className="rounded-lg border bg-card px-3 py-2 text-meta">
 			<div className="flex items-center justify-between gap-2">
 				<span className="font-medium">{name}</span>
-				<span
-					className={cn("text-muted-foreground", run?.status === "error" && "text-destructive")}
-				>
+				<span className={toneText(run?.status === "error" ? "danger" : "neutral")}>
 					{run?.status ?? "running"}
 					{run?.durationMs === undefined ? "" : ` · ${Math.round(run.durationMs)} ms`}
 				</span>
@@ -386,9 +385,9 @@ function ToolOutput({ output, isError }: { output: string; isError: boolean }) {
 	if (output === "") return null;
 	return (
 		<pre
-			className={cn(
+			className={toneText(
+				isError ? "danger" : "neutral",
 				"overflow-auto rounded-lg border bg-card px-3 py-2 text-code break-words whitespace-pre-wrap",
-				isError ? "text-destructive" : "text-muted-foreground",
 			)}
 		>
 			{output}

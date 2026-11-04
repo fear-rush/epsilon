@@ -159,6 +159,14 @@
 			}
 		},
 		{
+			// The status surfaces own tone and colour. A feature or route reports through them
+			// and never paints a state colour itself.
+			"files": ["src/app/features/**", "src/app/routes/**"],
+			"rules": {
+				"epsilon/feedback-surfaces": "error"
+			}
+		},
+		{
 			// Vendored from ui.shadcn.com and rewritten by `shadcn add`, or a third-party
 			// primitive's own defaults: raw sizes and colours there are not ours to change.
 			"files": ["src/app/components/ui/**/*.tsx", "src/app/components/editor/**/*.{ts,tsx}"],
