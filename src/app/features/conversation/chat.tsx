@@ -14,7 +14,6 @@ import type { ConversationState } from "#domain/conversation/state";
 import type { ImageBlock, Notice as NoticeFrame } from "#protocol/conversation/frames";
 import type { ModelOption } from "#protocol/conversation/session";
 import type { ContextView } from "#protocol/settings/context";
-import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +25,7 @@ import { Composer } from "./composer";
 import { ConversationDialogs } from "./dialogs";
 import { ProjectGate } from "./project-gate";
 import { RunStatus } from "./run-status";
+import { ComposerPlace, PlaceBadge, SessionLoader } from "./session-header";
 import { Transcript, matchingRowIds } from "./transcript";
 import type { Jump } from "./transcript";
 import { useConversation } from "./use-conversation";
@@ -155,6 +155,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 			codingTools={state.codingTools}
 			commands={state.commands}
 			draft={state.draft}
+			header={place === null ? undefined : <ComposerPlace path={place} />}
 			model={models.find((candidate) => `${candidate.provider}/${candidate.id}` === state.model)}
 			models={models}
 			sessionId={sessionId}
@@ -181,6 +182,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 				title={state.title ?? "New chat"}
 				actions={
 					<div className="flex items-center gap-2">
+						{place !== null && <PlaceBadge path={place} />}
 						<Button
 							size="icon-sm"
 							variant="ghost"
@@ -298,9 +300,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 				)
 			) : (
 				// The engine is still starting; an empty transcript would be a lie.
-				<div className="flex min-h-0 flex-1 animate-enter-rise items-center justify-center">
-					<LoadingState label="Loading the session…" />
-				</div>
+				<SessionLoader />
 			)}
 			<ConversationDialogs dialogs={state.dialogs} onAnswer={conversation.answer} />
 			<Suspense fallback={null}>

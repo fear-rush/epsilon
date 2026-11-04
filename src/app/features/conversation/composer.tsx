@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowUpIcon, PaperclipIcon, SquareIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { ChangeEvent, KeyboardEvent } from "react";
+import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
 
 import { parseBuiltinCommand } from "#domain/conversation/commands";
 import type { ConversationState } from "#domain/conversation/state";
@@ -125,6 +125,7 @@ export function Composer({
 	thinkingLevels,
 	codingTools,
 	commands,
+	header,
 	onOpenTree,
 	onReadContext,
 	onSetPermission,
@@ -150,6 +151,9 @@ export function Composer({
 	codingTools: boolean;
 	/** What `/` offers: the built-in table, pi's commands, templates and skills. */
 	commands: ReadonlyArray<CommandOffer>;
+	/** Drawn above the box, inside its column: where this conversation runs. */
+	header: ReactNode;
+
 	/** What the chat reads for its notices, `/copy` and `/session`. */
 	state: ConversationState;
 	onOpenTree: () => void;
@@ -486,6 +490,7 @@ export function Composer({
 	return (
 		<div className="border-t p-3">
 			<div ref={surfaceRef} className="mx-auto w-full max-w-4xl">
+				{header !== undefined && <div className="min-w-0 pb-2">{header}</div>}
 				{rail.length > 0 && (
 					<div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-1 pb-1 text-meta text-muted-foreground">
 						{rail.map((status) => (
