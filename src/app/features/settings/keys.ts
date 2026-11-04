@@ -1,0 +1,14 @@
+/**
+ * The settings read family. Every section shares the snapshot's key, so a write
+ * invalidates one family and each page re-reads what it shows.
+ */
+const all = ["config", "settings"] as const;
+
+export const settingsKeys = {
+	all,
+	snapshot: (project: string | undefined) => [...all, "snapshot", project ?? null] as const,
+	packageResources: (project: string | undefined, scope: string, source: string) =>
+		[...all, "package-resources", project ?? null, scope, source] as const,
+	packageUpdates: (project: string | undefined) =>
+		[...all, "package-updates", project ?? null] as const,
+};

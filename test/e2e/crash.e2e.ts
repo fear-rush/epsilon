@@ -18,7 +18,7 @@ test("a killed engine shows a notice and respawns on the next prompt", async ({ 
 		.first()
 		.click();
 
-	await page.getByRole("link", { name: /chats/i }).click();
+	await page.getByRole("link", { name: /back to app/i }).click();
 	await expect(page.getByRole("status")).toContainText(/engine stopped|no engine/i);
 
 	await page.getByRole("textbox", { name: /message/i }).fill("second turn");

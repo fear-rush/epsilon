@@ -6,9 +6,10 @@ import type { ReactNode } from "react";
 import { PaneBand } from "@/components/patterns/pane/pane-band";
 import { PaneBar } from "@/components/patterns/pane/pane-bar";
 import { Input } from "@/components/ui/input";
-import { SETTINGS_GROUPS, SETTINGS_SECTIONS } from "@/features/settings/shell/sections";
-import type { SettingsSection } from "@/features/settings/shell/sections";
 import { cn } from "@/lib/cn";
+
+import { SETTINGS_GROUPS, SETTINGS_SECTIONS } from "./sections.ts";
+import type { SettingsSection } from "./sections.ts";
 
 /**
  * The settings surface: its own left navigation, a search field, and one section
@@ -63,7 +64,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
 			<header className="md:hidden">
 				<PaneBar
 					leading={
-						<Link to="/" aria-label="Chats" className="text-muted-foreground">
+						<Link to="/" aria-label="Back to app" className="text-muted-foreground">
 							<ArrowLeftIcon className="size-4" />
 						</Link>
 					}
@@ -80,7 +81,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
 								className="flex items-center gap-2 text-body text-muted-foreground transition-colors duration-fast hover:text-foreground"
 							>
 								<ArrowLeftIcon className="size-4" />
-								Chats
+								Back to app
 							</Link>
 						}
 					/>

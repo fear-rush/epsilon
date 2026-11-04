@@ -13,7 +13,7 @@ export function Row({
 	children,
 }: {
 	title: string;
-	description?: string;
+	description?: string | undefined;
 	stacked?: boolean;
 	children?: ReactNode;
 }) {

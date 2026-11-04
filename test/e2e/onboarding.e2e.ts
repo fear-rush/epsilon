@@ -20,6 +20,6 @@ test("an empty home shows readiness, and a provider makes it ready", async ({ ap
 	await page.getByLabel(/model/i).fill("stub-model");
 	await page.getByRole("button", { name: /save/i }).click();
 
-	await page.getByRole("link", { name: /chats/i }).click();
+	await page.getByRole("link", { name: /back to app/i }).click();
 	await expect(page.getByRole("status")).toContainText(/ready/i);
 });

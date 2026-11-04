@@ -1,0 +1,77 @@
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearch } from "@tanstack/react-router";
+import { useCallback } from "react";
+
+import type { PackageScope } from "#protocol/config/packages";
+import { call } from "@/runtime";
+
+import { settingsKeys } from "./keys.ts";
+
+/**
+ * The one settings read: the snapshot the server assembles for a folder, or for the
+ * home alone. Every section reads it, and a write invalidates the family.
+ */
+const SETTINGS_STALE_MS = 30_000;
+
+export const settingsQuery = (project: string | undefined) =>
+	queryOptions({
+		queryKey: settingsKeys.snapshot(project),
+		queryFn: ({ signal }) =>
+			call((client) => client["config.snapshot"]({ folder: project ?? null }), { signal }),
+		staleTime: SETTINGS_STALE_MS,
+	});
+
+/**
+ * The project the resource sections show beside the agent home, from the Settings URL,
+ * or undefined for Global. Every settings read and write passes it on.
+ */
+export const useSettingsProject = (): string | undefined =>
+	useSearch({ from: "/settings", select: (search) => search.project });
+
+export const useSettings = () => useQuery(settingsQuery(useSettingsProject()));
+
+/**
+ * Re-read the snapshot after a write, and readiness with it: a new provider is what
+ * makes the not-ready notice clear.
+ */
+export const useSettingsRefresh = (): (() => void) => {
+	const queryClient = useQueryClient();
+	return useCallback(() => {
+		void queryClient.invalidateQueries({ queryKey: settingsKeys.all });
+		void queryClient.invalidateQueries({ queryKey: ["config", "readiness"] });
+	}, [queryClient]);
+};
+
+/** What one declared package provides, as pi resolves it. */
+export const usePackageResources = (source: string, scope: PackageScope) => {
+	const project = useSettingsProject();
+	return useQuery({
+		queryKey: settingsKeys.packageResources(project, scope, source),
+		queryFn: ({ signal }) =>
+			call(
+				(client) => client["config.packages.resources"]({ folder: project ?? null, scope, source }),
+				{ signal },
+			),
+		staleTime: SETTINGS_STALE_MS,
+	});
+};
+
+/** The packages pi's own check reports as outdated; the check runs npm or git. */
+export const usePackageUpdates = () => {
+	const project = useSettingsProject();
+	return useQuery({
+		queryKey: settingsKeys.packageUpdates(project),
+		queryFn: ({ signal }) =>
+			call((client) => client["config.packages.updates"]({ folder: project ?? null }), { signal }),
+		staleTime: SETTINGS_STALE_MS,
+		refetchOnWindowFocus: false,
+	});
+};
+
+/** Runs the update check again. Only a package write changes pi's answer. */
+export const usePackageUpdatesRefresh = (): (() => void) => {
+	const queryClient = useQueryClient();
+	return useCallback(() => {
+		void queryClient.invalidateQueries({ queryKey: [...settingsKeys.all, "package-updates"] });
+	}, [queryClient]);
+};
