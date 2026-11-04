@@ -6,12 +6,13 @@ import { Effect, Layer } from "effect";
 import { DevTools } from "effect/devtools";
 
 import { Catalog, CatalogLive } from "./catalog/catalog.ts";
+import { ProjectServiceLive } from "./config/projects/service.ts";
 import { Engines, EnginesLive } from "./engines/registry.ts";
 import { EngineSpecLive, SupervisorLive } from "./engines/supervisor.ts";
 import { AgentHome, AgentHomeLive } from "./platform/agent-home.ts";
 import { JsonDocumentLive } from "./platform/json-document.ts";
 import { Log, LogLive } from "./platform/log.ts";
-import { piVersion, sessionFormatVersion } from "./platform/pi.ts";
+import { PiConfigLive, piVersion, sessionFormatVersion } from "./platform/pi.ts";
 import { EpsilonSettings, EpsilonSettingsLive } from "./settings.ts";
 
 /**
@@ -26,13 +27,15 @@ import { EpsilonSettings, EpsilonSettingsLive } from "./settings.ts";
 
 const agentDir = process.env["EPSILON_AGENT_HOME"] ?? join(homedir(), ".pi", "agent");
 const userHome = process.env["HOME"] ?? homedir();
+/** The dev script sets this, so a sandboxed server cannot open the operator's disk. */
+const projectsRoot = process.env["EPSILON_PROJECTS_ROOT"];
 const isProduction = process.env["NODE_ENV"] === "production";
 
 // pi's MCP loader takes no directory and resolves `getAgentDir()` itself, so the variable
 // it reads is published here, once, before anything can load MCP. See docs/pi-sdk.md.
 process.env["PI_CODING_AGENT_DIR"] = agentDir;
 
-const homeLayer = AgentHomeLive(agentDir, userHome);
+const homeLayer = AgentHomeLive(agentDir, userHome, projectsRoot);
 
 /**
  * One engine, one process: `bun run src/engine/main.ts` in dev. A built binary re-runs
@@ -60,6 +63,8 @@ const catalog = CatalogLive(join(agentDir, ".epsilon", "session-index.sqlite"), 
 	piVersion,
 	schemaVersion: "1",
 }).pipe(Layer.provideMerge(core));
+const pi = PiConfigLive.pipe(Layer.provideMerge(core));
+const projects = ProjectServiceLive.pipe(Layer.provideMerge(core), Layer.provideMerge(pi));
 const supervisor = SupervisorLive.pipe(
 	Layer.provideMerge(core),
 	Layer.provideMerge(EngineSpecLive(engineSpec)),
@@ -69,10 +74,11 @@ const engines = EnginesLive.pipe(
 	Layer.provideMerge(core),
 	Layer.provideMerge(catalog),
 	Layer.provideMerge(settings),
+	Layer.provideMerge(projects),
 	Layer.provideMerge(supervisor),
 );
 
-const AppLive = Layer.mergeAll(core, settings, catalog, engines);
+const AppLive = Layer.mergeAll(core, settings, catalog, projects, engines);
 
 const program = Effect.gen(function* () {
 	const home = yield* AgentHome;

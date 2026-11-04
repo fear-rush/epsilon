@@ -3,6 +3,8 @@ import {
 	createAgentSessionRuntime,
 	createAgentSessionServices,
 	SessionManager,
+	SettingsManager,
+	hasTrustRequiringProjectResources,
 } from "@earendil-works/pi-coding-agent";
 import type {
 	AgentSession,
@@ -16,6 +18,7 @@ import { Effect } from "effect";
 
 import { EngineRefused, EngineStartFailed } from "./errors.ts";
 import { builtinExtensions } from "./extensions.ts";
+import { decideProjectTrust } from "./trust.ts";
 
 /**
  * One pi `AgentSessionRuntime` for one live chat.
@@ -49,15 +52,51 @@ const factoryFor =
 		onMcpServers: (names: ReadonlyArray<string>) => void,
 	): CreateAgentSessionRuntimeFactory =>
 	async ({ cwd, sessionManager, sessionStartEvent }): Promise<CreateAgentSessionRuntimeResult> => {
-		const services = await createAgentSessionServices({
+		// pi starts a folder as trusted unless the host decides first. A gated folder gets
+		// the two-pass load: the bootstrap extensions run `project_trust`, then the folder's
+		// own extensions, skills and SYSTEM.md load only if the answer is yes.
+		const gated = hasTrustRequiringProjectResources(cwd);
+		const settings = SettingsManager.create(cwd, agentDir, { projectTrusted: !gated });
+		const trustProblems: string[] = [];
+		const serviceOptions: Parameters<typeof createAgentSessionServices>[0] = {
 			agentDir,
 			cwd,
+			settingsManager: settings,
 			resourceLoaderOptions: { extensionFactories: builtinExtensions(onMcpServers) },
-		});
+		};
+		if (gated) {
+			serviceOptions.resourceLoaderReloadOptions = {
+				resolveProjectTrust: ({ extensionsResult }) =>
+					decideProjectTrust({
+						agentDir,
+						cwd,
+						extensions: extensionsResult,
+						onProblem: (message) => trustProblems.push(message),
+					}),
+			};
+		}
+		const services = await createAgentSessionServices(serviceOptions);
 		const options: CreateAgentSessionFromServicesOptions = { services, sessionManager };
 		if (sessionStartEvent !== undefined) options.sessionStartEvent = sessionStartEvent;
 		const created = await createAgentSessionFromServices(options);
-		return { ...created, diagnostics: services.diagnostics, services };
+		// A settings file pi could not load is reported once, so its fallback defaults are
+		// not mistaken for the operator's choices.
+		const settingsProblems = settings.drainErrors().map((problem) => ({
+			message:
+				problem.path === undefined
+					? problem.error.message
+					: `${problem.path}: ${problem.error.message}`,
+			type: "warning" as const,
+		}));
+		return {
+			...created,
+			diagnostics: [
+				...services.diagnostics,
+				...trustProblems.map((message) => ({ message, type: "warning" as const })),
+				...settingsProblems,
+			],
+			services,
+		};
 	};
 
 const openSessionManager = (input: RuntimeInput): SessionManager =>

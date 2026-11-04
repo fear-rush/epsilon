@@ -5,11 +5,18 @@ import type { Command } from "#protocol/conversation/commands";
 import type { ServerFrame } from "#protocol/conversation/frames";
 import type { QueryKind } from "#protocol/engine-ipc";
 import { EngineLimitReached } from "#protocol/errors";
-import type { CommandRefused, EngineCrashLoop, EngineStopped } from "#protocol/errors";
+import type {
+	CommandRefused,
+	EngineCrashLoop,
+	EngineStopped,
+	ProjectNotTrusted,
+	ProjectRefused,
+} from "#protocol/errors";
 
 import { Catalog } from "../catalog/catalog.ts";
 import { SessionLocks } from "../catalog/locks.ts";
 import type { SessionLocksApi } from "../catalog/locks.ts";
+import { ProjectService } from "../config/projects/service.ts";
 import { EpsilonSettings } from "../settings.ts";
 import type { RemoteEngine } from "./engine.ts";
 import { Supervisor } from "./supervisor.ts";
@@ -58,7 +65,7 @@ export type EnginesApi = {
 		input: AttachInput,
 	) => Effect.Effect<
 		Lease,
-		EngineLimitReached | EngineCrashLoop | EngineStopped,
+		EngineLimitReached | EngineCrashLoop | EngineStopped | ProjectNotTrusted | ProjectRefused,
 		FileSystem.FileSystem
 	>;
 	readonly detach: (
@@ -110,6 +117,8 @@ export const makeEngines = (options: {
 	};
 	readonly scope: Scope.Scope;
 	readonly locate: (sessionId: string) => Effect.Effect<{ path: string; cwd: string } | undefined>;
+	/** Resolves a folder and refuses when pi does not trust it. */
+	readonly trust: (cwd: string) => Effect.Effect<string, ProjectNotTrusted | ProjectRefused>;
 }): EnginesApi => {
 	/** One map, every alias; the same entry answers for each id the chat held. */
 	const byAlias = new Map<string, Entry>();
@@ -213,6 +222,12 @@ export const makeEngines = (options: {
 					return lease(existing, input.tab);
 				}
 
+				const located =
+					input.file === undefined ? yield* options.locate(input.sessionId) : undefined;
+				// A folder the operator has not trusted never gets a process, so nothing in it
+				// can be read or run whatever pi would load.
+				const cwd = yield* options.trust(located?.cwd ?? input.cwd);
+
 				const maxRunning = yield* options.maxRunning;
 				if (entries().length >= maxRunning) {
 					const evicted = yield* evict();
@@ -224,10 +239,8 @@ export const makeEngines = (options: {
 					}
 				}
 
-				const located =
-					input.file === undefined ? yield* options.locate(input.sessionId) : undefined;
 				const engine = yield* options.supervisor.start({
-					cwd: located?.cwd ?? input.cwd,
+					cwd,
 					file: located?.path ?? input.file,
 					place: input.place,
 					sessionId: input.sessionId,
@@ -342,13 +355,14 @@ export const SessionLocksFromEngines: Layer.Layer<SessionLocks, never, Engines> 
 export const EnginesLive: Layer.Layer<
 	Engines,
 	never,
-	Supervisor | Catalog | EpsilonSettings | FileSystem.FileSystem
+	Supervisor | Catalog | EpsilonSettings | ProjectService | FileSystem.FileSystem
 > = Layer.effect(
 	Engines,
 	Effect.gen(function* () {
 		const supervisor = yield* Supervisor;
 		const catalog = yield* Catalog;
 		const settings = yield* EpsilonSettings;
+		const projects = yield* ProjectService;
 		const scope = yield* Scope.Scope;
 		const engines = makeEngines({
 			locate: (sessionId) =>
@@ -358,6 +372,7 @@ export const EnginesLive: Layer.Layer<
 			maxRunning: settings.maxRunning,
 			scope,
 			supervisor,
+			trust: (cwd) => projects.trusted(cwd),
 		});
 		yield* Effect.addFinalizer(() =>
 			Effect.gen(function* () {

@@ -4,6 +4,8 @@ import { BunServices } from "@effect/platform-bun";
 import { Effect, Exit, Ref, Scope } from "effect";
 import type { FileSystem } from "effect";
 
+import { ProjectNotTrusted } from "#protocol/errors";
+
 import { fakeSpec } from "../../../test/fake-engine.ts";
 import { testPaths } from "../../../test/setup.ts";
 import type { RemoteEngine } from "./engine.ts";
@@ -45,6 +47,7 @@ const withEngines = <A, E>(
 			maxRunning: Effect.succeed(maxRunning),
 			scope,
 			supervisor: { start, stop },
+			trust: (cwd) => Effect.succeed(cwd),
 		});
 		return yield* body(engines).pipe(
 			Effect.ensuring(
@@ -80,6 +83,35 @@ describe("engine registry", () => {
 		);
 	}, 10_000);
 
+	test("an untrusted folder is refused before an engine starts", async () => {
+		const result = await run(
+			Effect.gen(function* () {
+				const scope = yield* Scope.make();
+				const engines = makeEngines({
+					locate: () => Effect.as(Effect.void, undefined),
+					maxRunning: Effect.succeed(4),
+					scope,
+					supervisor: { start, stop },
+					trust: () => Effect.fail(new ProjectNotTrusted({ path: "/tmp/untrusted" })),
+				});
+				const outcome = yield* Effect.exit(
+					engines.attach({
+						cwd: "/tmp/untrusted",
+						file: undefined,
+						place: null,
+						sessionId: "s-untrusted",
+						tab: "tab",
+					}),
+				);
+				const running = yield* engines.running;
+				yield* Scope.close(scope, Exit.void);
+				return { outcome, running };
+			}),
+		);
+		expect(Exit.isFailure(result.outcome)).toBe(true);
+		expect(result.running).toEqual([]);
+	}, 10_000);
+
 	test("a read-only query reaches every live engine", async () => {
 		await run(
 			withEngines(4, (engines) =>
@@ -113,6 +145,7 @@ describe("engine registry", () => {
 					maxRunning: Ref.get(limit),
 					scope,
 					supervisor: { start, stop },
+					trust: (cwd) => Effect.succeed(cwd),
 				});
 				const attach = (sessionId: string, tab: string) =>
 					engines.attach({ cwd: "/tmp", file: undefined, place: null, sessionId, tab });

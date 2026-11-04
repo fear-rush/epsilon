@@ -149,6 +149,7 @@ describe("acceptance", () => {
 					maxRunning: Effect.succeed(4),
 					scope,
 					supervisor: { start, stop: supervisor.stop },
+					trust: (cwd) => Effect.succeed(cwd),
 				});
 				const lease = yield* engines.attach({
 					cwd: "/tmp",

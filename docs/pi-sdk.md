@@ -721,11 +721,14 @@ returns `settingsManager.isProjectTrusted()`. `resolveProjectTrusted`,
 `emitProjectTrustEvent`, `getProjectTrustOptions` and `getProjectTrustParentPath` are
 private.
 
-The engine process does not run that resolution. `SettingsManager.create(cwd,
-agentDir)` starts at `projectTrusted = true` (`dist/core/settings-manager.js`), and
-nothing in `createAgentSession()` changes it. A host that builds an engine in a
-folder therefore loads that folder's `.pi` whatever `trust.json` says, unless it
-decides first.
+`SettingsManager.create(cwd, agentDir)` starts at `projectTrusted = true`
+(`dist/core/settings-manager.js`), and nothing in `createAgentSession()` changes it.
+A host that builds an engine in a folder therefore loads that folder's `.pi` whatever
+`trust.json` says, unless it decides first. Epsilon's engine does: for a gated folder
+`src/engine/runtime.ts` creates the manager with `projectTrusted: false` and passes
+pi's bootstrap `extensionsResult` through `ResourceLoaderReloadOptions.resolveProjectTrust`,
+so a `project_trust` handler decides before the folder's own extensions, skills and
+`SYSTEM.md` load. `src/engine/trust.ts` is that chain.
 
 What the SDK exports for that decision:
 
@@ -746,10 +749,11 @@ What the SDK exports for that decision:
   the untrusted extension set first, calls back with the result, sets the decision
   and reloads the resources for it.
 
-Epsilon runs the chain in `src/backend/features/projects/trust.ts`, over the store,
-`hasTrustRequiringProjectResources()`, `Extension.handlers` and the settings getter.
-The project page and every route that runs in a project use its answer with no
-extension set, so their answer comes from the store and the default.
+Epsilon runs the same chain in `src/backend/config/projects/trust.ts` with no
+extension set, for the project page and the engine registry: their answer comes from
+the store and the default. `src/engine/trust.ts` adds the extension handlers, so the
+two agree unless a handler decided. The store is pi's, so the page, an engine and a
+terminal pi share one `trust.json`.
 
 A gated project's engine starts untrusted and passes pi's bootstrap
 `extensionsResult` through `ResourceLoaderReloadOptions.resolveProjectTrust`, so a

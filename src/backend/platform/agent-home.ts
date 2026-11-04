@@ -17,16 +17,29 @@ export type AgentHomeApi = {
 	readonly userHome: string;
 	/** Epsilon's own directory inside the home: settings, logs, crashes, the index. */
 	readonly epsilonDir: string;
+	/**
+	 * The folder a project may be opened from, when a sandbox sets one: the dev server
+	 * sees its own `~`, so a folder on the operator's real disk is refused. Absent
+	 * means the operator's own folders are the picker's range.
+	 */
+	readonly projectsRoot?: string;
 };
 
 export class AgentHome extends Context.Service<AgentHome, AgentHomeApi>()("epsilon/AgentHome") {}
 
-export const makeAgentHome = (agentDir: string, userHome: string): AgentHomeApi => ({
-	agentDir,
-	epsilonDir: join(agentDir, ".epsilon"),
-	userHome,
-});
+export const makeAgentHome = (
+	agentDir: string,
+	userHome: string,
+	projectsRoot?: string,
+): AgentHomeApi => {
+	const home: AgentHomeApi = { agentDir, epsilonDir: join(agentDir, ".epsilon"), userHome };
+	return projectsRoot === undefined ? home : { ...home, projectsRoot };
+};
 
 /** The composition-root layer: the chosen home, provided once. */
-export const AgentHomeLive = (agentDir: string, userHome: string): Layer.Layer<AgentHome> =>
-	Layer.succeed(AgentHome, makeAgentHome(agentDir, userHome));
+export const AgentHomeLive = (
+	agentDir: string,
+	userHome: string,
+	projectsRoot?: string,
+): Layer.Layer<AgentHome> =>
+	Layer.succeed(AgentHome, makeAgentHome(agentDir, userHome, projectsRoot));

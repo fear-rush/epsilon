@@ -257,7 +257,12 @@
 			}
 		},
 		{
-			"files": ["src/backend/platform/**", "src/backend/main.ts", "src/engine/main.ts"],
+			"files": [
+				"src/backend/platform/**",
+				"src/backend/main.ts",
+				"src/engine/main.ts",
+				"src/engine/trust.ts"
+			],
 			"rules": {
 				"epsilon/effect-only-io": "off"
 			}
@@ -360,7 +365,12 @@
 			}
 		},
 		{
-			"files": ["src/engine/main.ts", "src/engine/translate.ts", "src/engine/ui.ts"],
+			"files": [
+				"src/engine/main.ts",
+				"src/engine/translate.ts",
+				"src/engine/ui.ts",
+				"src/engine/trust.ts"
+			],
 			"rules": {
 				"anti-slop/no-runtime-typeof": "off",
 				"anti-slop/no-unknown-parameters": "off",

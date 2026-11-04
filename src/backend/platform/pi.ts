@@ -2,15 +2,19 @@ import { join } from "node:path";
 
 import {
 	DefaultPackageManager,
+	ProjectTrustStore,
 	SettingsManager,
 	ModelRuntime,
+	hasTrustRequiringProjectResources,
 } from "@earendil-works/pi-coding-agent";
 import type { PackageSource, ResolvedPaths } from "@earendil-works/pi-coding-agent";
 import { Context, Effect, Layer } from "effect";
 
-import { PackageFailed } from "#protocol/errors";
+import type { SettingsProblem } from "#protocol/config/general";
+import { PackageFailed, ProjectRefused } from "#protocol/errors";
 
 import { AgentHome } from "./agent-home.ts";
+import type { AgentHomeApi } from "./agent-home.ts";
 import { RuntimeUnavailable } from "./errors.ts";
 
 /**
@@ -27,6 +31,27 @@ import { RuntimeUnavailable } from "./errors.ts";
 export type { SettingsManager } from "@earendil-works/pi-coding-agent";
 export type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 export type { PackageSource, ResolvedPaths } from "@earendil-works/pi-coding-agent";
+
+/** pi's default for a folder that nothing else decides. */
+export type ProjectTrustDefault = "always" | "never" | "ask";
+
+/**
+ * pi's project trust as the backend can read and write it: the store's decision, the
+ * folder's own record, whether anything is gated, and the home's default.
+ */
+export type PiProjectTrustApi = {
+	readonly hasResources: (cwd: string) => Effect.Effect<boolean>;
+	/** The closest saved decision, or null when no record covers the folder. */
+	readonly read: (cwd: string) => Effect.Effect<boolean | null>;
+	/** The path of this folder's own record, so a status can say a parent's decision counts. */
+	readonly entry: (cwd: string) => Effect.Effect<string | null>;
+	readonly write: (cwd: string, decision: boolean | null) => Effect.Effect<void, ProjectRefused>;
+	readonly writeMany: (
+		updates: ReadonlyArray<{ readonly path: string; readonly decision: boolean | null }>,
+	) => Effect.Effect<void, ProjectRefused>;
+	/** `defaultProjectTrust`, read from the home's settings alone. */
+	readonly defaultTrust: (cwd: string) => Effect.Effect<ProjectTrustDefault>;
+};
 
 /** pi's two package scopes; the manager's `temporary` scope is never stored. */
 export type PackageScope = "user" | "project";
@@ -72,6 +97,10 @@ export type PiConfigApi = {
 	readonly builtinModels: Effect.Effect<ModelRuntime, RuntimeUnavailable>;
 	/** pi's package manager for one folder, built with a settings writer for that folder. */
 	readonly packages: (cwd: string) => PiPackagesApi;
+	/** pi's `trust.json`, shared with a terminal pi on the same home. */
+	readonly projectTrust: PiProjectTrustApi;
+	/** The load errors pi's settings managers recorded for a folder, both scopes. */
+	readonly settingsProblems: (cwd: string) => Effect.Effect<ReadonlyArray<SettingsProblem>>;
 };
 
 export class PiConfig extends Context.Service<PiConfig, PiConfigApi>()("epsilon/PiConfig") {}
@@ -83,6 +112,31 @@ const packageFailure = (source: string | undefined, cause: unknown): PackageFail
 	new PackageFailed(
 		source === undefined ? { reason: describe(cause) } : { reason: describe(cause), source },
 	);
+
+const trustFailure = (cause: unknown): ProjectRefused =>
+	new ProjectRefused({ reason: describe(cause) });
+
+const makeProjectTrust = (home: AgentHomeApi): PiProjectTrustApi => {
+	const store = new ProjectTrustStore(home.agentDir);
+	return {
+		defaultTrust: (cwd) =>
+			Effect.sync(() =>
+				SettingsManager.create(cwd, home.agentDir, {
+					projectTrusted: false,
+				}).getDefaultProjectTrust(),
+			),
+		entry: (cwd) => Effect.sync(() => store.getEntry(cwd)?.path ?? null),
+		hasResources: (cwd) => Effect.sync(() => hasTrustRequiringProjectResources(cwd)),
+		read: (cwd) => Effect.sync(() => store.get(cwd)),
+		write: (cwd, decision) =>
+			Effect.try({ try: () => store.set(cwd, decision), catch: trustFailure }),
+		writeMany: (updates) =>
+			Effect.try({
+				try: () => store.setMany(updates.map(({ path, decision }) => ({ decision, path }))),
+				catch: trustFailure,
+			}),
+	};
+};
 
 const makePackages = (
 	manager: DefaultPackageManager,
@@ -173,6 +227,18 @@ export const PiConfigLive: Layer.Layer<PiConfig, never, AgentHome> = Layer.effec
 				});
 				return makePackages(manager, settings);
 			},
+			projectTrust: makeProjectTrust(home),
+			settingsProblems: (cwd) =>
+				Effect.sync(() => {
+					const manager = SettingsManager.create(cwd, home.agentDir);
+					return manager.drainErrors().map((problem) => {
+						const view: SettingsProblem = {
+							message: problem.error.message,
+							scope: problem.scope,
+						};
+						return problem.path === undefined ? view : Object.assign(view, { path: problem.path });
+					});
+				}),
 			settings: (cwd: string): Effect.Effect<SettingsManager> =>
 				Effect.sync(() => SettingsManager.create(cwd, home.agentDir)),
 			settingsPath: Effect.succeed(join(home.agentDir, "settings.json")),

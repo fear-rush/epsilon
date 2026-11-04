@@ -107,6 +107,23 @@ export class RegistryNotFound extends Schema.TaggedError<
 	server: Schema.String,
 }) {}
 
+/** A project folder Epsilon could not open, list or change trust for. */
+export class ProjectRefused extends Schema.TaggedError<
+	ProjectRefused,
+	{ readonly brand: unique symbol }
+>()("ProjectRefused", {
+	path: Schema.optional(Schema.String),
+	reason: Schema.String,
+}) {}
+
+/** A project folder pi does not trust yet, so nothing may run in it. */
+export class ProjectNotTrusted extends Schema.TaggedError<
+	ProjectNotTrusted,
+	{ readonly brand: unique symbol }
+>()("ProjectNotTrusted", {
+	path: Schema.String,
+}) {}
+
 /** pi's package manager refused or failed an install, remove or update. */
 export class PackageFailed extends Schema.TaggedError<
 	PackageFailed,
