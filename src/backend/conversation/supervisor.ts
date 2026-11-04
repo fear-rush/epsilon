@@ -223,6 +223,7 @@ export const makeSupervisor = (deps: {
 				file: input.file,
 				homeDir: deps.home.agentDir,
 				place: input.place,
+				sandboxRoot: deps.home.projectsRoot,
 				sessionId: input.sessionId,
 				spec: deps.spec,
 				userHome: deps.home.userHome,

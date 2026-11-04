@@ -399,6 +399,8 @@ export type StartOptions = {
 	readonly place: string | null;
 	readonly homeDir: string;
 	readonly userHome: string;
+	/** The sandbox `~` under `bun run dev`; undefined on the operator's own machine. */
+	readonly sandboxRoot?: string | undefined;
 };
 
 export const startEngine = (options: StartOptions): Effect.Effect<RemoteEngine, EngineStopped> =>
@@ -457,6 +459,7 @@ export const startEngine = (options: StartOptions): Effect.Effect<RemoteEngine, 
 			file: options.file ?? null,
 			homeDir: options.homeDir,
 			place: options.place,
+			sandboxRoot: options.sandboxRoot,
 			sessionId: options.sessionId,
 			t: "init",
 			userHome: options.userHome,

@@ -23,6 +23,7 @@ import type { ContextEngineLive } from "#protocol/settings/context";
 import type { McpAttention, McpEngineLive } from "#protocol/settings/mcp";
 import type { ExtensionSkillsAnswer } from "#protocol/settings/skills";
 
+import { parseBuiltinCommand } from "../domain/conversation/commands.ts";
 import { readMcpAttention } from "../domain/mcp/attention.ts";
 import { MCP_RESOURCE_TOOL_NAMES } from "../domain/mcp/tools.ts";
 import { withDefined } from "../domain/object.ts";
@@ -35,6 +36,8 @@ import { Dialogs } from "./dialogs.ts";
 import type { EngineStartFailed } from "./errors.ts";
 import { describe, RuntimeHandle } from "./runtime.ts";
 import type { RuntimeInput } from "./runtime.ts";
+import { runBuiltin } from "./slash.ts";
+import type { BuiltinHost } from "./slash.ts";
 import {
 	historyWindow,
 	noticesOf,
@@ -70,6 +73,7 @@ export type EngineInput = {
 	readonly place: string | null;
 	readonly homeDir: string;
 	readonly userHome: string;
+	readonly sandboxRoot: string | undefined;
 };
 
 export type Emit = (message: EngineToSupervisor) => void;
@@ -492,7 +496,7 @@ export class EngineSession {
 			loadHistory: (tab, before) => this.loadHistory(tab, before),
 			loadTree: (tab) => Effect.sync(() => this.sendTree(tab)),
 			navigateTree: (targetId) => this.navigateTree(targetId),
-			prompt: (text, images) => this.prompt(text, images),
+			prompt: (text, images) => this.promptOrBuiltin(text, images),
 			setAutoCompaction: (enabled) => this.setAutoCompaction(enabled),
 			setAutoRetry: (enabled) => this.setAutoRetry(enabled),
 			setCodingTools: (enabled) => this.setCodingTools(enabled),
@@ -504,6 +508,83 @@ export class EngineSession {
 			reloadFromDisk: () => this.reloadFromDisk(),
 			steer: (text, images) => this.queued("steer", text, images),
 		};
+	}
+
+	/**
+	 * A line the composer sent: a built-in command is answered here, before pi, so a name
+	 * in the table never reaches the model; anything else is a prompt.
+	 */
+	private promptOrBuiltin(
+		text: string,
+		images: ReadonlyArray<ImageBlock> | undefined,
+	): Effect.Effect<void, CommandRefused, FileSystem.FileSystem | Scope.Scope> {
+		const parsed = parseBuiltinCommand(text);
+		return parsed === undefined
+			? this.prompt(text, images)
+			: runBuiltin(this.builtinHost(), parsed);
+	}
+
+	/** What the built-in router may touch on this session. */
+	private builtinHost(): BuiltinHost {
+		return {
+			compact: (instructions) => this.compact(instructions),
+			cwd: this.input.cwd,
+			homeDir: this.input.homeDir,
+			importSession: (file) => this.importSession(file),
+			newSession: () => this.newSession(),
+			notice: (text) => this.notice(text, "notice"),
+			reload: () => this.reload(),
+			rename: (name) => this.rename(name),
+			sandboxRoot: this.input.sandboxRoot,
+			userHome: this.input.userHome,
+		};
+	}
+
+	/** `/name`: pi's own display name, or the name it has when the argument is empty. */
+	private rename(name: string | undefined): Effect.Effect<void, CommandRefused> {
+		if (name !== undefined) return this.setLabel(name);
+		const current = this.runtime.session.sessionName;
+		this.notice(
+			current === undefined
+				? "This chat has no name. Use /name <name>."
+				: `This chat is called "${current}". Use /name <name> to change it.`,
+			"notice",
+		);
+		return Effect.void;
+	}
+
+	/** `/new`: pi replaces the session and the tab follows the new id, as a fork does. */
+	private newSession(): Effect.Effect<void, CommandRefused, FileSystem.FileSystem | Scope.Scope> {
+		return this.runtime
+			.replace((runtime) => runtime.newSession())
+			.pipe(
+				Effect.mapError((error) => new CommandRefused({ command: "new", reason: error.reason })),
+				Effect.flatMap((result) =>
+					result.cancelled
+						? Effect.fail(
+								new CommandRefused({ command: "new", reason: "pi cancelled the new session." }),
+							)
+						: Effect.void,
+				),
+			);
+	}
+
+	/** `/import`: pi reads a session file and this chat continues in it. */
+	private importSession(
+		file: string,
+	): Effect.Effect<void, CommandRefused, FileSystem.FileSystem | Scope.Scope> {
+		return this.runtime
+			.replace((runtime) => runtime.importFromJsonl(file))
+			.pipe(
+				Effect.mapError((error) => new CommandRefused({ command: "import", reason: error.reason })),
+				Effect.flatMap((result) =>
+					result.cancelled
+						? Effect.fail(
+								new CommandRefused({ command: "import", reason: "pi cancelled the import." }),
+							)
+						: Effect.void,
+				),
+			);
 	}
 
 	/**
@@ -801,11 +882,11 @@ export class EngineSession {
 	}
 
 	/** pi's manual compaction: it aborts a running turn first and refuses a tiny session. */
-	private compact(): Effect.Effect<void, CommandRefused> {
+	private compact(instructions?: string): Effect.Effect<void, CommandRefused> {
 		const self = this;
 		const agent = this.runtime.session;
 		return Effect.tryPromise({
-			try: () => agent.compact(),
+			try: () => agent.compact(instructions),
 			catch: (cause) => new CommandRefused({ command: "compact", reason: describe(cause) }),
 		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
 	}

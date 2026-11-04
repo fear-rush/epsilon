@@ -121,6 +121,7 @@ const handle = (message: SupervisorToEngine) => {
 						file: message.file ?? undefined,
 						homeDir: message.homeDir,
 						place: message.place,
+						sandboxRoot: message.sandboxRoot,
 						sessionId: message.sessionId,
 						userHome: message.userHome,
 					},

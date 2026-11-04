@@ -1,5 +1,6 @@
 import type { DialogQuestion } from "#protocol/conversation/extui";
 import type { Notice, TranscriptEntry, TreeEntry } from "#protocol/conversation/frames";
+import type { CommandOffer } from "#protocol/conversation/palette";
 import type { ThinkingLevel } from "#protocol/conversation/session";
 import type { CacheWarming, ContextUsage, SessionStats } from "#protocol/usage";
 
@@ -80,6 +81,8 @@ export type ConversationState = {
 	/** Whether pi's coding tools are declared now, and the thinking levels it offers. */
 	readonly codingTools: boolean;
 	readonly thinkingLevels: ReadonlyArray<ThinkingLevel>;
+	/** What `/` offers in this chat: the builtin table, pi's commands, templates and skills. */
+	readonly commands: ReadonlyArray<CommandOffer>;
 	readonly hasOlder: boolean;
 	/** Set when the session file changed outside Epsilon; the chat is read-only until reload. */
 	readonly drift: string | undefined;
@@ -112,6 +115,7 @@ export const emptyConversation: ConversationState = {
 	hideThinking: false,
 	codingTools: false,
 	thinkingLevels: [],
+	commands: [],
 	hasOlder: false,
 	drift: undefined,
 };

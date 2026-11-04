@@ -84,7 +84,9 @@ view, built from the shared patterns.
    composer's readings (pi's context usage, the session's totals, the cache warmer) follow
    the snapshot and again whenever pi's numbers change.
 4. Commands go down the same socket as tagged values; extension dialogs come back as
-   frames and their answers go back as commands.
+   frames and their answers go back as commands. A prompt whose text starts with a name in
+   the built-in table is answered by the engine before pi, so a `/compact` never reaches
+   the model; the browser answers its own surfaces before sending.
 5. The reducer in `src/domain/` turns frames into state; the view renders state. A
    state-only resync replaces the transcript without replaying frames.
 6. A crash sends `EngineStopped` to that chat's tabs only; the next command respawns.

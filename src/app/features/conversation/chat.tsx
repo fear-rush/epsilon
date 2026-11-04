@@ -13,10 +13,12 @@ import { transcript } from "#domain/conversation/selectors";
 import type { ConversationState } from "#domain/conversation/state";
 import type { ImageBlock, Notice as NoticeFrame } from "#protocol/conversation/frames";
 import type { ModelOption } from "#protocol/conversation/session";
+import type { ContextView } from "#protocol/settings/context";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { call } from "@/core/runtime";
 import { useReportStatus } from "@/core/status";
 
 import { ChatBar } from "./chat-bar";
@@ -145,24 +147,30 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 			onClearQueue={() => void conversation.clearQueue()}
 		/>
 	);
+	const readContext = async (): Promise<ContextView> =>
+		call((client) => client["settings.context.read"]({ folder: place }));
 	const composer = (
 		<Composer
 			busy={state.busy}
 			codingTools={state.codingTools}
+			commands={state.commands}
 			draft={state.draft}
 			model={models.find((candidate) => `${candidate.provider}/${candidate.id}` === state.model)}
 			models={models}
-			readings={state.readings}
 			sessionId={sessionId}
+			state={state}
 			thinking={state.thinking}
 			thinkingLevels={state.thinkingLevels}
 			writable={conversation.writable}
 			onAbort={conversation.abort}
 			onBash={conversation.bash}
+			onOpenTree={() => setTreeOpen(true)}
+			onReadContext={readContext}
 			onSend={send}
 			onSetCodingTools={(enabled) => void conversation.setCodingTools(enabled)}
 			onSetModel={(provider, modelId) => void conversation.setModel(provider, modelId)}
 			onSetThinking={(level) => void conversation.setThinking(level)}
+			onSuggest={conversation.suggest}
 		/>
 	);
 

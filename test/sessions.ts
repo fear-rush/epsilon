@@ -29,6 +29,15 @@ export type MessageEntry = {
 		readonly toolCallId?: string;
 		readonly toolName?: string;
 		readonly isError?: boolean;
+		/** pi writes usage on every assistant message, and its totals read it unguarded. */
+		readonly usage?: {
+			readonly cacheRead: number;
+			readonly cacheWrite: number;
+			readonly cost: { readonly total: number };
+			readonly input: number;
+			readonly output: number;
+			readonly totalTokens?: number;
+		};
 	};
 };
 
@@ -98,7 +107,17 @@ export function assistantEntry(
 		id,
 		parentId,
 		timestamp: at(index),
-		message: { role: "assistant", content: [{ type: "text", text }] },
+		message: {
+			role: "assistant",
+			content: [{ type: "text", text }],
+			usage: {
+				cacheRead: 40,
+				cacheWrite: 8,
+				cost: { total: 0.0002 },
+				input: 120,
+				output: 30,
+			},
+		},
 	};
 }
 

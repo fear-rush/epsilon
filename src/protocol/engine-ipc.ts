@@ -42,6 +42,8 @@ export const SupervisorToEngine = Schema.Union([
 		place: Schema.NullOr(Schema.String),
 		homeDir: Schema.String,
 		userHome: Schema.String,
+		/** The sandbox `~` under `bun run dev`; absent on the operator's own machine. */
+		sandboxRoot: Schema.optional(Schema.String),
 	}),
 	Schema.Struct({ t: Schema.Literals(["subscribe"]), tab: Schema.String }),
 	Schema.Struct({ t: Schema.Literals(["unsubscribe"]), tab: Schema.String }),

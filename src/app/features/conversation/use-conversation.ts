@@ -8,6 +8,7 @@ import type { ConversationState } from "#domain/conversation/state";
 import type { Command } from "#protocol/conversation/commands";
 import type { DialogAnswer } from "#protocol/conversation/extui";
 import type { ImageBlock, ServerFrame } from "#protocol/conversation/frames";
+import { AutocompleteReply } from "#protocol/conversation/palette";
 import { ModelOptions, ToolsView } from "#protocol/conversation/session";
 import type { ModelOption, ThinkingLevel } from "#protocol/conversation/session";
 import { EngineStopped } from "#protocol/errors";
@@ -58,6 +59,8 @@ export type Conversation = {
 	readonly steer: (text: string, images?: ReadonlyArray<ImageBlock>) => Promise<void>;
 	readonly followUp: (text: string, images?: ReadonlyArray<ImageBlock>) => Promise<void>;
 	readonly setCodingTools: (enabled: boolean) => Promise<void>;
+	/** What an extension's autocomplete providers suggest at the caret. */
+	readonly suggest: (text: string, cursor: number) => Promise<AutocompleteReply>;
 };
 
 /** How long a message waits for the chat to open before it is refused. */
@@ -293,11 +296,15 @@ export function useConversation(input: {
 
 	/** A read-only question to the engine; the answer is decoded by its own schema. */
 	const ask = useCallback(
-		async (kind: "models" | "tools") => {
+		async (question: {
+			kind: "models" | "tools" | "autocomplete";
+			text?: string;
+			cursor?: number;
+		}) => {
 			const name = stopped.current ? await reattach() : await tabFor();
 			return call((client) =>
 				client["conversation.query"]({
-					kind,
+					...question,
 					sessionId: currentId.current,
 					tab: name,
 				}),
@@ -307,11 +314,19 @@ export function useConversation(input: {
 	);
 	const models = useCallback(
 		async (): Promise<ReadonlyArray<ModelOption>> =>
-			Schema.decodeUnknownSync(ModelOptions)(await ask("models")),
+			Schema.decodeUnknownSync(ModelOptions)(await ask({ kind: "models" })),
 		[ask],
 	);
 	const tools = useCallback(
-		async (): Promise<ToolsView> => Schema.decodeUnknownSync(ToolsView)(await ask("tools")),
+		async (): Promise<ToolsView> =>
+			Schema.decodeUnknownSync(ToolsView)(await ask({ kind: "tools" })),
+		[ask],
+	);
+	const suggest = useCallback(
+		async (text: string, cursor: number): Promise<AutocompleteReply> =>
+			Schema.decodeUnknownSync(AutocompleteReply)(
+				await ask({ cursor, kind: "autocomplete", text }),
+			),
 		[ask],
 	);
 	const bash = useCallback(
@@ -382,6 +397,7 @@ export function useConversation(input: {
 		steer,
 		followUp,
 		setCodingTools,
+		suggest,
 		toggleTool,
 		toolOpen,
 		tools,

@@ -1,8 +1,10 @@
+import { useNavigate } from "@tanstack/react-router";
 import { ArrowUpIcon, PaperclipIcon, SquareIcon } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, KeyboardEvent } from "react";
 
-import type { Readings } from "#domain/conversation/state";
+import { parseBuiltinCommand } from "#domain/conversation/commands";
+import type { ConversationState } from "#domain/conversation/state";
 import {
 	PROMPT_IMAGE_BASE64_TOTAL_MAX,
 	PROMPT_IMAGE_BYTES_MAX,
@@ -10,8 +12,13 @@ import {
 	promptImagesBase64Length,
 } from "#protocol/conversation/commands";
 import type { ImageBlock } from "#protocol/conversation/frames";
+import type { AutocompleteReply, CommandOffer } from "#protocol/conversation/palette";
 import type { ModelOption, ThinkingLevel } from "#protocol/conversation/session";
+import type { ContextView } from "#protocol/settings/context";
+import { shortcut } from "@/components/patterns/shortcut";
+import { errorView } from "@/components/patterns/status/error-view";
 import { Notice } from "@/components/patterns/status/notice";
+import type { Tone } from "@/components/patterns/status/status-tone";
 import { Tip } from "@/components/patterns/tip";
 import {
 	InputGroup,
@@ -22,15 +29,36 @@ import {
 
 import { AttachmentStrip } from "./composer/attachments";
 import type { Attachment } from "./composer/attachments";
+import { runComposerCommand } from "./composer/builtin-commands";
+import type { ComposerCommandContext, RouteTarget } from "./composer/builtin-commands";
 import { CacheWarmingState } from "./composer/cache-warming";
 import { ContextMeter } from "./composer/context-meter";
 import { ModelMenu } from "./composer/model-menu";
+import { Palette } from "./composer/palette";
+import type { PaletteEntry } from "./composer/palette";
 import { ThinkingMenu } from "./composer/thinking-menu";
 import { ToolsMenu } from "./composer/tools-menu";
 import { takeHandedOffDraft } from "./draft.ts";
 
 /** How a message joins a run that is already going; an idle composer ignores it. */
 type Behavior = "steer" | "followUp";
+
+/**
+ * What follows `/` while the draft is still a bare command. A space ends it: from then on
+ * the text is an argument to the command that was picked.
+ */
+const commandQuery = (draft: string): string | undefined => {
+	const trimmed = draft.trimStart();
+	if (!trimmed.startsWith("/")) return undefined;
+	const query = trimmed.slice(1);
+	return query.includes(" ") ? undefined : query;
+};
+
+/**
+ * How long the composer waits after a keystroke before asking an extension's autocomplete
+ * providers, so typing does not send a query per key.
+ */
+const SUGGESTION_DELAY_MS = 150;
 
 /** A megabyte as a file size reads it, for the caps the protocol states in bytes. */
 const MEGABYTE = 1024 * 1024;
@@ -85,7 +113,7 @@ export function Composer({
 	onSetCodingTools,
 	busy,
 	draft,
-	readings,
+	state,
 	sessionId,
 	writable,
 	models,
@@ -93,6 +121,10 @@ export function Composer({
 	thinking,
 	thinkingLevels,
 	codingTools,
+	commands,
+	onOpenTree,
+	onReadContext,
+	onSuggest,
 }: {
 	onSend: (text: string, behavior?: Behavior, images?: ReadonlyArray<ImageBlock>) => Promise<void>;
 	/** Run a shell command; `excludeFromContext` is pi's `!!`. */
@@ -104,8 +136,6 @@ export function Composer({
 	busy: boolean;
 	/** Text pi put back, such as the message a tree move undid. */
 	draft: { readonly text: string; readonly nonce: string } | undefined;
-	/** What pi reports under the box: the window, the session's totals and the cache warmer. */
-	readings: Readings | undefined;
 	/** The chat this box writes to, so a fork's text follows its new file. */
 	sessionId: string;
 	writable: boolean;
@@ -114,6 +144,14 @@ export function Composer({
 	thinking: ThinkingLevel | undefined;
 	thinkingLevels: ReadonlyArray<ThinkingLevel>;
 	codingTools: boolean;
+	/** What `/` offers: the built-in table, pi's commands, templates and skills. */
+	commands: ReadonlyArray<CommandOffer>;
+	/** What the chat reads for its notices, `/copy` and `/session`. */
+	state: ConversationState;
+	onOpenTree: () => void;
+	onReadContext: () => Promise<ContextView>;
+	/** An extension's providers answer what the draft suggests at the caret. */
+	onSuggest: (text: string, cursor: number) => Promise<AutocompleteReply>;
 }) {
 	// A fork's text belongs to the new chat; this composer only takes it under that id.
 	const [text, setText] = useState(() => takeHandedOffDraft(sessionId) ?? "");
@@ -127,13 +165,23 @@ export function Composer({
 		}
 	}
 	const [failure, setFailure] = useState<Error | undefined>(undefined);
-	const [notice, setNotice] = useState<string | undefined>(undefined);
+	// A refused attachment is a warning; a command's answer is information. One row, two
+	// tones, so the icon matches what the line says.
+	const [notice, setNotice] = useState<{ readonly text: string; readonly tone: Tone } | undefined>(
+		undefined,
+	);
 	const [sending, setSending] = useState(false);
 	const [modelMenuOpen, setModelMenuOpen] = useState(false);
 	const [thinkingMenuOpen, setThinkingMenuOpen] = useState(false);
 	const [attachments, setAttachments] = useState<Attachment[]>([]);
+	const [selected, setSelected] = useState<string>();
+	const [dismissed, setDismissed] = useState<string>();
+	const [suggestions, setSuggestions] = useState<AutocompleteReply | undefined>(undefined);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const textareaRef = useRef<HTMLTextAreaElement>(null);
+	const surfaceRef = useRef<HTMLDivElement>(null);
 	const applied = useRef<string | undefined>(undefined);
+	const navigate = useNavigate();
 
 	// pi's own editor puts a restored message in front of what is already typed.
 	useEffect(() => {
@@ -142,50 +190,201 @@ export function Composer({
 		setText((current) => (current === "" ? draft.text : `${draft.text}\n\n${current}`));
 	}, [draft]);
 
-	const submit = useCallback(
-		async (behavior?: Behavior) => {
-			const message = text.trim();
-			if (message === "" || !writable || sending) return;
-			// `!cmd` runs in the shell, and `!!cmd` hides its output from the agent. A lone
-			// `!` is not a command, so the draft stays instead of being sent.
-			if (message.startsWith("!")) {
-				const excludeFromContext = message.startsWith("!!");
-				const command = message.slice(excludeFromContext ? 2 : 1).trim();
-				if (command === "") return;
-				if (attachments.length > 0) {
-					setNotice("A shell command takes no images: remove them, or send them in a message.");
-					return;
-				}
-				setText("");
-				setFailure(undefined);
-				try {
-					await onBash(command, excludeFromContext);
-				} catch (cause) {
-					setFailure(cause instanceof Error ? cause : new Error(String(cause)));
-				}
-				return;
-			}
+	// An extension's providers see the draft after a pause, with the caret, the way its
+	// `getEditorText` sees it. An empty draft asks nothing.
+	useEffect(() => {
+		const timer =
+			text.trim() === ""
+				? undefined
+				: setTimeout(() => {
+						const cursor = textareaRef.current?.selectionStart ?? text.length;
+						void onSuggest(text, cursor).then(setSuggestions, () => setSuggestions(undefined));
+					}, SUGGESTION_DELAY_MS);
+		return () => {
+			if (timer !== undefined) clearTimeout(timer);
+		};
+	}, [text, onSuggest]);
+
+	const query = commandQuery(text);
+	const commandMatches =
+		query === undefined
+			? []
+			: commands.filter((command) => command.name.toLowerCase().includes(query.toLowerCase()));
+	// A reply names the draft it answered, so one that arrived after the operator typed
+	// on is not drawn.
+	const answered = suggestions?.text === text ? suggestions : undefined;
+	const entries: PaletteEntry[] = [
+		...commandMatches.map<PaletteEntry>((command) => ({
+			kind: "command",
+			key: `command:${command.name}`,
+			command,
+		})),
+		...(answered?.items ?? []).map<PaletteEntry>((item) => ({
+			kind: "suggestion",
+			key: `suggestion:${item.value}`,
+			item,
+			prefix: answered?.prefix ?? "",
+		})),
+	];
+	const paletteOpen = entries.length > 0 && dismissed !== text;
+	const highlighted = Math.max(
+		0,
+		entries.findIndex((entry) => entry.key === selected),
+	);
+
+	const pick = (entry: PaletteEntry) => {
+		if (entry.kind === "command") {
+			// pi expands its own `/name` when a prompt carries it, and answers Epsilon's own
+			// before a prompt exists, so the palette fills the draft for Enter either way.
+			setText(`/${entry.command.name} `);
+			setSelected(entry.key);
+			textareaRef.current?.focus();
+			return;
+		}
+		// An extension's suggestion replaces the prefix its provider matched, the way pi
+		// applies one; when the draft moved on, it lands at the caret instead.
+		const area = textareaRef.current;
+		const caret = area?.selectionStart ?? text.length;
+		const start =
+			entry.prefix !== "" && text.slice(0, caret).endsWith(entry.prefix)
+				? caret - entry.prefix.length
+				: caret;
+		const next = text.slice(0, start) + entry.item.value + text.slice(caret);
+		setText(next);
+		setSelected(entry.key);
+		setDismissed(next);
+		requestAnimationFrame(() => {
+			const at = start + entry.item.value.length;
+			area?.setSelectionRange(at, at);
+			area?.focus();
+		});
+	};
+
+	const move = (step: number) => {
+		if (entries.length === 0) return;
+		const next = (highlighted + step + entries.length) % entries.length;
+		setSelected(entries[next]?.key);
+	};
+
+	const empty = state.entries.length === 0 && state.streaming.length === 0;
+
+	/** Where a route command goes: the settings shell and the chat list are pages. */
+	const openRoute = (target: RouteTarget): void => {
+		if (target === "chats") void navigate({ search: {}, to: "/" });
+		else if (target === "providers") void navigate({ to: "/settings/providers" });
+		else void navigate({ to: "/settings/general" });
+	};
+
+	/**
+	 * What a browser-served command may touch. Rebuilt per command instead of memoized:
+	 * a command is rare, and a stale handler would act on the previous render's state.
+	 */
+	const commandContext = (): ComposerCommandContext => ({
+		empty,
+		models,
+		navigate: openRoute,
+		openModelMenu: () => setModelMenuOpen(true),
+		openThinkingMenu: () => setThinkingMenuOpen(true),
+		openTree: onOpenTree,
+		readContext: onReadContext,
+		setModel: onSetModel,
+		setThinking: onSetThinking,
+		state,
+		thinkingLevels,
+	});
+
+	/**
+	 * A command in pi's built-in list. The browser acts here, or the engine runs pi's own
+	 * session operation; a row that can do neither answers with its sentence. Either way
+	 * the model never sees the text.
+	 */
+	const runCommand = async (
+		command: NonNullable<ReturnType<typeof parseBuiltinCommand>>["command"],
+		argument: string,
+		message: string,
+	): Promise<void> => {
+		setText("");
+		setAttachments([]);
+		setNotice(undefined);
+		setFailure(undefined);
+		if (command.surface === "pi") {
 			setSending(true);
 			try {
-				await onSend(
-					message,
-					behavior,
-					attachments.length === 0
-						? undefined
-						: attachments.map(({ data, mimeType }) => ({ data, mimeType, type: "image" as const })),
-				);
-				setText("");
-				setAttachments([]);
-				setNotice(undefined);
-				setFailure(undefined);
+				await onSend(message);
 			} catch (cause) {
 				setFailure(cause instanceof Error ? cause : new Error(String(cause)));
 			} finally {
 				setSending(false);
 			}
-		},
-		[text, writable, sending, attachments, onSend, onBash],
-	);
+			return;
+		}
+		try {
+			const answer = await runComposerCommand(command, argument, commandContext());
+			setNotice(answer === undefined ? undefined : { text: answer, tone: "info" });
+		} catch (cause) {
+			const view = errorView(cause instanceof Error ? cause : new Error(String(cause)));
+			setNotice({ text: view.line, tone: view.tone });
+		}
+	};
+
+	const submit = async (behavior?: Behavior): Promise<void> => {
+		const message = text.trim();
+		if (message === "" || !writable || sending) return;
+		// `!cmd` runs in the shell, and `!!cmd` hides its output from the agent. A lone
+		// `!` is not a command, so the draft stays instead of being sent.
+		if (message.startsWith("!")) {
+			const excludeFromContext = message.startsWith("!!");
+			const command = message.slice(excludeFromContext ? 2 : 1).trim();
+			if (command === "") return;
+			if (attachments.length > 0) {
+				setNotice({
+					text: "A shell command takes no images: remove them, or send them in a message.",
+					tone: "warning",
+				});
+				return;
+			}
+			setText("");
+			setFailure(undefined);
+			try {
+				await onBash(command, excludeFromContext);
+			} catch (cause) {
+				setFailure(cause instanceof Error ? cause : new Error(String(cause)));
+			}
+			return;
+		}
+		// pi's built-in commands are the host's or this page's, never the model's: pi's
+		// editor answers them in a terminal.
+		const parsed = parseBuiltinCommand(message);
+		if (parsed !== undefined) {
+			if (attachments.length > 0) {
+				setNotice({
+					text: `/${parsed.command.name} takes no images: remove them, or send them in a message.`,
+					tone: "warning",
+				});
+				return;
+			}
+			await runCommand(parsed.command, parsed.argument, message);
+			return;
+		}
+		setSending(true);
+		try {
+			await onSend(
+				message,
+				behavior,
+				attachments.length === 0
+					? undefined
+					: attachments.map(({ data, mimeType }) => ({ data, mimeType, type: "image" as const })),
+			);
+			setText("");
+			setAttachments([]);
+			setNotice(undefined);
+			setFailure(undefined);
+		} catch (cause) {
+			setFailure(cause instanceof Error ? cause : new Error(String(cause)));
+		} finally {
+			setSending(false);
+		}
+	};
 
 	/**
 	 * Add picked, pasted or dropped files. The caps are the protocol's own, checked here
@@ -225,7 +424,7 @@ export function Composer({
 			// before it re-rendered must not get past the count.
 			setAttachments((previous) => [...previous, ...admitted].slice(0, PROMPT_IMAGE_MAX));
 		}
-		setNotice(problems.length === 0 ? undefined : problems.join(" "));
+		setNotice(problems.length === 0 ? undefined : { text: problems.join(" "), tone: "warning" });
 	};
 
 	const pickFiles = (event: ChangeEvent<HTMLInputElement>) => {
@@ -241,6 +440,27 @@ export function Composer({
 	};
 
 	const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+		if (paletteOpen) {
+			if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+				event.preventDefault();
+				move(event.key === "ArrowDown" ? 1 : -1);
+				return;
+			}
+			if (event.key === "Enter" || event.key === "Tab") {
+				const entry = entries[highlighted];
+				if (entry !== undefined) {
+					event.preventDefault();
+					pick(entry);
+					return;
+				}
+			}
+			// Esc closes the list first; it stops the run only when nothing is open.
+			if (event.key === "Escape") {
+				event.preventDefault();
+				setDismissed(text);
+				return;
+			}
+		}
 		if (event.key === "Escape" && busy) {
 			event.preventDefault();
 			void onAbort();
@@ -255,7 +475,7 @@ export function Composer({
 
 	return (
 		<div className="border-t p-3">
-			<div className="mx-auto w-full max-w-4xl">
+			<div ref={surfaceRef} className="mx-auto w-full max-w-4xl">
 				{failure !== undefined && (
 					<div className="pb-2">
 						<Notice error={failure} title="The message was not sent" />
@@ -263,7 +483,7 @@ export function Composer({
 				)}
 				{notice !== undefined && (
 					<div className="pb-2">
-						<Notice tone="warning">{notice}</Notice>
+						<Notice tone={notice.tone}>{notice.text}</Notice>
 					</div>
 				)}
 				<form
@@ -297,12 +517,13 @@ export function Composer({
 							</InputGroupAddon>
 						)}
 						<InputGroupTextarea
+							ref={textareaRef}
 							aria-label="Message"
 							placeholder={
 								writable
 									? busy
-										? "Steer this run: Enter steers, Shift+Enter adds a line, Esc stops"
-										: "Message Epsilon… (! runs a shell command, paste or drop images)"
+										? `Steer this run: Enter steers, ${shortcut("Enter")} waits until it settles, Esc stops`
+										: "Message the agent (/ commands, ! shell, Enter sends, paste or drop images)"
 									: "This chat is read-only until it is reloaded."
 							}
 							value={text}
@@ -371,15 +592,25 @@ export function Composer({
 						</InputGroupAddon>
 					</InputGroup>
 				</form>
-				{readings !== undefined &&
-					(readings.contextUsage !== undefined || readings.cacheWarming !== undefined) && (
+				{state.readings !== undefined &&
+					(state.readings.contextUsage !== undefined ||
+						state.readings.cacheWarming !== undefined) && (
 						<div className="flex items-start gap-2 px-1 pt-1">
 							<div className="ml-auto flex shrink-0 items-center gap-2">
-								<CacheWarmingState status={readings.cacheWarming} />
-								<ContextMeter usage={readings.contextUsage} stats={readings.stats} />
+								<CacheWarmingState status={state.readings.cacheWarming} />
+								<ContextMeter usage={state.readings.contextUsage} stats={state.readings.stats} />
 							</div>
 						</div>
 					)}
+				<Palette
+					open={paletteOpen}
+					anchor={surfaceRef}
+					entries={entries}
+					selected={entries[highlighted]?.key}
+					onSelect={setSelected}
+					onPick={pick}
+					onDismiss={() => setDismissed(text)}
+				/>
 			</div>
 		</div>
 	);

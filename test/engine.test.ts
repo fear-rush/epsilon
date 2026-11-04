@@ -318,3 +318,81 @@ test("a prompt's image reaches pi and comes back in the window", async () => {
 		stub.stop();
 	}
 }, 20_000);
+
+test("built-in commands are answered here, never by the model", async () => {
+	const home = testPaths.agentHome;
+	const project = join(testPaths.scratch, "engine-builtins");
+	const sessions = join(testPaths.scratch, "engine-builtin-sessions");
+	mkdirSync(project, { recursive: true });
+	const file = writeSession(sessions, "s-builtin", linearSession("s-builtin", project, 12));
+	const imported = writeSession(sessions, "s-imported", linearSession("s-imported", project, 3));
+	const env: Record<string, string> = {};
+	for (const [key, value] of Object.entries(process.env)) if (value !== undefined) env[key] = value;
+	env["HOME"] = testPaths.sandboxHome;
+	env["PI_CODING_AGENT_DIR"] = home;
+
+	const result = await Effect.runPromise(
+		Effect.gen(function* () {
+			const engine = yield* startEngine({
+				cwd: project,
+				file,
+				homeDir: home,
+				place: null,
+				sessionId: "s-builtin",
+				spec: {
+					command: [
+						process.execPath,
+						"run",
+						new URL("../src/engine/main.ts", import.meta.url).pathname,
+					],
+					env,
+				},
+				userHome: testPaths.sandboxHome,
+			});
+			yield* engine.attachTab("tab");
+			yield* frameOf(engine, (frame) => frame.t === "snapshot");
+			// A browser-surface name is answered with pi's own refusal, and the transcript
+			// does not grow: nothing was sent to the model.
+			yield* control(engine, { t: "prompt", text: "/model" });
+			const notice = yield* frameOf(
+				engine,
+				(frame) => frame.t === "notice" && frame.text.includes("/model"),
+			);
+			const history = yield* engine.request((id) => ({ id, kind: "history", t: "query" }));
+			// A pi-surface name runs pi's operation on the host.
+			yield* control(engine, { t: "prompt", text: "/name Renamed here" });
+			const named = yield* frameOf(
+				engine,
+				(frame) => frame.t === "sessionMeta" && frame.title === "Renamed here",
+			);
+			yield* control(engine, { t: "prompt", text: `/import ${JSON.stringify(imported)}` });
+			const afterImport = yield* frameOf(
+				engine,
+				(frame) => frame.t === "sessionMeta" && frame.sessionId === "s-imported",
+			);
+			yield* control(engine, { t: "prompt", text: "/new" });
+			const afterNew = yield* frameOf(
+				engine,
+				(frame) => frame.t === "sessionMeta" && frame.sessionId !== "s-imported",
+			);
+			yield* engine.stop(2_000);
+			return { afterImport, afterNew, history, named, notice };
+			// oxlint-disable-next-line effecttsgo/strict-effect-provide -- the test entry point builds the runtime
+		}).pipe(Effect.provide(BunServices.layer)),
+	);
+
+	if (Option.isNone(result.notice)) throw new Error("no notice for /model");
+	if (result.notice.value.t !== "notice") throw new Error("not a notice");
+	expect(result.notice.value.text).toBe(
+		"/model is answered by Epsilon's own interface, not by this engine. Nothing was sent to the model.",
+	);
+	if (result.history === undefined) throw new Error("no history answer");
+	if (typeof result.history !== "object" || result.history === null) {
+		throw new Error("the history answer is not a window");
+	}
+	if (!("entries" in result.history)) throw new Error("the window has no entries");
+	expect(result.history.entries).toHaveLength(12);
+	expect(Option.isSome(result.named)).toBe(true);
+	expect(Option.isSome(result.afterImport)).toBe(true);
+	expect(Option.isSome(result.afterNew)).toBe(true);
+}, 20_000);
