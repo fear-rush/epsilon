@@ -1,34 +1,69 @@
+import { ArrowUpIcon, SquareIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 
+import type { ModelOption, ThinkingLevel } from "#protocol/conversation/session";
 import { Notice } from "@/components/patterns/status/notice";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Tip } from "@/components/patterns/tip";
+import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupButton,
+	InputGroupTextarea,
+} from "@/components/ui/input-group";
 
+import { ModelMenu } from "./composer/model-menu";
+import { ThinkingMenu } from "./composer/thinking-menu";
+import { ToolsMenu } from "./composer/tools-menu";
 import { takeHandedOffDraft } from "./draft.ts";
+
+/** How a message joins a run that is already going; an idle composer ignores it. */
+type Behavior = "steer" | "followUp";
 
 /**
  * The one input of a chat.
  *
- * Enter sends and Shift+Enter adds a line, which is the habit a chat box trains. A refused
- * command is shown here in the feature's words instead of disappearing; a chat whose file
- * changed outside Epsilon is read-only, and the status line says how to get it back.
+ * Enter sends and Shift+Enter adds a line, which is the habit a chat box trains. While a
+ * run is going, Enter steers it and Ctrl/⌘+Enter waits for it to settle, as pi's editor
+ * does. A draft that starts with `!` is a shell command, and `!!` keeps its output out of
+ * the model's context. A refused command is shown here in the feature's words instead of
+ * disappearing; a chat whose file changed outside Epsilon is read-only.
  */
 export function Composer({
 	onSend,
+	onBash,
 	onAbort,
+	onSetModel,
+	onSetThinking,
+	onSetCodingTools,
 	busy,
 	draft,
 	sessionId,
 	writable,
+	models,
+	model,
+	thinking,
+	thinkingLevels,
+	codingTools,
 }: {
-	onSend: (text: string) => Promise<void>;
+	onSend: (text: string, behavior?: Behavior) => Promise<void>;
+	/** Run a shell command; `excludeFromContext` is pi's `!!`. */
+	onBash: (text: string, excludeFromContext: boolean) => Promise<void>;
 	onAbort: () => Promise<void>;
+	onSetModel: (provider: string, modelId: string) => void;
+	onSetThinking: (level: ThinkingLevel) => void;
+	onSetCodingTools: (enabled: boolean) => void;
 	busy: boolean;
 	/** Text pi put back, such as the message a tree move undid. */
 	draft: { readonly text: string; readonly nonce: string } | undefined;
 	/** The chat this box writes to, so a fork's text follows its new file. */
 	sessionId: string;
 	writable: boolean;
+	models: ReadonlyArray<ModelOption>;
+	model: ModelOption | undefined;
+	thinking: ThinkingLevel | undefined;
+	thinkingLevels: ReadonlyArray<ThinkingLevel>;
+	codingTools: boolean;
 }) {
 	// A fork's text belongs to the new chat; this composer only takes it under that id.
 	const [text, setText] = useState(() => takeHandedOffDraft(sessionId) ?? "");
@@ -43,6 +78,8 @@ export function Composer({
 	}
 	const [failure, setFailure] = useState<Error | undefined>(undefined);
 	const [sending, setSending] = useState(false);
+	const [modelMenuOpen, setModelMenuOpen] = useState(false);
+	const [thinkingMenuOpen, setThinkingMenuOpen] = useState(false);
 	const applied = useRef<string | undefined>(undefined);
 
 	// pi's own editor puts a restored message in front of what is already typed.
@@ -52,59 +89,123 @@ export function Composer({
 		setText((current) => (current === "" ? draft.text : `${draft.text}\n\n${current}`));
 	}, [draft]);
 
-	const send = useCallback(async () => {
-		const trimmed = text.trim();
-		if (trimmed === "" || !writable || sending) return;
-		setSending(true);
-		try {
-			await onSend(trimmed);
-			setText("");
-			setFailure(undefined);
-		} catch (cause) {
-			setFailure(cause instanceof Error ? cause : new Error(String(cause)));
-		} finally {
-			setSending(false);
+	const submit = useCallback(
+		async (behavior?: Behavior) => {
+			const message = text.trim();
+			if (message === "" || !writable || sending) return;
+			// `!cmd` runs in the shell, and `!!cmd` hides its output from the agent. A lone
+			// `!` is not a command, so the draft stays instead of being sent.
+			if (message.startsWith("!")) {
+				const excludeFromContext = message.startsWith("!!");
+				const command = message.slice(excludeFromContext ? 2 : 1).trim();
+				if (command === "") return;
+				setText("");
+				setFailure(undefined);
+				try {
+					await onBash(command, excludeFromContext);
+				} catch (cause) {
+					setFailure(cause instanceof Error ? cause : new Error(String(cause)));
+				}
+				return;
+			}
+			setSending(true);
+			try {
+				await onSend(message, behavior);
+				setText("");
+				setFailure(undefined);
+			} catch (cause) {
+				setFailure(cause instanceof Error ? cause : new Error(String(cause)));
+			} finally {
+				setSending(false);
+			}
+		},
+		[text, writable, sending, onSend, onBash],
+	);
+
+	const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+		if (event.key === "Escape" && busy) {
+			event.preventDefault();
+			void onAbort();
+			return;
 		}
-	}, [text, writable, sending, onSend]);
+		if (event.key === "Enter" && !event.shiftKey) {
+			event.preventDefault();
+			if (event.metaKey || event.ctrlKey) void submit("followUp");
+			else void submit(busy ? "steer" : undefined);
+		}
+	};
 
 	return (
-		<div className="border-t p-pane">
-			<div className="mx-auto grid w-full max-w-content gap-2">
+		<div className="border-t p-3">
+			<div className="mx-auto grid w-full max-w-4xl gap-2">
 				{failure !== undefined && <Notice error={failure} title="The message was not sent" />}
-				<Textarea
-					aria-label="Message"
-					placeholder={
-						writable ? "Message Epsilon…" : "This chat is read-only until it is reloaded."
-					}
-					value={text}
-					rows={2}
-					disabled={!writable}
-					onChange={(event) => setText(event.target.value)}
-					onKeyDown={(event) => {
-						if (event.key === "Enter" && !event.shiftKey) {
-							event.preventDefault();
-							void send();
-						}
+				<form
+					onSubmit={(event) => {
+						event.preventDefault();
+						void submit(busy ? "steer" : undefined);
 					}}
-				/>
-				<div className="flex items-center justify-between gap-2">
-					<span className="text-meta text-muted-foreground">
-						Enter sends, Shift+Enter adds a line.
-					</span>
-					{busy ? (
-						<Button variant="outline" size="sm" onClick={() => void onAbort()}>
-							Stop
-						</Button>
-					) : (
-						<Button
-							size="sm"
-							disabled={text.trim() === "" || !writable}
-							onClick={() => void send()}
-						>
-							Send
-						</Button>
-					)}
-				</div>
+				>
+					<InputGroup className="border-foreground/25">
+						<InputGroupTextarea
+							aria-label="Message"
+							placeholder={
+								writable
+									? busy
+										? "Steer this run: Enter steers, Shift+Enter adds a line, Esc stops"
+										: "Message Epsilon… (! runs a shell command)"
+									: "This chat is read-only until it is reloaded."
+							}
+							value={text}
+							rows={2}
+							disabled={!writable}
+							className="max-h-40 min-h-11 p-3"
+							onChange={(event) => setText(event.target.value)}
+							onKeyDown={onKeyDown}
+						/>
+						<InputGroupAddon align="block-end">
+							<ModelMenu
+								models={[...models]}
+								model={model}
+								open={modelMenuOpen}
+								onOpenChange={setModelMenuOpen}
+								onSelect={(next) => onSetModel(next.provider, next.id)}
+							/>
+							<ThinkingMenu
+								level={thinking ?? "off"}
+								levels={[...thinkingLevels]}
+								open={thinkingMenuOpen}
+								onOpenChange={setThinkingMenuOpen}
+								onSelect={onSetThinking}
+							/>
+							<ToolsMenu codingTools={codingTools} onSelect={onSetCodingTools} />
+							{busy && (
+								<Tip label="Stop the run">
+									<InputGroupButton
+										size="icon-sm"
+										variant="destructive"
+										className="ml-auto rounded-full"
+										aria-label="Stop the run"
+										onClick={() => void onAbort()}
+									>
+										<SquareIcon />
+									</InputGroupButton>
+								</Tip>
+							)}
+							<Tip label={busy ? "Steer the run" : "Send"}>
+								<InputGroupButton
+									type="submit"
+									size="icon-sm"
+									variant="default"
+									className={busy ? "rounded-full" : "ml-auto rounded-full"}
+									disabled={text.trim() === "" || !writable || sending}
+									aria-label={busy ? "Steer the run" : "Send"}
+								>
+									<ArrowUpIcon />
+								</InputGroupButton>
+							</Tip>
+						</InputGroupAddon>
+					</InputGroup>
+				</form>
 			</div>
 		</div>
 	);

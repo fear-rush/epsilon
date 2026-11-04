@@ -68,6 +68,8 @@ export const Command = Schema.Union([
 	Schema.Struct({ t: Schema.Literals(["abortBash"]) }),
 	/** pi's own hide-thinking setting, so a terminal sees what the dashboard chose. */
 	Schema.Struct({ t: Schema.Literals(["setHideThinking"]), hidden: Schema.Boolean }),
+	/** The composer's Tools menu: pi's coding tools as one switch; reading stays on. */
+	Schema.Struct({ t: Schema.Literals(["setCodingTools"]), enabled: Schema.Boolean }),
 	/** The chat's display name, which pi records in the session file. */
 	Schema.Struct({ t: Schema.Literals(["setLabel"]), label: Schema.String }),
 ]);

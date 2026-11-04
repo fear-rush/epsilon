@@ -44,6 +44,8 @@ describe("frames", () => {
 				autoCompaction: false,
 				autoRetry: true,
 				hideThinking: true,
+				codingTools: true,
+				thinkingLevels: ["off", "high"],
 			},
 			{
 				t: "queue",
@@ -75,7 +77,7 @@ describe("frames", () => {
 		// The version covers exactly the tags the socket can carry: adding a frame without
 		// naming it here means a stale tab would meet a frame it cannot decode.
 		expect(new Set(samples.map((sample) => sample.t))).toEqual(new Set(frameTags));
-		expect(PROTOCOL_VERSION).toBe("7");
+		expect(PROTOCOL_VERSION).toBe("8");
 		for (const sample of samples) expect(() => decodeServerFrame(sample)).not.toThrow();
 	});
 });
@@ -111,6 +113,7 @@ describe("reduce", () => {
 				autoCompaction: false,
 				autoRetry: true,
 				hideThinking: true,
+				thinkingLevels: ["off", "high"],
 			},
 		];
 		const state = frames.reduce(reduce, emptyConversation);
@@ -121,6 +124,7 @@ describe("reduce", () => {
 		expect(state.autoCompaction).toBe(false);
 		expect(state.autoRetry).toBe(true);
 		expect(state.hideThinking).toBe(true);
+		expect(state.thinkingLevels).toEqual(["off", "high"]);
 	});
 
 	test("replaces the streaming row when its entry arrives", () => {

@@ -54,6 +54,10 @@ export type Conversation = {
 	readonly cancelRetry: () => Promise<void>;
 	readonly abortCompaction: () => Promise<void>;
 	readonly clearQueue: () => Promise<void>;
+	/** Join a run that is already going: steer it now, or wait for it to settle. */
+	readonly steer: (text: string) => Promise<void>;
+	readonly followUp: (text: string) => Promise<void>;
+	readonly setCodingTools: (enabled: boolean) => Promise<void>;
 };
 
 /** How long a message waits for the chat to open before it is refused. */
@@ -328,6 +332,24 @@ export function useConversation(input: {
 	const clearQueue = useCallback(async (): Promise<void> => {
 		await command({ t: "clearQueue" });
 	}, [command]);
+	const steer = useCallback(
+		async (text: string): Promise<void> => {
+			await command({ t: "steer", text });
+		},
+		[command],
+	);
+	const followUp = useCallback(
+		async (text: string): Promise<void> => {
+			await command({ t: "followUp", text });
+		},
+		[command],
+	);
+	const setCodingTools = useCallback(
+		async (enabled: boolean): Promise<void> => {
+			await command({ t: "setCodingTools", enabled });
+		},
+		[command],
+	);
 	const toggleTool = useCallback((toolCallId: string) => {
 		setToolOpen((previous) => {
 			const next = new Map(previous);
@@ -357,6 +379,9 @@ export function useConversation(input: {
 		setThinking,
 		setTools,
 		state,
+		steer,
+		followUp,
+		setCodingTools,
 		toggleTool,
 		toolOpen,
 		tools,

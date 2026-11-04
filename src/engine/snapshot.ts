@@ -8,6 +8,7 @@ import type {
 } from "#protocol/conversation/frames";
 import type { ThinkingLevel } from "#protocol/conversation/session";
 
+import { hasCodingTools } from "./tools.ts";
 import { flatTree, transcriptOf } from "./translate.ts";
 
 /**
@@ -118,7 +119,9 @@ type MutableSessionMeta = {
 	tools?: string[];
 	autoCompaction?: boolean;
 	autoRetry?: boolean;
+	codingTools?: boolean;
 	hideThinking?: boolean;
+	thinkingLevels?: ThinkingLevel[];
 };
 
 /** What the page needs to draw the session controls, from pi's own state. */
@@ -128,10 +131,12 @@ export const sessionMeta = (agent: AgentSession): Extract<ServerFrame, { t: "ses
 	const frame: MutableSessionMeta = {
 		autoCompaction: agent.autoCompactionEnabled,
 		autoRetry: agent.autoRetryEnabled,
+		codingTools: hasCodingTools(agent),
 		hideThinking: agent.settingsManager.getHideThinkingBlock(),
 		sessionId: agent.sessionId,
 		t: "sessionMeta",
 		thinking: agent.thinkingLevel,
+		thinkingLevels: agent.getAvailableThinkingLevels(),
 		tools: agent.getActiveToolNames(),
 	};
 	if (title !== undefined) frame.title = title;

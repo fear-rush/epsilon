@@ -52,6 +52,7 @@ export type CommandHost = {
 	readonly bash: (text: string, excludeFromContext: boolean) => Effect.Effect<void, CommandRefused>;
 	readonly abortBash: () => Effect.Effect<void, CommandRefused>;
 	readonly setHideThinking: (hidden: boolean) => Effect.Effect<void, CommandRefused>;
+	readonly setCodingTools: (enabled: boolean) => Effect.Effect<void, CommandRefused>;
 	readonly setLabel: (label: string) => Effect.Effect<void, CommandRefused>;
 	readonly fork: (
 		entryId: string,
@@ -128,6 +129,8 @@ export const dispatchCommand = (
 			return host.abortBash();
 		case "setHideThinking":
 			return host.setHideThinking(command.hidden);
+		case "setCodingTools":
+			return host.setCodingTools(command.enabled);
 		case "setLabel": {
 			// The name is written into the session file, so a foreign write refuses it too.
 			const refusal = writeRefusal(host, "setLabel");

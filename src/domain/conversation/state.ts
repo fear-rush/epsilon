@@ -67,6 +67,9 @@ export type ConversationState = {
 	readonly autoCompaction: boolean;
 	readonly autoRetry: boolean;
 	readonly hideThinking: boolean;
+	/** Whether pi's coding tools are declared now, and the thinking levels it offers. */
+	readonly codingTools: boolean;
+	readonly thinkingLevels: ReadonlyArray<ThinkingLevel>;
 	readonly hasOlder: boolean;
 	/** Set when the session file changed outside Epsilon; the chat is read-only until reload. */
 	readonly drift: string | undefined;
@@ -96,6 +99,8 @@ export const emptyConversation: ConversationState = {
 	autoCompaction: false,
 	autoRetry: false,
 	hideThinking: false,
+	codingTools: false,
+	thinkingLevels: [],
 	hasOlder: false,
 	drift: undefined,
 };

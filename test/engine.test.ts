@@ -135,6 +135,7 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 				yield* control(engine, { t: "setAutoCompaction", enabled: false });
 				yield* control(engine, { t: "setAutoRetry", enabled: false });
 				yield* control(engine, { t: "setHideThinking", hidden: true });
+				yield* control(engine, { t: "setCodingTools", enabled: false });
 				yield* control(engine, { t: "clearQueue" });
 				yield* engine.attachTab("tab2");
 				const opening = [...(yield* engine.frames("tab2").pipe(Stream.take(4), Stream.runCollect))];
@@ -186,6 +187,8 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 		expect(result.meta.autoCompaction).toBe(false);
 		expect(result.meta.autoRetry).toBe(false);
 		expect(result.meta.hideThinking).toBe(true);
+		expect(result.meta.codingTools).toBe(false);
+		expect(Array.isArray(result.meta.thinkingLevels)).toBe(true);
 		if (result.queue === undefined) throw new Error("no queue frame");
 		expect(result.queue).toEqual({ followUp: [], steering: [], t: "queue" });
 		if (result.bash === undefined) throw new Error("no running bash frame");

@@ -12,6 +12,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { transcript } from "#domain/conversation/selectors";
 import type { ConversationState } from "#domain/conversation/state";
 import type { Notice as NoticeFrame } from "#protocol/conversation/frames";
+import type { ModelOption } from "#protocol/conversation/session";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,23 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 	const [jumpNonce, setJumpNonce] = useState(0);
 	const [anchorFrom, setAnchorFrom] = useState<number | undefined>(undefined);
 	const [controlsOpen, setControlsOpen] = useState(false);
+	const loadModels = conversation.models;
+	const [models, setModels] = useState<ReadonlyArray<ModelOption>>([]);
+	useEffect(() => {
+		let cancelled = false;
+		const load = async (): Promise<void> => {
+			try {
+				const next = await loadModels();
+				if (!cancelled) setModels(next);
+			} catch {
+				// The picker says "Model" until a read works; the controls dialog shows the reason.
+			}
+		};
+		void load();
+		return () => {
+			cancelled = true;
+		};
+	}, [loadModels]);
 	const [treeOpen, setTreeOpen] = useState(false);
 
 	const matches = searching ? matchingRowIds(transcript(state), query) : [];
@@ -87,8 +105,10 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 	const jump: Jump | undefined =
 		jumpId === undefined ? undefined : { id: jumpId, nonce: jumpNonce };
 
-	const send = async (text: string): Promise<void> => {
-		await conversation.send(text);
+	const send = async (text: string, behavior?: "steer" | "followUp"): Promise<void> => {
+		if (behavior === "steer") await conversation.steer(text);
+		else if (behavior === "followUp") await conversation.followUp(text);
+		else await conversation.send(text);
 		// The sent message scrolls to the top of the view; the reply grows below it (R9).
 		setAnchorFrom(transcript(state).length);
 	};
@@ -124,11 +144,20 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 	const composer = (
 		<Composer
 			busy={state.busy}
+			codingTools={state.codingTools}
 			draft={state.draft}
+			model={models.find((candidate) => `${candidate.provider}/${candidate.id}` === state.model)}
+			models={models}
 			sessionId={sessionId}
+			thinking={state.thinking}
+			thinkingLevels={state.thinkingLevels}
 			writable={conversation.writable}
 			onAbort={conversation.abort}
+			onBash={conversation.bash}
 			onSend={send}
+			onSetCodingTools={(enabled) => void conversation.setCodingTools(enabled)}
+			onSetModel={(provider, modelId) => void conversation.setModel(provider, modelId)}
+			onSetThinking={(level) => void conversation.setThinking(level)}
 		/>
 	);
 

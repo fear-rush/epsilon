@@ -159,6 +159,8 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				autoCompaction: frame.autoCompaction ?? state.autoCompaction,
 				autoRetry: frame.autoRetry ?? state.autoRetry,
 				hideThinking: frame.hideThinking ?? state.hideThinking,
+				codingTools: frame.codingTools ?? state.codingTools,
+				thinkingLevels: frame.thinkingLevels ?? state.thinkingLevels,
 			};
 		case "editorText":
 			return { ...state, draft: { nonce: frame.nonce, text: frame.text } };

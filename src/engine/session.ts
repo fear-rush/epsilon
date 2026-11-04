@@ -42,6 +42,7 @@ import {
 	treeOf,
 	type Window,
 } from "./snapshot.ts";
+import { setCodingTools } from "./tools.ts";
 import { appendedEntry, entryForMessage, toolCallsOf, toolTextOf } from "./translate.ts";
 import { UiBridge } from "./ui.ts";
 
@@ -461,6 +462,7 @@ export class EngineSession {
 			prompt: (text, images) => this.prompt(text, images),
 			setAutoCompaction: (enabled) => this.setAutoCompaction(enabled),
 			setAutoRetry: (enabled) => this.setAutoRetry(enabled),
+			setCodingTools: (enabled) => this.setCodingTools(enabled),
 			setHideThinking: (hidden) => this.setHideThinking(hidden),
 			setLabel: (label) => this.setLabel(label),
 			setModel: (provider, modelId) => this.setModel(provider, modelId),
@@ -623,6 +625,16 @@ export class EngineSession {
 			try: () => self.runtime.session.abortBash(),
 			catch: (cause) => new CommandRefused({ command: "abortBash", reason: describe(cause) }),
 		});
+	}
+
+	/** The composer's Tools menu, through pi's own active-tool list. */
+	private setCodingTools(enabled: boolean): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		const agent = this.runtime.session;
+		return Effect.try({
+			try: () => setCodingTools(agent, enabled),
+			catch: (cause) => new CommandRefused({ command: "setCodingTools", reason: describe(cause) }),
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
 	}
 
 	/** pi's setting writers, so a terminal reading the same home sees the same choice. */
