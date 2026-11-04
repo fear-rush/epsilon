@@ -46,7 +46,7 @@ Choose by the scope of what the message is about. A feature never invents its ow
 
 ## Items
 
-- [ ] `status-tone.ts`: the one `Tone`. `StatusView`, `Notice`, `InlineStatus`, the status
+- [x] `status-tone.ts`: the one `Tone`. `StatusView`, `Notice`, `InlineStatus`, the status
       line and `AppBanner` (if still used) take it.
 - [x] `errorView`: exhaustive over the protocol's tagged errors, with the words above;
       `StatusView` and `Notice` accept `error`.
