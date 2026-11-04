@@ -2,7 +2,6 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 import { DetailPage } from "@/components/patterns/pane/detail-page";
-import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { StatusView } from "@/components/patterns/status/status-view";
 
@@ -45,7 +44,7 @@ export function SkillReader<Detail>({
 	if (query.error !== null) {
 		return (
 			<SkillStatusPage title={title}>
-				<StatusView {...errorView(query.error)} />
+				<StatusView error={query.error} />
 			</SkillStatusPage>
 		);
 	}

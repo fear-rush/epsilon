@@ -1,5 +1,7 @@
 import { unzipSync } from "fflate";
 
+import { LocalRefused } from "@/core/errors";
+
 /** One file on its way to the server, named by its path inside the picked source. */
 export type PickedFile = { readonly name: string; readonly bytes: Uint8Array };
 
@@ -33,6 +35,15 @@ const pathProblem = (path: string): string | undefined => {
 
 const bytesOf = async (file: File): Promise<Uint8Array> => new Uint8Array(await file.arrayBuffer());
 
+/** A zip fflate cannot open is the picker's refusal, not a crash. */
+const unzip = (bytes: Uint8Array): Record<string, Uint8Array> => {
+	try {
+		return unzipSync(bytes);
+	} catch {
+		throw new LocalRefused({ reason: "This file is not a zip archive Epsilon can open." });
+	}
+};
+
 /** A file input, whether it picked one archive or a whole folder. */
 export const pickedFiles = async (input: FileList | null): Promise<PickedSet> => {
 	const list = input === null ? [] : [...input];
@@ -51,7 +62,7 @@ export const pickedFiles = async (input: FileList | null): Promise<PickedSet> =>
 			continue;
 		}
 		const problem = pathProblem(file.name);
-		if (problem !== undefined) throw new Error(problem);
+		if (problem !== undefined) throw new LocalRefused({ reason: problem });
 		files.push(file);
 	}
 	return { files, omitted };
@@ -59,7 +70,7 @@ export const pickedFiles = async (input: FileList | null): Promise<PickedSet> =>
 
 /** A zip archive: every file binary it holds, paths already relative to its root. */
 export const archiveFiles = (bytes: Uint8Array): PickedSet => {
-	const entries = unzipSync(bytes);
+	const entries = unzip(bytes);
 	const files: PickedFile[] = [];
 	const omitted: string[] = [];
 	for (const [name, data] of Object.entries(entries)) {
@@ -69,7 +80,7 @@ export const archiveFiles = (bytes: Uint8Array): PickedSet => {
 			continue;
 		}
 		const problem = pathProblem(name);
-		if (problem !== undefined) throw new Error(problem);
+		if (problem !== undefined) throw new LocalRefused({ reason: problem });
 		files.push({ bytes: data, name });
 	}
 	return { files, omitted };
@@ -79,11 +90,11 @@ export const archiveFiles = (bytes: Uint8Array): PickedSet => {
 export const checkSize = (files: ReadonlyArray<PickedFile>): void => {
 	const total = files.reduce((sum, file) => sum + file.bytes.byteLength, 0);
 	if (total > IMPORT_MAX_UPLOAD_BYTES) {
-		throw new Error(
-			`The folder is ${Math.round(total / 1024 / 1024)} MB; the limit is ${
+		throw new LocalRefused({
+			reason: `The folder is ${Math.round(total / 1024 / 1024)} MB; the limit is ${
 				IMPORT_MAX_UPLOAD_BYTES / 1024 / 1024
 			} MB`,
-		);
+		});
 	}
 };
 

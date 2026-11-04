@@ -10,13 +10,8 @@ import type { DialogAnswer } from "#protocol/conversation/extui";
 import type { ServerFrame } from "#protocol/conversation/frames";
 import { ModelOptions, ToolsView } from "#protocol/conversation/session";
 import type { ModelOption, ThinkingLevel } from "#protocol/conversation/session";
-import {
-	CommandRefused,
-	EngineLimitReached,
-	EngineStopped,
-	ProjectNotTrusted,
-	ProjectRefused,
-} from "#protocol/errors";
+import { EngineStopped } from "#protocol/errors";
+import { errorView } from "@/components/patterns/status/error-view";
 import { call, keepSubscribed, runStream } from "@/core/runtime";
 
 import { handOffDraft } from "./draft.ts";
@@ -58,42 +53,12 @@ export type Conversation = {
 /** How long a message waits for the chat to open before it is refused. */
 const OPEN_TIMEOUT_MS = 10_000;
 
-/** A command is answered by a tagged error; a composer shows the sentence, not the tag. */
-const commandFailure = (error: Error): Error => {
-	if (error instanceof EngineStopped) {
-		return new Error("The engine that owns this chat stopped. Send again to start a new one.");
-	}
-	if (error instanceof CommandRefused) return new Error(error.reason);
-	if (error instanceof EngineLimitReached) {
-		return new Error(
-			"Every chat engine is busy. Close an idle chat or raise the limit in Settings.",
-		);
-	}
-	if (error instanceof ProjectRefused) return new Error(error.reason);
-	return error;
-};
-
 const notice = (text: string): ServerFrame => ({
 	id: crypto.randomUUID(),
 	kind: "error",
 	text,
 	t: "notice",
 });
-
-/** The one sentence a refused attach deserves in the transcript. */
-const describe = (error: Error): string => {
-	if (error instanceof EngineLimitReached) {
-		return "Every chat engine is busy. Close an idle chat or raise the limit in Settings.";
-	}
-	if (error instanceof EngineStopped) {
-		return "The engine that owns this chat stopped. Send a message to start a new one.";
-	}
-	if (error instanceof ProjectNotTrusted) {
-		return "This chat runs in a folder that is not trusted. Open Settings → Projects to trust it.";
-	}
-	if (error instanceof ProjectRefused) return `This chat could not open: ${error.reason}`;
-	return `This chat could not continue: ${error.message}`;
-};
 
 export function useConversation(input: {
 	readonly sessionId: string;
@@ -214,7 +179,7 @@ export function useConversation(input: {
 				notice(
 					error === undefined
 						? "The engine for this chat stopped. Send a message to start a new one."
-						: describe(error),
+						: errorView(error).line,
 				),
 			);
 		},
@@ -266,7 +231,7 @@ export function useConversation(input: {
 					);
 					return;
 				}
-				throw commandFailure(error);
+				throw error;
 			}
 		},
 		[reattach, tabFor],

@@ -9,7 +9,6 @@ import { useState } from "react";
 
 import type { ProjectStatus, ProjectTrustAction } from "#protocol/settings/projects";
 import { DialogFrame } from "@/components/patterns/dialog-frame";
-import { errorView } from "@/components/patterns/status/error-view";
 import { InlineStatus } from "@/components/patterns/status/inline-status";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
@@ -53,7 +52,7 @@ export function FolderDialog({
 	const [showNew, setShowNew] = useState(false);
 	const [newName, setNewName] = useState("");
 	const [pending, setPending] = useState<ProjectStatus | undefined>(undefined);
-	const [error, setError] = useState<string | undefined>(undefined);
+	const [error, setError] = useState<Error | undefined>(undefined);
 	const [working, setWorking] = useState(false);
 	const trust = useSetProjectTrust();
 	const queryClient = useQueryClient();
@@ -114,7 +113,7 @@ export function FolderDialog({
 			await onPick(path);
 			close(false);
 		} catch (cause) {
-			setError(cause instanceof Error ? cause.message : String(cause));
+			setError(cause instanceof Error ? cause : new Error(String(cause)));
 		}
 	};
 
@@ -142,7 +141,7 @@ export function FolderDialog({
 			if (status.trusted) await finish(status.path);
 			else setPending(status);
 		} catch (cause) {
-			setError(cause instanceof Error ? cause.message : String(cause));
+			setError(cause instanceof Error ? cause : new Error(String(cause)));
 		} finally {
 			setWorking(false);
 		}
@@ -161,7 +160,7 @@ export function FolderDialog({
 			setBrowsing(listing.path);
 			setTyped("");
 		} catch (cause) {
-			setError(cause instanceof Error ? cause.message : String(cause));
+			setError(cause instanceof Error ? cause : new Error(String(cause)));
 		} finally {
 			setWorking(false);
 		}
@@ -201,15 +200,16 @@ export function FolderDialog({
 				<div className="grid gap-field">
 					<p className="truncate font-mono text-meta text-muted-foreground">{pending.path}</p>
 					<TrustNotice status={pending} />
-					{(error !== undefined || trust.isError) && (
-						<Notice tone="danger">{error ?? trust.error?.message}</Notice>
+					{error !== undefined && <Notice error={error} />}
+					{trust.error !== null && (
+						<Notice error={trust.error} title="The folder was not trusted" />
 					)}
 				</div>
 			</DialogFrame>
 		);
 	}
 
-	const failure = error ?? create.error?.message;
+	const failure = error ?? create.error ?? undefined;
 	return (
 		<DialogFrame
 			open={open}
@@ -329,7 +329,7 @@ export function FolderDialog({
 					{folders.isPending ? (
 						<LoadingState label="Loading folders…" />
 					) : folders.isError ? (
-						<StatusView {...errorView(folders.error)} />
+						<StatusView error={folders.error} />
 					) : (
 						<div className="grid content-start gap-row">
 							{recent.length > 0 && (
@@ -410,7 +410,7 @@ export function FolderDialog({
 					</Field>
 				</FieldGroup>
 
-				{failure !== undefined && <Notice tone="danger">{failure}</Notice>}
+				{failure !== undefined && <Notice error={failure} />}
 			</div>
 		</DialogFrame>
 	);

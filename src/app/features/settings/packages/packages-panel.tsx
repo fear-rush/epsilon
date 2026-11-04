@@ -46,9 +46,7 @@ function PackagesList({ selected }: { selected: string | undefined }) {
 				error={settings.error}
 				notices={
 					updates.error === null ? undefined : (
-						<Notice tone="danger" title="Could not check for updates">
-							{updates.error.message}
-						</Notice>
+						<Notice error={updates.error} title="Could not check for updates" />
 					)
 				}
 				empty={

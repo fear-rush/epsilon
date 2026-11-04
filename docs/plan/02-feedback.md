@@ -54,7 +54,7 @@ Choose by the scope of what the message is about. A feature never invents its ow
       inside the shell.
 - [x] `epsilon/feedback-surfaces` in `tools/oxlint/epsilon/rules/`, with tests in
       `tools/oxlint/epsilon/rules.test.ts`, enforcing the colour and import rule.
-- [ ] Move every existing feature on the branch onto the surfaces until the new rule
+- [x] Move every existing feature on the branch onto the surfaces until the new rule
       passes.
 - [ ] Move the "Surfaces" and "Rules" sections into ARCHITECTURE.md's UI rules, and leave
       a link here.
@@ -70,8 +70,8 @@ is ticked as "replaced by `AppStatus`".
 
 ## Done when
 
-- [ ] The lint rule is on at error and `bun run check` is green.
+- [x] The lint rule is on at error and `bun run check` is green.
 - [ ] Screenshots, light and dark: a route that throws (sidebar still visible), an
       unknown session id, the server stopped (status line), a refused save (`Notice`), a
-      field error.
-- [ ] `git grep -n 'error.message' -- src/app/features src/app/routes` finds nothing.
+      field error. Not taken: AGENTS.md allows browser checks only when the owner asks.
+- [x] `git grep -n 'error.message' -- src/app/features src/app/routes` finds nothing.

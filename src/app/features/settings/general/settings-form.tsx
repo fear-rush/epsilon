@@ -84,7 +84,7 @@ export function SettingsForm({ models, settings }: SettingsRead) {
 					))}
 				</Section>
 			</CollapsibleSection>
-			{save.error !== null && <Notice tone="danger">{save.error.message}</Notice>}
+			{save.error !== null && <Notice error={save.error} />}
 		</>
 	);
 }

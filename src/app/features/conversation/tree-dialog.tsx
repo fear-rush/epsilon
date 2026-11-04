@@ -2,7 +2,6 @@ import { GitForkIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { TreeEntry } from "#protocol/conversation/frames";
-import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { Badge } from "@/components/ui/badge";
@@ -122,11 +121,7 @@ export function TreeDialog({
 						))}
 					</div>
 				)}
-				{failure !== undefined && (
-					<Notice tone="danger" title="The branch was not moved">
-						{errorView(failure).line}
-					</Notice>
-				)}
+				{failure !== undefined && <Notice error={failure} title="The branch was not moved" />}
 			</DialogContent>
 		</Dialog>
 	);

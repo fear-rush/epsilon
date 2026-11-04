@@ -7,7 +7,6 @@ import { PaneBar } from "@/components/patterns/pane/pane-bar";
 import { PaneBody } from "@/components/patterns/pane/pane-body";
 import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";
-import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { StatusView } from "@/components/patterns/status/status-view";
 import { Badge } from "@/components/ui/badge";
@@ -76,11 +75,10 @@ export function SettingsDiagnostics() {
 	}
 
 	if (diagnostics.error !== null) {
-		const view = errorView(diagnostics.error);
 		return (
 			<Pane className="flex-1">
 				<PaneBar title="Diagnostics" />
-				<StatusView icon={view.icon} title={view.title} line={view.line} tone={view.tone} />
+				<StatusView error={diagnostics.error} />
 			</Pane>
 		);
 	}

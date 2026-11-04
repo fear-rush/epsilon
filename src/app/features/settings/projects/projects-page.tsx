@@ -9,7 +9,6 @@ import { PaneBar } from "@/components/patterns/pane/pane-bar";
 import { PaneBody } from "@/components/patterns/pane/pane-body";
 import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";
-import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { StatusView } from "@/components/patterns/status/status-view";
@@ -71,18 +70,14 @@ export function SettingsProjects() {
 	}
 
 	if (sessions.error !== null) {
-		const view = errorView(sessions.error);
 		return (
 			<StatusView
+				error={sessions.error}
 				action={
 					<Button variant="outline" onClick={() => void sessions.refetch()}>
 						Try again
 					</Button>
 				}
-				icon={view.icon}
-				line={view.line}
-				title={view.title}
-				tone={view.tone}
 			/>
 		);
 	}
@@ -117,9 +112,7 @@ export function SettingsProjects() {
 					)}
 				</Section>
 				{trust.error !== null && (
-					<Notice tone="danger" title="The trust decision was not saved">
-						{errorView(trust.error).line}
-					</Notice>
+					<Notice error={trust.error} title="The trust decision was not saved" />
 				)}
 			</PaneBody>
 			<FolderPicker

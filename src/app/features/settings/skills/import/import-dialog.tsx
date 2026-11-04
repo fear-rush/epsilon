@@ -40,7 +40,7 @@ function ImportBody({ onOpenChange }: { onOpenChange: (open: boolean) => void })
 	const im = useSkillImport();
 	const [input, setInput] = useState("");
 	const [picked, setPicked] = useState<string | undefined>(undefined);
-	const [failure, setFailure] = useState<string | undefined>(undefined);
+	const [failure, setFailure] = useState<Error | undefined>(undefined);
 	const folderInput = useRef<HTMLInputElement>(null);
 	const archiveInput = useRef<HTMLInputElement>(null);
 	const close = (): void => {
@@ -56,7 +56,7 @@ function ImportBody({ onOpenChange }: { onOpenChange: (open: boolean) => void })
 		try {
 			checkSize(files.files);
 		} catch (cause) {
-			setFailure(cause instanceof Error ? cause.message : String(cause));
+			setFailure(cause instanceof Error ? cause : new Error(String(cause)));
 			return;
 		}
 		setPicked(
@@ -150,7 +150,7 @@ function ImportBody({ onOpenChange }: { onOpenChange: (open: boolean) => void })
 						webkitdirectory=""
 						onChange={(event) => {
 							void pickedFiles(event.target.files).then(stageFiles, (error: Error) => {
-								setFailure(error.message);
+								setFailure(error);
 							});
 						}}
 					/>
@@ -166,7 +166,7 @@ function ImportBody({ onOpenChange }: { onOpenChange: (open: boolean) => void })
 								try {
 									stageFiles(archiveFiles(new Uint8Array(buffer)));
 								} catch (cause) {
-									setFailure(cause instanceof Error ? cause.message : String(cause));
+									setFailure(cause instanceof Error ? cause : new Error(String(cause)));
 								}
 								return undefined;
 							});
@@ -181,15 +181,9 @@ function ImportBody({ onOpenChange }: { onOpenChange: (open: boolean) => void })
 					</div>
 				)}
 				{picked !== undefined && <Notice tone="info">{picked}</Notice>}
-				{failure !== undefined && (
-					<Notice tone="danger" title="The files could not be read">
-						{failure}
-					</Notice>
-				)}
+				{failure !== undefined && <Notice error={failure} title="The files could not be read" />}
 				{im.stage.error !== null && (
-					<Notice tone="danger" title="The source could not be staged">
-						{im.stage.error.message}
-					</Notice>
+					<Notice error={im.stage.error} title="The source could not be staged" />
 				)}
 			</div>
 		</DialogFrame>
@@ -343,9 +337,7 @@ function Review({
 					</label>
 				)}
 				{im.commit.error !== null && (
-					<Notice tone="danger" title="The import was not installed">
-						{im.commit.error.message}
-					</Notice>
+					<Notice error={im.commit.error} title="The import was not installed" />
 				)}
 			</div>
 		</DialogFrame>

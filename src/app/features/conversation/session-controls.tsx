@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
 import type { ModelOption, ThinkingLevel, ToolsView } from "#protocol/conversation/session";
-import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { Badge } from "@/components/ui/badge";
@@ -193,11 +192,7 @@ export function SessionControls({
 						)}
 					</section>
 
-					{failure !== undefined && (
-						<Notice tone="danger" title="That did not take effect">
-							{errorView(failure).line}
-						</Notice>
-					)}
+					{failure !== undefined && <Notice error={failure} title="That did not take effect" />}
 				</div>
 				<DialogFooter>
 					<Button variant="outline" onClick={() => void run(conversation.compact())}>

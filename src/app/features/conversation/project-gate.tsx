@@ -7,7 +7,6 @@ import type { ProjectTrustAction } from "#protocol/settings/projects";
 import { Pane } from "@/components/patterns/pane/pane";
 import { PaneBar } from "@/components/patterns/pane/pane-bar";
 import { PaneBody } from "@/components/patterns/pane/pane-body";
-import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { StatusView } from "@/components/patterns/status/status-view";
@@ -41,18 +40,14 @@ export function ProjectGate({ folder, children }: { folder: string; children: Re
 	}
 
 	if (status.error !== null) {
-		const view = errorView(status.error);
 		return (
 			<StatusView
+				error={status.error}
 				action={
 					<Button variant="outline" onClick={() => void navigate({ to: "/" })}>
 						Start a chat without a folder
 					</Button>
 				}
-				icon={view.icon}
-				line={view.line}
-				title={view.title}
-				tone={view.tone}
 			/>
 		);
 	}
@@ -89,11 +84,7 @@ export function ProjectGate({ folder, children }: { folder: string; children: Re
 						{problem.message}
 					</Notice>
 				))}
-				{trust.error !== null && (
-					<Notice tone="danger" title="The folder was not trusted">
-						{errorView(trust.error).line}
-					</Notice>
-				)}
+				{trust.error !== null && <Notice error={trust.error} title="The folder was not trusted" />}
 				<div className="flex flex-wrap gap-2">
 					<Button disabled={trust.isPending} onClick={() => trust.mutate("trust")}>
 						{trust.isPending ? "Trusting…" : "Trust this folder"}

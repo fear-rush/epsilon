@@ -15,7 +15,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 import * as protocol from "#protocol/errors";
-import { PageOutOfDate, ServerUnreachable } from "@/core/errors";
+import { LocalRefused, PageOutOfDate, ServerUnreachable } from "@/core/errors";
 
 import type { Tone } from "./status-tone";
 
@@ -81,6 +81,14 @@ export function errorView(error: Error): ErrorView {
 			title: "Server not reachable",
 			line: "This page reconnects on its own.",
 			icon: WifiOffIcon,
+		};
+	}
+	if (error instanceof LocalRefused) {
+		return {
+			tone: "danger",
+			title: "Couldn't read that",
+			line: error.reason,
+			icon: CircleAlertIcon,
 		};
 	}
 	if (!isProtocolError(error)) return UNKNOWN;

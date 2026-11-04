@@ -28,7 +28,6 @@ import type { ProjectTrustAction } from "#protocol/settings/projects";
 import { DeleteDialog } from "@/components/patterns/confirm-dialogs";
 import { SearchField } from "@/components/patterns/list/search-field";
 import { PaneBar } from "@/components/patterns/pane/pane-bar";
-import { errorView } from "@/components/patterns/status/error-view";
 import { InlineStatus } from "@/components/patterns/status/inline-status";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
@@ -231,7 +230,7 @@ export function SessionSidebar() {
 						<LoadingState label="Loading chats…" />
 					</div>
 				) : sessions.isError ? (
-					<StatusView {...errorView(sessions.error ?? new Error("The chats could not be read."))} />
+					<StatusView error={sessions.error ?? new Error("The chats could not be read.")} />
 				) : noMatches ? (
 					<div className="flex min-h-0 flex-1 animate-enter-fade flex-col">
 						<StatusView icon={SearchXIcon} title="No chats match" />
@@ -306,10 +305,8 @@ export function SessionSidebar() {
 
 			{pinChat.error !== null || projectTrust.error !== null ? (
 				<div className="grid animate-enter-rise gap-2 px-pane pb-pane">
-					{pinChat.error !== null && <Notice tone="danger">{pinChat.error.message}</Notice>}
-					{projectTrust.error !== null && (
-						<Notice tone="danger">{projectTrust.error.message}</Notice>
-					)}
+					{pinChat.error !== null && <Notice error={pinChat.error} />}
+					{projectTrust.error !== null && <Notice error={projectTrust.error} />}
 				</div>
 			) : undefined}
 

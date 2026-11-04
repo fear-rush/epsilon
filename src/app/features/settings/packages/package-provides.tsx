@@ -35,11 +35,7 @@ export function PackageProvides({
 	return (
 		<section className="grid gap-card">
 			<h2 className="text-section">Provides</h2>
-			{toggle.error !== null && (
-				<Notice tone="danger" title="The switch was not saved">
-					{toggle.error.message}
-				</Notice>
-			)}
+			{toggle.error !== null && <Notice error={toggle.error} title="The switch was not saved" />}
 			{groups.length === 0 ? (
 				<p className="text-meta text-muted-foreground">Nothing found</p>
 			) : (

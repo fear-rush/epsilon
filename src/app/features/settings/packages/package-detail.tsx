@@ -8,7 +8,6 @@ import { DeleteDialog } from "@/components/patterns/confirm-dialogs";
 import { DetailPage } from "@/components/patterns/pane/detail-page";
 import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";
-import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { StatusView } from "@/components/patterns/status/status-view";
@@ -73,7 +72,7 @@ export function PackageDetail({ scope, source }: { scope: PackageView["scope"]; 
 	if (settings.error !== null) {
 		return (
 			<DetailPage title={source} back={back}>
-				<StatusView {...errorView(settings.error)} />
+				<StatusView error={settings.error} />
 			</DetailPage>
 		);
 	}
@@ -128,17 +127,13 @@ export function PackageDetail({ scope, source }: { scope: PackageView["scope"]; 
 				<Row title="Scope">{scopeLabel(entry)}</Row>
 				{entry.installedPath !== undefined && <Row title="Install path">{entry.installedPath}</Row>}
 			</Section>
-			{update.error !== null && (
-				<Notice tone="danger" title="The update failed">
-					{update.error.message}
-				</Notice>
-			)}
+			{update.error !== null && <Notice error={update.error} title="The update failed" />}
 			{resources.isPending ? (
 				<LoadingState label="Reading what it provides…" />
 			) : resources.error === null ? (
 				<PackageProvides resources={resources.data} source={source} scope={scope} />
 			) : (
-				<StatusView {...errorView(resources.error)} />
+				<StatusView error={resources.error} />
 			)}
 			<DeleteDialog
 				open={removing}

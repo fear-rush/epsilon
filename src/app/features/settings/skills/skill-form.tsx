@@ -148,11 +148,7 @@ export function SkillForm({
 						{warning}
 					</Notice>
 				))}
-				{save.error !== null && (
-					<Notice tone="danger" title="The skill was not saved">
-						{save.error.message}
-					</Notice>
-				)}
+				{save.error !== null && <Notice error={save.error} title="The skill was not saved" />}
 
 				{tab === "form" && !unreadable ? (
 					<>

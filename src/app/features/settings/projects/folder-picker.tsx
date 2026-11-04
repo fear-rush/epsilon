@@ -3,7 +3,6 @@ import { ChevronUpIcon, FolderIcon } from "lucide-react";
 import { useState } from "react";
 
 import type { FolderListing } from "#protocol/settings/projects";
-import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
@@ -123,9 +122,7 @@ function PickerDialog({
 						</Button>
 					</form>
 					{create.error !== null && (
-						<Notice tone="danger" title="The folder was not created">
-							{errorView(create.error).line}
-						</Notice>
+						<Notice error={create.error} title="The folder was not created" />
 					)}
 					<div className="flex items-center gap-2 text-meta text-muted-foreground">
 						<Switch aria-label="Show hidden folders" checked={hidden} onCheckedChange={setHidden} />
@@ -160,11 +157,7 @@ function FolderList({
 	onDescend: (path: string) => void;
 }) {
 	if (error !== null) {
-		return (
-			<Notice tone="danger" title="This folder cannot be read">
-				{errorView(error).line}
-			</Notice>
-		);
+		return <Notice error={error} title="This folder cannot be read" />;
 	}
 	if (current === undefined) return <LoadingState label="Reading folders…" />;
 	return (

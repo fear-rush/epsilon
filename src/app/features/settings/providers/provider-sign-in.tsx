@@ -24,7 +24,7 @@ export function ProviderSignIn({
 	const refresh = useSettingsRefresh();
 	const [snapshot, setSnapshot] = useState<ProviderLoginSnapshot | undefined>(undefined);
 	const [answer, setAnswer] = useState("");
-	const [failure, setFailure] = useState<string | undefined>(undefined);
+	const [failure, setFailure] = useState<Error | undefined>(undefined);
 
 	useEffect(
 		() =>
@@ -38,7 +38,7 @@ export function ProviderSignIn({
 						},
 					),
 				(error) => {
-					if (error !== undefined) setFailure(error.message);
+					if (error !== undefined) setFailure(error);
 				},
 			),
 		[providerId, refresh],
@@ -149,11 +149,7 @@ export function ProviderSignIn({
 						)}
 					</>
 				)}
-				{failure !== undefined && (
-					<Notice tone="danger" title="The sign-in stopped">
-						{failure}
-					</Notice>
-				)}
+				{failure !== undefined && <Notice error={failure} title="The sign-in stopped" />}
 			</div>
 		</DialogFrame>
 	);

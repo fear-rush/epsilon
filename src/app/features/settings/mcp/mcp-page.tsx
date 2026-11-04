@@ -6,7 +6,6 @@ import { PaneBar } from "@/components/patterns/pane/pane-bar";
 import { PaneBody } from "@/components/patterns/pane/pane-body";
 import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";
-import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { StatusView } from "@/components/patterns/status/status-view";
@@ -63,11 +62,10 @@ export function SettingsMcp() {
 	}
 
 	if (mcp.error !== null) {
-		const view = errorView(mcp.error);
 		return (
 			<Pane className="flex-1">
 				<PaneBar title="MCP servers" />
-				<StatusView icon={view.icon} title={view.title} line={view.line} tone={view.tone} />
+				<StatusView error={mcp.error} />
 			</Pane>
 		);
 	}
@@ -84,14 +82,10 @@ export function SettingsMcp() {
 					</Notice>
 				))}
 				{setEnabled.error !== null && (
-					<Notice tone="danger" title="The switch was not written">
-						{setEnabled.error.message}
-					</Notice>
+					<Notice error={setEnabled.error} title="The switch was not written" />
 				)}
 				{remove.error !== null && (
-					<Notice tone="danger" title="The server was not removed">
-						{remove.error.message}
-					</Notice>
+					<Notice error={remove.error} title="The server was not removed" />
 				)}
 
 				<Section

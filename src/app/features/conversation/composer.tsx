@@ -70,11 +70,7 @@ export function Composer({
 	return (
 		<div className="border-t p-pane">
 			<div className="mx-auto grid w-full max-w-content gap-2">
-				{failure !== undefined && (
-					<Notice tone="danger" title="The message was not sent">
-						{failure.message}
-					</Notice>
-				)}
+				{failure !== undefined && <Notice error={failure} title="The message was not sent" />}
 				<Textarea
 					aria-label="Message"
 					placeholder={

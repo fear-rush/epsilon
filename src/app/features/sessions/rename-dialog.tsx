@@ -81,7 +81,7 @@ export function RenameDialog({
 						{invalid && <FieldError>A chat needs a name.</FieldError>}
 					</Field>
 				</FieldGroup>
-				{error !== null && <Notice tone="danger">{error.message}</Notice>}
+				{error !== null && <Notice error={error} />}
 			</form>
 		</DialogFrame>
 	);

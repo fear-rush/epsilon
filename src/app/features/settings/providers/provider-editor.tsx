@@ -13,7 +13,6 @@ import { DeleteDialog } from "@/components/patterns/confirm-dialogs";
 import { DetailPage } from "@/components/patterns/pane/detail-page";
 import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";
-import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { StatusView } from "@/components/patterns/status/status-view";
@@ -141,11 +140,7 @@ function NewProvider() {
 					</div>
 				</Section>
 				{error !== undefined && <Notice tone="danger">{error}</Notice>}
-				{save.error !== null && (
-					<Notice tone="danger" title="The provider was not saved">
-						{save.error.message}
-					</Notice>
-				)}
+				{save.error !== null && <Notice error={save.error} title="The provider was not saved" />}
 			</div>
 		</DetailPage>
 	);
@@ -163,7 +158,7 @@ function ExistingProvider({ providerId }: { providerId: string }) {
 	if (query.error !== null) {
 		return (
 			<DetailPage back={BACK} title={providerId}>
-				<StatusView {...errorView(query.error)} />
+				<StatusView error={query.error} />
 			</DetailPage>
 		);
 	}
@@ -320,16 +315,8 @@ function ProviderBody({ detail }: { detail: ProviderDetail }) {
 				)}
 
 				{error !== undefined && <Notice tone="danger">{error}</Notice>}
-				{save.error !== null && (
-					<Notice tone="danger" title="The provider was not saved">
-						{save.error.message}
-					</Notice>
-				)}
-				{saveKey.error !== null && (
-					<Notice tone="danger" title="The key was not saved">
-						{saveKey.error.message}
-					</Notice>
-				)}
+				{save.error !== null && <Notice error={save.error} title="The provider was not saved" />}
+				{saveKey.error !== null && <Notice error={saveKey.error} title="The key was not saved" />}
 			</div>
 
 			{signingIn && <ProviderSignIn providerId={detail.id} onClose={() => setSigningIn(false)} />}

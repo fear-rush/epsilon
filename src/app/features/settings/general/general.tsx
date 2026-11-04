@@ -5,7 +5,6 @@ import type { SettingsProblem } from "#protocol/settings/general";
 import { DetailPage } from "@/components/patterns/pane/detail-page";
 import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";
-import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { StatusView } from "@/components/patterns/status/status-view";
@@ -37,7 +36,7 @@ export function SettingsGeneral() {
 	if (query.error !== null) {
 		return (
 			<DetailPage title="General">
-				<StatusView {...errorView(query.error)} />
+				<StatusView error={query.error} />
 			</DetailPage>
 		);
 	}
@@ -166,14 +165,10 @@ function AppSection({
 				/>
 			</Row>
 			{defaults.error !== null && (
-				<Notice tone="danger" title="The default model was not saved">
-					{defaults.error.message}
-				</Notice>
+				<Notice error={defaults.error} title="The default model was not saved" />
 			)}
 			{engines.error !== null && (
-				<Notice tone="danger" title="The engine count was not saved">
-					{engines.error.message}
-				</Notice>
+				<Notice error={engines.error} title="The engine count was not saved" />
 			)}
 		</Section>
 	);

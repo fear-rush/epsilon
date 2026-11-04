@@ -78,7 +78,7 @@ export function PackageInstallDialog({
 						/>
 						<FieldDescription>npm:name, git:host/repo, or a path</FieldDescription>
 					</Field>
-					{install.error !== null && <Notice tone="danger">{install.error.message}</Notice>}
+					{install.error !== null && <Notice error={install.error} />}
 				</FieldGroup>
 			</form>
 		</DialogFrame>

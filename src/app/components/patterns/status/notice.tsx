@@ -18,8 +18,9 @@ const TONE = {
 /**
  * An alert for something the user should read, with the icon its tone calls for.
  *
- * A failure comes through `error`, and the translator supplies its tone, title and line;
- * `title` and `children` are then ignored.
+ * A failure comes through `error`, and the translator supplies its tone, icon and reason.
+ * An explicit `title` still wins, for a section that names the action more precisely than
+ * the error's tag can.
  */
 export function Notice({
 	error,
@@ -38,7 +39,7 @@ export function Notice({
 	const view = error === undefined ? undefined : errorView(error);
 	const resolved = view?.tone ?? tone;
 	const Icon = view?.icon ?? TONE[resolved].icon;
-	const heading = view?.title ?? title;
+	const heading = title ?? view?.title;
 	const body = view?.line ?? children;
 	return (
 		<Alert variant={TONE[resolved].variant}>
