@@ -34,7 +34,12 @@ export const ConversationHandlersLive = ConversationRpcs.toLayer(
 			"conversation.command": (input) =>
 				Effect.asVoid(engines.command(input.sessionId, input.tab, input.command)),
 			"conversation.query": (input) =>
-				engines.query(input.sessionId, input.tab, input.kind, input.before),
+				engines.query(input.sessionId, input.tab, {
+					before: input.before,
+					cursor: input.cursor,
+					kind: input.kind,
+					text: input.text,
+				}),
 			"conversation.detach": (input) => engines.detach(input.sessionId, input.tab),
 		};
 	}),

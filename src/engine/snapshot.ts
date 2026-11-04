@@ -11,9 +11,11 @@ import type {
 	TranscriptEntry,
 	TreeEntry,
 } from "#protocol/conversation/frames";
+import type { CommandOffer } from "#protocol/conversation/palette";
 import type { ThinkingLevel } from "#protocol/conversation/session";
 import type { CacheWarming, SessionStats } from "#protocol/usage";
 
+import { BUILTIN_COMMANDS, builtinCommand } from "../domain/conversation/commands.ts";
 import { withDefined } from "../domain/object.ts";
 import { hasCodingTools } from "./tools.ts";
 import { flatTree, transcriptOf } from "./translate.ts";
@@ -129,6 +131,7 @@ type MutableSessionMeta = {
 	codingTools?: boolean;
 	hideThinking?: boolean;
 	thinkingLevels?: ThinkingLevel[];
+	commands?: CommandOffer[];
 };
 
 /**
@@ -171,6 +174,73 @@ export const readingsOf = (agent: AgentSession): Extract<ServerFrame, { t: "read
 	return withDefined(withUsage, "cacheWarming", warmingOf(agent.cacheWarmingStatus));
 };
 
+/**
+ * What `/` offers: pi's built-in commands first, then the extension commands, prompt
+ * templates and skills `prompt()` still dispatches. A builtin wins over a name it
+ * shadows, the way pi's editor does; `shadowedCommandsOf` names the losers so a tab
+ * hears about it instead of a command quietly disappearing.
+ */
+const commandsOf = (agent: AgentSession): CommandOffer[] => {
+	const commands: CommandOffer[] = BUILTIN_COMMANDS.map((command) => {
+		const offer: CommandOffer = {
+			description: command.description,
+			name: command.name,
+			source: "builtin",
+		};
+		return withDefined(
+			offer,
+			"argumentHint",
+			"argumentHint" in command ? command.argumentHint : undefined,
+		);
+	});
+	for (const command of agent.extensionRunner.getRegisteredCommands()) {
+		if (builtinCommand(command.invocationName) !== undefined) continue;
+		commands.push({
+			description: command.description,
+			name: command.invocationName,
+			source: "extension",
+		});
+	}
+	for (const template of agent.promptTemplates) {
+		if (builtinCommand(template.name) !== undefined) continue;
+		const offer: CommandOffer = {
+			description: template.description,
+			name: template.name,
+			source: "prompt",
+		};
+		commands.push(withDefined(offer, "argumentHint", template.argumentHint));
+	}
+	// pi's setting only hides the entries; `prompt()` still expands a typed
+	// `/skill:name`, so manual entry keeps working with the palette off.
+	if (agent.settingsManager.getEnableSkillCommands()) {
+		for (const skill of agent.resourceLoader.getSkills().skills) {
+			commands.push({
+				description: skill.description,
+				name: `skill:${skill.name}`,
+				source: "skill",
+			});
+		}
+	}
+	return commands;
+};
+
+/**
+ * Extension commands and templates a builtin takes the name from. pi's editor answers
+ * the builtin, so the extension one is unreachable from `/` here.
+ */
+export const shadowedCommandsOf = (agent: AgentSession): string[] => {
+	const shadowed = new Set<string>();
+	for (const command of agent.extensionRunner.getRegisteredCommands()) {
+		if (builtinCommand(command.invocationName) !== undefined) {
+			shadowed.add(command.invocationName);
+		}
+	}
+	for (const template of agent.promptTemplates) {
+		if (builtinCommand(template.name) !== undefined) shadowed.add(template.name);
+	}
+	return [...shadowed];
+};
+
 /** What the page needs to draw the session controls, from pi's own state. */
 export const sessionMeta = (agent: AgentSession): Extract<ServerFrame, { t: "sessionMeta" }> => {
 	const title = agent.sessionManager.getSessionName();
@@ -179,6 +249,7 @@ export const sessionMeta = (agent: AgentSession): Extract<ServerFrame, { t: "ses
 		autoCompaction: agent.autoCompactionEnabled,
 		autoRetry: agent.autoRetryEnabled,
 		codingTools: hasCodingTools(agent),
+		commands: commandsOf(agent),
 		hideThinking: agent.settingsManager.getHideThinkingBlock(),
 		sessionId: agent.sessionId,
 		t: "sessionMeta",

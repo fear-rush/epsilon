@@ -17,7 +17,7 @@ import type {
 	TreeEntry,
 } from "#protocol/conversation/frames";
 import type { ThinkingLevel } from "#protocol/conversation/session";
-import type { EngineToSupervisor } from "#protocol/engine-ipc";
+import type { EngineToSupervisor, SupervisorToEngine } from "#protocol/engine-ipc";
 import { CommandRefused } from "#protocol/errors";
 import type { ContextEngineLive } from "#protocol/settings/context";
 import type { McpAttention, McpEngineLive } from "#protocol/settings/mcp";
@@ -27,6 +27,7 @@ import { readMcpAttention } from "../domain/mcp/attention.ts";
 import { MCP_RESOURCE_TOOL_NAMES } from "../domain/mcp/tools.ts";
 import { withDefined } from "../domain/object.ts";
 import { EXTENSION_SKILL_SOURCE } from "../domain/skills/rules.ts";
+import { suggestionsFor } from "./autocomplete.ts";
 import { bindEngineSession } from "./bindings.ts";
 import { dispatchCommand } from "./commands.ts";
 import type { CommandHost } from "./commands.ts";
@@ -39,6 +40,7 @@ import {
 	noticesOf,
 	readingsOf,
 	sessionMeta,
+	shadowedCommandsOf,
 	snapshotWindow,
 	treeOf,
 	type Window,
@@ -81,6 +83,9 @@ type To = "all" | { readonly tab: string };
 type AcceptedPrompt = "handled" | "queued" | "started";
 
 type StreamingFrame = Extract<ServerFrame, { t: "streaming" }>;
+
+/** One question about this chat, in the shape the supervisor sends on the wire. */
+type EngineQuery = Omit<Extract<SupervisorToEngine, { t: "query" }>, "id" | "t">;
 
 const noticeLimit = 200;
 
@@ -153,6 +158,8 @@ export class EngineSession {
 	private readonly ui: UiBridge;
 	private readonly notices: Notice[] = [];
 	private readonly unsupported = new Set<string>();
+	/** Names already reported, so a rebind does not repeat the same shadowing notice. */
+	private readonly reportedShadowed = new Set<string>();
 	private readonly toolEntries = new Map<string, string>();
 	/** The servers pi last reported a problem with, replaced by each attention notice. */
 	private mcpAttention = new Map<string, McpAttention>();
@@ -240,6 +247,7 @@ export class EngineSession {
 			self.events = yield* Queue.unbounded<SessionInput>();
 			self.subscribe(self.runtime.session);
 			yield* self.bind(self.runtime.session);
+			self.reportShadowedCommands();
 			yield* Effect.forkScoped(
 				Effect.gen(function* () {
 					for (;;) {
@@ -321,11 +329,12 @@ export class EngineSession {
 		this.ui.setEditorText(text);
 	}
 
-	query(kind: string, before: string | undefined): Effect.Effect<unknown, CommandRefused> {
+	/** One question about this chat; only the fields its kind reads are set. */
+	query(question: EngineQuery): Effect.Effect<unknown, CommandRefused> {
 		const self = this;
 		return Effect.gen(function* () {
 			const agent = self.runtime.session;
-			switch (kind) {
+			switch (question.kind) {
 				case "tools":
 					return {
 						active: agent.getActiveToolNames(),
@@ -343,15 +352,27 @@ export class EngineSession {
 				case "systemPrompt":
 					return agent.systemPrompt;
 				case "history": {
-					if (before === undefined) return snapshotWindow(agent) satisfies Window;
-					const window = historyWindow(agent, before);
+					if (question.before === undefined) return snapshotWindow(agent) satisfies Window;
+					const window = historyWindow(agent, question.before);
 					if (window === undefined) {
 						return yield* new CommandRefused({
 							command: "history",
-							reason: `No entry ${before} is on this branch.`,
+							reason: `No entry ${question.before} is on this branch.`,
 						});
 					}
 					return window;
+				}
+				case "autocomplete": {
+					if (question.text === undefined || question.cursor === undefined) {
+						return yield* new CommandRefused({
+							command: "autocomplete",
+							reason: "An autocomplete query needs a draft and the caret's offset.",
+						});
+					}
+					return yield* suggestionsFor(self.ui.autocompleteProviders, {
+						cursor: question.cursor,
+						text: question.text,
+					});
 				}
 				case "tree":
 					return treeOf(agent.sessionManager) satisfies ReadonlyArray<TreeEntry>;
@@ -430,7 +451,7 @@ export class EngineSession {
 					});
 				default:
 					return yield* new CommandRefused({
-						command: kind,
+						command: question.kind,
 						reason: "Unknown query.",
 					});
 			}
@@ -1056,6 +1077,21 @@ export class EngineSession {
 		this.frames.to("all", { id: notice.id, kind, text, t: "notice" });
 	}
 
+	/**
+	 * A built-in command took its name from an extension command, so the extension one
+	 * cannot be reached from `/`. Say so once per name (invariant 10: no silent drop).
+	 */
+	private reportShadowedCommands(): void {
+		for (const name of shadowedCommandsOf(this.runtime.session)) {
+			if (this.reportedShadowed.has(name)) continue;
+			this.reportedShadowed.add(name);
+			this.notice(
+				`An extension command named /${name} is shadowed by pi's built-in /${name}, so the built-in runs here.`,
+				"notice",
+			);
+		}
+	}
+
 	private unsupportedMethod(method: string): void {
 		if (this.unsupported.has(method)) return;
 		this.unsupported.add(method);
@@ -1197,6 +1233,7 @@ export class EngineSession {
 						),
 					),
 				);
+			self.reportShadowedCommands();
 			const lock = self.lock;
 			self.lock = undefined;
 			if (lock !== undefined) yield* lock.release;

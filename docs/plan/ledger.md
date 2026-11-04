@@ -40,7 +40,7 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | Done | main                                                                          | For slice | Branch today                             |
 | ---- | ----------------------------------------------------------------------------- | --------- | ---------------------------------------- |
 | [x]  | chat `bash`, `abort_bash`                                                     | S2        | `feat(conversation): the run status`     |
-| [ ]  | chat `autocomplete`                                                           | S2        | **missing**                              |
+| [x]  | chat `autocomplete`                                                           | S2        | `feat(conversation): the palette's data` |
 | [x]  | chat `cancel_retry`, `set_auto_retry`                                         | S2        | `feat(conversation): the run controls`   |
 | [x]  | chat `set_auto_compaction`, `abort_compaction`                                | S2        | `feat(conversation): the run controls`   |
 | [x]  | chat `clear_queue`                                                            | S2        | `feat(conversation): the run controls`   |

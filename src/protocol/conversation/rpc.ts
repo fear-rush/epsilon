@@ -57,6 +57,9 @@ export const ConversationRpcs = RpcGroup.make(
 			tab: Schema.String,
 			kind: QueryKind,
 			before: Schema.optional(Schema.String),
+			/** The draft an autocomplete query is about, and the caret's offset in it. */
+			text: Schema.optional(Schema.String),
+			cursor: Schema.optional(Schema.Finite),
 		},
 		success: Schema.Unknown,
 		error: Schema.Union([CommandRefused, EngineStopped]),

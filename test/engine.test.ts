@@ -128,6 +128,15 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 					kind: "contextLive",
 					t: "query",
 				}));
+				// No extension registered a provider in this home, so the chain has no answer
+				// to offer and the reply keeps the draft it was asked about.
+				const autocomplete = yield* engine.request((id) => ({
+					cursor: 3,
+					id,
+					kind: "autocomplete",
+					text: "/mo",
+					t: "query",
+				}));
 				// The run controls go through pi: a new tab's opening frames are the answer it
 				// wrote. Read them once: a stream that stops mid-chunk drops the frames it
 				// pulled and did not use, so one filtered read per frame can lose the next.
@@ -165,6 +174,7 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 				return {
 					acceptedIn,
 					append,
+					autocomplete,
 					contextLive,
 					extensionSkills,
 					live,
@@ -191,6 +201,18 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 		expect(result.meta.hideThinking).toBe(true);
 		expect(result.meta.codingTools).toBe(false);
 		expect(Array.isArray(result.meta.thinkingLevels)).toBe(true);
+		// `/` offers pi's built-in table first, in its own order, with its sentences.
+		expect(result.meta.commands?.slice(0, 2)).toEqual([
+			{ description: "Open settings menu", name: "settings", source: "builtin" },
+			{
+				argumentHint: "<provider/model>",
+				description: "Select model (opens selector UI)",
+				name: "model",
+				source: "builtin",
+			},
+		]);
+		expect(result.meta.commands?.some((offer) => offer.name === "compact")).toBe(true);
+		expect(result.autocomplete).toEqual({ items: [], prefix: "", text: "/mo" });
 		if (result.queue === undefined) throw new Error("no queue frame");
 		expect(result.queue).toEqual({ followUp: [], steering: [], t: "queue" });
 		if (result.readings === undefined) throw new Error("no readings frame");

@@ -178,12 +178,19 @@ const handle = (message: SupervisorToEngine) => {
 					refuse(message.id, "This chat's engine is not ready.");
 					return;
 				}
-				yield* session.query(message.kind, message.before).pipe(
-					Effect.matchEffect({
-						onFailure: (error) => Effect.sync(() => refuse(message.id, error.reason)),
-						onSuccess: (value) => Effect.sync(() => reply(message.id, value)),
-					}),
-				);
+				yield* session
+					.query({
+						before: message.before,
+						cursor: message.cursor,
+						kind: message.kind,
+						text: message.text,
+					})
+					.pipe(
+						Effect.matchEffect({
+							onFailure: (error) => Effect.sync(() => refuse(message.id, error.reason)),
+							onSuccess: (value) => Effect.sync(() => reply(message.id, value)),
+						}),
+					);
 			});
 		case "shutdown":
 			return Effect.gen(function* () {

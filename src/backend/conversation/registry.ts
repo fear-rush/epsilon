@@ -2,7 +2,7 @@ import { Clock, Context, Effect, FileSystem, Layer, Ref, Scope, Semaphore, Strea
 
 import type { Command } from "#protocol/conversation/commands";
 import type { ServerFrame } from "#protocol/conversation/frames";
-import type { QueryKind } from "#protocol/engine-ipc";
+import type { QueryKind, SupervisorToEngine } from "#protocol/engine-ipc";
 import { EngineLimitReached, EngineStopped } from "#protocol/errors";
 import type {
 	CommandRefused,
@@ -44,12 +44,12 @@ export type Lease = {
 	readonly engine: RemoteEngine;
 	readonly frames: Stream.Stream<ServerFrame>;
 	readonly command: (command: Command) => Effect.Effect<unknown, CommandRefused | EngineStopped>;
-	readonly query: (
-		kind: QueryKind,
-		before: string | undefined,
-	) => Effect.Effect<unknown, CommandRefused | EngineStopped>;
+	readonly query: (input: EngineQuery) => Effect.Effect<unknown, CommandRefused | EngineStopped>;
 	readonly release: Effect.Effect<void, never, FileSystem.FileSystem>;
 };
+
+/** One question to an engine; only the fields its kind reads are set. */
+export type EngineQuery = Omit<Extract<SupervisorToEngine, { t: "query" }>, "id" | "t">;
 
 export type RunningEngine = {
 	readonly sessionId: string;
@@ -87,8 +87,7 @@ export type EnginesApi = {
 	readonly query: (
 		sessionId: string,
 		tab: string,
-		kind: QueryKind,
-		before: string | undefined,
+		input: EngineQuery,
 	) => Effect.Effect<unknown, CommandRefused | EngineStopped>;
 	readonly running: Effect.Effect<ReadonlyArray<RunningEngine>>;
 	/**
@@ -226,7 +225,7 @@ export const makeEngines = (options: {
 		command: (command) => entry.engine.request((id) => ({ command, id, t: "command", tab })),
 		engine: entry.engine,
 		frames: entry.engine.frames(tab),
-		query: (kind, before) => entry.engine.request((id) => ({ before, id, kind, t: "query" })),
+		query: (input) => entry.engine.request((id) => ({ ...input, id, t: "query" })),
 		release: releaseTab(entry, tab),
 	});
 
@@ -357,9 +356,9 @@ export const makeEngines = (options: {
 			entry.engine.request((id) => ({ command: command_, id, t: "command", tab })),
 		);
 
-	const query: EnginesApi["query"] = (sessionId, tab, kind, before) =>
+	const query: EnginesApi["query"] = (sessionId, tab, input) =>
 		Effect.flatMap(runningEntry(sessionId), (entry) =>
-			entry.engine.request((id) => ({ before, id, kind, t: "query" })),
+			entry.engine.request((id) => ({ ...input, id, t: "query" })),
 		);
 
 	const running = Effect.sync(() =>

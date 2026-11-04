@@ -22,6 +22,7 @@ export const QueryKind = Schema.Literals([
 	"mcpLive",
 	"extensionSkills",
 	"contextLive",
+	"autocomplete",
 	"export",
 	"rename",
 	"history",
@@ -57,6 +58,9 @@ export const SupervisorToEngine = Schema.Union([
 		id: Schema.String,
 		kind: QueryKind,
 		before: Schema.optional(Schema.String),
+		/** The draft an autocomplete query is about, and the caret's offset in it. */
+		text: Schema.optional(Schema.String),
+		cursor: Schema.optional(Schema.Finite),
 	}),
 	Schema.Struct({ t: Schema.Literals(["shutdown"]), deadlineMs: Schema.Finite }),
 ]);

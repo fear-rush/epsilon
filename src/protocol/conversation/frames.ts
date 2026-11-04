@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 
 import { CacheWarming, ContextUsage, SessionStats } from "../usage.ts";
+import { CommandOffer } from "./palette.ts";
 import { ThinkingLevel } from "./session.ts";
 
 /**
@@ -237,6 +238,8 @@ export const SessionMetaFrame = Schema.Struct({
 	codingTools: Schema.optional(Schema.Boolean),
 	/** The thinking levels pi offers for the current model, as the model picker shows them. */
 	thinkingLevels: Schema.optional(Schema.Array(ThinkingLevel)),
+	/** What `/` offers: the built-in table, pi's commands, templates and skills. */
+	commands: Schema.optional(Schema.Array(CommandOffer)),
 });
 
 /**
