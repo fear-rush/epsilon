@@ -12,5 +12,6 @@
 		"paths": { "@/*": ["./*"] }
 	},
 	"include": ["**/*.ts", "**/*.tsx"],
+	"exclude": ["**/*.test.ts", "**/*.test.tsx"],
 	"references": [{ "path": "../protocol" }, { "path": "../domain" }]
 }

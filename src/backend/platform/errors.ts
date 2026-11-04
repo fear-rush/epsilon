@@ -1,5 +1,9 @@
 import { Schema } from "effect";
 
+// The wire error and the platform error are one class: a session rename refuses on the
+// socket with the same value the file layer raised.
+export { FileUnwritable } from "#protocol/errors";
+
 /**
  * What the platform layer reports when the outside world refuses.
  *
@@ -12,11 +16,6 @@ export class FileUnreadable extends Schema.TaggedError<
 	FileUnreadable,
 	{ readonly brand: unique symbol }
 >()("FileUnreadable", { path: Schema.String, reason: Schema.String }) {}
-
-export class FileUnwritable extends Schema.TaggedError<
-	FileUnwritable,
-	{ readonly brand: unique symbol }
->()("FileUnwritable", { path: Schema.String, reason: Schema.String }) {}
 
 /** The file exists and is not the JSON the schema describes. */
 export class NotJson extends Schema.TaggedError<NotJson, { readonly brand: unique symbol }>()(

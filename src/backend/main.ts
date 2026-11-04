@@ -8,6 +8,7 @@ import { DevTools } from "effect/devtools";
 import { FetchHttpClient } from "effect/http";
 
 import { Catalog, CatalogLive } from "./catalog/catalog.ts";
+import { SessionsLive } from "./catalog/operations.ts";
 import { ConfigChangesLive } from "./config/changes.ts";
 import { GeneralStoreLive } from "./config/general/store.ts";
 import { McpRegistryServiceLive } from "./config/mcp-registry/service.ts";
@@ -24,7 +25,7 @@ import { SkillsServiceLive } from "./config/skills/service.ts";
 import { ConfigSnapshotServiceLive } from "./config/snapshot.ts";
 import { ContextServiceLive } from "./context/service.ts";
 import { DiagnosticsServiceLive } from "./diagnostics/service.ts";
-import { Engines, EnginesLive } from "./engines/registry.ts";
+import { Engines, EnginesLive, SessionLocksFromEngines } from "./engines/registry.ts";
 import { EngineSpecLive, SupervisorLive } from "./engines/supervisor.ts";
 import { AgentHome, AgentHomeLive } from "./platform/agent-home.ts";
 import { ensureDir } from "./platform/files.ts";
@@ -33,6 +34,7 @@ import { Log, LogLive } from "./platform/log.ts";
 import { PiConfigLive, piVersion, sessionFormatVersion } from "./platform/pi.ts";
 import { installForceExit } from "./platform/signals.ts";
 import { HOSTNAME, ServeLive } from "./serve.ts";
+import { PinsLive } from "./sessions/pins.ts";
 import { EpsilonSettings, EpsilonSettingsLive } from "./settings.ts";
 
 /**
@@ -122,7 +124,17 @@ const engines = EnginesLive.pipe(
 	Layer.provideMerge(supervisor),
 );
 
-const infra = Layer.mergeAll(core, settings, catalog, pi, projects, engines);
+// The chat's own operations and Epsilon's pin file. The lock service answers "does an
+// engine hold this chat?", which is what makes a rename or delete refuse a live chat.
+const sessionLocks = SessionLocksFromEngines.pipe(Layer.provideMerge(engines));
+const sessions = SessionsLive.pipe(
+	Layer.provideMerge(core),
+	Layer.provideMerge(catalog),
+	Layer.provideMerge(sessionLocks),
+);
+const pins = PinsLive.pipe(Layer.provideMerge(core));
+
+const infra = Layer.mergeAll(core, settings, catalog, pi, projects, engines, sessions, pins);
 
 /**
  * Every configuration service the socket answers from, in three stages: what nothing else

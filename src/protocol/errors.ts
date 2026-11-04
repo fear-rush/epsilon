@@ -61,6 +61,12 @@ export class FileUnreadable extends Schema.TaggedError<
 	reason: Schema.String,
 }) {}
 
+/** A file Epsilon could not write, and the reason a reader can act on. */
+export class FileUnwritable extends Schema.TaggedError<
+	FileUnwritable,
+	{ readonly brand: unique symbol }
+>()("FileUnwritable", { path: Schema.String, reason: Schema.String }) {}
+
 /** A write Epsilon refused before it touched the file, with the sentence the page shows. */
 export class SettingRefused extends Schema.TaggedError<
 	SettingRefused,

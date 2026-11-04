@@ -12,16 +12,19 @@
 	"include": ["**/*.ts", "../src/**/*.test.ts"],
 	"references": [
 		{
-			"path": "../src/protocol"
-		},
-		{
-			"path": "../src/domain"
+			"path": "../src/app"
 		},
 		{
 			"path": "../src/backend"
 		},
 		{
+			"path": "../src/domain"
+		},
+		{
 			"path": "../src/engine"
+		},
+		{
+			"path": "../src/protocol"
 		}
 	]
 }

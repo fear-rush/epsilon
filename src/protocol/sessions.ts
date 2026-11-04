@@ -1,6 +1,8 @@
 import { Schema } from "effect";
 import { Rpc, RpcGroup } from "effect/rpc";
 
+import { FileUnwritable, SessionNotFound, SessionRunning } from "./errors.ts";
+
 /**
  * The chat list, read from the derived index.
  *
@@ -19,11 +21,40 @@ export const SessionSummary = Schema.Struct({
 	lastActivity: Schema.Finite,
 	messageCount: Schema.Finite,
 	parentSession: Schema.NullOr(Schema.String),
+	/** Epsilon's own preference, from `pinned-sessions.json`; not pi state. */
+	pinned: Schema.Boolean,
 });
 export type SessionSummary = typeof SessionSummary.Type;
 
+export const SessionList = Schema.Struct({
+	sessions: Schema.Array(SessionSummary),
+	/** The pins file Epsilon could not read; the list still answers with an empty set. */
+	pinsProblem: Schema.optional(Schema.String),
+});
+export type SessionList = typeof SessionList.Type;
+
 export const SessionsRpcs = RpcGroup.make(
-	Rpc.make("sessions.list", { success: Schema.Array(SessionSummary) }),
+	Rpc.make("sessions.list", { success: SessionList }),
 	/** A version per batch of changed rows; the list is refetched, not patched in place. */
 	Rpc.make("sessions.changes", { success: Schema.Finite, stream: true }),
+	/**
+	 * pi's own rename: a `session_info` entry is appended, so a terminal sees it too. A
+	 * running chat is refused rather than rewritten under its engine.
+	 */
+	Rpc.make("sessions.rename", {
+		payload: { sessionId: Schema.String, name: Schema.String },
+		success: Schema.Void,
+		error: Schema.Union([SessionNotFound, SessionRunning, FileUnwritable]),
+	}),
+	Rpc.make("sessions.remove", {
+		payload: { sessionId: Schema.String },
+		success: Schema.Void,
+		error: Schema.Union([SessionNotFound, SessionRunning, FileUnwritable]),
+	}),
+	/** Pin is Epsilon's own preference, so only an existing chat may be pinned. */
+	Rpc.make("sessions.setPinned", {
+		payload: { sessionId: Schema.String, pinned: Schema.Boolean },
+		success: Schema.Void,
+		error: Schema.Union([SessionNotFound, FileUnwritable]),
+	}),
 );
