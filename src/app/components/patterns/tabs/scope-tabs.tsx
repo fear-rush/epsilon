@@ -20,7 +20,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FolderDialog } from "@/features/projects";
 import { useSessionList } from "@/features/sessions";
-import { useSettings, useSettingsProject } from "@/features/settings";
+import { useSettings, useSettingsProject } from "@/features/settings/queries.ts";
 
 export type ScopedSection =
 	| "/settings/mcp"

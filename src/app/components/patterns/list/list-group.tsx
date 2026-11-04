@@ -6,7 +6,13 @@ import type { ReactNode } from "react";
  * A group after another draws a rule that runs full bleed across the list's
  * gutters.
  */
-export function ListGroup({ title, children }: { title?: string; children: ReactNode }) {
+export function ListGroup({
+	title,
+	children,
+}: {
+	title?: string | undefined;
+	children: ReactNode;
+}) {
 	return (
 		<section className="-mx-pane grid grid-cols-[minmax(0,1fr)] gap-row border-t px-pane py-2 first:mx-0 first:border-t-0 first:px-0 first:pt-0">
 			{title !== undefined && (

@@ -1,11 +1,13 @@
-import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 import type { PackageScope } from "#protocol/config/packages";
+import type { SkillRoot } from "#protocol/config/skills";
 import { call } from "@/runtime";
 
 import { settingsKeys } from "./keys.ts";
+import { readSkill, readSkillDocument, readSkillRaw } from "./skills/api.ts";
 
 /**
  * The one settings read: the snapshot the server assembles for a folder, or for the
@@ -40,6 +42,36 @@ export const useSettingsRefresh = (): (() => void) => {
 		void queryClient.invalidateQueries({ queryKey: settingsKeys.all });
 		void queryClient.invalidateQueries({ queryKey: ["config", "readiness"] });
 	}, [queryClient]);
+};
+
+/** The editable file of one skill. A new skill has no name yet, so it reads nothing. */
+export const useSkill = (root: SkillRoot, name: string | undefined) => {
+	const project = useSettingsProject();
+	return useQuery({
+		queryKey: [...settingsKeys.all, "skill", project ?? null, root, name ?? ""],
+		queryFn: name === undefined ? skipToken : () => readSkill(project, root, name),
+		staleTime: SETTINGS_STALE_MS,
+	});
+};
+
+/** One skill's `SKILL.md` as text, for the Raw tab. */
+export const useSkillRaw = (root: SkillRoot, name: string) => {
+	const project = useSettingsProject();
+	return useQuery({
+		queryKey: [...settingsKeys.all, "skill-raw", project ?? null, root, name],
+		queryFn: () => readSkillRaw(project, root, name),
+		staleTime: 0,
+	});
+};
+
+/** A listed skill, whoever owns it, read for display. */
+export const useSkillDocument = (filePath: string | undefined) => {
+	const project = useSettingsProject();
+	return useQuery({
+		queryKey: [...settingsKeys.all, "skill-document", project ?? null, filePath ?? ""],
+		queryFn: filePath === undefined ? skipToken : () => readSkillDocument(project, filePath),
+		staleTime: SETTINGS_STALE_MS,
+	});
 };
 
 /** Every model pi composed, for the default-model picker and the settings controls. */

@@ -11,7 +11,7 @@ import { LoadingState } from "@/components/patterns/status/loading-state";
 import { StatusView } from "@/components/patterns/status/status-view";
 import { ProjectPicker, ScopeTabs } from "@/components/patterns/tabs/scope-tabs";
 import type { ScopedSection } from "@/components/patterns/tabs/scope-tabs";
-import { useSettingsProject } from "@/features/settings";
+import { useSettingsProject } from "@/features/settings/queries.ts";
 import { cn } from "@/lib/cn";
 
 /**
