@@ -2,6 +2,7 @@ import { ArrowUpIcon, SquareIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 
+import type { Readings } from "#domain/conversation/state";
 import type { ModelOption, ThinkingLevel } from "#protocol/conversation/session";
 import { Notice } from "@/components/patterns/status/notice";
 import { Tip } from "@/components/patterns/tip";
@@ -12,6 +13,8 @@ import {
 	InputGroupTextarea,
 } from "@/components/ui/input-group";
 
+import { CacheWarmingState } from "./composer/cache-warming";
+import { ContextMeter } from "./composer/context-meter";
 import { ModelMenu } from "./composer/model-menu";
 import { ThinkingMenu } from "./composer/thinking-menu";
 import { ToolsMenu } from "./composer/tools-menu";
@@ -38,6 +41,7 @@ export function Composer({
 	onSetCodingTools,
 	busy,
 	draft,
+	readings,
 	sessionId,
 	writable,
 	models,
@@ -56,6 +60,8 @@ export function Composer({
 	busy: boolean;
 	/** Text pi put back, such as the message a tree move undid. */
 	draft: { readonly text: string; readonly nonce: string } | undefined;
+	/** What pi reports under the box: the window, the session's totals and the cache warmer. */
+	readings: Readings | undefined;
 	/** The chat this box writes to, so a fork's text follows its new file. */
 	sessionId: string;
 	writable: boolean;
@@ -137,8 +143,12 @@ export function Composer({
 
 	return (
 		<div className="border-t p-3">
-			<div className="mx-auto grid w-full max-w-4xl gap-2">
-				{failure !== undefined && <Notice error={failure} title="The message was not sent" />}
+			<div className="mx-auto w-full max-w-4xl">
+				{failure !== undefined && (
+					<div className="pb-2">
+						<Notice error={failure} title="The message was not sent" />
+					</div>
+				)}
 				<form
 					onSubmit={(event) => {
 						event.preventDefault();
@@ -206,6 +216,15 @@ export function Composer({
 						</InputGroupAddon>
 					</InputGroup>
 				</form>
+				{readings !== undefined &&
+					(readings.contextUsage !== undefined || readings.cacheWarming !== undefined) && (
+						<div className="flex items-start gap-2 px-1 pt-1">
+							<div className="ml-auto flex shrink-0 items-center gap-2">
+								<CacheWarmingState status={readings.cacheWarming} />
+								<ContextMeter usage={readings.contextUsage} stats={readings.stats} />
+							</div>
+						</div>
+					)}
 			</div>
 		</div>
 	);

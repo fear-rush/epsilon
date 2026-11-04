@@ -148,6 +148,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 			draft={state.draft}
 			model={models.find((candidate) => `${candidate.provider}/${candidate.id}` === state.model)}
 			models={models}
+			readings={state.readings}
 			sessionId={sessionId}
 			thinking={state.thinking}
 			thinkingLevels={state.thinkingLevels}

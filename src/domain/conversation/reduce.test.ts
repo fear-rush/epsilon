@@ -58,6 +58,25 @@ describe("frames", () => {
 				output: "AGENTS.md\n",
 				running: true,
 			},
+			{
+				t: "readings",
+				contextUsage: { tokens: 12_000, contextWindow: 200_000, percent: 6 },
+				stats: {
+					assistantMessages: 2,
+					cost: 0.1234,
+					tokens: {
+						cacheRead: 1_000,
+						cacheWrite: 200,
+						input: 11_000,
+						output: 400,
+						total: 12_400,
+					},
+					toolCalls: 1,
+					totalMessages: 5,
+					userMessages: 2,
+				},
+				cacheWarming: { nextWarmAt: 1_700_000_000_000, state: "scheduled" },
+			},
 			{ t: "busy", busy: true, compacting: true, retrying: true },
 			{ t: "editorText", sessionId: "s1", text: "the message a move undid", nonce: "n1" },
 			{
@@ -77,7 +96,7 @@ describe("frames", () => {
 		// The version covers exactly the tags the socket can carry: adding a frame without
 		// naming it here means a stale tab would meet a frame it cannot decode.
 		expect(new Set(samples.map((sample) => sample.t))).toEqual(new Set(frameTags));
-		expect(PROTOCOL_VERSION).toBe("8");
+		expect(PROTOCOL_VERSION).toBe("9");
 		for (const sample of samples) expect(() => decodeServerFrame(sample)).not.toThrow();
 	});
 });
@@ -101,6 +120,41 @@ describe("reduce", () => {
 			{ t: "bash", command: "", output: "", running: false },
 		]);
 		expect(state.bash).toEqual({ command: "", output: "", running: false });
+	});
+
+	test("carries the composer's readings: the window, the totals and the warmer", () => {
+		const stats = {
+			assistantMessages: 2,
+			cost: 0.1234,
+			tokens: { cacheRead: 1_000, cacheWrite: 200, input: 11_000, output: 400, total: 12_400 },
+			toolCalls: 1,
+			totalMessages: 5,
+			userMessages: 2,
+		};
+		const state = replay([
+			{
+				t: "readings",
+				contextUsage: { tokens: 12_000, contextWindow: 200_000, percent: 6 },
+				stats,
+				cacheWarming: { nextWarmAt: 1_700_000_000_000, state: "scheduled" },
+			},
+		]);
+		expect(state.readings).toEqual({
+			cacheWarming: { nextWarmAt: 1_700_000_000_000, state: "scheduled" },
+			contextUsage: { tokens: 12_000, contextWindow: 200_000, percent: 6 },
+			stats,
+		});
+		// Right after a compaction pi counts no tokens, and the composer hides the meter
+		// instead of drawing an empty window; the nulls travel so it can tell the difference.
+		const compacted = replay([
+			{
+				t: "readings",
+				contextUsage: { tokens: null, contextWindow: 200_000, percent: null },
+				stats,
+			},
+		]);
+		expect(compacted.readings?.contextUsage?.tokens).toBeNull();
+		expect(compacted.readings?.cacheWarming).toBeUndefined();
 	});
 
 	test("carries the run controls pi holds: the queue, a retry and the meta flags", () => {

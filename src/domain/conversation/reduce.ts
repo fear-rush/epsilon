@@ -146,6 +146,15 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				...state,
 				bash: { command: frame.command, output: frame.output, running: frame.running },
 			};
+		case "readings":
+			return {
+				...state,
+				readings: {
+					cacheWarming: frame.cacheWarming,
+					contextUsage: frame.contextUsage,
+					stats: frame.stats,
+				},
+			};
 		case "drift":
 			return { ...state, drift: frame.reason };
 		case "sessionMeta":

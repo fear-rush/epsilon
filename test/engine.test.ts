@@ -138,9 +138,10 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 				yield* control(engine, { t: "setCodingTools", enabled: false });
 				yield* control(engine, { t: "clearQueue" });
 				yield* engine.attachTab("tab2");
-				const opening = [...(yield* engine.frames("tab2").pipe(Stream.take(4), Stream.runCollect))];
+				const opening = [...(yield* engine.frames("tab2").pipe(Stream.take(5), Stream.runCollect))];
 				const meta = opening.find((frame) => frame.t === "sessionMeta");
 				const queue = opening.find((frame) => frame.t === "queue");
+				const readings = opening.find((frame) => frame.t === "readings");
 				// A shell command runs outside a turn; its frames reach every open tab. The
 				// read stops at the frame that ends the run, after the frame that started it.
 				yield* engine.attachTab("tab3");
@@ -170,6 +171,7 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 					bash,
 					meta,
 					queue,
+					readings,
 					snapshot: snapshot.value,
 					transcript,
 					tree,
@@ -191,6 +193,10 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 		expect(Array.isArray(result.meta.thinkingLevels)).toBe(true);
 		if (result.queue === undefined) throw new Error("no queue frame");
 		expect(result.queue).toEqual({ followUp: [], steering: [], t: "queue" });
+		if (result.readings === undefined) throw new Error("no readings frame");
+		// The composer's meter reads pi's own totals, which count the turn the stub answered.
+		expect(result.readings.stats.totalMessages).toBeGreaterThan(0);
+		expect(typeof result.readings.stats.tokens.total).toBe("number");
 		if (result.bash === undefined) throw new Error("no running bash frame");
 		expect(result.bash.command).toBe("echo hello-bash");
 		expect(result.bash.output).toBe("hello-bash\n");

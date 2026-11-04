@@ -1,4 +1,9 @@
-import type { AgentSession, SessionEntry, SessionManager } from "@earendil-works/pi-coding-agent";
+import type {
+	AgentSession,
+	CacheWarmingStatus,
+	SessionEntry,
+	SessionManager,
+} from "@earendil-works/pi-coding-agent";
 
 import type {
 	Notice,
@@ -7,7 +12,9 @@ import type {
 	TreeEntry,
 } from "#protocol/conversation/frames";
 import type { ThinkingLevel } from "#protocol/conversation/session";
+import type { CacheWarming, SessionStats } from "#protocol/usage";
 
+import { withDefined } from "../domain/object.ts";
 import { hasCodingTools } from "./tools.ts";
 import { flatTree, transcriptOf } from "./translate.ts";
 
@@ -122,6 +129,46 @@ type MutableSessionMeta = {
 	codingTools?: boolean;
 	hideThinking?: boolean;
 	thinkingLevels?: ThinkingLevel[];
+};
+
+/**
+ * What the composer reads under the box. pi's price model (`decision`) and whether an
+ * extension overrode it stay out: the footer says when a warm happens and why not, not
+ * what pi expected it to save.
+ */
+const warmingOf = (status: CacheWarmingStatus | undefined): CacheWarming | undefined => {
+	if (status === undefined) return undefined;
+	return withDefined(
+		withDefined({ state: status.state }, "reason", status.reason),
+		"nextWarmAt",
+		status.nextWarmAt,
+	);
+};
+
+/** What the session has cost, as pi summed it. */
+const statsOf = (stats: SessionStats): SessionStats => ({
+	assistantMessages: stats.assistantMessages,
+	cost: stats.cost,
+	tokens: {
+		cacheRead: stats.tokens.cacheRead,
+		cacheWrite: stats.tokens.cacheWrite,
+		input: stats.tokens.input,
+		output: stats.tokens.output,
+		total: stats.tokens.total,
+	},
+	toolCalls: stats.toolCalls,
+	totalMessages: stats.totalMessages,
+	userMessages: stats.userMessages,
+});
+
+/** The composer's readings, as pi answered them. */
+export const readingsOf = (agent: AgentSession): Extract<ServerFrame, { t: "readings" }> => {
+	const frame: Extract<ServerFrame, { t: "readings" }> = {
+		stats: statsOf(agent.getSessionStats()),
+		t: "readings",
+	};
+	const withUsage = withDefined(frame, "contextUsage", agent.getContextUsage());
+	return withDefined(withUsage, "cacheWarming", warmingOf(agent.cacheWarmingStatus));
 };
 
 /** What the page needs to draw the session controls, from pi's own state. */

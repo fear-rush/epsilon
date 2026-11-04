@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 
+import { CacheWarming, ContextUsage, SessionStats } from "../usage.ts";
 import { ThinkingLevel } from "./session.ts";
 
 /**
@@ -239,6 +240,19 @@ export const SessionMetaFrame = Schema.Struct({
 });
 
 /**
+ * What the composer reads under the box: how full the window is, what the session has
+ * cost, and what pi's cache warmer is doing. They travel together because pi answers
+ * them together and they change on the same events; a reading pi cannot give is absent,
+ * and the tab draws neither the meter nor the warmer.
+ */
+export const ReadingsFrame = Schema.Struct({
+	t: Schema.Literals(["readings"]),
+	contextUsage: Schema.optional(ContextUsage),
+	stats: SessionStats,
+	cacheWarming: Schema.optional(CacheWarming),
+});
+
+/**
  * Text pi put back in the composer, such as the user message a tree move restored. The
  * nonce tells the page this is a new insertion, not the draft it reported itself.
  */
@@ -265,6 +279,7 @@ export const ServerFrame = Schema.Union([
 	BashFrame,
 	DriftFrame,
 	SessionMetaFrame,
+	ReadingsFrame,
 	EditorTextFrame,
 	TreeFrame,
 ]);

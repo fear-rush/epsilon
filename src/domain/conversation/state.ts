@@ -1,6 +1,7 @@
 import type { DialogQuestion } from "#protocol/conversation/extui";
 import type { Notice, TranscriptEntry, TreeEntry } from "#protocol/conversation/frames";
 import type { ThinkingLevel } from "#protocol/conversation/session";
+import type { CacheWarming, ContextUsage, SessionStats } from "#protocol/usage";
 
 /** Text or thinking that has streamed but has no entry yet. */
 export type StreamingBlock = { readonly kind: "text" | "thinking"; readonly text: string };
@@ -26,6 +27,13 @@ export type BashRun = {
 export type Queue = {
 	readonly steering: ReadonlyArray<string>;
 	readonly followUp: ReadonlyArray<string>;
+};
+
+/** The composer's readings: pi's window, totals and warmer, from one frame. */
+export type Readings = {
+	readonly contextUsage: ContextUsage | undefined;
+	readonly stats: SessionStats;
+	readonly cacheWarming: CacheWarming | undefined;
 };
 
 export type ToolRun = {
@@ -63,6 +71,8 @@ export type ConversationState = {
 	readonly retrying: boolean;
 	readonly queue: Queue;
 	readonly bash: BashRun;
+	/** What pi reports about the session: the window, its totals and the cache warmer. */
+	readonly readings: Readings | undefined;
 	/** pi's automatic behaviours, which its own settings file owns. */
 	readonly autoCompaction: boolean;
 	readonly autoRetry: boolean;
@@ -96,6 +106,7 @@ export const emptyConversation: ConversationState = {
 	retrying: false,
 	queue: { followUp: [], steering: [] },
 	bash: { command: "", output: "", running: false },
+	readings: undefined,
 	autoCompaction: false,
 	autoRetry: false,
 	hideThinking: false,

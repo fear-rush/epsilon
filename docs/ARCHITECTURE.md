@@ -80,7 +80,9 @@ view, built from the shared patterns.
 2. The registry either reuses the engine for that session or asks the supervisor to
    spawn one inside a scope. The engine builds its runtime from the session file.
 3. The engine sends a windowed snapshot (entry ids, recent entries, notices); older
-   pages arrive when the transcript asks, and the flat tree when the picker opens.
+   pages arrive when the transcript asks, and the flat tree when the picker opens. The
+   composer's readings (pi's context usage, the session's totals, the cache warmer) follow
+   the snapshot and again whenever pi's numbers change.
 4. Commands go down the same socket as tagged values; extension dialogs come back as
    frames and their answers go back as commands.
 5. The reducer in `src/domain/` turns frames into state; the view renders state. A

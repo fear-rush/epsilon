@@ -4,7 +4,7 @@ import type {
 	PromptOptions,
 } from "@earendil-works/pi-coding-agent";
 import type { Scope } from "effect";
-import { Deferred, Effect, FileSystem, Option, Queue, Schema } from "effect";
+import { Clock, Deferred, Effect, Fiber, FileSystem, Option, Queue, Schema } from "effect";
 
 import type { Command } from "#protocol/conversation/commands";
 import type { DialogAnswer } from "#protocol/conversation/extui";
@@ -37,6 +37,7 @@ import type { RuntimeInput } from "./runtime.ts";
 import {
 	historyWindow,
 	noticesOf,
+	readingsOf,
 	sessionMeta,
 	snapshotWindow,
 	treeOf,
@@ -82,6 +83,12 @@ type AcceptedPrompt = "handled" | "queued" | "started";
 type StreamingFrame = Extract<ServerFrame, { t: "streaming" }>;
 
 const noticeLimit = 200;
+
+/**
+ * How long after the moment pi named the warmer's reading is refreshed. pi fires on its
+ * own timer and sends no event when it does.
+ */
+const CACHE_WARM_LAG_MS = 1_000;
 
 const sameTo = (left: To, right: To): boolean => {
 	if (left === "all" || right === "all") return left === right;
@@ -130,7 +137,9 @@ class FrameOut {
 type SessionInput =
 	| { readonly kind: "event"; readonly event: AgentSessionEvent }
 	| { readonly kind: "swap"; readonly session: AgentSession }
-	| { readonly kind: "flush" };
+	| { readonly kind: "flush" }
+	/** Re-read pi's answer and, when a cache warm is scheduled, arm its wake-up. */
+	| { readonly kind: "arm" };
 
 export class EngineSession {
 	private runtime: RuntimeHandle;
@@ -155,6 +164,9 @@ export class EngineSession {
 	private lock: SessionLock | undefined;
 	private unsubscribe: (() => void) | undefined;
 	private toolRunning = 0;
+	/** The moment pi named for its next cache warm, and the fiber waiting for it. */
+	private warmAt: number | undefined;
+	private warmFiber: Fiber.Fiber<void> | undefined;
 	private shutdownRequested = false;
 	private readonly onShutdown: () => void;
 
@@ -933,8 +945,13 @@ export class EngineSession {
 			sessionId: agent.sessionId,
 			t: "snapshot",
 		};
-		this.frames.to(tab === undefined ? "all" : { tab }, frame);
-		this.frames.to(tab === undefined ? "all" : { tab }, sessionMeta(agent));
+		const to: To = tab === undefined ? "all" : { tab };
+		this.frames.to(to, frame);
+		this.frames.to(to, sessionMeta(agent));
+		this.frames.to(to, readingsOf(agent));
+		// The snapshot carries the warmer's reading, so its timer is armed here too: a chat
+		// that opens while a warm is scheduled sees the bar change when pi warms it.
+		Queue.offerUnsafe(this.events, { kind: "arm" });
 		if (tab === undefined) {
 			this.sendQueue();
 			this.sendBash();
@@ -968,6 +985,47 @@ export class EngineSession {
 
 	private sendBash(): void {
 		this.broadcast(this.bashFrame());
+	}
+
+	/** The composer's readings now, and the warmer's timer re-armed from pi's answer. */
+	private publishReadings(): Effect.Effect<void, never, Scope.Scope> {
+		const self = this;
+		return Effect.gen(function* () {
+			self.broadcast(readingsOf(self.runtime.session));
+			yield* self.armWarming();
+		});
+	}
+
+	/**
+	 * pi's warmer fires on its own timer and sends no session event when it does, so the
+	 * page would otherwise promise a warm that already happened. One wake-up after the
+	 * moment pi named keeps it honest; a moment in the past never becomes a timer again.
+	 */
+	private armWarming(): Effect.Effect<void, never, Scope.Scope> {
+		const self = this;
+		return Effect.gen(function* () {
+			const warming = self.runtime.session.cacheWarmingStatus;
+			const at = warming?.state === "scheduled" ? warming.nextWarmAt : undefined;
+			if (at === self.warmAt) return;
+			self.warmAt = at;
+			const previous = self.warmFiber;
+			self.warmFiber = undefined;
+			if (previous !== undefined) yield* Fiber.interrupt(previous);
+			if (at === undefined) return;
+			const delay = at - (yield* Clock.currentTimeMillis) + CACHE_WARM_LAG_MS;
+			if (delay <= 0) return;
+			self.warmFiber = yield* Effect.forkScoped(
+				Effect.sleep(delay).pipe(
+					Effect.andThen(
+						Effect.sync(() => {
+							self.warmAt = undefined;
+							self.warmFiber = undefined;
+						}),
+					),
+					Effect.andThen(self.publishReadings()),
+				),
+			);
+		});
 	}
 
 	private broadcastAll(): void {
@@ -1113,6 +1171,10 @@ export class EngineSession {
 				self.broadcastAll();
 				return;
 			}
+			if (item.kind === "arm") {
+				yield* self.armWarming();
+				return;
+			}
 			yield* self.receive(item.event);
 		});
 	}
@@ -1201,6 +1263,7 @@ export class EngineSession {
 					if (entry.role === "assistant") self.streamId = undefined;
 					yield* self.ensureLock();
 					self.sendStatus();
+					if (entry.role === "assistant") yield* self.publishReadings();
 					return;
 				}
 				case "entry_appended":
@@ -1260,6 +1323,7 @@ export class EngineSession {
 					return;
 				case "compaction_end":
 					self.broadcast({ busy: self.runtime.session.isStreaming, compacting: false, t: "busy" });
+					yield* self.publishReadings();
 					return;
 				case "auto_retry_start":
 					// The reason stays in the notice until the run status row can carry it.

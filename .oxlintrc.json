@@ -210,6 +210,14 @@
 			}
 		},
 		{
+			// main's cache warmer is a reading, not a control, and it is focusable only so its
+			// tooltip opens on Tab; there is no action to give a button.
+			"files": ["src/app/features/conversation/composer/cache-warming.tsx"],
+			"rules": {
+				"jsx-a11y/no-noninteractive-tabindex": "off"
+			}
+		},
+		{
 			"files": ["src/protocol/**"],
 			"rules": {
 				"no-restricted-imports": [

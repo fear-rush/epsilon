@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import { Rpc, RpcGroup } from "effect/rpc";
 
 import { ProjectNotTrusted, ProjectRefused, SkillRefused } from "../errors.ts";
+import { ContextUsage } from "../usage.ts";
 import { SkillView } from "./skills.ts";
 
 /**
@@ -69,14 +70,6 @@ export const ContextTool = Schema.Struct({
 	namespace: Schema.optional(Schema.String),
 });
 export type ContextTool = typeof ContextTool.Type;
-
-/** How much of the model's window the chat holds, when pi reports a number. */
-export const ContextUsage = Schema.Struct({
-	tokens: Schema.NullOr(Schema.Finite),
-	contextWindow: Schema.Finite,
-	percent: Schema.NullOr(Schema.Finite),
-});
-export type ContextUsage = typeof ContextUsage.Type;
 
 /** Something pi reported that the operator should see on the page, not in silence. */
 export const ContextProblem = Schema.Struct({
