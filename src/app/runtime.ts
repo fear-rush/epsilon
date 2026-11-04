@@ -130,8 +130,10 @@ const makeConnection = Effect.gen(function* () {
 	const gate = yield* Ref.make(yield* Deferred.make<void>());
 	const generation = yield* Ref.make(0);
 	const connects = yield* Queue.unbounded<void>();
+	const up = yield* Ref.make(false);
 
 	const opened = Effect.gen(function* () {
+		yield* Ref.set(up, true);
 		yield* Ref.update(generation, (current) => current + 1);
 		yield* Deferred.succeed(yield* Ref.get(gate), undefined).pipe(Effect.ignore);
 		yield* Effect.sync(() => publish({ socket: "open" }));
@@ -140,8 +142,22 @@ const makeConnection = Effect.gen(function* () {
 
 	const closed = Effect.gen(function* () {
 		yield* Ref.set(gate, yield* Deferred.make<void>());
+		yield* Ref.set(up, false);
 		yield* Effect.sync(() => publish({ socket: "closed" }));
 	});
+
+	// A server that is going away can leave the socket open long enough for a write to land
+	// in a process that is already closing. The probe closes the gate first, so a call waits
+	// for the connection that replaces it instead of being sent into the dying one.
+	yield* Effect.forkScoped(
+		Effect.forever(
+			Effect.gen(function* () {
+				const reachable = yield* healthReachable();
+				if (!reachable && (yield* Ref.get(up))) yield* closed;
+				yield* Effect.sleep(HEALTH_INTERVAL);
+			}),
+		),
+	);
 
 	const waitOpen = Effect.gen(function* () {
 		yield* Deferred.await(yield* Ref.get(gate)).pipe(Effect.timeout(OPEN_WAIT));
@@ -159,6 +175,24 @@ const makeConnection = Effect.gen(function* () {
 });
 
 const ConnectionLive = Layer.effect(Connection, makeConnection);
+
+/** How often the page asks its server whether it is still there. */
+const HEALTH_INTERVAL = "2 seconds";
+const HEALTH_TIMEOUT_MS = 1_500;
+
+/** The one address the server answers outside the socket. */
+const healthReachable = (): Effect.Effect<boolean> =>
+	Effect.promise(async () => {
+		try {
+			const response = await fetch(
+				`${window.location.protocol}//${window.location.host}/api/health`,
+				{ cache: "no-store", signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS) },
+			);
+			return response.ok;
+		} catch {
+			return false;
+		}
+	});
 
 /** The client the whole page shares, typed by the same group the server serves. */
 export type Api = RpcClient.FromGroup<
@@ -218,9 +252,11 @@ const makeLink = Effect.gen(function* () {
 
 	const ready = Effect.suspend(() =>
 		Effect.gen(function* () {
+			// The gate first: a probe can close it while the socket still reads as open, and a
+			// handshake that is current says nothing about whether the server is reachable.
+			yield* connection.waitOpen;
 			const current = yield* connection.generation;
 			if ((yield* Ref.get(handshakenAt)) === current) return;
-			yield* connection.waitOpen;
 			yield* permit.withPermit(
 				Effect.gen(function* () {
 					if ((yield* Ref.get(handshakenAt)) === current) return;

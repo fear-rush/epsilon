@@ -158,12 +158,20 @@ export function useConversation(input: {
 				// A new name per connection, so a reconnect receives a fresh window rather
 				// than a replay it might have missed.
 				const name = crypto.randomUUID();
-				yield* runStream(
-					(client) => client["conversation.attach"]({ place, sessionId, tab: name }),
-					(frame) => {
-						opened(name);
-						dispatch(frame);
-					},
+				// The tab belongs to this attempt only. When the connection drops, the name
+				// goes with it, so a command waits for the next attempt instead of writing to
+				// a tab the new connection never subscribed.
+				yield* Effect.ensuring(
+					runStream(
+						(client) => client["conversation.attach"]({ place, sessionId, tab: name }),
+						(frame) => {
+							opened(name);
+							dispatch(frame);
+						},
+					),
+					Effect.sync(() => {
+						if (tab.current === name) tab.current = undefined;
+					}),
 				);
 			}),
 		// All three are read inside the Effect.gen below, which the rule cannot see through.
@@ -196,15 +204,19 @@ export function useConversation(input: {
 		// oxlint-disable-next-line react/exhaustive-effect-dependencies
 	}, [sessionId, attempt, onEnd, epoch]);
 
+	/** Subscribes again, then waits for the new tab to open. The old one is dead. */
+	const reattach = useCallback(async (): Promise<string> => {
+		tab.current = undefined;
+		stopped.current = false;
+		setEpoch((current) => current + 1);
+		return tabFor();
+	}, [tabFor]);
+
 	const command = useCallback(
 		async (value: Command) => {
-			// A chat whose engine stopped subscribes again before it sends; the attach starts a
-			// new process from the file, which is what the notice promised.
-			if (stopped.current) {
-				stopped.current = false;
-				setEpoch((current) => current + 1);
-			}
-			const name = await tabFor();
+			// A chat whose engine stopped subscribes again before it sends; the attach starts
+			// a new process from the file, which is what the notice promised.
+			const name = stopped.current ? await reattach() : await tabFor();
 			try {
 				await call((client) =>
 					client["conversation.command"]({
@@ -214,10 +226,24 @@ export function useConversation(input: {
 					}),
 				);
 			} catch (cause) {
-				throw commandFailure(cause instanceof Error ? cause : new Error(String(cause)));
+				const error = cause instanceof Error ? cause : new Error(String(cause));
+				// The engine behind this tab is gone, which is what a restart looks like: the
+				// message was not delivered, so attach again and send it once more.
+				if (error instanceof EngineStopped) {
+					const fresh = await reattach();
+					await call((client) =>
+						client["conversation.command"]({
+							command: value,
+							sessionId: currentId.current,
+							tab: fresh,
+						}),
+					);
+					return;
+				}
+				throw commandFailure(error);
 			}
 		},
-		[tabFor],
+		[reattach, tabFor],
 	);
 
 	const send = useCallback(

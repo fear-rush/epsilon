@@ -31,6 +31,7 @@ import { ensureDir } from "./platform/files.ts";
 import { JsonDocumentLive } from "./platform/json-document.ts";
 import { Log, LogLive } from "./platform/log.ts";
 import { PiConfigLive, piVersion, sessionFormatVersion } from "./platform/pi.ts";
+import { installForceExit } from "./platform/signals.ts";
 import { HOSTNAME, ServeLive } from "./serve.ts";
 import { EpsilonSettings, EpsilonSettingsLive } from "./settings.ts";
 
@@ -191,20 +192,9 @@ const program = Effect.gen(function* () {
 	return yield* Effect.never;
 });
 
-/**
- * A second signal forces the exit.
- *
- * `BunRuntime.runMain` interrupts the main fiber on the first one, and that closes every
- * scope in reverse order. If a finalizer is waiting on an engine that ignores shutdown,
- * the wait would otherwise have no end (F8h).
- */
-let signals = 0;
-const onSignal = (): void => {
-	signals += 1;
-	if (signals > 1) process.exit(1);
-};
-process.on("SIGINT", onSignal);
-process.on("SIGTERM", onSignal);
+// `BunRuntime.runMain` interrupts the main fiber on the first signal, which closes every
+// scope in reverse order; the second forces the exit (F8h).
+installForceExit((code) => process.exit(code));
 
 const app = isProduction ? AppLive : Layer.mergeAll(AppLive, DevTools.layer());
 

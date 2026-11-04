@@ -119,49 +119,15 @@ export function useStatus(): StatusApi | undefined {
 
 export type AppHealth = "ok" | "reconnecting" | "stale";
 
-/** How often the page asks its server whether it is still there. */
-const HEALTH_INTERVAL_MS = 2_000;
-const HEALTH_TIMEOUT_MS = 1_500;
-
 /**
- * The health route is the one address the server answers outside the socket, so it is also
- * the cheapest proof that the process is alive. The socket's own close event is the usual
- * signal; this probe is what makes a stopped server visible when the socket reports
- * nothing, which is what a browser does when the process is gone without a close frame.
+ * The socket, plus whether this page is still the one the server serves.
+ *
+ * The runtime's probe closes the link when the server stops answering, so one answer drives
+ * the banner and the wait a command does.
  */
-function useReachable(): boolean | undefined {
-	const [reachable, setReachable] = useState<boolean | undefined>(undefined);
-
-	useEffect(() => {
-		let cancelled = false;
-		const check = async (): Promise<void> => {
-			try {
-				const response = await fetch("/api/health", {
-					cache: "no-store",
-					signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
-				});
-				if (!cancelled) setReachable(response.ok);
-			} catch {
-				if (!cancelled) setReachable(false);
-			}
-		};
-		void check();
-		const timer = setInterval(() => void check(), HEALTH_INTERVAL_MS);
-		return () => {
-			cancelled = true;
-			clearInterval(timer);
-		};
-	}, []);
-
-	return reachable;
-}
-
-/** The socket, the health probe, and whether this page is still the one the server serves. */
 export function useAppHealth(): AppHealth {
 	const current = useSyncExternalStore(link.subscribe, link.current, link.current);
-	const reachable = useReachable();
 	if (current.outOfDate) return "stale";
-	if (reachable === false) return "reconnecting";
 	return current.socket === "open" ? "ok" : "reconnecting";
 }
 

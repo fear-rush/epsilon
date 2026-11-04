@@ -324,14 +324,56 @@ test("F8k: a skill download stops at the byte cap", async () => {
 	}
 }, 10_000);
 
-test.todo("F8f: a command typed while reconnecting is queued or refused visibly", () => {
-	// Step 8. The runtime queues commands during reconnect and shows them once attached.
-});
+// F8f is proven in `test/e2e/reconnect.e2e.ts`: a message typed while the server is gone is
+// refused in the composer's own words, and the chat delivers the next one after it returns.
 
-test.todo("F8h: a second process signal exits even when an engine ignores shutdown", () => {
-	// Step 8. The forced exit is in main.ts; proving it needs a chat whose engine ignores
-	// shutdown, and a chat needs conversation.attach.
-});
+/**
+ * F8h: a second process signal exits even when a child ignores shutdown.
+ *
+ * The fixture installs the server's own handler and then waits on a shell that ignores
+ * SIGTERM, which is what a hung engine looks like to the first signal. The second signal
+ * must end the process with code 1 instead of waiting forever.
+ */
+test("F8h: a second process signal exits even when a child ignores shutdown", async () => {
+	const pidFile = join(testPaths.scratch, "f8h.pid");
+	const fixture = new URL("./fixtures/hung-shutdown.ts", import.meta.url).pathname;
+	const child = Bun.spawn([process.execPath, fixture, pidFile], {
+		stdio: ["ignore", "ignore", "ignore"],
+	});
+	const shellPid = async (): Promise<number> => Number(await Bun.file(pidFile).text());
+
+	try {
+		await until(() => existsSync(pidFile), { what: "the hung child", deadline: 4000 });
+		const shell = await shellPid();
+
+		process.kill(child.pid, "SIGTERM");
+		// The first signal only counts: the fixture is still waiting on its child.
+		await until(() => child.exitCode !== null, {
+			deadline: 300,
+			what: "the first signal to be survived",
+		}).then(
+			() => {
+				throw new Error("the first signal ended the process");
+			},
+			() => undefined,
+		);
+
+		process.kill(child.pid, "SIGTERM");
+		await until(() => child.exitCode !== null, {
+			deadline: 4000,
+			what: "the second signal to exit the process",
+		});
+		expect(child.exitCode).toBe(1);
+		// The ignored shell is the fixture's engine: it must not outlive the test.
+		try {
+			process.kill(shell, "SIGKILL");
+		} catch {
+			// It is already gone.
+		}
+	} finally {
+		if (child.exitCode === null) process.kill(child.pid, "SIGKILL");
+	}
+}, 10_000);
 
 test.todo("F8m: notices are capped so a looping extension cannot grow the transcript", () => {
 	// Step 2. The reducer keeps the newest notices and counts what it dropped.
