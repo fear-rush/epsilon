@@ -35,9 +35,17 @@ keys); the index conformance test against `SessionManager.listAll`
       a cold build on a copy of the owner's home; if it exceeds 100 ms, move the sync into a
       Worker (one write connection, as designed) or chunk it, and add a benchmark budget.
       Ask the owner before choosing.
-- [ ] **Large files**: read `src/engine/session.ts` (1,083 lines) and
+- [ ] **Large files**: read `src/engine/session.ts` (1,347 lines) and
       `src/backend/settings/mcp/service.ts` (784; `config/` before phase 1). Split only
       what holds two concepts, per the File rules; otherwise leave them.
+- [ ] **A session pi cannot total.** pi's `getSessionStats()` reads `message.usage.input`
+      on every assistant message, so a file whose assistant entry has no `usage` throws it,
+      and the readings frame calls it on attach: the engine exits, the supervisor records a
+      crash, and the next message reattaches into the same crash. The fixture that found it
+      was written by hand; pi's own writer always includes usage. `main` made the same call
+      inside its snapshot, in the server process. Decide with the owner whether the reading
+      is skipped with a notice or the file is refused with words. Test: a chat whose
+      assistant entry has no `usage` opens and says what is wrong.
 
 ## The review every slice gets
 
