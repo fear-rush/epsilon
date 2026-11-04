@@ -141,6 +141,11 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				...state,
 				queue: { followUp: frame.followUp, steering: frame.steering },
 			};
+		case "bash":
+			return {
+				...state,
+				bash: { command: frame.command, output: frame.output, running: frame.running },
+			};
 		case "drift":
 			return { ...state, drift: frame.reason };
 		case "sessionMeta":

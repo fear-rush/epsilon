@@ -50,6 +50,12 @@ describe("frames", () => {
 				steering: ["stop and use the tests"],
 				followUp: ["then commit"],
 			},
+			{
+				t: "bash",
+				command: "rg --files",
+				output: "AGENTS.md\n",
+				running: true,
+			},
 			{ t: "busy", busy: true, compacting: true, retrying: true },
 			{ t: "editorText", sessionId: "s1", text: "the message a move undid", nonce: "n1" },
 			{
@@ -69,7 +75,7 @@ describe("frames", () => {
 		// The version covers exactly the tags the socket can carry: adding a frame without
 		// naming it here means a stale tab would meet a frame it cannot decode.
 		expect(new Set(samples.map((sample) => sample.t))).toEqual(new Set(frameTags));
-		expect(PROTOCOL_VERSION).toBe("6");
+		expect(PROTOCOL_VERSION).toBe("7");
 		for (const sample of samples) expect(() => decodeServerFrame(sample)).not.toThrow();
 	});
 });
@@ -84,6 +90,15 @@ describe("reduce", () => {
 		expect(state.tools[0]?.output).toContain("README.md");
 		expect(state.tools[0]?.durationMs).toBe(41);
 		expect(state.busy).toBe(false);
+	});
+
+	test("carries the shell command a chat is running and the output pi streamed", () => {
+		const state = replay([
+			{ t: "bash", command: "rg --files", output: "", running: true },
+			{ t: "bash", command: "rg --files", output: "AGENTS.md\n", running: true },
+			{ t: "bash", command: "", output: "", running: false },
+		]);
+		expect(state.bash).toEqual({ command: "", output: "", running: false });
 	});
 
 	test("carries the run controls pi holds: the queue, a retry and the meta flags", () => {

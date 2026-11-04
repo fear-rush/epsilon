@@ -148,6 +148,8 @@ export class EngineSession {
 	private mcpAttention = new Map<string, McpAttention>();
 	private streamId: string | undefined;
 	private driftReason: string | undefined;
+	/** The shell command in flight, so its chunks land in its own row and not the next. */
+	private bashRun: { readonly command: string; readonly id: string; output: string } | undefined;
 	private watcher: SessionWatcher | undefined;
 	private lock: SessionLock | undefined;
 	private unsubscribe: (() => void) | undefined;
@@ -445,7 +447,9 @@ export class EngineSession {
 			abort: () => this.abort(),
 			answerDialog: (answer) => this.dialogs.answer(answer),
 			drift: this.driftReason,
+			abortBash: () => this.abortBash(),
 			abortCompaction: () => this.abortCompaction(),
+			bash: (text, excludeFromContext) => this.bash(text, excludeFromContext),
 			cancelRetry: () => this.cancelRetry(),
 			clearQueue: () => this.clearQueue(),
 			compact: () => this.compact(),
@@ -573,6 +577,51 @@ export class EngineSession {
 			sessionId: this.runtime.session.sessionId,
 			text,
 			t: "editorText",
+		});
+	}
+
+	/**
+	 * A shell command, the way pi's `!cmd` runs one: its output streams to every tab, and
+	 * pi records the execution in the session once it ends. `!!` keeps it out of the context
+	 * the model reads next turn.
+	 */
+	private bash(text: string, excludeFromContext: boolean): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		const agent = this.runtime.session;
+		if (this.bashRun !== undefined) {
+			return Effect.fail(
+				new CommandRefused({ command: "bash", reason: "A shell command is already running." }),
+			);
+		}
+		const id = crypto.randomUUID();
+		this.bashRun = { command: text, id, output: "" };
+		this.sendBash();
+		return Effect.tryPromise({
+			try: () =>
+				agent.executeBash(text, (chunk) => self.bashChunk(id, chunk), { excludeFromContext, id }),
+			catch: (cause) => new CommandRefused({ command: "bash", reason: describe(cause) }),
+		}).pipe(
+			Effect.andThen(
+				Effect.sync(() => {
+					self.bashRun = undefined;
+					self.sendBash();
+				}),
+			),
+		);
+	}
+
+	private bashChunk(id: string, chunk: string): void {
+		const run = this.bashRun;
+		if (run === undefined || run.id !== id) return;
+		this.bashRun = { command: run.command, id, output: run.output + chunk };
+		this.sendBash();
+	}
+
+	private abortBash(): Effect.Effect<void, CommandRefused> {
+		const self = this;
+		return Effect.try({
+			try: () => self.runtime.session.abortBash(),
+			catch: (cause) => new CommandRefused({ command: "abortBash", reason: describe(cause) }),
 		});
 	}
 
@@ -874,8 +923,13 @@ export class EngineSession {
 		};
 		this.frames.to(tab === undefined ? "all" : { tab }, frame);
 		this.frames.to(tab === undefined ? "all" : { tab }, sessionMeta(agent));
-		if (tab === undefined) this.sendQueue();
-		else this.frames.to({ tab }, this.queueFrame());
+		if (tab === undefined) {
+			this.sendQueue();
+			this.sendBash();
+		} else {
+			this.frames.to({ tab }, this.queueFrame());
+			this.frames.to({ tab }, this.bashFrame());
+		}
 	}
 
 	/** Where a tab sends a prompt for the running turn, and what pi will send next. */
@@ -890,6 +944,18 @@ export class EngineSession {
 
 	private sendQueue(): void {
 		this.broadcast(this.queueFrame());
+	}
+
+	/** The running shell command, or the empty state every tab starts from. */
+	private bashFrame(): Extract<ServerFrame, { t: "bash" }> {
+		const run = this.bashRun;
+		return run === undefined
+			? { command: "", output: "", running: false, t: "bash" }
+			: { command: run.command, output: run.output, running: true, t: "bash" };
+	}
+
+	private sendBash(): void {
+		this.broadcast(this.bashFrame());
 	}
 
 	private broadcastAll(): void {

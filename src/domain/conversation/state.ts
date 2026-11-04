@@ -15,6 +15,13 @@ export type StreamingTurn = {
 };
 
 /** A tool call and what it has produced so far, keyed by pi's own tool call id. */
+/** The shell command a chat is running, with the output pi has streamed so far. */
+export type BashRun = {
+	readonly command: string;
+	readonly output: string;
+	readonly running: boolean;
+};
+
 /** What pi holds for the next turn: steering messages and follow-ups, in pi's order. */
 export type Queue = {
 	readonly steering: ReadonlyArray<string>;
@@ -55,6 +62,7 @@ export type ConversationState = {
 	readonly compacting: boolean;
 	readonly retrying: boolean;
 	readonly queue: Queue;
+	readonly bash: BashRun;
 	/** pi's automatic behaviours, which its own settings file owns. */
 	readonly autoCompaction: boolean;
 	readonly autoRetry: boolean;
@@ -84,6 +92,7 @@ export const emptyConversation: ConversationState = {
 	compacting: false,
 	retrying: false,
 	queue: { followUp: [], steering: [] },
+	bash: { command: "", output: "", running: false },
 	autoCompaction: false,
 	autoRetry: false,
 	hideThinking: false,

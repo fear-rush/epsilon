@@ -22,6 +22,7 @@ import { ChatBar } from "./chat-bar";
 import { Composer } from "./composer";
 import { ConversationDialogs } from "./dialogs";
 import { ProjectGate } from "./project-gate";
+import { RunStatus } from "./run-status";
 import { Transcript, matchingRowIds } from "./transcript";
 import type { Jump } from "./transcript";
 import { useConversation } from "./use-conversation";
@@ -101,6 +102,25 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 	useReportStatus("chat", chatReport(state), () => void conversation.reload());
 
 	const empty = state.entries.length === 0 && state.streaming.length === 0;
+	/** The rows above the composer change with a queue or a run state, never with a token. */
+	const runStatus = (
+		<RunStatus
+			working={state.busy}
+			workingMessage={undefined}
+			isCompacting={state.compacting}
+			isRetrying={state.retrying}
+			isBashRunning={state.bash.running}
+			bashCommand={state.bash.command === "" ? undefined : state.bash.command}
+			bashOutput={state.bash.output}
+			queue={state.queue}
+			drift={state.drift}
+			onReload={() => void conversation.reload()}
+			onAbortCompaction={() => void conversation.abortCompaction()}
+			onCancelRetry={() => void conversation.cancelRetry()}
+			onAbortBash={() => void conversation.abortBash()}
+			onClearQueue={() => void conversation.clearQueue()}
+		/>
+	);
 	const composer = (
 		<Composer
 			busy={state.busy}
@@ -210,7 +230,12 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 					<ConversationWelcome
 						composer={composer}
 						place={place === null ? "chat" : "project"}
-						status={<ChatNotices notices={state.notices} />}
+						status={
+							<>
+								{runStatus}
+								<ChatNotices notices={state.notices} />
+							</>
+						}
 					/>
 				) : (
 					<>
@@ -224,6 +249,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 							onToggleTool={conversation.toggleTool}
 						/>
 						<ChatNotices notices={state.notices} />
+						{runStatus}
 						<div className="animate-enter-rise">{composer}</div>
 					</>
 				)
@@ -245,17 +271,10 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 }
 
 /**
- * What the chat wants the status line to say: a file rewritten elsewhere first, because
- * the chat cannot continue; then the engine's own stop, in its own words.
+ * What the chat wants the status line to say: the engine's own stop, in its own words.
+ * A file rewritten elsewhere is the run status's row above the composer, as in main.
  */
 function chatReport(state: ConversationState) {
-	if (state.drift !== undefined) {
-		return {
-			action: "Reload",
-			text: "This chat's file changed outside Epsilon. Reload to continue.",
-			tone: "warning" as const,
-		};
-	}
 	const stopped = state.notices.findLast((notice) => notice.kind === "error");
 	if (stopped !== undefined) return { text: stopped.text, tone: "warning" as const };
 	return undefined;

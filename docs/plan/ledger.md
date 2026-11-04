@@ -39,7 +39,7 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 
 | Done | main                                                                          | For slice | Branch today                           |
 | ---- | ----------------------------------------------------------------------------- | --------- | -------------------------------------- |
-| [ ]  | chat `bash`, `abort_bash`                                                     | S2        | **missing**                            |
+| [x]  | chat `bash`, `abort_bash`                                                     | S2        | `feat(conversation): the run status`   |
 | [ ]  | chat `autocomplete`                                                           | S2        | **missing**                            |
 | [x]  | chat `cancel_retry`, `set_auto_retry`                                         | S2        | `feat(conversation): the run controls` |
 | [x]  | chat `set_auto_compaction`, `abort_compaction`                                | S2        | `feat(conversation): the run controls` |
@@ -107,7 +107,7 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | [ ]  | `features/conversation/fork-dialog.tsx`              | 129   | **missing**                           | `ForkSessionDialog`                                           |
 | [ ]  | `features/conversation/new-chat.tsx`                 | 156   | exists, changed (163 lines)           |                                                               |
 | [ ]  | `features/conversation/pending-draft.ts`             | 18    | **missing**                           | `clearPendingDraft`, `pendingDraftOf`, `setPendingDraft`      |
-| [ ]  | `features/conversation/run-status.tsx`               | 150   | **missing**                           | `RunStatus`                                                   |
+| [x]  | `features/conversation/run-status.tsx`               | 150   | `feat(conversation): the run status`  |                                                               |
 | [ ]  | `features/conversation/session-context-sentence.ts`  | 38    | **missing**                           | `contextSentence`                                             |
 | [ ]  | `features/conversation/session-controls.tsx`         | 163   | exists, changed (353 lines)           |                                                               |
 | [ ]  | `features/conversation/session-header.tsx`           | 194   | **missing**                           | `ComposerPlace`, `SessionHeader`                              |

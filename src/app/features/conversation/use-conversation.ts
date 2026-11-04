@@ -48,6 +48,12 @@ export type Conversation = {
 	/** Which tool cards are open, kept above the rows so unmounting one does not forget it. */
 	readonly toolOpen: ReadonlyMap<string, boolean>;
 	readonly toggleTool: (toolCallId: string) => void;
+	/** A shell command, as pi's `!cmd` runs one; `!!` keeps it out of the context. */
+	readonly bash: (text: string, excludeFromContext?: boolean) => Promise<void>;
+	readonly abortBash: () => Promise<void>;
+	readonly cancelRetry: () => Promise<void>;
+	readonly abortCompaction: () => Promise<void>;
+	readonly clearQueue: () => Promise<void>;
 };
 
 /** How long a message waits for the chat to open before it is refused. */
@@ -304,6 +310,24 @@ export function useConversation(input: {
 		async (): Promise<ToolsView> => Schema.decodeUnknownSync(ToolsView)(await ask("tools")),
 		[ask],
 	);
+	const bash = useCallback(
+		async (text: string, excludeFromContext = false): Promise<void> => {
+			await command({ excludeFromContext, t: "bash", text });
+		},
+		[command],
+	);
+	const abortBash = useCallback(async (): Promise<void> => {
+		await command({ t: "abortBash" });
+	}, [command]);
+	const cancelRetry = useCallback(async (): Promise<void> => {
+		await command({ t: "cancelRetry" });
+	}, [command]);
+	const abortCompaction = useCallback(async (): Promise<void> => {
+		await command({ t: "abortCompaction" });
+	}, [command]);
+	const clearQueue = useCallback(async (): Promise<void> => {
+		await command({ t: "clearQueue" });
+	}, [command]);
 	const toggleTool = useCallback((toolCallId: string) => {
 		setToolOpen((previous) => {
 			const next = new Map(previous);
@@ -314,7 +338,12 @@ export function useConversation(input: {
 
 	return {
 		abort,
+		abortBash,
+		abortCompaction,
 		answer,
+		bash,
+		cancelRetry,
+		clearQueue,
 		compact,
 		fork,
 		loadOlder,

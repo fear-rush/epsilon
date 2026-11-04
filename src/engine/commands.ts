@@ -49,6 +49,8 @@ export type CommandHost = {
 	readonly setAutoRetry: (enabled: boolean) => Effect.Effect<void, CommandRefused>;
 	/** Empty pi's queue and put its text back in the composer. */
 	readonly clearQueue: () => Effect.Effect<void, CommandRefused>;
+	readonly bash: (text: string, excludeFromContext: boolean) => Effect.Effect<void, CommandRefused>;
+	readonly abortBash: () => Effect.Effect<void, CommandRefused>;
 	readonly setHideThinking: (hidden: boolean) => Effect.Effect<void, CommandRefused>;
 	readonly setLabel: (label: string) => Effect.Effect<void, CommandRefused>;
 	readonly fork: (
@@ -120,6 +122,10 @@ export const dispatchCommand = (
 			return host.setAutoRetry(command.enabled);
 		case "clearQueue":
 			return host.clearQueue();
+		case "bash":
+			return host.bash(command.text, command.excludeFromContext ?? false);
+		case "abortBash":
+			return host.abortBash();
 		case "setHideThinking":
 			return host.setHideThinking(command.hidden);
 		case "setLabel": {

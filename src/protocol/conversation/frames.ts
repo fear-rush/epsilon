@@ -200,6 +200,14 @@ export const BusyFrame = Schema.Struct({
 	retrying: Schema.optional(Schema.Boolean),
 });
 
+/** The shell command this chat is running, and what it has written so far. */
+export const BashFrame = Schema.Struct({
+	t: Schema.Literals(["bash"]),
+	command: Schema.String,
+	output: Schema.String,
+	running: Schema.Boolean,
+});
+
 /** What pi holds for the next turn, in the order pi will send it. */
 export const QueueFrame = Schema.Struct({
 	t: Schema.Literals(["queue"]),
@@ -250,6 +258,7 @@ export const ServerFrame = Schema.Union([
 	DialogClosedFrame,
 	BusyFrame,
 	QueueFrame,
+	BashFrame,
 	DriftFrame,
 	SessionMetaFrame,
 	EditorTextFrame,

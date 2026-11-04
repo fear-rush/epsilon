@@ -140,6 +140,25 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 				const opening = [...(yield* engine.frames("tab2").pipe(Stream.take(4), Stream.runCollect))];
 				const meta = opening.find((frame) => frame.t === "sessionMeta");
 				const queue = opening.find((frame) => frame.t === "queue");
+				// A shell command runs outside a turn; its frames reach every open tab. The
+				// read stops at the frame that ends the run, after the frame that started it.
+				yield* engine.attachTab("tab3");
+				yield* control(engine, { t: "bash", text: "echo hello-bash" });
+				let seenRun = false;
+				const bashFrames: ReadonlyArray<ServerFrame> = [
+					...(yield* engine.frames("tab3").pipe(
+						Stream.takeUntil((frame) => {
+							if (frame.t !== "bash") return false;
+							if (frame.running) seenRun = true;
+							return seenRun && !frame.running;
+						}),
+						Stream.runCollect,
+					)),
+				];
+				let bash: Extract<ServerFrame, { t: "bash" }> | undefined;
+				for (const frame of bashFrames) {
+					if (frame.t === "bash" && frame.running) bash = frame;
+				}
 				yield* engine.stop(5_000);
 				return {
 					acceptedIn,
@@ -147,6 +166,7 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 					contextLive,
 					extensionSkills,
 					live,
+					bash,
 					meta,
 					queue,
 					snapshot: snapshot.value,
@@ -168,6 +188,9 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 		expect(result.meta.hideThinking).toBe(true);
 		if (result.queue === undefined) throw new Error("no queue frame");
 		expect(result.queue).toEqual({ followUp: [], steering: [], t: "queue" });
+		if (result.bash === undefined) throw new Error("no running bash frame");
+		expect(result.bash.command).toBe("echo hello-bash");
+		expect(result.bash.output).toBe("hello-bash\n");
 		const entry = result.append.value.entry;
 		expect(entry.role).toBe("assistant");
 		if (entry.role === "assistant") {

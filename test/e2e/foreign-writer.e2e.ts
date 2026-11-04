@@ -39,7 +39,8 @@ test("a foreign append makes the chat read-only until it is reloaded", async ({
 		})}\n`,
 	);
 
-	await expect(page.getByRole("status")).toContainText(/changed outside Epsilon/i);
+	// The run status above the composer owns this one, so its Reload is the only one.
+	await expect(page.getByText(/changed outside Epsilon/i)).toBeVisible();
 	await page.getByRole("button", { name: /reload/i }).click();
 	await expect(page.getByRole("textbox", { name: /message/i })).toBeEditable();
 });

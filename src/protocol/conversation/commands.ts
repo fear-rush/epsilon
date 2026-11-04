@@ -58,6 +58,14 @@ export const Command = Schema.Union([
 	Schema.Struct({ t: Schema.Literals(["abortCompaction"]) }),
 	/** Drop what pi holds for the next turn; pi hands the text back for the composer. */
 	Schema.Struct({ t: Schema.Literals(["clearQueue"]) }),
+	/** A shell command, the way pi's `!cmd` runs one; `!!` keeps it out of the context. */
+	Schema.Struct({
+		t: Schema.Literals(["bash"]),
+		text: Schema.String,
+		excludeFromContext: Schema.optional(Schema.Boolean),
+	}),
+	/** Stop the shell command this chat is running. */
+	Schema.Struct({ t: Schema.Literals(["abortBash"]) }),
 	/** pi's own hide-thinking setting, so a terminal sees what the dashboard chose. */
 	Schema.Struct({ t: Schema.Literals(["setHideThinking"]), hidden: Schema.Boolean }),
 	/** The chat's display name, which pi records in the session file. */
