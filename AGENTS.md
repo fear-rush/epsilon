@@ -5,35 +5,54 @@ page, holds one WebSocket and supervises one engine process per live chat. Epsil
 the agent home (config, credentials, extensions, packages, sessions), so the dashboard
 and a terminal using that home are one agent, and Settings configures it there.
 
-Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) first, [docs/pi-sdk.md](docs/pi-sdk.md)
-before touching anything pi, [docs/effect.md](docs/effect.md) before writing server,
-engine or runtime code, and [docs/DECISIONS.md](docs/DECISIONS.md) for why. Code wins
-over prose; fix a doc that disagrees in the same commit, and never copy code or file
-lists into a doc.
+## Start here
+
+**This branch is finishing a rebuild.** Before any work, read
+[docs/plan/README.md](docs/plan/README.md): the current phase, the next item, and how to
+work and report it. `main` (`48226bb`) is the specification of every feature, screen,
+word and animation; nothing of it is dropped without the owner's yes.
+
+Then read what your task needs ([docs/README.md](docs/README.md) has the full table):
+
+| You are about to                               | Read first                                                         |
+| ---------------------------------------------- | ------------------------------------------------------------------ |
+| touch anything pi                              | [docs/pi-sdk.md](docs/pi-sdk.md)                                   |
+| write server, engine or runtime code           | [docs/effect.md](docs/effect.md)                                   |
+| port a screen from `main`                      | [docs/plan/03-port.md](docs/plan/03-port.md)                       |
+| show an error, warning, empty or loading state | [docs/plan/02-feedback.md](docs/plan/02-feedback.md)               |
+| add or move a file                             | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#file-rules)            |
+| propose an option that sounds obvious          | [docs/DECISIONS.md](docs/DECISIONS.md) (it may have been rejected) |
+
+Code wins over prose: fix a doc that disagrees in the same commit. Never copy code or
+file lists into a doc. `.sandbox/` is scratch, not instructions; the plans in it are
+retired.
 
 ## Layout
 
 - `src/protocol/`: the wire. Effect Schema and types only.
 - `src/domain/`: rules both sides run, pure.
-- `src/backend/`: sockets, configuration, catalog, supervisor, the page.
+- `src/backend/`: sockets, configuration, the session index, the engine supervisor, the
+  page.
 - `src/engine/`: the child process that hosts pi for one chat.
 - `src/app/`: React, Vite, Tailwind, shadcn.
 - `test/`, `scripts/`, `tools/`.
 
 ## Commands (from the repository root)
 
-| Command                        | Result                                                     |
-| ------------------------------ | ---------------------------------------------------------- |
-| `bun run dev`                  | Vite and the server on a sandboxed agent home              |
-| `bun run dev:host`             | The same, against the real `~/.pi`                         |
-| `bun run sandbox:clean`        | Remove the dev sandbox                                     |
-| `bun run check`                | Format, lint, type-check, dead code, tests                 |
-| `bun run build` `/` `start`    | Build the app and the server bundles, run the built server |
-| `bun run test` / `test:tools`  | `bun test` / the lint plugin's own tests                   |
-| `bun run lint` / `lint:fix`    | Effect-patched Oxlint                                      |
-| `bun run dead-code` / `format` | Knip / Oxfmt                                               |
-| `bun run routes:generate`      | Regenerate the client route tree                           |
-| `bun run hooks:install`        | Install the commit hooks, once per clone                   |
+| Command                         | Result                                                     |
+| ------------------------------- | ---------------------------------------------------------- |
+| `bun run dev`                   | Vite and the server on a sandboxed agent home              |
+| `bun run dev:host`              | The same, against the real `~/.pi`                         |
+| `bun run sandbox:clean`         | Remove the dev sandbox                                     |
+| `bun run check`                 | Format, lint, type-check, dead code, tests                 |
+| `bun run build` / `start`       | Build the app and the server bundles, run the built server |
+| `bun run test` / `test:tools`   | `bun test` / the lint plugin's own tests                   |
+| `bun run test:e2e` / `bench`    | Playwright specs against a build / the performance budgets |
+| `bun run lint` / `lint:fix`     | Effect-patched Oxlint                                      |
+| `bun run dead-code` / `format`  | Knip / Oxfmt                                               |
+| `bun run routes:generate`       | Regenerate the client route tree                           |
+| `bun run parity <main> <port…>` | What a ported file lacks of `main`'s classes and copy      |
+| `bun run hooks:install`         | Install the commit hooks, once per clone                   |
 
 ## Invariants
 
@@ -49,14 +68,14 @@ lists into a doc.
    `auth.json` or `trust.json`. Other files: use an exported writer, else `JsonDocument`
    (merge, keep unknown keys, refuse what you cannot parse, pi's lock for
    `settings.json`). MCP sign-in stays in the terminal.
-6. The agent home is chosen once in `src/backend/main.ts` and passed to the catalog worker
-   and every engine explicitly (`PI_CODING_AGENT_DIR`, `HOME`), never inherited.
-   `bun run dev` uses `.sandbox/agent`; tests use a temp home from `test/setup.ts`.
+6. The agent home is chosen once in `src/backend/main.ts` and passed to every engine
+   explicitly (`PI_CODING_AGENT_DIR`, `HOME`), never inherited. `bun run dev` uses
+   `.sandbox/agent`; tests use a temp home from `test/setup.ts`.
 7. One schema language (Effect Schema), one error model (tagged errors), one styling
    system (Tailwind + shadcn, tokens, the `design-tokens` rule).
 8. No `throw`, `try`/`catch`, `new Promise`, `.then`/`.catch`, `setTimeout`,
    `setInterval`, `Date.now` or `process.env` in `src/backend/**` and `src/engine/**`
-   outside `platform/`, `engine/main.ts`, `server/main.ts` and the one line reader over
+   outside `platform/`, `engine/main.ts`, `backend/main.ts` and the one line reader over
    pi's file format, `catalog/ingest.ts`, where a line that is not JSON is skipped, not
    thrown. Wrap a Promise API once, in the service that owns it. Lint enforces it.
 9. Every resource (engine, process, watcher, socket, timer, fiber) belongs to a Scope.
@@ -70,7 +89,8 @@ lists into a doc.
 
 1. If both sides run a rule, put it in `src/domain/<name>/rules.ts`.
 2. The schema goes in `src/protocol/<name>.ts`; the server handler in
-   `src/backend/<name>/`; the UI in `src/app/features/<name>/`.
+   `src/backend/<name>/`; the UI in `src/app/features/<name>/`. Use the same `<name>` in
+   all three and in the route.
 3. Server code outside `platform/` reaches IO through a service: `Context.Service`, its
    `Layer` in the same file, `Effect.fn` on every operation
    ([docs/effect.md](docs/effect.md)).
@@ -82,6 +102,19 @@ There is no line limit; split files by meaning, as
 
 ## Working on this repository as an agent
 
+- **One item at a time.** Take the next unticked item of the current phase. Something
+  else you notice becomes a new unticked item in the right plan file, not part of this
+  commit.
+- **Done needs evidence.** A tick needs what the item's _Done when_ asks for. For UI that
+  includes `bun run parity` and screenshots of the running app read by you; type-check
+  and lint passing say nothing about pixels.
+- **Never drop, never improvise.** Removing or restyling something of `main`'s, or a
+  visible change beyond the feedback system, needs the owner's yes first.
+- **Same commit**: the code, its tests, the plan tick, and the ARCHITECTURE or DECISIONS
+  change it causes. Messages are `type(scope): what changed`.
+- **Report**: what changed, the commands run and their results, the test duration,
+  screenshot paths, and what you could not do. Say plainly when something failed or was
+  skipped.
 - Run tests through `bun run test` or a bounded command; report the duration. The suite
   budget is 10 s.
 - Never wait with a sleep. Wait on an event, or on `until(...)` with a deadline. If a run
@@ -89,10 +122,10 @@ There is no line limit; split files by meaning, as
   raise the timeout.
 - A check that starts a server or an engine sets `EPSILON_AGENT_HOME` to a scratch
   directory. The test preload does this for tests; do it yourself for a manual run.
-- Time in code comes from `Clock`; in tests from `TestClock`.
 
 ## Ask before acting when
 
+- Something of `main`'s seems wrong, unused or not worth porting.
 - The request needs a capability [pi-sdk.md](docs/pi-sdk.md) does not list.
 - The engine would stop being an SDK call inside a process Epsilon supervises.
 - A check fails for a reason you do not understand.

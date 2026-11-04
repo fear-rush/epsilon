@@ -2,8 +2,7 @@
 
 The choices that hold today, with the reason and the option that was rejected, so a
 rejected option is not proposed again. Code and commits cite a decision by its heading.
-pi facts live in [pi-sdk.md](pi-sdk.md); the verification behind them in
-[`13-verified`](/.sandbox/refactor/13-verified.md).
+pi facts live in [pi-sdk.md](pi-sdk.md), each with the pi file it was read from.
 
 ## Web interface for pi, keeping pi's concepts
 
@@ -54,7 +53,7 @@ version-skew handling and orphan adoption.
 
 ## The session index is derived
 
-A SQLite index in `<home>/.epsilon/session-index.sqlite` is written by one worker and
+A SQLite index in `<home>/.epsilon/session-index.sqlite`, with one write connection,
 rebuilt on any doubt. Listing is a stat, opening a chat is a byte-offset read, and the
 transcript arrives as a window plus history pages.
 
@@ -72,6 +71,10 @@ cannot disagree with what pi sees.
 
 Not: caching `SessionManager.listAll` in memory (same parse, plus staleness). Writing a
 new session format. Keeping the index only in memory.
+
+Open: the design put the writes in a Worker; it was not built, and the sync runs in the
+server process, so a cold build stalls the socket. Whether to build the Worker is an item
+in [plan/04-safety.md](plan/04-safety.md).
 
 ## An engine cap
 
@@ -219,14 +222,51 @@ The old `client/`, `server/` and `shared/` were deleted at the start and kept on
 `main`'s history. No adapters, shims, dual schema languages, old wire
 frames or index-key fallbacks.
 
-Why: compatibility code is permanent and hides the design it was meant to protect. The
-plan, not the old tree, is the reference.
-
-Cost accepted: the app does not run until the steps that rebuild it are done; tests,
-benchmarks and e2e specs prove progress in between.
+Why: compatibility code is permanent and hides the design it was meant to protect.
 
 Kept compatible on purpose, because they are not Epsilon's legacy: pi's files, and
 `<home>/pinned-sessions.json` (same path and shape).
+
+Amended 2026-11-04: "no transition code" covers code, never features. The first version
+said the plan, not the old tree, was the reference, and let the app stay broken until
+the end. The plan listed architecture but no features, nobody could open the app to
+notice, and much of the UI was lost (the MCP settings kept 4% of their code). See
+"`main` is the feature specification".
+
+## `main` is the feature specification
+
+Every feature, screen, word, animation and test of `main` at `48226bb` is ported 1:1.
+What may differ is a closed list in [plan/03-port.md](plan/03-port.md): the data source,
+the schema language, file boundaries, render performance and the feedback system.
+Dropping or changing anything else needs the owner's dated yes in the ledger. The app
+runs after every commit.
+
+Why: the rebuild is a better foundation for the same product, not a new product. A
+rewrite from a description loses whatever the description left out.
+
+Not: rebuilding screens from the plan's prose; "the app runs at the end".
+
+## One name per concept across the roots
+
+A concept has one name in `src/protocol/`, `src/backend/`, `src/app/features/` and the
+URL: `settings/mcp` everywhere, not `config` on the server and `settings` on the page.
+
+Why: two names for one thing (`config`/`settings`, `engine`/`engines`,
+`catalog`/`sessions`) sent agents to the wrong folder. The moves are in
+[plan/01-structure.md](plan/01-structure.md).
+
+## Feedback has one surface per scope
+
+An app-wide problem goes to the status line, a crashed route to a route error inside the
+shell, a pane's state to `StatusView`, a section's message to `Notice`, a control's
+result to `InlineStatus`, a field's to `FieldError`, a turn's to the transcript. One tone
+vocabulary, one error translator (`errorView`), no toasts. The rules are in
+[plan/02-feedback.md](plan/02-feedback.md) until they land in ARCHITECTURE.md.
+
+Why: `main` had three tone vocabularies, raw alerts, full-page route errors and ad hoc
+red text, so the same failure looked different on each page.
+
+Not: toasts. A message that disappears is a failure nobody saw.
 
 ## One package, no workspaces
 
@@ -268,30 +308,10 @@ tuning before there is code to judge.
 
 pi is pinned exactly. An upgrade is one commit that reads pi's changelog, runs the
 catalog conformance test, re-checks the facts in [pi-sdk.md](pi-sdk.md) that code relies
-on, and passes `check`, e2e and benchmarks. An upgrade that fails for a reason not
+on ([the procedure](pi-sdk.md#upgrading-pi)), and passes `check`, e2e and benchmarks. An upgrade that fails for a reason not
 understood is refused.
 
 Why: the index reads pi's fields directly and the engine depends on pi's runtime shape.
 A silent behaviour change there breaks chats in ways tests would otherwise miss.
 
 Not: a version range, or upgrading to pick up a feature mid-step.
-
-## Rollback is the previous commit
-
-`main` holds the last old commit; the rebuild is one branch with one commit per step. A
-step that fails its exit checks twice is reset to the previous step's commit and
-re-planned, not patched forward. There are no tags; the branch history is the record.
-
-Why: rebuilding on a broken foundation is how plans quietly become patches.
-
-Not: reverting individual commits out of a step.
-
-## One implementer
-
-This agent builds every step. Its review is rereading the step against the invariants
-and [effect.md](effect.md) before starting the next one.
-
-Why: there is no second author to split the risky work with.
-
-Cost accepted: the review is weaker than a second pair of eyes. A step whose exit check
-fails for a reason not understood stops and reports instead of re-planning alone.

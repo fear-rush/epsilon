@@ -9,16 +9,16 @@ exposes: [pi-sdk.md](pi-sdk.md). How server code is written: [effect.md](effect.
 ```
 Browser tab ──one WebSocket (Effect RPC)──▶ epsilon   (Bun, one port, one process)
                                              ├─ serves dist/app
-                                             ├─ catalog worker ── <home>/.epsilon/session-index.sqlite
+                                             ├─ catalog (in process) ── <home>/.epsilon/session-index.sqlite
                                              └─ supervisor ──Bun IPC──▶ engine, one per live chat
                                                                          (pi's AgentSessionRuntime + extensions)
 ```
 
-| Process        | Owns                                                                 | Never does                              |
-| -------------- | -------------------------------------------------------------------- | --------------------------------------- |
-| `epsilon`      | Socket, configuration, catalog reads, supervisor, the page           | Import pi's runtime; run extension code |
-| Catalog worker | The only write connection to the index, the fs watch, the stat sweep | Write session files                     |
-| Engine         | One `AgentSessionRuntime`, its extensions, dialogs, frames           | Talk to the browser; outlive `epsilon`  |
+| Process   | Owns                                                                                  | Never does                              |
+| --------- | ------------------------------------------------------------------------------------- | --------------------------------------- |
+| `epsilon` | Socket, configuration, catalog reads, supervisor, the page                            | Import pi's runtime; run extension code |
+| Catalog   | Runs inside `epsilon`: the index's one write connection, the fs watch, the stat sweep | Write session files                     |
+| Engine    | One `AgentSessionRuntime`, its extensions, dialogs, frames                            | Talk to the browser; outlive `epsilon`  |
 
 One crash, freeze or leak costs one chat. The chat restarts from its JSONL, which stays
 the truth. The index is derived: delete it and nothing is lost.
@@ -32,24 +32,31 @@ server's own port redirects to Vite, so it is never mistaken for the page. In pr
 - `src/protocol/`: the one contract. Effect Schema for every wire shape, the RPC group,
   an explicit `PROTOCOL_VERSION` checked against the frame list, errors both sides see.
   Types only from pi.
-- `src/domain/`: pure rules both sides run (the conversation reducer and selectors,
-  permission rules, path rules, formatting). No I/O, no services, no React.
+- `src/domain/`: pure rules both sides run: the conversation reducer, its state and
+  selectors, and the MCP, provider and skill rules. No I/O, no services, no React.
 - `src/backend/`: sockets, the catalog, configuration features, the supervisor, and
   `platform/` where the only pi, filesystem, process and clock boundaries live.
 - `src/engine/`: the child process. It embeds pi, bridges extension UI, and speaks one
   tagged message set over Bun IPC.
-- `src/app/`: React, Vite, Tailwind, shadcn. Features mirror the server's names.
+- `src/app/`: React, Vite, Tailwind, shadcn. Features are meant to mirror the server's
+  names; today the server says `config` where the page says `settings`
+  ([plan/01-structure.md](plan/01-structure.md) renames it).
 
 Boundaries are enforced twice: tsconfig project references for what may type-check
 together, and `no-restricted-imports` per root. A feature reaches another feature only
-through its service or index (`epsilon/no-feature-internals`).
+through its service or index (`epsilon/no-feature-internals`). On the page that rule is
+live; on the server it points at `src/backend/features`, which does not exist, so it
+checks nothing until [plan/01-structure.md](plan/01-structure.md) fixes it.
 
 ## Inside a server feature
 
-`contract.ts` (Effect Schema), `store.ts` (files and pi's exporters), `service.ts`
-(`Effect.fn` operations, typed errors), `routes.ts` (RPC handlers), and `domain.ts` when
-the feature has pure logic worth testing alone. IO goes through `platform/`; a handler
-only composes a service.
+The schema is not here: it is `src/protocol/<name>.ts`, shared with the page. The
+feature folder holds `service.ts` (`Effect.fn` operations, typed errors), `handlers.ts`
+(the RPC handlers, which only compose the service), `store.ts` when it reads or writes
+files through pi's exporters or `JsonDocument`, and its tests. Pure logic worth testing
+alone is `rules.ts` in `projects/` but `domain.ts` in `mcp-registry/` and
+`skill-import/`; [plan/01-structure.md](plan/01-structure.md) settles it as `rules.ts`.
+IO goes through `platform/`.
 
 The shape is the same for every configuration feature, so a reader learns one and knows
 the rest. The client mirrors it: `features/<name>/` with a query hook, a form and a
@@ -62,10 +69,12 @@ view, built from the shared patterns.
    socket.
 3. The server handler decodes it again (the wire is not trusted), runs the service, and
    returns the schema'd value or one of the declared tagged errors.
-4. The client renders the value, or maps the error to a notice through one exhaustive
-   `errorView`.
-5. A write invalidates through a pushed stream (`config.changes`, `providers.loginProgress`,
-   `catalog.changes`), never a timer. React Query is the cache, not the source of truth.
+4. The client renders the value, or maps the error to a view through `errorView`. It
+   names the connection's own failures and shows any other error's message; making it
+   exhaustive over the protocol's errors is [plan/02-feedback.md](plan/02-feedback.md).
+5. A write invalidates through a pushed stream (`config.changes`, `sessions.changes`),
+   never a timer; a provider sign-in streams its progress on `config.providers.login`.
+   React Query is the cache, not the source of truth.
 
 ## Live chat flow
 
@@ -120,6 +129,12 @@ cannot represent is a visible notice, never silence.
 - Colour carries state only (running, needs input, error, selected). Surfaces rest white;
   a muted fill is a state.
 - Destructive actions use `variant="destructive"` and confirm in an `AlertDialog`.
+- Registry classes beat base-layer CSS: shadcn's `cursor-default` is a utility and wins
+  over any base rule, so it is removed from the component files. When a registry class
+  string is rewritten, diff it against `shadcn view` instead of retyping it (a dropped
+  `[&>svg]:size-3.5` once blew the checkbox tick up to 24px).
+- A Base UI dialog mounted already open has no motion. Mount closed and open on the next
+  animation frame; close, wait for the transition, then unmount.
 - Registry defaults are source; a local change in `components/ui` is explained where it
   is made.
 

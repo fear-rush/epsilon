@@ -23,6 +23,7 @@
 		"hooks:run": "prek run --all-files",
 		"lint": "effect-tsgo oxlint --type-aware --report-unused-disable-directives --deny-warnings",
 		"lint:fix": "effect-tsgo oxlint --type-aware --fix",
+		"parity": "bun run scripts/parity.ts",
 		"postinstall": "bun run routes:generate",
 		"routes:generate": "tsr generate",
 		"sandbox:clean": "bun run scripts/sandbox.ts clean",

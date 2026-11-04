@@ -2,9 +2,14 @@
 
 Reference for what pi exposes to an embedding host and what it does not. Everything
 here was read from pi's shipped types and code, not from documentation prose.
-Epsilon embeds pi's engine through this SDK ([DECISIONS.md](DECISIONS.md), Embedded engine)
-and configures it through the same exports plus pi's documented files
-([DECISIONS.md](DECISIONS.md), Configure in the dashboard).
+Epsilon embeds pi's engine through this SDK ([DECISIONS.md](DECISIONS.md), "One engine
+process per live chat") and configures it through the same exports plus pi's documented
+files ([DECISIONS.md](DECISIONS.md), "Web interface for pi, keeping pi's concepts").
+
+This file describes pi. Where Epsilon applies a fact, it says what Epsilon does, never
+which file does it: file paths go stale when code moves, and the code's own comments
+carry them. How to re-verify all of it on a pi upgrade is the last section,
+[Upgrading pi](#upgrading-pi).
 
 **Re-verify after every pi upgrade.** The sources of truth. Paths are relative to the
 pinned package, `node_modules/@earendil-works/pi-coding-agent`, which is the
@@ -144,7 +149,7 @@ Other facts worth having before embedding:
     and composer groups, the autocomplete chain and `theme`. It refuses 7 with one notice
     each (`custom`, `onTerminalInput`, `setFooter`, `setHeader`, `setEditorComponent`,
     `getEditorComponent`, `setWorkingIndicator`) and answers the theme trio with an empty
-    or failing result by design ([DECISIONS.md](DECISIONS.md), UI contract).
+    or failing result by design.
 - `mode` and `hasUI` answer different questions, and only one of them matters to an
   extension. `ExtensionMode` is `"tui" | "rpc" | "json" | "print"`: a presentation, not
   a transport, and its doc comment says to use `"tui"` as the guard for terminal-only UI.
@@ -240,8 +245,7 @@ Other facts worth having before embedding:
   does **not** dispatch pi's built-in slash commands: `/compact`, `/model` and the rest
   of `dist/core/slash-commands.js` are answered by the TUI's submit handler, so a host
   that forwards the raw text sends `/compact` to the model. Epsilon carries the name
-  list as a table both sides read and answers each row itself
-  ([DECISIONS.md](DECISIONS.md), Built-in commands).
+  list as a table both sides read and answers each row itself.
 
 ## Events
 
@@ -356,9 +360,9 @@ Because the flow asks and reports through callbacks, a host without a terminal s
 it with a record per provider: what pi reported, the question it waits on, and an
 abort signal, polled by the page. pi also narrates the loopback callback server it
 opens, which names a port the operator cannot act on, so those lines are dropped and
-the rest of what it reports is shown. Epsilon keeps that record in
-`src/backend/features/providers/login.ts` and writes no `auth.json` of its own; pi
-exports neither the store nor its cross-process lock.
+the rest of what it reports is shown. Epsilon keeps that record in its providers login
+service and writes no `auth.json` of its own; pi exports neither the store nor its
+cross-process lock.
 
 `models.json` is parsed with `ModelConfig.load()`, which is read-only. Its provider
 fields are documented in pi's `docs/models-configuration.md`: `name`, `baseUrl`,
@@ -488,7 +492,7 @@ The base URL is not interchangeable between families:
 - pi sets Google's `apiVersion` to empty when a `baseUrl` is present, so the base
   must include the version path (`https://generativelanguage.googleapis.com/v1beta`).
 
-`src/domain/providers/endpoints.ts` mirrors this table. The provider form's API
+Epsilon's provider rules mirror this table. The provider form's API
 picker labels each family with the path it appends, the base URL field names the
 request URL that results, and the model-list fetch reads `modelsPath` from the same
 list. A list that carries `supported_endpoints` (commandcode does) is read as a
@@ -527,9 +531,9 @@ characters the provider returned.
 
 ## Session files the index reads
 
-The catalog reads pi's v3 JSONL directly, so these are the fields it depends on. The
-conformance test (`src/backend/catalog/catalog.test.ts`) pins each one to
-`SessionManager.listAll`; a pi upgrade that changes one fails there first.
+The session index reads pi's v3 JSONL directly, so these are the fields it depends on.
+The index's conformance test pins each one to `SessionManager.listAll`; a pi upgrade that
+changes one fails there first.
 
 - The first line is `{ type: "session", version: 3, id, timestamp, cwd, parentSession? }`.
   A file whose first entry is not a session header is not listed.
@@ -693,8 +697,8 @@ Run /mcp to fix.
 A server appears only while it is `needs-auth` or `failed`; a `config:` line reports
 a `mcp.json` pi could not read, not a server. The list is complete for the moment it
 is sent, so the host replaces what it kept rather than merging into it, and `reload()`
-clears it before pi speaks again. The engine parses those lines in
-`src/domain/mcp/attention.ts` and reports them with the live tools, so the panel can
+clears it before pi speaks again. The engine parses those lines (Epsilon's MCP
+attention rules) and reports them with the live tools, so the panel can
 show `needs-sign-in` and `failed` per server; `disabled`, connected with its tool count
 and no-tool-yet come from the file and the tool inventory instead. `connected` is never
 claimed from the notice: a tool registered for the server is the proof, which is why a
@@ -704,8 +708,8 @@ The two files a connection leaves behind are readable without a token. A line of
 `mcp.log` is `<ISO time> [<server>] <level>: <text>`, and pi rotates it to `mcp.log.1`
 at 5 MB. `mcp-auth.json` keys a credential by `<namespace>|<url>`, or by the URL alone
 in older versions, so a detail pane can find one server's log tail and tell whether a
-sign-in is stored without ever reading the token. Epsilon reads those names in
-`src/backend/config/mcp/store.ts`.
+sign-in is stored without ever reading the token. Epsilon's MCP store reads those
+names.
 
 A settings write reaches the live engines through `session.reload()`, which emits
 `session_shutdown` (reason `reload`). The MCP extension closes every connection
@@ -740,11 +744,11 @@ private.
 `SettingsManager.create(cwd, agentDir)` starts at `projectTrusted = true`
 (`dist/core/settings-manager.js`), and nothing in `createAgentSession()` changes it.
 A host that builds an engine in a folder therefore loads that folder's `.pi` whatever
-`trust.json` says, unless it decides first. Epsilon's engine does: for a gated folder
-`src/engine/runtime.ts` creates the manager with `projectTrusted: false` and passes
-pi's bootstrap `extensionsResult` through `ResourceLoaderReloadOptions.resolveProjectTrust`,
-so a `project_trust` handler decides before the folder's own extensions, skills and
-`SYSTEM.md` load. `src/engine/trust.ts` is that chain.
+`trust.json` says, unless it decides first. Epsilon's engine does: for a gated folder it
+creates the manager with `projectTrusted: false` and passes pi's bootstrap
+`extensionsResult` through `ResourceLoaderReloadOptions.resolveProjectTrust`, so a
+`project_trust` handler decides before the folder's own extensions, skills and
+`SYSTEM.md` load.
 
 What the SDK exports for that decision:
 
@@ -765,10 +769,9 @@ What the SDK exports for that decision:
   the untrusted extension set first, calls back with the result, sets the decision
   and reloads the resources for it.
 
-Epsilon runs the same chain in `src/backend/config/projects/trust.ts` with no
-extension set, for the project page and the engine registry: their answer comes from
-the store and the default. `src/engine/trust.ts` adds the extension handlers, so the
-two agree unless a handler decided. The store is pi's, so the page, an engine and a
+Epsilon's server runs the same chain with no extension set, for the project page and
+the engine registry: their answer comes from the store and the default. The engine's
+chain adds the extension handlers, so the two agree unless a handler decided. The store is pi's, so the page, an engine and a
 terminal pi share one `trust.json`.
 
 A gated project's engine starts untrusted and passes pi's bootstrap
@@ -777,7 +780,7 @@ A gated project's engine starts untrusted and passes pi's bootstrap
 `SYSTEM.md` load. Handlers see `hasUI: false`: there is no synchronous dialog, and
 `"ask"` is answered by the page's Trust gate, which shows because the answer is
 false. A handler that throws is reported in the chat as pi's extension error, and the
-rest of the chain still decides ([DECISIONS.md](DECISIONS.md), Chats and projects).
+rest of the chain still decides.
 
 ## The CLI, for what an embedding host does not do
 
@@ -797,12 +800,12 @@ the TUI (`/login`, `/logout`) it drives as SDK calls, as the Writers section say
 
 The dashboard writes the same files these commands write, but it does not call them:
 a server that spawns the CLI would duplicate argument parsing and lose structured
-errors ([DECISIONS.md](DECISIONS.md), Configure in the dashboard).
+errors.
 
 ## Traps
 
-Behaviour that cost time and that no type or test shows. Each is a fact about pi,
-Turborepo or the runtime.
+Behaviour that cost time and that no type or test shows. Each is a fact about pi or
+the runtime.
 
 - **A session file is read once.** An engine loads its transcript at creation and does
   not re-read the file. Another process writing it is invisible until the engine is
@@ -825,12 +828,12 @@ Turborepo or the runtime.
   operations object is passed back in as the command's runner.
 - **`toJsonEvent` is not exported.** `package.json` exports only `.` and
   `./rpc-entry`; `dist/modes/json-event.js` is private. Epsilon does not consume pi's
-  JSON event shape: `src/engine/translate.ts` maps events and session entries onto the
-  wire frames directly.
+  JSON event shape: the engine maps events and session entries onto the wire frames
+  directly.
 - **A `message_end` listener runs before the entry is persisted.** The listener is
   called, then `SessionManager.appendMessage` writes it; a listener that reads the leaf
   sees the previous message. Look the entry up after the event (or by the message
-  object) in `src/engine/translate.ts`.
+  object).
 - **pi exposes no MCP connection state.** A connected server's tools appear in
   `session.getAllTools()` with `namespace.name === "mcp__<server>"` and, when the
   server sent hints, `annotations` (`readOnlyHint`, `destructiveHint`,
@@ -954,49 +957,69 @@ Turborepo or the runtime.
 - **Installed packages are bound to one platform.** Native optional dependencies are
   resolved at install time. Install on the machine that runs them; config
   files are portable, dependency trees are not.
-- **Turborepo strict env mode drops undeclared variables.** A variable a task needs
-  (`EPSILON_AGENT_HOME`) must be named in `turbo.json`, or `bun run dev` runs
-  without it while the shell looks correct.
-- **`turbo dev` runs tasks in their workspace directory.** `process.cwd()` is
-  `server/`, which pi would take as the project. No pi call may default its `cwd`;
-  every one is given a chat's or a project's folder.
-- **A partial commit can fail on a stale build.** `dist` is gitignored and survives
-  the pre-commit stash, so a type-check can read a `shared/dist` from another
-  commit. Run `bun run build --force` before committing partially staged work.
-- **`z.custom<T>()` with no checker accepts anything.** A schema that wraps a pi
-  type validates nothing inside it; check the fields the page reads.
-- **Registry classes beat base-layer CSS.** shadcn's `cursor-default` is a utility
-  and wins over any base rule, so it is removed from the component files. When a
-  registry class string is rewritten, diff it against `shadcn view` instead of
-  retyping it (a dropped `[&>svg]:size-3.5` blew the checkbox tick up to 24px).
-- **A Base UI dialog mounted already open has no motion.** Mount closed and open on
-  the next animation frame; close, wait for the transition, then unmount.
-
+- **A pi call that defaults its `cwd` uses the process's.** `process.cwd()` of the server
+  or an engine is never a chat's folder, and pi would take it as the project and load
+  its `.pi`. No pi call may default its `cwd`; every one is given a chat's or a
+  project's folder.
+- **`prompt()` waits for every `agent_settled` handler.** While pi emits
+  `agent_settled` (`_isEmittingAgentSettled`), `prompt()` queues itself on
+  `_deferredSettledActions` and returns; it reaches preflight only after every handler
+  finishes (`core/agent-session.js:128-130,684-700,1629-1635`; custom messages too, at
+  `:1866`). A handler that awaits a network call holds the next prompt for as long as it
+  runs, so a host acknowledges a command instead of awaiting it and gives a run a
+  deadline.
 - **pi does not redirect stdout, so stdout is not a protocol channel.**
   `takeOverStdout()` — which sends `process.stdout.write` to stderr — is called only by
   `modes/rpc/rpc-mode.js` and the CLI's `main.js`. The SDK path an engine uses does not
   call it, so pi, its extensions and codemode may write to stdout at any moment. An
-  engine's protocol rides Bun IPC; logs go over IPC or stderr (`13-verified` item 23).
+  engine's protocol rides Bun IPC; logs go over IPC or stderr.
 - **`settings.json` is locked, with specific options.** `FileSettingsStorage.withLock`
   takes `lockfile.lockSync(path, { realpath: false })`, retries 10 times with a 20 ms
   synchronous spin, and only locks when the file exists or a write is produced
   (`core/settings-manager.js:126-180`). A host taking the same lock must pass the same
-  path and options; use the async `lockfile.lock` so the spin never blocks the server
-  (`13-verified` item 2).
+  path and options; use the async `lockfile.lock` so the spin never blocks the server.
 - **A session file is not locked by pi.** `proper-lockfile` is used by the trust,
   settings, auth, package-CLI and MCP-OAuth stores only; `session-manager.js` has no
-  lock. Two processes appending to one session is possible and undetected by pi
-  (`13-verified` item 15).
+  lock. Two processes appending to one session is possible and undetected by pi.
 - **A bash tool update is the whole accumulated output, not a delta.**
   `tool_execution_update` carries `output.snapshot(...)`, tail-truncated to 2,000 lines
   or 50 KB and throttled to one update per 100 ms (`core/tools/bash.js:180-195`,
-  `renderers/bash.js:15`). A host that wants deltas computes them itself
-  (`13-verified` item 4).
+  `renderers/bash.js:15`). A host that wants deltas computes them itself.
 - **A session line is `{ type, id, parentId, timestamp, message }` in that order.**
   `appendMessage` builds the literal and `_persist` writes one `JSON.stringify` line
   (`core/session-manager.js:812,827`). A reader that peeks at a line prefix may rely on
-  it; the conformance test guards it (`13-verified` item 3).
+  it; the conformance test guards it.
 - **`mcp.json` and `mcp-auth.json` take no directory argument.**
   `extensions/mcp/index.js:1202` and `oauth.js:88` resolve `getAgentDir()` themselves, so
   the only way to point them at another home is `PI_CODING_AGENT_DIR` in the process
-  environment. Every other reader accepts an explicit directory (`13-verified` item 16).
+  environment. Every other reader accepts an explicit directory.
+
+## Upgrading pi
+
+pi is pinned exactly (`@earendil-works/pi-coding-agent`), because Epsilon reads its session
+files directly and embeds its runtime. An upgrade is one commit, never a version range.
+
+### Procedure
+
+1. **Read pi's changelog** between the pinned version and the new one. List anything
+   touching sessions, extensions, settings, MCP, auth, the SDK surface or the RPC mode.
+2. **Run the session index's conformance test** (the test named "agrees with
+   SessionManager.listAll, field by field"). It builds the index from fixtures and
+   compares every field with `SessionManager.listAll`, which is the oracle. A mismatch
+   means pi changed a rule the index copies.
+3. **Confirm the index rebuild.** `meta` carries `schema_version`, `pi_version` and
+   `format_version`; a version change drops and rebuilds the tables. Start Epsilon on a
+   copy of a real home and check the list appears.
+4. **Re-verify the facts Epsilon relies on**, each in [Traps](#traps) with the pi file
+   and line it was read from: the `agent_settled` prompt deferral, the `settings.json`
+   lock options, the `appendMessage` key order, the bash update snapshot bound, that pi
+   locks no session file, which readers resolve `getAgentDir()` themselves, and that
+   the SDK path leaves stdout unguarded. Grep the pinned package, not the docs.
+5. **Update this file** in the same commit. A trap that moved is a trap a future reader
+   will trust.
+6. **Run the engine test** (`test/engine.test.ts`). It starts a real engine on a scratch
+   home with the stub model and a fake extension, so a moved `message_end` or
+   `bindExtensions` contract fails before a chat does.
+7. **Run everything:** `bun run check`, `bun run test:e2e`, `bun run bench`.
+8. **Refuse the upgrade** if the conformance test or an e2e flow fails for a reason you
+   do not understand. Staying pinned is a supported state; a silently lossy index is not.

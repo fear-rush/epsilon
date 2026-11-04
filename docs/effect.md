@@ -2,7 +2,10 @@
 
 How Epsilon writes Effect code. The decisions behind it are in
 [DECISIONS.md](DECISIONS.md); the API names here were checked against the pinned
-`effect` 4.1.x ([`13-verified`](/.sandbox/refactor/13-verified.md) records the checks).
+`effect` 4.1.x. On an Effect upgrade, re-check the names this file pins: the
+`RpcSerialization` presets, `RpcServer.layerProtocolWebsocket`, the `RcMap` options, the
+`PlatformError` reason tags, `Schema.StructWithRest`, `Schema.toStandardSchemaV1` and the
+timeout operators.
 
 ## Services
 
@@ -20,7 +23,9 @@ export const CatalogLive = Layer.effect(
 );
 ```
 
-- Name the layer `<Service>Live`; tests provide a `<Service>Test` layer from `test/`.
+- Name the layer `<Service>Live`. Tests run the `Live` layers against the temp home from
+  `test/setup.ts`, and swap a service with `Layer.succeed(Service, value)` only where a
+  test needs a fixed answer.
 - A feature may import another feature's service, never its internals
   (`epsilon/no-feature-internals`).
 - Services own their dependency: `platform/files.ts` wraps `node:fs`, `pi.ts` wraps
@@ -52,8 +57,10 @@ export const CatalogLive = Layer.effect(
   notice.
 - Bugs are defects: `Effect.die` or `Effect.orDie`. They are logged with a span and
   shown as one generic notice.
-- A wire error is declared in `src/protocol/` and handled exhaustively by the client
-  with `Match.tagsExhaustive`, so adding one breaks the client build until it is shown.
+- A wire error is declared in `src/protocol/` and handled exhaustively by the client's
+  `errorView`, so adding one breaks the client build until it is shown. Not yet true:
+  `errorView` still has a generic fallback; [plan/02-feedback.md](plan/02-feedback.md)
+  makes it exhaustive.
 
 ## Time
 
