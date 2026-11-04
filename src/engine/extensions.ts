@@ -9,6 +9,8 @@ import type {
 	RegisteredMcpServer,
 } from "@earendil-works/pi-coding-agent";
 
+import { discussExtension } from "./discuss.ts";
+
 /**
  * The CLI's built-in extensions, registered the way the CLI registers them
  * (`dist/extensions/index.js`): `builtin` makes each a toggleable resource, and
@@ -16,7 +18,8 @@ import type {
  *
  * The SDK does not load these on its own, so an engine without them is quieter than
  * `pi` in a terminal: no codemode, no deferred `tool_search`, and no MCP servers at all.
- * Epsilon's own defaults (permission, discuss) land with the features that need them.
+ * Epsilon's own `discuss` tool is registered here too, so a chat can ask a question the
+ * page answers; the permission guard lands with the feature that needs it.
  */
 
 /** Where an MCP registration report goes: the runtime that owns this session. */
@@ -55,5 +58,6 @@ export const builtinExtensions = (report: McpReportSink): InlineExtension[] => [
 	{ name: "codemode", factory: createCodemodeExtension(), replaceable: true, builtin: true },
 	{ name: "tool-search", factory: createToolSearchExtension(), replaceable: true, builtin: true },
 	{ name: "mcp", factory: createMcpExtension(), replaceable: true, builtin: true },
+	{ name: "discuss", factory: discussExtension, replaceable: true, builtin: true },
 	mcpObserverExtension(report),
 ];

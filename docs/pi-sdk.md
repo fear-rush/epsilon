@@ -53,6 +53,22 @@ Register those three the way the CLI does, as
 `{ name, factory, replaceable: true, builtin: true }` in `dist/extensions/index.js`.
 That list is not exported; a host that wants CLI parity builds the same entries.
 
+An extension can add a tool of its own with `pi.registerTool`, which the host should
+use only when it means to ask the user something or reach something pi does not:
+
+- The `parameters` field is **TypeBox**, not Effect Schema and not zod. pi validates a
+  call against it before `execute` runs, and its own tools import `Type` from
+  `typebox`; the host must declare `typebox` itself rather than relying on pi's copy.
+- `execute(toolCallId, params, signal, onUpdate, ctx)` returns
+  `{ content, details }`. `details` is the host's shape, kept beside the tool result;
+  `content` is what the model reads.
+- A tool that asks a question does it through `ctx.ui.select`, `ctx.ui.confirm` or
+  `ctx.ui.input`. pi waits for the answer, so an unanswered dialog blocks the turn.
+  With a `uiContext` bound in `"json"` mode these calls become the host's dialogs,
+  which is how `discuss` reaches the page.
+- `promptSnippet` and `promptGuidelines` are how a custom tool is described in the
+  system prompt; a tool without a snippet is left out of the Available tools section.
+
 Other facts worth having before embedding:
 
 - `mode` is not on `AgentSessionConfig`. It is a field of `ExtensionBindings`,
