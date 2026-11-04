@@ -67,9 +67,10 @@ view, built from the shared patterns.
    socket.
 3. The server handler decodes it again (the wire is not trusted), runs the service, and
    returns the schema'd value or one of the declared tagged errors.
-4. The client renders the value, or maps the error to a view through `errorView`. It
-   names the connection's own failures and shows any other error's message; making it
-   exhaustive over the protocol's errors is [plan/02-feedback.md](plan/02-feedback.md).
+4. The client renders the value, or maps the error to a view through `errorView`, which has
+   words for every tagged error the protocol declares: a new tag does not type-check until
+   it does. The rest of the feedback surfaces are
+   [plan/02-feedback.md](plan/02-feedback.md).
 5. A write invalidates through a pushed stream (`settings.changes`, `sessions.changes`),
    never a timer; a provider sign-in streams its progress on `settings.providers.login`.
    React Query is the cache, not the source of truth.

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
+import { errorView } from "./error-view";
 import type { Tone } from "./status-tone";
 
 /** Each tone's icon and the alert variant that paints it. */
@@ -14,25 +15,36 @@ const TONE = {
 	danger: { icon: CircleAlertIcon, variant: "destructive" },
 } as const;
 
-/** An alert for something the user should read, with the icon its tone calls for. */
+/**
+ * An alert for something the user should read, with the icon its tone calls for.
+ *
+ * A failure comes through `error`, and the translator supplies its tone, title and line;
+ * `title` and `children` are then ignored.
+ */
 export function Notice({
-	tone,
+	error,
+	tone = "neutral",
 	title,
 	action,
 	children,
 }: {
-	tone: Tone;
+	error?: Error;
+	tone?: Tone;
 	title?: string;
 	/** One button on the right, such as "Use pi's catalog". */
 	action?: ReactNode;
 	children?: ReactNode;
 }) {
-	const { icon: Icon, variant } = TONE[tone];
+	const view = error === undefined ? undefined : errorView(error);
+	const resolved = view?.tone ?? tone;
+	const Icon = view?.icon ?? TONE[resolved].icon;
+	const heading = view?.title ?? title;
+	const body = view?.line ?? children;
 	return (
-		<Alert variant={variant}>
+		<Alert variant={TONE[resolved].variant}>
 			<Icon />
-			{title !== undefined && <AlertTitle>{title}</AlertTitle>}
-			{children !== undefined && <AlertDescription>{children}</AlertDescription>}
+			{heading !== undefined && <AlertTitle>{heading}</AlertTitle>}
+			{body !== undefined && <AlertDescription>{body}</AlertDescription>}
 			{action !== undefined && <AlertAction>{action}</AlertAction>}
 		</Alert>
 	);
