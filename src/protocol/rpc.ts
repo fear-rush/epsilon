@@ -1,7 +1,22 @@
 import { Schema } from "effect";
 import { Rpc, RpcGroup } from "effect/rpc";
 
+import { GeneralRpcs } from "./config/general.ts";
+import { McpRegistryRpcs } from "./config/mcp-registry.ts";
+import { McpRpcs } from "./config/mcp.ts";
+import { PackageRpcs } from "./config/packages.ts";
+import { ProjectRpcs } from "./config/projects.ts";
+import { ProviderLoginRpcs, ProviderRpcs } from "./config/providers.ts";
+import { ReadinessRpcs } from "./config/readiness.ts";
+import { ConfigRpcs } from "./config/settings.ts";
+import { SkillImportRpcs } from "./config/skill-import.ts";
+import { SkillRpcs } from "./config/skills.ts";
+import { ContextRpcs } from "./context.ts";
+import { ConversationRpcs } from "./conversation/rpc.ts";
+import { DiagnosticsRpcs } from "./diagnostics.ts";
 import { HandshakeRefused } from "./errors.ts";
+import { HandshakeGate } from "./handshake.ts";
+import { SessionsRpcs } from "./sessions.ts";
 
 /** One socket, one path, declared once. */
 export const SOCKET_PATH = "/api/link";
@@ -56,3 +71,28 @@ export type Welcome = typeof Welcome.Type;
 export const HandshakeRpcs = RpcGroup.make(
 	Rpc.make("handshake", { payload: Hello, success: Welcome, error: HandshakeRefused }),
 );
+
+/**
+ * The socket's whole vocabulary, gated by the handshake.
+ *
+ * It lives here, not beside the handlers, because the page builds its client from the
+ * same group: a procedure the page cannot name is not on the wire, and one the server
+ * does not serve would fail at the first call instead of at the type.
+ */
+export const EpsilonRpcs = HandshakeRpcs.merge(
+	GeneralRpcs,
+	ConfigRpcs,
+	ProjectRpcs,
+	ProviderRpcs,
+	ProviderLoginRpcs,
+	McpRpcs,
+	McpRegistryRpcs,
+	ReadinessRpcs,
+	PackageRpcs,
+	SkillRpcs,
+	SkillImportRpcs,
+	ContextRpcs,
+	DiagnosticsRpcs,
+	SessionsRpcs,
+	ConversationRpcs,
+).middleware(HandshakeGate);

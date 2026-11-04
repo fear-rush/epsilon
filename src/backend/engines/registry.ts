@@ -1,14 +1,12 @@
-import { Clock, Context, Effect, Layer, Ref, Scope, Semaphore, Stream } from "effect";
-import type { FileSystem } from "effect";
+import { Clock, Context, Effect, FileSystem, Layer, Ref, Scope, Semaphore, Stream } from "effect";
 
 import type { Command } from "#protocol/conversation/commands";
 import type { ServerFrame } from "#protocol/conversation/frames";
 import type { QueryKind } from "#protocol/engine-ipc";
-import { EngineLimitReached } from "#protocol/errors";
+import { EngineLimitReached, EngineStopped } from "#protocol/errors";
 import type {
 	CommandRefused,
 	EngineCrashLoop,
-	EngineStopped,
 	ProjectNotTrusted,
 	ProjectRefused,
 } from "#protocol/errors";
@@ -17,6 +15,7 @@ import { Catalog } from "../catalog/catalog.ts";
 import { SessionLocks } from "../catalog/locks.ts";
 import type { SessionLocksApi } from "../catalog/locks.ts";
 import { ProjectService } from "../config/projects/service.ts";
+import { AgentHome } from "../platform/agent-home.ts";
 import { EpsilonSettings } from "../settings.ts";
 import type { RemoteEngine } from "./engine.ts";
 import { Supervisor } from "./supervisor.ts";
@@ -78,6 +77,19 @@ export type EnginesApi = {
 		effect: Effect.Effect<A, E, R>,
 	) => Effect.Effect<A, E, R>;
 	readonly isRunning: (sessionId: string) => Effect.Effect<boolean>;
+	/** A command to the chat's engine, refusing a chat that has none running. */
+	readonly command: (
+		sessionId: string,
+		tab: string,
+		command: Command,
+	) => Effect.Effect<unknown, CommandRefused | EngineStopped>;
+	/** A read-only query to the chat's engine, with the same refusal. */
+	readonly query: (
+		sessionId: string,
+		tab: string,
+		kind: QueryKind,
+		before: string | undefined,
+	) => Effect.Effect<unknown, CommandRefused | EngineStopped>;
 	readonly running: Effect.Effect<ReadonlyArray<RunningEngine>>;
 	/**
 	 * A read-only query to every live engine, for a panel that describes what the open
@@ -122,6 +134,11 @@ export const makeEngines = (options: {
 	readonly locate: (sessionId: string) => Effect.Effect<{ path: string; cwd: string } | undefined>;
 	/** Resolves a folder and refuses when pi does not trust it. */
 	readonly trust: (cwd: string) => Effect.Effect<string, ProjectNotTrusted | ProjectRefused>;
+	/**
+	 * Epsilon's own chat folder. It holds no project resources, so it is not a project and
+	 * never goes through the trust gate, which refuses folders inside the agent home.
+	 */
+	readonly isChatFolder: (cwd: string) => boolean;
 }): EnginesApi => {
 	/** One map, every alias; the same entry answers for each id the chat held. */
 	const byAlias = new Map<string, Entry>();
@@ -227,9 +244,25 @@ export const makeEngines = (options: {
 
 				const located =
 					input.file === undefined ? yield* options.locate(input.sessionId) : undefined;
-				// A folder the operator has not trusted never gets a process, so nothing in it
-				// can be read or run whatever pi would load.
-				const cwd = yield* options.trust(located?.cwd ?? input.cwd);
+				const fs = yield* FileSystem.FileSystem;
+				// A folder the operator has not trusted never gets a process, so nothing in it can
+				// be read or run whatever pi would load. Epsilon's own chat folder is not a
+				// project; it is inside the agent home, which the project resolver refuses.
+				const requestFolder = options.isChatFolder(input.cwd)
+					? Effect.succeed(input.cwd)
+					: options.trust(input.cwd);
+				// A saved chat runs in the folder its file records, unless that folder is gone:
+				// then this open uses the requested folder and the file keeps its own header.
+				const saved = located === undefined ? undefined : located.cwd;
+				const savedExists =
+					saved === undefined
+						? false
+						: yield* fs.stat(saved).pipe(
+								Effect.map((info) => info.type === "Directory"),
+								Effect.orElseSucceed(() => false),
+							);
+				const cwd = saved !== undefined && savedExists ? saved : yield* requestFolder;
+				const file = located?.path;
 
 				const maxRunning = yield* options.maxRunning;
 				if (entries().length >= maxRunning) {
@@ -244,7 +277,7 @@ export const makeEngines = (options: {
 
 				const engine = yield* options.supervisor.start({
 					cwd,
-					file: located?.path ?? input.file,
+					file: file ?? input.file,
 					place: input.place,
 					sessionId: input.sessionId,
 				});
@@ -311,6 +344,24 @@ export const makeEngines = (options: {
 	const isRunning = (sessionId: string): Effect.Effect<boolean> =>
 		Effect.sync(() => find(sessionId) !== undefined);
 
+	/** The chat's entry, or the refusal a caller needs to say why there is none. */
+	const runningEntry = (sessionId: string): Effect.Effect<Entry, EngineStopped> => {
+		const entry = find(sessionId);
+		return entry === undefined
+			? Effect.fail(new EngineStopped({ sessionId }))
+			: Effect.succeed(entry);
+	};
+
+	const command: EnginesApi["command"] = (sessionId, tab, command_) =>
+		Effect.flatMap(runningEntry(sessionId), (entry) =>
+			entry.engine.request((id) => ({ command: command_, id, t: "command", tab })),
+		);
+
+	const query: EnginesApi["query"] = (sessionId, tab, kind, before) =>
+		Effect.flatMap(runningEntry(sessionId), (entry) =>
+			entry.engine.request((id) => ({ before, id, kind, t: "query" })),
+		);
+
 	const running = Effect.sync(() =>
 		entries().map((entry) => ({
 			busy: Ref.getUnsafe(entry.engine.status).busy,
@@ -352,7 +403,7 @@ export const makeEngines = (options: {
 			),
 		);
 
-	return { attach, close, detach, isRunning, queryAll, running, withLock };
+	return { attach, close, command, detach, isRunning, query, queryAll, running, withLock };
 };
 
 /** The registry's answer to "does an engine hold this chat?", for the catalog (F1). */
@@ -364,7 +415,7 @@ export const SessionLocksFromEngines: Layer.Layer<SessionLocks, never, Engines> 
 export const EnginesLive: Layer.Layer<
 	Engines,
 	never,
-	Supervisor | Catalog | EpsilonSettings | ProjectService | FileSystem.FileSystem
+	AgentHome | Supervisor | Catalog | EpsilonSettings | ProjectService | FileSystem.FileSystem
 > = Layer.effect(
 	Engines,
 	Effect.gen(function* () {
@@ -372,8 +423,10 @@ export const EnginesLive: Layer.Layer<
 		const catalog = yield* Catalog;
 		const settings = yield* EpsilonSettings;
 		const projects = yield* ProjectService;
+		const home = yield* AgentHome;
 		const scope = yield* Scope.Scope;
 		const engines = makeEngines({
+			isChatFolder: (cwd) => cwd === home.chatsDir,
 			locate: (sessionId) =>
 				Effect.map(catalog.locate(sessionId), (row) =>
 					row === undefined ? undefined : { cwd: row.cwd, path: row.path },

@@ -1,4 +1,5 @@
 import { mkdtempSync } from "node:fs";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -19,6 +20,26 @@ export type Fixtures = {
 	readonly app: RunningApp;
 };
 
+/**
+ * A port nothing else holds. Playwright runs files in separate workers, so one fixed port
+ * would make two tests share a server and one test's stop kill another test's page.
+ */
+const freePort = (): Promise<number> =>
+	new Promise((resolve, reject) => {
+		const probe = createServer();
+		probe.on("error", reject);
+		probe.listen(0, "127.0.0.1", () => {
+			const address = probe.address();
+			if (address === null || typeof address === "string") {
+				probe.close();
+				reject(new Error("no port was assigned"));
+				return;
+			}
+			const { port } = address;
+			probe.close(() => resolve(port));
+		});
+	});
+
 export const test = base.extend<Fixtures>({
 	// oxlint-disable-next-line no-empty-pattern -- Playwright requires the destructuring form
 	agentHome: async ({}, use) => {
@@ -33,7 +54,7 @@ export const test = base.extend<Fixtures>({
 	},
 	app: async ({ agentHome, stub }, use) => {
 		writeStubModels(agentHome, stub.baseUrl);
-		const app = await launchEpsilon({ home: agentHome });
+		const app = await launchEpsilon({ home: agentHome, port: await freePort() });
 		await use(app);
 		app.stop();
 	},

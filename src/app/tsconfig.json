@@ -8,7 +8,8 @@
 		"tsBuildInfoFile": "../../dist/types/src/app/tsbuildinfo",
 		"jsx": "react-jsx",
 		"lib": ["es2025", "dom", "dom.iterable"],
-		"types": ["vite/client"]
+		"types": ["vite/client"],
+		"paths": { "@/*": ["./*"] }
 	},
 	"include": ["**/*.ts", "**/*.tsx"],
 	"references": [{ "path": "../protocol" }, { "path": "../domain" }]

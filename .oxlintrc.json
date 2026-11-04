@@ -139,6 +139,14 @@
 			}
 		},
 		{
+			// TanStack Router signals a redirect by throwing the redirect value, which is
+			// not an Error. The throw is the API, not a mistake.
+			"files": ["src/app/routes/**"],
+			"rules": {
+				"typescript/only-throw-error": "off"
+			}
+		},
+		{
 			"files": ["src/app/**"],
 			"rules": {
 				"epsilon/no-feature-internals": [
@@ -149,6 +157,49 @@
 						"open": ["settings/kit"]
 					}
 				]
+			}
+		},
+		{
+			// Vendored from ui.shadcn.com and rewritten by `shadcn add`, or a third-party
+			// primitive's own defaults: raw sizes and colours there are not ours to change.
+			"files": ["src/app/components/ui/**/*.tsx", "src/app/components/editor/**/*.{ts,tsx}"],
+			"rules": {
+				"epsilon/design-tokens": "off"
+			}
+		},
+		{
+			// Registry files are replaced wholesale by `shadcn add`. Rules they violate by
+			// construction are off here, not silenced at each line, so a re-add stays clean.
+			"files": ["src/app/components/ui/**/*.tsx"],
+			"rules": {
+				"anti-slop/no-runtime-typeof": "off",
+				"anti-slop/require-safety-comment-for-type-assertion": "off",
+				"eslint/eqeqeq": "off",
+				"jsx-a11y/click-events-have-key-events": "off",
+				"jsx-a11y/control-has-associated-label": "off",
+				"jsx-a11y/label-has-associated-control": "off",
+				"jsx-a11y/no-noninteractive-element-interactions": "off",
+				"jsx-a11y/no-noninteractive-tabindex": "off",
+				"jsx-a11y/prefer-tag-over-role": "off",
+				"react/no-array-index-key": "off",
+				"react/only-export-components": "off",
+				"typescript/consistent-return": "off",
+				"typescript/no-unnecessary-condition": "off",
+				"typescript/no-unsafe-type-assertion": "off",
+				"typescript/strict-boolean-expressions": "off"
+			}
+		},
+		{
+			// Two deliberate departures in the restored primitives. The file tree nests a list
+			// inside a treeitem, which is the ARIA group role with no element of its own. The
+			// pane bar keys an entrance on its text; the helper already excludes elements.
+			"files": [
+				"src/app/components/editor/file-tree.tsx",
+				"src/app/components/patterns/pane/pane-bar.tsx"
+			],
+			"rules": {
+				"jsx-a11y/prefer-tag-over-role": "off",
+				"typescript/no-base-to-string": "off"
 			}
 		},
 		{
@@ -319,7 +370,12 @@
 			}
 		},
 		{
-			"files": ["src/protocol/errors.ts", "src/backend/platform/errors.ts", "src/engine/errors.ts"],
+			"files": [
+				"src/protocol/errors.ts",
+				"src/backend/platform/errors.ts",
+				"src/engine/errors.ts",
+				"src/app/errors.ts"
+			],
 			"rules": {
 				"unicorn/throw-new-error": "off"
 			}

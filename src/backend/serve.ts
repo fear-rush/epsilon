@@ -3,9 +3,9 @@ import { Effect, FileSystem, Layer, Option, Path, type Types } from "effect";
 import { Headers, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http";
 import { type Rpc, type RpcGroup, RpcSerialization, RpcServer } from "effect/rpc";
 
-import { SOCKET_PATH } from "#protocol/rpc";
+import { EpsilonRpcs, SOCKET_PATH } from "#protocol/rpc";
 
-import { EpsilonHandlersLive, EpsilonRpcs } from "./handlers.ts";
+import { EpsilonHandlersLive } from "./handlers.ts";
 import { HandshakeGateLive, HandshakeLive, LaunchToken } from "./handshake.ts";
 
 /**

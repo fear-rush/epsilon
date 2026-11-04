@@ -1,19 +1,29 @@
-import { createRootRoute } from "@tanstack/react-router";
+import { createRootRouteWithContext, HeadContent, Outlet } from "@tanstack/react-router";
 
-/**
- * The shell every route sits in. Step 8 replaces this placeholder with the real layout and
- * adds the routes; today it proves the built page reaches a browser.
- */
-export const Route = createRootRoute({ component: Root });
+import { TooltipProvider } from "@/components/ui/tooltip";
+import type { RouterContext } from "@/router";
+import { AppStatus, StatusProvider } from "@/status";
+
+// The status line sits above every surface and owns connection, version, chat and
+// readiness problems, so a page never draws a second banner. The context is the one
+// Query cache, so a loader reaches it without importing the client.
+export const Route = createRootRouteWithContext<RouterContext>()({
+	head: () => ({ meta: [{ title: "Epsilon" }] }),
+	component: Root,
+});
 
 function Root() {
 	return (
-		<main className="mx-auto max-w-xl p-8">
-			<h1 className="text-title font-semibold">Epsilon is running</h1>
-			<p className="mt-2">
-				The dashboard is being rebuilt. Its pages arrive with the client step; the server, the
-				socket and the configuration features are here.
-			</p>
-		</main>
+		<TooltipProvider>
+			<HeadContent />
+			<StatusProvider>
+				<div className="flex h-svh flex-col">
+					<AppStatus />
+					<div className="relative flex min-h-0 flex-1 flex-col contain-layout">
+						<Outlet />
+					</div>
+				</div>
+			</StatusProvider>
+		</TooltipProvider>
 	);
 }

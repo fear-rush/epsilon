@@ -42,4 +42,9 @@ export const DiagnosticsRpcs = RpcGroup.make(
 	Rpc.make("diagnostics.read", {
 		success: DiagnosticsView,
 	}),
+	/** Stops the chat's engine; the next command starts a new one from the file. */
+	Rpc.make("diagnostics.stop", {
+		payload: { sessionId: Schema.String },
+		success: Schema.Void,
+	}),
 );

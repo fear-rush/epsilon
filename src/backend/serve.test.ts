@@ -9,13 +9,14 @@ import { RpcClient, RpcSerialization } from "effect/rpc";
 
 import { ReadinessRpcs } from "#protocol/config/readiness";
 import { HandshakeRefused } from "#protocol/errors";
+import { HandshakeGate } from "#protocol/handshake";
 import { type Hello, HandshakeRpcs, PROTOCOL_VERSION, SOCKET_PATH } from "#protocol/rpc";
 
 import { testPaths } from "../../test/setup.ts";
 import { ProvidersStoreLive } from "./config/providers/store.ts";
 import { ReadinessHandlersLive } from "./config/readiness/handlers.ts";
 import { ReadinessServiceLive } from "./config/readiness/service.ts";
-import { HandshakeGate, HandshakeHandlersLive } from "./handshake.ts";
+import { HandshakeHandlersLive } from "./handshake.ts";
 import { AgentHomeLive } from "./platform/agent-home.ts";
 import { JsonDocumentLive } from "./platform/json-document.ts";
 import { LogLive } from "./platform/log.ts";

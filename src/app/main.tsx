@@ -1,23 +1,15 @@
-import { createRouter, RouterProvider } from "@tanstack/react-router";
+import { RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { routeTree } from "./routeTree.gen";
+import { router } from "./router";
 
 import "./index.css";
 
 /**
- * The page's entry. The one RPC runtime, the query client and the reconnect banner arrive
- * with the client step; the router is here so the build emits the page the server serves.
+ * The page's entry. The one RPC runtime is started by the first call a route makes; the
+ * router owns the address, and the query cache is reached through its context.
  */
-const router = createRouter({ routeTree, defaultPreload: "intent" });
-
-declare module "@tanstack/react-router" {
-	interface Register {
-		router: typeof router;
-	}
-}
-
 const container = document.getElementById("root");
 if (container === null) throw new Error("index.html has no #root element");
 

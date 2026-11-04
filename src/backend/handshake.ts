@@ -1,7 +1,7 @@
 import { Context, Effect, HashSet, Layer, Ref } from "effect";
-import { RpcMiddleware } from "effect/rpc";
 
 import { HandshakeRefused } from "#protocol/errors";
+import { HandshakeGate } from "#protocol/handshake";
 import { HandshakeRpcs, type Hello, PROTOCOL_VERSION, type Welcome } from "#protocol/rpc";
 
 import { AgentHome } from "./platform/agent-home.ts";
@@ -50,11 +50,7 @@ export const HandshakeLive = Layer.effect(
 	}),
 );
 
-/** The gate on every call except the handshake itself. */
-export class HandshakeGate extends RpcMiddleware.Service<HandshakeGate>()("epsilon/HandshakeGate", {
-	error: HandshakeRefused,
-}) {}
-
+/** The gate declared in `protocol/handshake.ts`, implemented over this server's state. */
 export const HandshakeGateLive = Layer.effect(
 	HandshakeGate,
 	Effect.gen(function* () {

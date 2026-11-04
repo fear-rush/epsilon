@@ -125,6 +125,7 @@ describe("acceptance", () => {
 	test("F3: closing a replaced engine closes the one that replaced it", async () => {
 		const home = {
 			agentDir: testPaths.agentHome,
+			chatsDir: `${testPaths.agentHome}/chats`,
 			epsilonDir: `${testPaths.agentHome}/.epsilon`,
 			userHome: testPaths.sandboxHome,
 		};
@@ -145,6 +146,7 @@ describe("acceptance", () => {
 				const log = { engine: () => ({ write: () => Effect.void }), write: () => Effect.void };
 				const supervisor = makeSupervisor({ fs, home, log, spec: fakeSpec() });
 				const engines = makeEngines({
+					isChatFolder: () => false,
 					locate: () => Effect.as(Effect.void, undefined),
 					maxRunning: Effect.succeed(4),
 					scope,

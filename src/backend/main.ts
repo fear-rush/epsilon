@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -26,6 +27,7 @@ import { DiagnosticsServiceLive } from "./diagnostics/service.ts";
 import { Engines, EnginesLive } from "./engines/registry.ts";
 import { EngineSpecLive, SupervisorLive } from "./engines/supervisor.ts";
 import { AgentHome, AgentHomeLive } from "./platform/agent-home.ts";
+import { ensureDir } from "./platform/files.ts";
 import { JsonDocumentLive } from "./platform/json-document.ts";
 import { Log, LogLive } from "./platform/log.ts";
 import { PiConfigLive, piVersion, sessionFormatVersion } from "./platform/pi.ts";
@@ -75,13 +77,17 @@ process.env["PI_CODING_AGENT_DIR"] = agentDir;
 const homeLayer = AgentHomeLive(agentDir, userHome, projectsRoot);
 
 /**
- * One engine, one process: `bun run src/engine/main.ts` in dev. A built binary re-runs
- * itself with `--engine`; the dispatch in this file lands with the packaging step.
+ * One engine, one process.
+ *
+ * The built backend finds the built engine beside it; a server started from source runs the
+ * TypeScript entry. Either way the path is resolved from this file, never from the working
+ * directory, so the two builds cannot be mixed.
  */
+const builtEngine = new URL("../engine/main.js", import.meta.url).pathname;
+const sourceEngine = new URL("../engine/main.ts", import.meta.url).pathname;
+const engineEntry = existsSync(builtEngine) ? builtEngine : sourceEngine;
 const engineSpec = {
-	command: isProduction
-		? [process.execPath, "--engine"]
-		: [process.execPath, "run", new URL("../engine/main.ts", import.meta.url).pathname],
+	command: [process.execPath, ...(engineEntry.endsWith(".ts") ? ["run"] : []), engineEntry],
 	env: {
 		EPSILON_ENGINE: "1",
 		HOME: userHome,
@@ -147,8 +153,23 @@ const services = Layer.mergeAll(
 	ContextServiceLive.pipe(Layer.provideMerge(middle)),
 );
 
+/**
+ * The session folder is watched for the life of the process: a chat a terminal pi writes
+ * appears in the page without a reload, and the index stays a read model of the files.
+ */
+const watchSessions = Layer.effectDiscard(
+	Effect.gen(function* () {
+		const catalogService = yield* Catalog;
+		const home = yield* AgentHome;
+		const root = join(home.agentDir, "sessions");
+		yield* ensureDir(root);
+		yield* ensureDir(home.chatsDir);
+		yield* catalogService.watch([root]);
+	}),
+).pipe(Layer.provideMerge(infra));
+
 const serve = ServeLive({ appDir, devOrigin, port, token: launchToken });
-const AppLive = serve.pipe(Layer.provideMerge(services));
+const AppLive = serve.pipe(Layer.provideMerge(services), Layer.provideMerge(watchSessions));
 
 const program = Effect.gen(function* () {
 	const home = yield* AgentHome;

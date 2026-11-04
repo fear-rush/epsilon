@@ -43,6 +43,7 @@ const withEngines = <A, E>(
 	Effect.gen(function* () {
 		const scope = yield* Scope.make();
 		const engines = makeEngines({
+			isChatFolder: () => false,
 			locate: () => Effect.as(Effect.void, undefined),
 			maxRunning: Effect.succeed(maxRunning),
 			scope,
@@ -88,6 +89,7 @@ describe("engine registry", () => {
 			Effect.gen(function* () {
 				const scope = yield* Scope.make();
 				const engines = makeEngines({
+					isChatFolder: () => false,
 					locate: () => Effect.as(Effect.void, undefined),
 					maxRunning: Effect.succeed(4),
 					scope,
@@ -141,6 +143,7 @@ describe("engine registry", () => {
 				const scope = yield* Scope.make();
 				const limit = Ref.makeUnsafe(1);
 				const engines = makeEngines({
+					isChatFolder: () => false,
 					locate: () => Effect.as(Effect.void, undefined),
 					maxRunning: Ref.get(limit),
 					scope,

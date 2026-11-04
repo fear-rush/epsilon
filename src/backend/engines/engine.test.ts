@@ -16,6 +16,7 @@ import { makeSupervisor } from "./supervisor.ts";
 
 const home = {
 	agentDir: testPaths.agentHome,
+	chatsDir: `${testPaths.agentHome}/chats`,
 	epsilonDir: `${testPaths.agentHome}/.epsilon`,
 	userHome: testPaths.sandboxHome,
 };

@@ -15,6 +15,8 @@ export type AgentHomeApi = {
 	readonly agentDir: string;
 	/** The user home that a spawned pi or engine should see as `HOME`. */
 	readonly userHome: string;
+	/** The folder a plain chat runs in; a project chat runs in the project. */
+	readonly chatsDir: string;
 	/** Epsilon's own directory inside the home: settings, logs, crashes, the index. */
 	readonly epsilonDir: string;
 	/**
@@ -32,7 +34,12 @@ export const makeAgentHome = (
 	userHome: string,
 	projectsRoot?: string,
 ): AgentHomeApi => {
-	const home: AgentHomeApi = { agentDir, epsilonDir: join(agentDir, ".epsilon"), userHome };
+	const home: AgentHomeApi = {
+		agentDir,
+		chatsDir: join(agentDir, "chats"),
+		epsilonDir: join(agentDir, ".epsilon"),
+		userHome,
+	};
 	return projectsRoot === undefined ? home : { ...home, projectsRoot };
 };
 

@@ -357,13 +357,19 @@ export class RemoteEngine {
 		return PubSub.publish(this.pubsub, event).pipe(Effect.asVoid);
 	}
 
-	/** The child is gone: fail what waited on it and tell the listeners once. */
+	/** The child is gone: fail what waited on it, end every tab, tell the listeners once. */
 	finish(info: ExitInfo): Effect.Effect<void> {
 		return Effect.gen({ self: this }, function* () {
 			for (const [id, deferred] of this.pending) {
 				this.pending.delete(id);
 				yield* Deferred.fail(deferred, this.stoppedError(info));
 			}
+			// A stream that never ended would leave the page waiting on a process that is
+			// gone. Ending it lets the chat say so and start a new engine on the next message.
+			for (const queue of this.tabs.values()) {
+				yield* Queue.shutdown(queue);
+			}
+			this.tabs.clear();
 			yield* Ref.set(this.exitInfo, info);
 			yield* Deferred.succeed(this.exit, info);
 			yield* this.publish({ info, type: "exit" });
