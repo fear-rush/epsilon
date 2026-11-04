@@ -7,13 +7,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { Schema } from "effect";
 
-import type { SettingValue, SettingView } from "#protocol/config/general";
-import type { ProviderModelView } from "#protocol/config/providers";
+import type { SettingValue, SettingView } from "#protocol/settings/general";
+import type { ProviderModelView } from "#protocol/settings/providers";
 import { CollapsibleSection } from "@/components/patterns/section/collapsible-section";
 import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";
 import { Notice } from "@/components/patterns/status/notice";
-import { call } from "@/runtime";
+import { call } from "@/core/runtime";
 
 import { useSettingsRefresh } from "../queries.ts";
 import {
@@ -50,7 +50,7 @@ export function SettingsForm({ models, settings }: SettingsRead) {
 	const refresh = useSettingsRefresh();
 	const save = useMutation({
 		mutationFn: (input: { key: string; value: SettingValue }) =>
-			call((client) => client["config.general.writeSetting"](input)),
+			call((client) => client["settings.general.writeSetting"](input)),
 		onSuccess: refresh,
 	});
 	const rows = new Map(settings.map((row) => [row.key, row]));

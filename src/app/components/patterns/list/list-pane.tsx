@@ -6,11 +6,11 @@ import { Pane } from "@/components/patterns/pane/pane";
 import { PaneBand } from "@/components/patterns/pane/pane-band";
 import { PaneBar } from "@/components/patterns/pane/pane-bar";
 import { PaneFooter } from "@/components/patterns/pane/pane-footer";
+import { ProjectPicker, ScopeTabs } from "@/components/patterns/scope-tabs";
+import type { ScopedSection } from "@/components/patterns/scope-tabs";
 import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { StatusView } from "@/components/patterns/status/status-view";
-import { ProjectPicker, ScopeTabs } from "@/components/patterns/tabs/scope-tabs";
-import type { ScopedSection } from "@/components/patterns/tabs/scope-tabs";
 import { useSettingsProject } from "@/features/settings/queries.ts";
 import { cn } from "@/lib/cn";
 

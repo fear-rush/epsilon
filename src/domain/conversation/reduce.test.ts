@@ -4,9 +4,9 @@ import { decodeServerFrame } from "#protocol/conversation/frames";
 import type { ServerFrame, TreeEntry } from "#protocol/conversation/frames";
 import { frameTags, PROTOCOL_VERSION } from "#protocol/rpc";
 
-import { bashTurnFrames } from "./fixtures/bash-turn.ts";
-import { failedTurnFrames } from "./fixtures/failed-turn.ts";
-import { toolTurnFrames } from "./fixtures/tool-turn.ts";
+import { bashTurnFrames } from "../../../test/fixtures/conversation/bash-turn.ts";
+import { failedTurnFrames } from "../../../test/fixtures/conversation/failed-turn.ts";
+import { toolTurnFrames } from "../../../test/fixtures/conversation/tool-turn.ts";
 import { reduce } from "./reduce.ts";
 import type { ConversationState } from "./state.ts";
 import { emptyConversation, noticeLimit } from "./state.ts";

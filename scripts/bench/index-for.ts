@@ -5,8 +5,8 @@ import { BunServices } from "@effect/platform-bun";
 import { Effect, Layer } from "effect";
 import type { FileSystem, Scope } from "effect";
 
-import { Catalog, CatalogLive } from "../../src/backend/catalog/catalog.ts";
-import type { CatalogApi } from "../../src/backend/catalog/catalog.ts";
+import { Catalog, CatalogLive } from "../../src/backend/sessions/catalog.ts";
+import type { CatalogApi } from "../../src/backend/sessions/catalog.ts";
 
 /** The catalog the way the server builds it: a layer, yielded as a service. */
 const catalogLayer = (home: string): Layer.Layer<Catalog> => {

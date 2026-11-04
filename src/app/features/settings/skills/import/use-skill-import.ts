@@ -1,8 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 
-import type { SkillImportReport } from "#protocol/config/skill-import";
-import { call } from "@/runtime";
+import type { SkillImportReport } from "#protocol/settings/skill-import";
+import { call } from "@/core/runtime";
 
 import { useSettingsProject, useSettingsRefresh } from "../../queries.ts";
 import type { PickedFile } from "./read-files.ts";
@@ -30,7 +30,7 @@ export function useSkillImport() {
 		mutationFn: (request: StageRequest) =>
 			request.kind === "upload"
 				? call((client) =>
-						client["config.skills.import.stageUpload"]({
+						client["settings.skills.import.stageUpload"]({
 							...folder(project),
 							files: request.files.map((file) => ({
 								bytes: file.bytes,
@@ -39,7 +39,7 @@ export function useSkillImport() {
 						}),
 					)
 				: call((client) =>
-						client["config.skills.import.stageSource"]({
+						client["settings.skills.import.stageSource"]({
 							...folder(project),
 							input: request.input,
 						}),
@@ -51,7 +51,7 @@ export function useSkillImport() {
 		mutationFn: (input: Commit) => {
 			if (report === undefined) throw new Error("There is nothing staged to install");
 			return call((client) =>
-				client["config.skills.import.commit"]({
+				client["settings.skills.import.commit"]({
 					...folder(project),
 					commit: input,
 					stageId: report.stageId,
@@ -68,7 +68,7 @@ export function useSkillImport() {
 		if (report === undefined) return;
 		const stageId = report.stageId;
 		void call((client) =>
-			client["config.skills.import.discard"]({ ...folder(project), stageId }),
+			client["settings.skills.import.discard"]({ ...folder(project), stageId }),
 		).catch(() => undefined);
 		setReport(undefined);
 		commit.reset();

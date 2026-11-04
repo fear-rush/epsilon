@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import type { SettingsProblem } from "#protocol/config/general";
+import type { SettingsProblem } from "#protocol/settings/general";
 import { DetailPage } from "@/components/patterns/pane/detail-page";
 import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";
@@ -11,8 +11,8 @@ import { Notice } from "@/components/patterns/status/notice";
 import { StatusView } from "@/components/patterns/status/status-view";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { agentHomeQuery } from "@/queries";
-import { call } from "@/runtime";
+import { agentHomeQuery } from "@/core/queries";
+import { call } from "@/core/runtime";
 
 import { useModels, useSettings, useSettingsRefresh } from "../queries.ts";
 import { ModelPicker } from "./model-picker.tsx";
@@ -104,12 +104,12 @@ function AppSection({
 	const refresh = useSettingsRefresh();
 	const defaults = useMutation({
 		mutationFn: (input: { provider: string; modelId: string }) =>
-			call((client) => client["config.general.setDefaultModel"](input)),
+			call((client) => client["settings.general.setDefaultModel"](input)),
 		onSuccess: refresh,
 	});
 	const engines = useMutation({
 		mutationFn: (value: number) =>
-			call((client) => client["config.general.setMaxRunning"]({ maxRunning: value })),
+			call((client) => client["settings.general.setMaxRunning"]({ maxRunning: value })),
 		onSuccess: refresh,
 	});
 	const [draft, setDraft] = useState(String(maxRunning));

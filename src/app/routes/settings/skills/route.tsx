@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Schema } from "effect";
 
-import { SkillRoot } from "#protocol/config/skills";
+import { SkillRoot } from "#protocol/settings/skills";
 import { SkillsLayout } from "@/features/settings/skills/skills-panel";
 
 /** The project tab, the editable root a skill is opened in, or a listed skill's path. */

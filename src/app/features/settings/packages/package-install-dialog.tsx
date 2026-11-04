@@ -1,8 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 
-import type { PackageView } from "#protocol/config/packages";
-import { DialogFrame } from "@/components/patterns/dialog/dialog-frame";
+import type { PackageView } from "#protocol/settings/packages";
+import { DialogFrame } from "@/components/patterns/dialog-frame";
 import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";

@@ -2,8 +2,8 @@ import { Effect, Stream } from "effect";
 
 import { ConversationRpcs } from "#protocol/conversation/rpc";
 
-import { Engines } from "../engines/registry.ts";
 import { AgentHome } from "../platform/agent-home.ts";
+import { Engines } from "./registry.ts";
 
 /**
  * One chat over the socket.

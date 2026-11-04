@@ -1,8 +1,8 @@
 import { createRootRouteWithContext, HeadContent, Outlet } from "@tanstack/react-router";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import type { RouterContext } from "@/router";
-import { AppStatus, StatusProvider } from "@/status";
+import type { RouterContext } from "@/core/router";
+import { AppStatus, StatusProvider } from "@/core/status";
 
 // The status line sits above every surface and owns connection, version, chat and
 // readiness problems, so a page never draws a second banner. The context is the one

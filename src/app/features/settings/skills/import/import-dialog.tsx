@@ -1,8 +1,8 @@
 import { ArchiveIcon, FolderOpenIcon } from "lucide-react";
 import { useRef, useState } from "react";
 
-import type { SkillImportCandidate, SkillImportReport } from "#protocol/config/skill-import";
-import { DialogFrame } from "@/components/patterns/dialog/dialog-frame";
+import type { SkillImportCandidate, SkillImportReport } from "#protocol/settings/skill-import";
+import { DialogFrame } from "@/components/patterns/dialog-frame";
 import { Notice } from "@/components/patterns/status/notice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

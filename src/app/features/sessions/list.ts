@@ -1,8 +1,8 @@
 import { useQueries } from "@tanstack/react-query";
 
-import type { ProjectStatus } from "#protocol/config/projects";
 import type { SessionSummary as WireSummary } from "#protocol/sessions";
-import { projectStatusQuery } from "@/queries";
+import type { ProjectStatus } from "#protocol/settings/projects";
+import { projectStatusQuery } from "@/core/queries";
 
 import { useSessions } from "./use-sessions.ts";
 

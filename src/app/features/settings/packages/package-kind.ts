@@ -1,4 +1,4 @@
-import type { PackageView } from "#protocol/config/packages";
+import type { PackageView } from "#protocol/settings/packages";
 
 /** Where a package comes from, read off its source the way `pi install` does. */
 const packageKind = (source: string): "npm" | "git" | "local" => {

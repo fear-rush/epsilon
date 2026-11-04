@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
-import type { PackageResources, PackageView } from "#protocol/config/packages";
+import type { PackageResources, PackageView } from "#protocol/settings/packages";
 import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";
 import { Notice } from "@/components/patterns/status/notice";

@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 
-import type { ProviderLoginSnapshot } from "#protocol/config/providers";
-import { DialogFrame } from "@/components/patterns/dialog/dialog-frame";
+import type { ProviderLoginSnapshot } from "#protocol/settings/providers";
+import { DialogFrame } from "@/components/patterns/dialog-frame";
 import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { keepSubscribed, runStream } from "@/runtime";
+import { keepSubscribed, runStream } from "@/core/runtime";
 
 import { useSettingsRefresh } from "../queries.ts";
 import { answerProviderLogin, cancelProviderLogin } from "./api.ts";
@@ -31,7 +31,7 @@ export function ProviderSignIn({
 			keepSubscribed(
 				() =>
 					runStream(
-						(client) => client["config.providers.login"]({ providerId, type: "oauth" }),
+						(client) => client["settings.providers.login"]({ providerId, type: "oauth" }),
 						(next) => {
 							setSnapshot(next);
 							if (next.status === "succeeded") refresh();

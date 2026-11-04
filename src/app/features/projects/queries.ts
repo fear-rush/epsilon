@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { ProjectTrustAction } from "#protocol/config/projects";
-import { call } from "@/runtime";
+import type { ProjectTrustAction } from "#protocol/settings/projects";
+import { call } from "@/core/runtime";
 
 /**
  * Trust a folder in pi's `trust.json`, or change the decision it already holds.
@@ -14,7 +14,7 @@ export function useSetProjectTrust() {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({ action, path }: { action: ProjectTrustAction; path: string }) =>
-			call((client) => client["config.projects.setTrust"]({ action, path })),
+			call((client) => client["settings.projects.setTrust"]({ action, path })),
 		onSuccess: () => {
 			void queryClient.invalidateQueries({ queryKey: ["config", "projects"] });
 			void queryClient.invalidateQueries({ queryKey: ["sessions"] });

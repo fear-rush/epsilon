@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { Option, Clock, Effect, Stream } from "effect";
 
-import { startEngine } from "../../src/backend/engines/engine.ts";
-import type { EngineSpec } from "../../src/backend/engines/engine.ts";
+import { startEngine } from "../../src/backend/conversation/engine.ts";
+import type { EngineSpec } from "../../src/backend/conversation/engine.ts";
 import { linearSession } from "../../test/sessions.ts";
 import { report } from "./lib.ts";
 

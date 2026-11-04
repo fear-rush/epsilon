@@ -31,7 +31,7 @@ retired.
 
 - `src/protocol/`: the wire. Effect Schema and types only.
 - `src/domain/`: rules both sides run, pure.
-- `src/backend/`: sockets, configuration, the session index, the engine supervisor, the
+- `src/backend/`: sockets, settings, the session index, the supervisor of live chats, the
   page.
 - `src/engine/`: the child process that hosts pi for one chat.
 - `src/app/`: React, Vite, Tailwind, shadcn.
@@ -76,7 +76,7 @@ retired.
 8. No `throw`, `try`/`catch`, `new Promise`, `.then`/`.catch`, `setTimeout`,
    `setInterval`, `Date.now` or `process.env` in `src/backend/**` and `src/engine/**`
    outside `platform/`, `engine/main.ts`, `backend/main.ts` and the one line reader over
-   pi's file format, `catalog/ingest.ts`, where a line that is not JSON is skipped, not
+   pi's file format, `sessions/ingest.ts`, where a line that is not JSON is skipped, not
    thrown. Wrap a Promise API once, in the service that owns it. Lint enforces it.
 9. Every resource (engine, process, watcher, socket, timer, fiber) belongs to a Scope.
    Nothing is fire-and-forget.

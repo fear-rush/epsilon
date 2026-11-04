@@ -1,7 +1,7 @@
 import { CircleAlertIcon, FileQuestionIcon, RefreshCwIcon, WifiOffIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-import { PageOutOfDate, ServerUnreachable } from "@/errors";
+import { PageOutOfDate, ServerUnreachable } from "@/core/errors";
 
 import type { StatusTone } from "./status-tone";
 

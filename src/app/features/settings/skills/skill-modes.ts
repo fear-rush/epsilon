@@ -1,6 +1,6 @@
 import { CodeIcon, FileTextIcon } from "lucide-react";
 
-import type { ModeItem } from "@/components/patterns/tabs/mode-tabs";
+import type { ModeItem } from "@/components/patterns/mode-tabs";
 
 export type SkillTab = "form" | "raw";
 

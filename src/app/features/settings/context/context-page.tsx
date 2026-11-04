@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import type { ContextOrigin } from "#protocol/context";
+import type { ContextOrigin } from "#protocol/settings/context";
 import { Pane } from "@/components/patterns/pane/pane";
 import { PaneBar } from "@/components/patterns/pane/pane-bar";
 import { PaneBody } from "@/components/patterns/pane/pane-body";
@@ -11,7 +11,7 @@ import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { StatusView } from "@/components/patterns/status/status-view";
 import { Badge } from "@/components/ui/badge";
-import { call } from "@/runtime";
+import { call } from "@/core/runtime";
 
 /**
  * Settings → Context: what pi loads for a folder before the model answers.
@@ -23,7 +23,7 @@ import { call } from "@/runtime";
 const contextQuery = {
 	queryKey: ["context", null],
 	queryFn: ({ signal }: { signal: AbortSignal }) =>
-		call((client) => client["context.read"]({ folder: null }), { signal }),
+		call((client) => client["settings.context.read"]({ folder: null }), { signal }),
 };
 
 const originLabel = {

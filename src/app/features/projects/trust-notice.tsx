@@ -1,4 +1,4 @@
-import type { ProjectStatus } from "#protocol/config/projects";
+import type { ProjectStatus } from "#protocol/settings/projects";
 /**
  * What trusting a folder means, in one place: the full-page gate and the folder
  * dialog say the same thing.

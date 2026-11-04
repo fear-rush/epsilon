@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronUpIcon, FolderIcon } from "lucide-react";
 import { useState } from "react";
 
-import type { FolderListing } from "#protocol/config/projects";
+import type { FolderListing } from "#protocol/settings/projects";
 import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { call } from "@/runtime";
+import { call } from "@/core/runtime";
 
 /**
  * One level of folders at a time.
@@ -57,13 +57,13 @@ function PickerDialog({
 		queryFn: ({ signal }) =>
 			call(
 				(client) =>
-					client["config.projects.folders"](path === undefined ? { hidden } : { hidden, path }),
+					client["settings.projects.folders"](path === undefined ? { hidden } : { hidden, path }),
 				{ signal },
 			),
 	});
 	const create = useMutation({
 		mutationFn: (input: { parent: string; name: string }) =>
-			call((client) => client["config.projects.createFolder"](input)),
+			call((client) => client["settings.projects.createFolder"](input)),
 		onSuccess: (created) => {
 			setName("");
 			void queryClient.invalidateQueries({ queryKey: ["config", "projects", "folders"] });

@@ -1,4 +1,4 @@
-import type { SkillFile, SkillInput, SkillView } from "#protocol/config/skills";
+import type { SkillFile, SkillInput, SkillView } from "#protocol/settings/skills";
 
 import { skillDescriptionProblem, skillNameProblem } from "./rules.ts";
 import { SKILL_BODY_STARTER } from "./skill-starter.ts";

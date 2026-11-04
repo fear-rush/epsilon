@@ -153,8 +153,7 @@
 					"error",
 					{
 						"root": "src/app/features",
-						"aliasRoot": "src/app",
-						"open": ["settings/kit"]
+						"aliasRoot": "src/app"
 					}
 				]
 			}
@@ -321,14 +320,28 @@
 			}
 		},
 		{
-			"files": ["src/backend/**"],
+			// The server's features are the folders under `src/backend`; the files beside them
+			// (main.ts, handlers.ts, serve.ts) are the composition root and may reach in, as the
+			// page's routes do. There is no `@/` alias on the server, so no aliasRoot: `#domain`
+			// and `#protocol` name other roots, not a feature.
+			"files": ["src/backend/*/**"],
 			"rules": {
 				"epsilon/no-feature-internals": [
 					"error",
 					{
-						"root": "src/backend/features",
-						"aliasRoot": "src/app",
-						"open": ["settings/kit"]
+						"root": "src/backend",
+						// Today's cross-feature edges: a feature that reads a live chat's tools,
+						// skills or context reaches the registry, and the registry asks the session
+						// index and Epsilon's own settings. Give a feature an index.ts when it
+						// grows a second caller and delete its entry here.
+						"open": [
+							"platform",
+							"conversation/registry.ts",
+							"sessions/catalog.ts",
+							"sessions/locks.ts",
+							"settings/epsilon.ts",
+							"settings/projects/service.ts"
+						]
 					}
 				]
 			}
@@ -374,7 +387,7 @@
 				"src/protocol/errors.ts",
 				"src/backend/platform/errors.ts",
 				"src/engine/errors.ts",
-				"src/app/errors.ts"
+				"src/app/core/errors.ts"
 			],
 			"rules": {
 				"unicorn/throw-new-error": "off"
@@ -408,7 +421,7 @@
 			}
 		},
 		{
-			"files": ["src/backend/catalog/ingest.ts"],
+			"files": ["src/backend/sessions/ingest.ts"],
 			"rules": {
 				"anti-slop/no-runtime-typeof": "off",
 				"epsilon/effect-only-io": "off",
@@ -416,14 +429,14 @@
 			}
 		},
 		{
-			"files": ["src/backend/config/mcp/entries.ts"],
+			"files": ["src/backend/settings/mcp/entries.ts"],
 			"rules": {
 				"anti-slop/no-runtime-typeof": "off",
 				"effecttsgo/prefer-typed-schema-decoder": "off"
 			}
 		},
 		{
-			"files": ["src/backend/config/providers/login.ts"],
+			"files": ["src/backend/settings/providers/login.ts"],
 			"rules": {
 				"effecttsgo/abort-controller-in-effect": "off",
 				"effecttsgo/global-error-in-effect-failure": "off"
@@ -436,7 +449,7 @@
 			}
 		},
 		{
-			"files": ["src/backend/config/skills/frontmatter.ts"],
+			"files": ["src/backend/settings/skills/frontmatter.ts"],
 			"rules": {
 				"typescript/no-unsafe-type-assertion": "off"
 			}
@@ -456,7 +469,7 @@
 			}
 		},
 		{
-			"files": ["src/engine/session.ts", "src/backend/engines/engine.ts"],
+			"files": ["src/engine/session.ts", "src/backend/conversation/engine.ts"],
 			"rules": {
 				"typescript/no-this-alias": "off"
 			}

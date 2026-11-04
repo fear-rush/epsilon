@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type { McpServerRow } from "#protocol/config/mcp";
+import type { McpServerRow } from "#protocol/settings/mcp";
 import { Pane } from "@/components/patterns/pane/pane";
 import { PaneBar } from "@/components/patterns/pane/pane-bar";
 import { PaneBody } from "@/components/patterns/pane/pane-body";
@@ -13,7 +13,7 @@ import { StatusView } from "@/components/patterns/status/status-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { call } from "@/runtime";
+import { call } from "@/core/runtime";
 
 /**
  * Settings → MCP servers: pi's two files, read as pi reads them.
@@ -25,7 +25,7 @@ import { call } from "@/runtime";
 const mcpQuery = {
 	queryKey: ["config", "mcp", null],
 	queryFn: ({ signal }: { signal: AbortSignal }) =>
-		call((client) => client["config.mcp.list"]({ folder: null }), { signal }),
+		call((client) => client["settings.mcp.list"]({ folder: null }), { signal }),
 };
 
 /** One row's identity in its file, which is how a write names it. */
@@ -41,12 +41,13 @@ export function SettingsMcp() {
 	const setEnabled = useMutation({
 		mutationFn: (input: { row: McpServerRow; enabled: boolean }) =>
 			call((client) =>
-				client["config.mcp.setEnabled"]({ ...targetOf(input.row), enabled: input.enabled }),
+				client["settings.mcp.setEnabled"]({ ...targetOf(input.row), enabled: input.enabled }),
 			),
 		onSuccess: refresh,
 	});
 	const remove = useMutation({
-		mutationFn: (row: McpServerRow) => call((client) => client["config.mcp.remove"](targetOf(row))),
+		mutationFn: (row: McpServerRow) =>
+			call((client) => client["settings.mcp.remove"](targetOf(row))),
 		onSuccess: refresh,
 	});
 

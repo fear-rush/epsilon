@@ -7,21 +7,21 @@ import { Effect, Layer, Schema, type Scope } from "effect";
 import { HttpRouter } from "effect/http";
 import { RpcClient, RpcSerialization } from "effect/rpc";
 
-import { ReadinessRpcs } from "#protocol/config/readiness";
 import { HandshakeRefused } from "#protocol/errors";
 import { HandshakeGate } from "#protocol/handshake";
 import { type Hello, HandshakeRpcs, PROTOCOL_VERSION, SOCKET_PATH } from "#protocol/rpc";
+import { ReadinessRpcs } from "#protocol/settings/readiness";
 
 import { testPaths } from "../../test/setup.ts";
-import { ProvidersStoreLive } from "./config/providers/store.ts";
-import { ReadinessHandlersLive } from "./config/readiness/handlers.ts";
-import { ReadinessServiceLive } from "./config/readiness/service.ts";
 import { HandshakeHandlersLive } from "./handshake.ts";
 import { AgentHomeLive } from "./platform/agent-home.ts";
 import { JsonDocumentLive } from "./platform/json-document.ts";
 import { LogLive } from "./platform/log.ts";
 import { PiConfigLive } from "./platform/pi.ts";
 import { BoundaryLive, HOSTNAME, TOKEN_MARKER } from "./serve.ts";
+import { ProvidersStoreLive } from "./settings/providers/store.ts";
+import { ReadinessHandlersLive } from "./settings/readiness/handlers.ts";
+import { ReadinessServiceLive } from "./settings/readiness/service.ts";
 
 /**
  * The browser boundary over a real listener: the page, the health answer, the `Host` and
@@ -204,7 +204,7 @@ describe("serve", () => {
 					const welcome = yield* client.handshake({ version: PROTOCOL_VERSION, token });
 					expect(welcome.version).toBe(PROTOCOL_VERSION);
 					expect(welcome.agentHome).toBe(agentDir);
-					const readiness = yield* client["config.readiness.read"]();
+					const readiness = yield* client["settings.readiness.read"]();
 					expect(readiness.ready).toBe(false);
 				}).pipe(Effect.provide(clientLayer(port))),
 			),
@@ -235,7 +235,7 @@ describe("serve", () => {
 
 					const unopened = yield* Effect.gen(function* () {
 						const client = yield* RpcClient.make(group);
-						return yield* Effect.flip(client["config.readiness.read"]());
+						return yield* Effect.flip(client["settings.readiness.read"]());
 					}).pipe(Effect.provide(clientLayer(port)));
 					expect(refusal(unopened).reason).toBe("unopened");
 				}),

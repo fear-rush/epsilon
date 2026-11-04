@@ -13,7 +13,7 @@ test is not done.
 F5 a 50,000-entry chat, F6 a prompt cannot hang, F8e, F8h, F8k);
 `backend/platform/json-document.test.ts` (F7 a panel write and a pi write keep both
 keys); the index conformance test against `SessionManager.listAll`
-(`backend/catalog/catalog.test.ts`); the engine cap in the registry; logs with rotation
+(`backend/sessions/catalog.test.ts`); the engine cap in the registry; logs with rotation
 (`backend/platform/log.ts`); the handshake token and Origin/Host checks.
 
 ## Items

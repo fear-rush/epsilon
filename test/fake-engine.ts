@@ -17,7 +17,7 @@ export type FakeEngine = {
 	stop(): void;
 };
 
-const fixture = new URL("./fixtures/fake-engine.ts", import.meta.url).pathname;
+const fixture = new URL("./fixtures/fake-engine-child.ts", import.meta.url).pathname;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null;

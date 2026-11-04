@@ -2,7 +2,7 @@ import { Effect } from "effect";
 
 import { DiagnosticsRpcs } from "#protocol/diagnostics";
 
-import { Engines } from "../engines/registry.ts";
+import { Engines } from "../conversation/registry.ts";
 import { DiagnosticsService } from "./service.ts";
 
 /**

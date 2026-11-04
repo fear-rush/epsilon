@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { FolderLockIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
-import type { ProjectTrustAction } from "#protocol/config/projects";
+import type { ProjectTrustAction } from "#protocol/settings/projects";
 import { Pane } from "@/components/patterns/pane/pane";
 import { PaneBar } from "@/components/patterns/pane/pane-bar";
 import { PaneBody } from "@/components/patterns/pane/pane-body";
@@ -12,8 +12,8 @@ import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { StatusView } from "@/components/patterns/status/status-view";
 import { Button } from "@/components/ui/button";
-import { projectStatusQuery } from "@/queries";
-import { call } from "@/runtime";
+import { projectStatusQuery } from "@/core/queries";
+import { call } from "@/core/runtime";
 
 /**
  * The trust gate before a chat runs in a project folder.
@@ -28,7 +28,7 @@ export function ProjectGate({ folder, children }: { folder: string; children: Re
 	const status = useQuery(projectStatusQuery(folder));
 	const trust = useMutation({
 		mutationFn: (action: ProjectTrustAction) =>
-			call((client) => client["config.projects.setTrust"]({ action, path: folder })),
+			call((client) => client["settings.projects.setTrust"]({ action, path: folder })),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["config", "projects"] }),
 	});
 

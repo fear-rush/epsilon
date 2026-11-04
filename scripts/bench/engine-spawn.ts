@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { Effect } from "effect";
 
-import { startEngine } from "../../src/backend/engines/engine.ts";
-import type { EngineSpec } from "../../src/backend/engines/engine.ts";
+import { startEngine } from "../../src/backend/conversation/engine.ts";
+import type { EngineSpec } from "../../src/backend/conversation/engine.ts";
 import { report } from "./lib.ts";
 
 /** Spawn to `ready` for one engine, on a scratch home that holds no sessions. */

@@ -1,22 +1,22 @@
 import { Schema } from "effect";
 import { Rpc, RpcGroup } from "effect/rpc";
 
-import { GeneralRpcs } from "./config/general.ts";
-import { McpRegistryRpcs } from "./config/mcp-registry.ts";
-import { McpRpcs } from "./config/mcp.ts";
-import { PackageRpcs } from "./config/packages.ts";
-import { ProjectRpcs } from "./config/projects.ts";
-import { ProviderLoginRpcs, ProviderRpcs } from "./config/providers.ts";
-import { ReadinessRpcs } from "./config/readiness.ts";
-import { ConfigRpcs } from "./config/settings.ts";
-import { SkillImportRpcs } from "./config/skill-import.ts";
-import { SkillRpcs } from "./config/skills.ts";
-import { ContextRpcs } from "./context.ts";
 import { ConversationRpcs } from "./conversation/rpc.ts";
 import { DiagnosticsRpcs } from "./diagnostics.ts";
 import { HandshakeRefused } from "./errors.ts";
 import { HandshakeGate } from "./handshake.ts";
 import { SessionsRpcs } from "./sessions.ts";
+import { ContextRpcs } from "./settings/context.ts";
+import { ConfigRpcs } from "./settings/epsilon.ts";
+import { GeneralRpcs } from "./settings/general.ts";
+import { McpRegistryRpcs } from "./settings/mcp-registry.ts";
+import { McpRpcs } from "./settings/mcp.ts";
+import { PackageRpcs } from "./settings/packages.ts";
+import { ProjectRpcs } from "./settings/projects.ts";
+import { ProviderLoginRpcs, ProviderRpcs } from "./settings/providers.ts";
+import { ReadinessRpcs } from "./settings/readiness.ts";
+import { SkillImportRpcs } from "./settings/skill-import.ts";
+import { SkillRpcs } from "./settings/skills.ts";
 
 /** One socket, one path, declared once. */
 export const SOCKET_PATH = "/api/link";

@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { CircleAlertIcon, TriangleAlertIcon } from "lucide-react";
 
-import type { Readiness } from "#protocol/config/readiness";
+import type { Readiness } from "#protocol/settings/readiness";
 import { StatusView } from "@/components/patterns/status/status-view";
 import { buttonVariants } from "@/components/ui/button";
 

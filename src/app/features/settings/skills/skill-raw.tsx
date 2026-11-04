@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 
-import type { SkillRoot } from "#protocol/config/skills";
+import type { SkillRoot } from "#protocol/settings/skills";
 import { CodeEditor } from "@/components/editor/code-editor/code-editor";
 import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";

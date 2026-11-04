@@ -1,5 +1,5 @@
-import { McpExposure, McpOverrideKey } from "#protocol/config/mcp";
-import type { McpOAuthView } from "#protocol/config/mcp";
+import { McpExposure, McpOverrideKey } from "#protocol/settings/mcp";
+import type { McpOAuthView } from "#protocol/settings/mcp";
 
 /**
  * The MCP rules both sides run: the closed value sets, the name pattern, the tool

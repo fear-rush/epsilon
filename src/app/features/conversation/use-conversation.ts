@@ -17,7 +17,7 @@ import {
 	ProjectNotTrusted,
 	ProjectRefused,
 } from "#protocol/errors";
-import { call, keepSubscribed, runStream } from "@/runtime";
+import { call, keepSubscribed, runStream } from "@/core/runtime";
 
 import { handOffDraft } from "./draft.ts";
 

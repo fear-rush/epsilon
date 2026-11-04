@@ -7,8 +7,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUpIcon, FolderIcon, FolderOpenIcon, FolderPlusIcon, InboxIcon } from "lucide-react";
 import { useState } from "react";
 
-import type { ProjectStatus, ProjectTrustAction } from "#protocol/config/projects";
-import { DialogFrame } from "@/components/patterns/dialog/dialog-frame";
+import type { ProjectStatus, ProjectTrustAction } from "#protocol/settings/projects";
+import { DialogFrame } from "@/components/patterns/dialog-frame";
 import { errorView } from "@/components/patterns/status/error-view";
 import { InlineStatus } from "@/components/patterns/status/inline-status";
 import { LoadingState } from "@/components/patterns/status/loading-state";
@@ -20,7 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { call } from "@/runtime";
+import { call } from "@/core/runtime";
 
 import { useSetProjectTrust } from "./queries.ts";
 import { TrustNotice } from "./trust-notice.tsx";
@@ -78,7 +78,7 @@ export function FolderDialog({
 		queryFn: ({ signal }) =>
 			call(
 				(client) =>
-					client["config.projects.folders"](
+					client["settings.projects.folders"](
 						browsing === undefined
 							? { hidden: showHidden }
 							: { hidden: showHidden, path: browsing },
@@ -91,7 +91,7 @@ export function FolderDialog({
 
 	const create = useMutation({
 		mutationFn: ({ parent, name }: { parent: string; name: string }) =>
-			call((client) => client["config.projects.createFolder"]({ name, parent })),
+			call((client) => client["settings.projects.createFolder"]({ name, parent })),
 		onSuccess: async (created) => {
 			setShowNew(false);
 			setNewName("");
@@ -138,7 +138,7 @@ export function FolderDialog({
 		setError(undefined);
 		setWorking(true);
 		try {
-			const status = await call((client) => client["config.projects.status"]({ path }));
+			const status = await call((client) => client["settings.projects.status"]({ path }));
 			if (status.trusted) await finish(status.path);
 			else setPending(status);
 		} catch (cause) {
@@ -156,7 +156,7 @@ export function FolderDialog({
 		setWorking(true);
 		try {
 			const listing = await call((client) =>
-				client["config.projects.folders"]({ hidden: showHidden, path }),
+				client["settings.projects.folders"]({ hidden: showHidden, path }),
 			);
 			setBrowsing(listing.path);
 			setTyped("");

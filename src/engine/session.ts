@@ -6,9 +6,6 @@ import type {
 import type { Scope } from "effect";
 import { Deferred, Effect, FileSystem, Option, Queue, Schema } from "effect";
 
-import type { McpAttention, McpEngineLive } from "#protocol/config/mcp";
-import type { ExtensionSkillsAnswer } from "#protocol/config/skills";
-import type { ContextEngineLive } from "#protocol/context";
 import type { Command } from "#protocol/conversation/commands";
 import type { DialogAnswer } from "#protocol/conversation/extui";
 import type {
@@ -22,6 +19,9 @@ import type {
 import type { ThinkingLevel } from "#protocol/conversation/session";
 import type { EngineToSupervisor } from "#protocol/engine-ipc";
 import { CommandRefused } from "#protocol/errors";
+import type { ContextEngineLive } from "#protocol/settings/context";
+import type { McpAttention, McpEngineLive } from "#protocol/settings/mcp";
+import type { ExtensionSkillsAnswer } from "#protocol/settings/skills";
 
 import { readMcpAttention } from "../domain/mcp/attention.ts";
 import { MCP_RESOURCE_TOOL_NAMES } from "../domain/mcp/tools.ts";

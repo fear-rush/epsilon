@@ -17,7 +17,7 @@ import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useReportStatus } from "@/status";
+import { useReportStatus } from "@/core/status";
 
 import { Composer } from "./composer";
 import { ConversationDialogs } from "./dialogs";

@@ -4,7 +4,7 @@
  */
 import { useState } from "react";
 
-import { DialogFrame } from "@/components/patterns/dialog/dialog-frame";
+import { DialogFrame } from "@/components/patterns/dialog-frame";
 import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";

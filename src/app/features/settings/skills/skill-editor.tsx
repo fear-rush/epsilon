@@ -1,4 +1,4 @@
-import type { SkillRoot } from "#protocol/config/skills";
+import type { SkillRoot } from "#protocol/settings/skills";
 
 import { useSettings, useSkill } from "../queries.ts";
 import { SkillForm } from "./skill-form.tsx";

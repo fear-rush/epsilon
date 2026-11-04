@@ -1,4 +1,4 @@
-import type { McpAttention } from "#protocol/config/mcp";
+import type { McpAttention } from "#protocol/settings/mcp";
 
 /**
  * What pi reports about MCP servers it could not use.

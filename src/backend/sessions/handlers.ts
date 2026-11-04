@@ -5,10 +5,10 @@ import { Effect } from "effect";
 import { SessionNotFound } from "#protocol/errors";
 import { SessionsRpcs } from "#protocol/sessions";
 
-import { Catalog } from "../catalog/catalog.ts";
-import type { StoredSummary } from "../catalog/ingest.ts";
-import { Sessions } from "../catalog/operations.ts";
 import { AgentHome } from "../platform/agent-home.ts";
+import { Catalog } from "./catalog.ts";
+import type { StoredSummary } from "./ingest.ts";
+import { Sessions } from "./operations.ts";
 import { Pins } from "./pins.ts";
 
 /**

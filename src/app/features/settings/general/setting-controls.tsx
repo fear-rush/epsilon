@@ -9,11 +9,11 @@ import { Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
-import type { SettingValue as ReadSettingValue, SettingView } from "#protocol/config/general";
-import type { ProviderModelView } from "#protocol/config/providers";
 import { ThinkingLevel } from "#protocol/conversation/session";
 import type { ThinkingLevel as ThinkingLevelType } from "#protocol/conversation/session";
-import { EnabledSwitch } from "@/components/patterns/controls/enabled-switch";
+import type { SettingValue as ReadSettingValue, SettingView } from "#protocol/settings/general";
+import type { ProviderModelView } from "#protocol/settings/providers";
+import { EnabledSwitch } from "@/components/patterns/enabled-switch";
 import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError } from "@/components/ui/field";

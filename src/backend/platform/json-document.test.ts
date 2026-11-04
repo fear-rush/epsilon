@@ -28,7 +28,7 @@ const writeInitial = (): void => {
 
 /** Runs pi's writer as a child process, the way a terminal pi flushes settings. */
 const runPiWriter = (): Effect.Effect<{ readonly stderr: string; readonly stdout: string }> => {
-	const script = new URL("./fixtures/pi-settings-writer.ts", import.meta.url).pathname;
+	const script = new URL("../../../test/fixtures/pi-settings-writer.ts", import.meta.url).pathname;
 	const child = Bun.spawn(["bun", "run", script, home], {
 		env: { ...process.env, PI_CODING_AGENT_DIR: home },
 		stderr: "pipe",

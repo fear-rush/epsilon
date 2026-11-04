@@ -2,9 +2,9 @@ import { queryOptions, skipToken, useQuery, useQueryClient } from "@tanstack/rea
 import { useSearch } from "@tanstack/react-router";
 import { useCallback } from "react";
 
-import type { PackageScope } from "#protocol/config/packages";
-import type { SkillRoot } from "#protocol/config/skills";
-import { call } from "@/runtime";
+import type { PackageScope } from "#protocol/settings/packages";
+import type { SkillRoot } from "#protocol/settings/skills";
+import { call } from "@/core/runtime";
 
 import { settingsKeys } from "./keys.ts";
 import { readSkill, readSkillDocument, readSkillRaw } from "./skills/api.ts";
@@ -19,7 +19,7 @@ export const settingsQuery = (project: string | undefined) =>
 	queryOptions({
 		queryKey: settingsKeys.snapshot(project),
 		queryFn: ({ signal }) =>
-			call((client) => client["config.snapshot"]({ folder: project ?? null }), { signal }),
+			call((client) => client["settings.snapshot"]({ folder: project ?? null }), { signal }),
 		staleTime: SETTINGS_STALE_MS,
 	});
 
@@ -78,7 +78,7 @@ export const useSkillDocument = (filePath: string | undefined) => {
 export const useModels = () => {
 	return useQuery({
 		queryKey: [...settingsKeys.all, "models"],
-		queryFn: ({ signal }) => call((client) => client["config.providers.models"](), { signal }),
+		queryFn: ({ signal }) => call((client) => client["settings.providers.models"](), { signal }),
 		staleTime: SETTINGS_STALE_MS,
 	});
 };
@@ -90,7 +90,8 @@ export const usePackageResources = (source: string, scope: PackageScope) => {
 		queryKey: settingsKeys.packageResources(project, scope, source),
 		queryFn: ({ signal }) =>
 			call(
-				(client) => client["config.packages.resources"]({ folder: project ?? null, scope, source }),
+				(client) =>
+					client["settings.packages.resources"]({ folder: project ?? null, scope, source }),
 				{ signal },
 			),
 		staleTime: SETTINGS_STALE_MS,
@@ -103,7 +104,9 @@ export const usePackageUpdates = () => {
 	return useQuery({
 		queryKey: settingsKeys.packageUpdates(project),
 		queryFn: ({ signal }) =>
-			call((client) => client["config.packages.updates"]({ folder: project ?? null }), { signal }),
+			call((client) => client["settings.packages.updates"]({ folder: project ?? null }), {
+				signal,
+			}),
 		staleTime: SETTINGS_STALE_MS,
 		refetchOnWindowFocus: false,
 	});

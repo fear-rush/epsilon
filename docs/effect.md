@@ -37,7 +37,7 @@ export const CatalogLive = Layer.effect(
   one step. `pipe` for short transformations and for cross-cutting operators
   (`Effect.timeout`, `Effect.retry`, `Effect.withSpan`) applied at the end.
 - No `Effect.runPromise` inside services. Only `src/backend/main.ts`,
-  `src/engine/main.ts`, `src/app/runtime.ts` and tests run effects.
+  `src/engine/main.ts`, `src/app/core/runtime.ts` and tests run effects.
 - A Promise API is wrapped once, with `Effect.tryPromise({ try, catch })`, in the
   service that owns the dependency, and mapped to a tagged error. Never
   `Effect.promise` for something that can reject.
@@ -88,7 +88,7 @@ export const CatalogLive = Layer.effect(
 ## The React boundary
 
 - Components never import from `effect` except types.
-- `src/app/runtime.ts` holds the one `ManagedRuntime`, the socket `RpcClient`, the
+- `src/app/core/runtime.ts` holds the one `ManagedRuntime`, the socket `RpcClient`, the
   reconnect `Schedule` and the hooks that turn effects into Promises and Streams.
 - The conversation store stays `useSyncExternalStore`, fed by the attach stream. The
   reducer stays a pure function in `src/domain/`.

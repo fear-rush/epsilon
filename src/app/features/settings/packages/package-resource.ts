@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 
-import type { PackageResourceInput, PackageView } from "#protocol/config/packages";
+import type { PackageResourceInput, PackageView } from "#protocol/settings/packages";
 
 import { useSettingsProject, useSettingsRefresh } from "../queries.ts";
 import { setPackageResource } from "./api.ts";

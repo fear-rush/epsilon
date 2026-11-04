@@ -5,7 +5,7 @@ import { Context, Effect, FileSystem, Layer, Option, Schema } from "effect";
 import { CrashRecord } from "#protocol/diagnostics";
 import type { DiagnosticsView, RunningEngine } from "#protocol/diagnostics";
 
-import { Engines } from "../engines/registry.ts";
+import { Engines } from "../conversation/registry.ts";
 import { AgentHome } from "../platform/agent-home.ts";
 import { readTextIfExists } from "../platform/files.ts";
 import { Log } from "../platform/log.ts";

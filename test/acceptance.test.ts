@@ -7,12 +7,12 @@ import { Clock, Effect, Exit, FileSystem, Scope, Schema } from "effect";
 
 import { TreeEntry } from "#protocol/conversation/frames";
 
-import { skillsCli } from "../src/backend/config/skill-import/cli.ts";
-import { download } from "../src/backend/config/skill-import/fetch.ts";
-import { startEngine, type RemoteEngine } from "../src/backend/engines/engine.ts";
-import { makeEngines } from "../src/backend/engines/registry.ts";
-import type { StartInput } from "../src/backend/engines/supervisor.ts";
-import { makeSupervisor } from "../src/backend/engines/supervisor.ts";
+import { startEngine, type RemoteEngine } from "../src/backend/conversation/engine.ts";
+import { makeEngines } from "../src/backend/conversation/registry.ts";
+import type { StartInput } from "../src/backend/conversation/supervisor.ts";
+import { makeSupervisor } from "../src/backend/conversation/supervisor.ts";
+import { skillsCli } from "../src/backend/settings/skill-import/cli.ts";
+import { download } from "../src/backend/settings/skill-import/fetch.ts";
 import { startStubModel, writeStubModels } from "./e2e/stub-model.ts";
 import { fakeSpec } from "./fake-engine.ts";
 import { writeSession } from "./sessions.ts";

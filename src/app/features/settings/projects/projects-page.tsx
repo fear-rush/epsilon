@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { FolderPlusIcon, MessageSquarePlusIcon, MoreHorizontalIcon } from "lucide-react";
 import { useState } from "react";
 
-import type { ProjectStatus, ProjectTrustAction } from "#protocol/config/projects";
+import type { ProjectStatus, ProjectTrustAction } from "#protocol/settings/projects";
 import { Pane } from "@/components/patterns/pane/pane";
 import { PaneBar } from "@/components/patterns/pane/pane-bar";
 import { PaneBody } from "@/components/patterns/pane/pane-body";
@@ -22,9 +22,9 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { projectStatusQuery } from "@/core/queries";
+import { call } from "@/core/runtime";
 import { sessionsQuery } from "@/features/sessions";
-import { projectStatusQuery } from "@/queries";
-import { call } from "@/runtime";
 
 import { FolderPicker } from "./folder-picker.tsx";
 
@@ -51,7 +51,7 @@ export function SettingsProjects() {
 
 	const trust = useMutation({
 		mutationFn: (input: { action: ProjectTrustAction; path: string }) =>
-			call((client) => client["config.projects.setTrust"](input)),
+			call((client) => client["settings.projects.setTrust"](input)),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["config", "projects"] }),
 	});
 

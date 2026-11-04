@@ -1,4 +1,4 @@
-import type { SkillView } from "#protocol/config/skills";
+import type { SkillView } from "#protocol/settings/skills";
 
 type SkillOrigin = SkillView["origin"];
 

@@ -24,8 +24,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import type { ProjectTrustAction } from "#protocol/config/projects";
-import { DeleteDialog } from "@/components/patterns/dialog/confirm-dialogs";
+import type { ProjectTrustAction } from "#protocol/settings/projects";
+import { DeleteDialog } from "@/components/patterns/confirm-dialogs";
 import { SearchField } from "@/components/patterns/list/search-field";
 import { PaneBar } from "@/components/patterns/pane/pane-bar";
 import { errorView } from "@/components/patterns/status/error-view";
@@ -57,10 +57,10 @@ import {
 	SidebarTrigger,
 	useSidebar,
 } from "@/components/ui/sidebar";
+import { call } from "@/core/runtime";
 import { FolderDialog, useSetProjectTrust } from "@/features/projects";
 import { SidebarAccount } from "@/features/sessions/sidebar-account";
 import { useLastDefined } from "@/hooks/use-last-defined";
-import { call } from "@/runtime";
 
 import { sessionLabel } from "./format.ts";
 import type { ProjectSessions, SessionSummary } from "./list.ts";

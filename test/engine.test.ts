@@ -7,8 +7,8 @@ import { Clock, Effect, Option, Stream } from "effect";
 
 import type { ServerFrame } from "#protocol/conversation/frames";
 
-import { startEngine } from "../src/backend/engines/engine.ts";
-import type { RemoteEngine } from "../src/backend/engines/engine.ts";
+import { startEngine } from "../src/backend/conversation/engine.ts";
+import type { RemoteEngine } from "../src/backend/conversation/engine.ts";
 import { startStubModel, writeStubModels } from "./e2e/stub-model.ts";
 import { linearSession, writeSession } from "./sessions.ts";
 import { testPaths } from "./setup.ts";

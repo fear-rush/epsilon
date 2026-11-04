@@ -4,8 +4,12 @@ import { Trash2Icon } from "lucide-react";
 import { useState } from "react";
 
 import { providerApis } from "#domain/providers/rules";
-import type { ProviderDetail, ProviderInput, ProviderModelInput } from "#protocol/config/providers";
-import { DeleteDialog } from "@/components/patterns/dialog/confirm-dialogs";
+import type {
+	ProviderDetail,
+	ProviderInput,
+	ProviderModelInput,
+} from "#protocol/settings/providers";
+import { DeleteDialog } from "@/components/patterns/confirm-dialogs";
 import { DetailPage } from "@/components/patterns/pane/detail-page";
 import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";

@@ -17,9 +17,9 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { Context, Effect, Layer } from "effect";
 
-import type { SettingsProblem } from "#protocol/config/general";
-import type { ProviderLoginType } from "#protocol/config/providers";
 import { PackageFailed, ProviderRefused, ProjectRefused, SkillRefused } from "#protocol/errors";
+import type { SettingsProblem } from "#protocol/settings/general";
+import type { ProviderLoginType } from "#protocol/settings/providers";
 
 import { AgentHome } from "./agent-home.ts";
 import type { AgentHomeApi } from "./agent-home.ts";

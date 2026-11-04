@@ -1,4 +1,4 @@
-import type { SkillRoot, SkillView } from "#protocol/config/skills";
+import type { SkillRoot, SkillView } from "#protocol/settings/skills";
 
 /** What the skills routes carry in their search string. */
 export type SkillSearch = {

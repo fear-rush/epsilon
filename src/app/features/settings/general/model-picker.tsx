@@ -6,7 +6,7 @@
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { useState } from "react";
 
-import type { ProviderModelView } from "#protocol/config/providers";
+import type { ProviderModelView } from "#protocol/settings/providers";
 
 type SnapshotModel = ProviderModelView;
 const modelKey = (model: SnapshotModel): string => `${model.provider}/${model.id}`;

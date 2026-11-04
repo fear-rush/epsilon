@@ -1,7 +1,7 @@
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-import { call, keepSubscribed, runStream } from "@/runtime";
+import { call, keepSubscribed, runStream } from "@/core/runtime";
 
 /**
  * The chat list, and the stream that keeps it current.

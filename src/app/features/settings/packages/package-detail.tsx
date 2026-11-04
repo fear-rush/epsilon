@@ -3,8 +3,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { ArrowUpCircleIcon, FileQuestionIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 
-import type { PackageView } from "#protocol/config/packages";
-import { DeleteDialog } from "@/components/patterns/dialog/confirm-dialogs";
+import type { PackageView } from "#protocol/settings/packages";
+import { DeleteDialog } from "@/components/patterns/confirm-dialogs";
 import { DetailPage } from "@/components/patterns/pane/detail-page";
 import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";

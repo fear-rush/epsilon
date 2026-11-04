@@ -2,8 +2,8 @@ import { Outlet } from "@tanstack/react-router";
 
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { useReadiness } from "@/core/status";
 import { SessionSidebar } from "@/features/sessions";
-import { useReadiness } from "@/status";
 
 import { NotReady } from "./not-ready";
 

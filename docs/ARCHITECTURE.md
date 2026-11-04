@@ -34,19 +34,19 @@ server's own port redirects to Vite, so it is never mistaken for the page. In pr
   Types only from pi.
 - `src/domain/`: pure rules both sides run: the conversation reducer, its state and
   selectors, and the MCP, provider and skill rules. No I/O, no services, no React.
-- `src/backend/`: sockets, the catalog, configuration features, the supervisor, and
-  `platform/` where the only pi, filesystem, process and clock boundaries live.
+- `src/backend/`: sockets, the session index, the settings features, the supervisor of
+  live chats, and `platform/` where the only pi, filesystem, process and clock boundaries
+  live.
 - `src/engine/`: the child process. It embeds pi, bridges extension UI, and speaks one
   tagged message set over Bun IPC.
-- `src/app/`: React, Vite, Tailwind, shadcn. Features are meant to mirror the server's
-  names; today the server says `config` where the page says `settings`
-  ([plan/01-structure.md](plan/01-structure.md) renames it).
+- `src/app/`: React, Vite, Tailwind, shadcn. `core/` holds the runtime, router, queries,
+  errors and status line; `features/` mirrors the server's names.
 
 Boundaries are enforced twice: tsconfig project references for what may type-check
 together, and `no-restricted-imports` per root. A feature reaches another feature only
-through its service or index (`epsilon/no-feature-internals`). On the page that rule is
-live; on the server it points at `src/backend/features`, which does not exist, so it
-checks nothing until [plan/01-structure.md](plan/01-structure.md) fixes it.
+through its service or index (`epsilon/no-feature-internals`): on the page the features
+root is `src/app/features`, on the server it is `src/backend`, whose composition root is
+the files beside the feature folders, not a feature.
 
 ## Inside a server feature
 
@@ -54,9 +54,7 @@ The schema is not here: it is `src/protocol/<name>.ts`, shared with the page. Th
 feature folder holds `service.ts` (`Effect.fn` operations, typed errors), `handlers.ts`
 (the RPC handlers, which only compose the service), `store.ts` when it reads or writes
 files through pi's exporters or `JsonDocument`, and its tests. Pure logic worth testing
-alone is `rules.ts` in `projects/` but `domain.ts` in `mcp-registry/` and
-`skill-import/`; [plan/01-structure.md](plan/01-structure.md) settles it as `rules.ts`.
-IO goes through `platform/`.
+alone is `rules.ts`. IO goes through `platform/`.
 
 The shape is the same for every configuration feature, so a reader learns one and knows
 the rest. The client mirrors it: `features/<name>/` with a query hook, a form and a
@@ -64,7 +62,7 @@ view, built from the shared patterns.
 
 ## Request flow (configuration)
 
-1. A component calls a typed function from `src/app/runtime.ts`.
+1. A component calls a typed function from `src/app/core/runtime.ts`.
 2. `RpcClient` encodes the payload with the protocol schema and sends it on the one
    socket.
 3. The server handler decodes it again (the wire is not trusted), runs the service, and
@@ -72,8 +70,8 @@ view, built from the shared patterns.
 4. The client renders the value, or maps the error to a view through `errorView`. It
    names the connection's own failures and shows any other error's message; making it
    exhaustive over the protocol's errors is [plan/02-feedback.md](plan/02-feedback.md).
-5. A write invalidates through a pushed stream (`config.changes`, `sessions.changes`),
-   never a timer; a provider sign-in streams its progress on `config.providers.login`.
+5. A write invalidates through a pushed stream (`settings.changes`, `sessions.changes`),
+   never a timer; a provider sign-in streams its progress on `settings.providers.login`.
    React Query is the cache, not the source of truth.
 
 ## Live chat flow

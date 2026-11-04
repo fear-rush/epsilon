@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { decodeServerFrame } from "#protocol/conversation/frames";
 import type { ServerFrame } from "#protocol/conversation/frames";
 
-import { bashTurnFrames } from "./fixtures/bash-turn.ts";
+import { bashTurnFrames } from "../../../test/fixtures/conversation/bash-turn.ts";
 import { reduce } from "./reduce.ts";
 import {
 	entryById,
