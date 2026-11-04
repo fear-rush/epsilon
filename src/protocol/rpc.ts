@@ -1,4 +1,7 @@
 import { Schema } from "effect";
+import { Rpc, RpcGroup } from "effect/rpc";
+
+import { HandshakeRefused } from "./errors.ts";
 
 /** One socket, one path, declared once. */
 export const SOCKET_PATH = "/api/link";
@@ -38,6 +41,18 @@ export type Hello = typeof Hello.Type;
 
 export const Welcome = Schema.Struct({
 	version: Schema.String,
-	server: Schema.String,
+	/** The agent home this server runs, so the page can say which one it shows. */
+	agentHome: Schema.String,
 });
 export type Welcome = typeof Welcome.Type;
+
+/**
+ * The opening call.
+ *
+ * Nothing else on the socket is answered before it: the launch token in `Hello` is
+ * readable only by a page the server itself served, so a socket that never sent it is
+ * refused every call (12-gaps.md G3).
+ */
+export const HandshakeRpcs = RpcGroup.make(
+	Rpc.make("handshake", { payload: Hello, success: Welcome, error: HandshakeRefused }),
+);

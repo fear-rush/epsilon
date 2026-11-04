@@ -2,9 +2,9 @@
 
 A web dashboard for the `pi` coding agent on your machine.
 
-> Under rebuild. The old tree was deleted and the new one is being
-> built step by step (see `AGENTS.md` and `docs/ARCHITECTURE.md`). Until the rebuild
-> reaches its serve step, `bun run dev` does not start an app.
+> Under rebuild. The server, the socket and the configuration features are in place; the
+> page is a placeholder until the client step (see `AGENTS.md` and
+> `docs/ARCHITECTURE.md`).
 
 ## Run it
 

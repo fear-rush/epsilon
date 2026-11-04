@@ -158,3 +158,14 @@ export class ImportFailed extends Schema.TaggedError<
 	/** The source the person pasted, when one was involved. */
 	source: Schema.optional(Schema.String),
 }) {}
+
+/**
+ * The opening call did not open the socket: another build, another launch's token, or a
+ * call that arrived before any handshake at all.
+ */
+export class HandshakeRefused extends Schema.TaggedError<
+	HandshakeRefused,
+	{ readonly brand: unique symbol }
+>()("HandshakeRefused", {
+	reason: Schema.Literals(["version", "token", "unopened"]),
+}) {}

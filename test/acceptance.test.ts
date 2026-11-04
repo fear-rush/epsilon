@@ -327,7 +327,8 @@ test.todo("F8f: a command typed while reconnecting is queued or refused visibly"
 });
 
 test.todo("F8h: a second process signal exits even when an engine ignores shutdown", () => {
-	// Step 7. Shutdown has a deadline and a forced exit; a hung child cannot block Ctrl-C.
+	// Step 8. The forced exit is in main.ts; proving it needs a chat whose engine ignores
+	// shutdown, and a chat needs conversation.attach.
 });
 
 test.todo("F8m: notices are capped so a looping extension cannot grow the transcript", () => {
