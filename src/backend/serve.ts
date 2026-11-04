@@ -116,6 +116,25 @@ const placeholder = (token: string): string => `<!doctype html>
 `;
 
 /**
+ * In dev the page belongs to Vite and this server is only its socket. A browser that
+ * opens the server's own port is sent to the dev page rather than a shell whose
+ * `/main.tsx` only Vite can serve.
+ */
+const devPageUrl = (
+	config: ServeConfig,
+	request: HttpServerRequest.HttpServerRequest,
+): string | undefined => {
+	if (config.devOrigin === undefined) return undefined;
+	const devOrigins = config.devOrigin.split(",");
+	const hostname = (request.headers["host"] ?? "").split(":")[0];
+	const target =
+		devOrigins.find((origin) => new URL(origin).hostname === hostname) ?? devOrigins[0];
+	if (target === undefined) return undefined;
+	const url = requestUrl(request);
+	return `${target}${url.pathname}${url.search}`;
+};
+
+/**
  * The served page carries the token; nothing else does, and only a page this server
  * served can read it. The path is used as received, without percent-decoding, so an
  * encoded `..` cannot reach a file outside the app directory.
@@ -125,6 +144,8 @@ const page = (config: ServeConfig) =>
 		const fs = yield* FileSystem.FileSystem;
 		const path = yield* Path.Path;
 		const request = yield* HttpServerRequest.HttpServerRequest;
+		const devTarget = devPageUrl(config, request);
+		if (devTarget !== undefined) return HttpServerResponse.redirect(devTarget);
 		const requested = requestUrl(request).pathname;
 		const relative = requested.endsWith("/") ? `${requested}index.html` : requested;
 

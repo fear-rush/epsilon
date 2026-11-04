@@ -47,7 +47,7 @@ const freePort = (): number => {
 	return port;
 };
 
-const boundary = (name: string) => {
+const boundary = (name: string, devOrigin?: string) => {
 	const agentDir = join(testPaths.scratch, `serve-${name}`);
 	const appDir = join(testPaths.scratch, `serve-app-${name}`);
 	mkdirSync(join(agentDir, ".epsilon"), { recursive: true });
@@ -71,7 +71,9 @@ const boundary = (name: string) => {
 	);
 
 	const handlers = Layer.mergeAll(HandshakeHandlersLive, ReadinessHandlersLive);
-	const layer = HttpRouter.serve(BoundaryLive({ appDir, port, token }, group, handlers)).pipe(
+	const layer = HttpRouter.serve(
+		BoundaryLive({ appDir, devOrigin, port, token }, group, handlers),
+	).pipe(
 		Layer.provide(readiness),
 		Layer.provide(RpcSerialization.layerJson),
 		Layer.provide(BunHttpServer.layer({ hostname: HOSTNAME, port })),
@@ -148,6 +150,30 @@ describe("serve", () => {
 					);
 					expect(asset.status).toBe(200);
 					expect(asset.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+				}),
+			),
+		);
+	}, 10_000);
+
+	test("in dev the page belongs to Vite, so the server sends the browser there", async () => {
+		const { layer, port } = boundary("dev", "http://localhost:5173,http://127.0.0.1:5173");
+		await Effect.runPromise(
+			withServer(layer, () =>
+				Effect.gen(function* () {
+					const page = yield* Effect.promise(() =>
+						fetch(`http://127.0.0.1:${port}/`, { redirect: "manual" }),
+					);
+					expect(page.status).toBe(302);
+					expect(page.headers.get("location")).toBe("http://127.0.0.1:5173/");
+
+					// The origin whose hostname matches is the one the browser is sent to.
+					const named = yield* Effect.promise(() =>
+						fetch(`http://127.0.0.1:${port}/`, {
+							headers: { host: `localhost:${port}` },
+							redirect: "manual",
+						}),
+					);
+					expect(named.headers.get("location")).toBe("http://localhost:5173/");
 				}),
 			),
 		);

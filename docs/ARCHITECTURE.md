@@ -23,8 +23,9 @@ Browser tab ──one WebSocket (Effect RPC)──▶ epsilon   (Bun, one port, 
 One crash, freeze or leak costs one chat. The chat restarts from its JSONL, which stays
 the truth. The index is derived: delete it and nothing is lost.
 
-In dev, Vite serves the UI with HMR and proxies the one socket to the server. In
-production `bun run start` is one process serving the built page and the socket.
+In dev, Vite serves the UI with HMR and proxies the one socket to the server; the
+server's own port redirects to Vite, so it is never mistaken for the page. In production
+`bun run start` is one process serving the built page and the socket.
 
 ## Roots
 
