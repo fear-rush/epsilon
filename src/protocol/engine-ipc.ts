@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 
 import { Command } from "./conversation/commands.ts";
+import { ExportFormat } from "./conversation/export.ts";
 import { DialogAnswer } from "./conversation/extui.ts";
 import { ServerFrame } from "./conversation/frames.ts";
 
@@ -63,6 +64,8 @@ export const SupervisorToEngine = Schema.Union([
 		/** The draft an autocomplete query is about, and the caret's offset in it. */
 		text: Schema.optional(Schema.String),
 		cursor: Schema.optional(Schema.Finite),
+		/** Which file an export writes. */
+		format: Schema.optional(ExportFormat),
 	}),
 	Schema.Struct({ t: Schema.Literals(["shutdown"]), deadlineMs: Schema.Finite }),
 ]);

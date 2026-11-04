@@ -34,6 +34,7 @@ import { dispatchCommand } from "./commands.ts";
 import type { CommandHost } from "./commands.ts";
 import { Dialogs } from "./dialogs.ts";
 import type { EngineStartFailed } from "./errors.ts";
+import { exportOf } from "./export.ts";
 import { describe, RuntimeHandle } from "./runtime.ts";
 import type { RuntimeInput } from "./runtime.ts";
 import { runBuiltin } from "./slash.ts";
@@ -337,7 +338,7 @@ export class EngineSession {
 	}
 
 	/** One question about this chat; only the fields its kind reads are set. */
-	query(question: EngineQuery): Effect.Effect<unknown, CommandRefused> {
+	query(question: EngineQuery): Effect.Effect<unknown, CommandRefused, FileSystem.FileSystem> {
 		const self = this;
 		return Effect.gen(function* () {
 			const agent = self.runtime.session;
@@ -446,11 +447,15 @@ export class EngineSession {
 						...withDefined({}, "contextUsage", usage),
 					} satisfies ContextEngineLive;
 				}
-				case "export":
-					return yield* new CommandRefused({
-						command: "export",
-						reason: "Export needs a target path and lands with the catalog handler.",
-					});
+				case "export": {
+					if (question.format === undefined) {
+						return yield* new CommandRefused({
+							command: "export",
+							reason: "An export needs a format: html or jsonl.",
+						});
+					}
+					return yield* exportOf(agent, self.runtime.id, question.format);
+				}
 				case "rename":
 					return yield* new CommandRefused({
 						command: "rename",

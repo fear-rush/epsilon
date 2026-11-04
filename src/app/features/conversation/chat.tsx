@@ -165,6 +165,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 			writable={conversation.writable}
 			onAbort={conversation.abort}
 			onBash={conversation.bash}
+			onExport={conversation.exportSession}
 			onOpenTree={() => setTreeOpen(true)}
 			onReadContext={readContext}
 			onSend={send}

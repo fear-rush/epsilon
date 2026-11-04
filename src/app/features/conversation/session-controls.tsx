@@ -1,5 +1,7 @@
+import { FileDownIcon, FileJsonIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import type { ExportFormat } from "#protocol/conversation/export";
 import type { ModelOption, ThinkingLevel, ToolsView } from "#protocol/conversation/session";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
@@ -15,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
+import { downloadExport } from "./export-file.ts";
 import type { Conversation } from "./use-conversation.ts";
 
 /**
@@ -38,6 +41,21 @@ export function SessionControls({
 	const [tools, setTools] = useState<ToolsView | undefined>(undefined);
 	const [filter, setFilter] = useState("");
 	const [failure, setFailure] = useState<Error | undefined>(undefined);
+	const [exporting, setExporting] = useState(false);
+	const empty = state.entries.length === 0 && state.streaming.length === 0;
+
+	/** pi writes the file and the browser saves it; a refusal is the dialog's Notice. */
+	const exportAs = async (format: ExportFormat): Promise<void> => {
+		setExporting(true);
+		try {
+			downloadExport(await conversation.exportSession(format));
+			setFailure(undefined);
+		} catch (cause) {
+			setFailure(cause instanceof Error ? cause : new Error(String(cause)));
+		} finally {
+			setExporting(false);
+		}
+	};
 
 	useEffect(() => {
 		let cancelled = false;
@@ -190,6 +208,32 @@ export function SessionControls({
 								})}
 							</div>
 						)}
+					</section>
+
+					<section className="grid gap-2">
+						<h3 className="text-section">This chat</h3>
+						<p className="text-meta text-muted-foreground">
+							pi writes the transcript and the browser saves it, so a run in progress does not block
+							it.
+						</p>
+						<div className="flex flex-wrap gap-2">
+							<Button
+								variant="outline"
+								disabled={empty || exporting}
+								onClick={() => void exportAs("html")}
+							>
+								<FileDownIcon />
+								Export as HTML
+							</Button>
+							<Button
+								variant="outline"
+								disabled={empty || exporting}
+								onClick={() => void exportAs("jsonl")}
+							>
+								<FileJsonIcon />
+								Export as JSONL
+							</Button>
+						</div>
 					</section>
 
 					{failure !== undefined && <Notice error={failure} title="That did not take effect" />}

@@ -8,11 +8,13 @@ import type { BuiltinCommand, ComposerCommandName } from "#domain/conversation/c
 import { cacheHitRate, costLabel, tokenLabel } from "#domain/conversation/format";
 import { transcript } from "#domain/conversation/selectors";
 import type { ConversationState } from "#domain/conversation/state";
+import type { ExportedSession, ExportFormat } from "#protocol/conversation/export";
 import type { ModelOption, ThinkingLevel } from "#protocol/conversation/session";
 import type { ContextView } from "#protocol/settings/context";
 import { shortcut } from "@/components/patterns/shortcut";
 import { errorView } from "@/components/patterns/status/error-view";
 
+import { downloadExport } from "../export-file";
 import { contextSentence } from "../session-context-sentence";
 
 /** Where a route-only command goes: the settings shell and the chat list are pages. */
@@ -34,6 +36,8 @@ export type ComposerCommandContext = {
 	readonly setThinking: (level: ThinkingLevel) => void;
 	/** The context read `/session` quotes, from the same call the Context page makes. */
 	readonly readContext: () => Promise<ContextView>;
+	/** pi's own exporter, through the engine that owns the session. */
+	readonly exportChat: (format: ExportFormat) => Promise<ExportedSession>;
 	readonly navigate: (to: RouteTarget) => void;
 };
 
@@ -56,6 +60,12 @@ const lastAssistantText = (state: ConversationState): string | undefined => {
 		);
 	}
 	return texts.findLast((text) => text.trim() !== "");
+};
+
+/** `/export` reads pi's own rule: HTML unless the argument asks for JSONL. */
+const exportFormat = (argument: string): ExportFormat | undefined => {
+	if (argument === "") return "html";
+	return argument === ".jsonl" || argument === "jsonl" ? "jsonl" : undefined;
 };
 
 /** How a model is named in a sentence and in `/model`'s argument: `provider/id`. */
@@ -106,6 +116,20 @@ const HANDLERS: Partial<Record<ComposerCommandName, Handler>> = {
 	"scoped-models": (_argument, { navigate }) => {
 		// General holds the one field pi resolves `enabledModels` with.
 		navigate("settings");
+		return undefined;
+	},
+	export: async (argument, { empty, exportChat }) => {
+		const format = exportFormat(argument.trim());
+		if (format === undefined) {
+			return "Epsilon downloads the export, so it takes no path: /export saves HTML and /export .jsonl saves pi's JSONL.";
+		}
+		if (empty) return "This chat has nothing to export yet.";
+		try {
+			downloadExport(await exportChat(format));
+		} catch (cause) {
+			const view = errorView(cause instanceof Error ? cause : new Error(String(cause)));
+			return `The export failed: ${view.line}`;
+		}
 		return undefined;
 	},
 	copy: async (_argument, { state }) => {

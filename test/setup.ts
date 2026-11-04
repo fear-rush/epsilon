@@ -31,6 +31,15 @@ for (const path of [scratch, agentHome, sandboxHome]) assertNotRealHome(path);
 mkdirSync(agentHome, { recursive: true });
 mkdirSync(sandboxHome, { recursive: true });
 
+// A run inside the operator's own pi session must not inherit its CLI context: the
+// package path decides where pi's own assets live (its HTML export template, for one),
+// and the session variables name another chat. `bun run dev` drops the same list.
+delete process.env["PI_PACKAGE_DIR"];
+delete process.env["PI_SESSION_FILE"];
+delete process.env["PI_SESSION_ID"];
+delete process.env["PI_CODING_AGENT"];
+delete process.env["PI_CODING_AGENT_SESSION_DIR"];
+
 process.env["HOME"] = sandboxHome;
 process.env["PI_CODING_AGENT_DIR"] = agentHome;
 process.env["EPSILON_AGENT_HOME"] = agentHome;

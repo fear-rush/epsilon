@@ -183,6 +183,7 @@ const handle = (message: SupervisorToEngine) => {
 					.query({
 						before: message.before,
 						cursor: message.cursor,
+						format: message.format,
 						kind: message.kind,
 						text: message.text,
 					})

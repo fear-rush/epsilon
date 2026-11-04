@@ -7,6 +7,8 @@ import { emptyConversation } from "#domain/conversation/state";
 import type { ConversationState } from "#domain/conversation/state";
 import type { PermissionMode } from "#domain/permission/rules";
 import type { Command } from "#protocol/conversation/commands";
+import { ExportedSession } from "#protocol/conversation/export";
+import type { ExportFormat } from "#protocol/conversation/export";
 import type { DialogAnswer } from "#protocol/conversation/extui";
 import type { ImageBlock, ServerFrame } from "#protocol/conversation/frames";
 import { AutocompleteReply } from "#protocol/conversation/palette";
@@ -64,6 +66,8 @@ export type Conversation = {
 	readonly suggest: (text: string, cursor: number) => Promise<AutocompleteReply>;
 	/** Switch the permission mode through the bundled extension's own command. */
 	readonly setPermission: (mode: PermissionMode) => Promise<void>;
+	/** pi's own exporter, through the engine that owns the session. */
+	readonly exportSession: (format: ExportFormat) => Promise<ExportedSession>;
 };
 
 /** How long a message waits for the chat to open before it is refused. */
@@ -300,9 +304,10 @@ export function useConversation(input: {
 	/** A read-only question to the engine; the answer is decoded by its own schema. */
 	const ask = useCallback(
 		async (question: {
-			kind: "models" | "tools" | "autocomplete";
+			kind: "models" | "tools" | "autocomplete" | "export";
 			text?: string;
 			cursor?: number;
+			format?: ExportFormat;
 		}) => {
 			const name = stopped.current ? await reattach() : await tabFor();
 			return call((client) =>
@@ -323,6 +328,11 @@ export function useConversation(input: {
 	const tools = useCallback(
 		async (): Promise<ToolsView> =>
 			Schema.decodeUnknownSync(ToolsView)(await ask({ kind: "tools" })),
+		[ask],
+	);
+	const exportSession = useCallback(
+		async (format: ExportFormat): Promise<ExportedSession> =>
+			Schema.decodeUnknownSync(ExportedSession)(await ask({ format, kind: "export" })),
 		[ask],
 	);
 	const suggest = useCallback(
@@ -407,6 +417,7 @@ export function useConversation(input: {
 		followUp,
 		setCodingTools,
 		setPermission,
+		exportSession,
 		suggest,
 		toggleTool,
 		toolOpen,

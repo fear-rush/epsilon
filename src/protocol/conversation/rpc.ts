@@ -11,6 +11,7 @@ import {
 	ProjectRefused,
 } from "../errors.ts";
 import { Command } from "./commands.ts";
+import { ExportFormat } from "./export.ts";
 import { ServerFrame } from "./frames.ts";
 
 /**
@@ -60,6 +61,8 @@ export const ConversationRpcs = RpcGroup.make(
 			/** The draft an autocomplete query is about, and the caret's offset in it. */
 			text: Schema.optional(Schema.String),
 			cursor: Schema.optional(Schema.Finite),
+			/** Which file an export writes. */
+			format: Schema.optional(ExportFormat),
 		},
 		success: Schema.Unknown,
 		error: Schema.Union([CommandRefused, EngineStopped]),

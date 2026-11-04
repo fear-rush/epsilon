@@ -3,9 +3,10 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { BunServices } from "@effect/platform-bun";
-import { Clock, Effect, Option, Stream } from "effect";
+import { Clock, Effect, Option, Schema, Stream } from "effect";
 
 import type { Command } from "#protocol/conversation/commands";
+import { ExportedSession } from "#protocol/conversation/export";
 import type { ServerFrame } from "#protocol/conversation/frames";
 
 import { startEngine } from "../src/backend/conversation/engine.ts";
@@ -146,6 +147,14 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 				yield* control(engine, { t: "setHideThinking", hidden: true });
 				yield* control(engine, { t: "setCodingTools", enabled: false });
 				yield* control(engine, { t: "clearQueue" });
+				// pi writes its own export into a scratch folder the engine reads and removes;
+				// the rename above is the name the download gets.
+				const exported = yield* engine.request((id) => ({
+					format: "html",
+					id,
+					kind: "export",
+					t: "query",
+				}));
 				yield* engine.attachTab("tab2");
 				const opening = [...(yield* engine.frames("tab2").pipe(Stream.take(5), Stream.runCollect))];
 				const meta = opening.find((frame) => frame.t === "sessionMeta");
@@ -176,6 +185,7 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 					append,
 					autocomplete,
 					contextLive,
+					exported,
 					extensionSkills,
 					live,
 					bash,
@@ -232,6 +242,15 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 		expect(Array.isArray(result.tree)).toBe(true);
 		expect(result.transcript).toEqual(expect.objectContaining({ entries: expect.any(Array) }));
 		expect(result.extensionSkills).toEqual({ skills: [] });
+		const exported = Schema.decodeUnknownSync(ExportedSession)(result.exported);
+		expect(exported.filename).toBe("Renamed.html");
+		expect(exported.mimeType).toBe("text/html;charset=utf-8");
+		// pi's HTML carries the JSONL, base64-encoded in its session-data script.
+		const data = /<script id="session-data" type="application\/json">([^<]+)<\/script>/.exec(
+			exported.text,
+		)?.[1];
+		if (data === undefined) throw new Error("the export carries no session data");
+		expect(Buffer.from(data, "base64").toString("utf8")).toContain("hello there");
 		expect(result.contextLive).toMatchObject({
 			sessionId: "s-real",
 			systemPrompt: expect.any(String),

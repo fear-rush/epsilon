@@ -13,6 +13,7 @@ import {
 	PROMPT_IMAGE_MAX,
 	promptImagesBase64Length,
 } from "#protocol/conversation/commands";
+import type { ExportedSession, ExportFormat } from "#protocol/conversation/export";
 import type { ImageBlock } from "#protocol/conversation/frames";
 import type { AutocompleteReply, CommandOffer } from "#protocol/conversation/palette";
 import type { ModelOption, ThinkingLevel } from "#protocol/conversation/session";
@@ -126,6 +127,7 @@ export function Composer({
 	codingTools,
 	commands,
 	header,
+	onExport,
 	onOpenTree,
 	onReadContext,
 	onSetPermission,
@@ -158,6 +160,8 @@ export function Composer({
 	state: ConversationState;
 	onOpenTree: () => void;
 	onReadContext: () => Promise<ContextView>;
+	/** pi's own exporter, through the engine that owns the session. */
+	onExport: (format: ExportFormat) => Promise<ExportedSession>;
 	/** The bundled permission extension's mode, through its own `/permission` command. */
 	onSetPermission: (mode: PermissionMode) => void;
 	/** An extension's providers answer what the draft suggests at the caret. */
@@ -291,6 +295,7 @@ export function Composer({
 	 */
 	const commandContext = (): ComposerCommandContext => ({
 		empty,
+		exportChat: onExport,
 		models,
 		navigate: openRoute,
 		openModelMenu: () => setModelMenuOpen(true),
