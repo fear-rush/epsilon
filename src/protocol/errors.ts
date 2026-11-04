@@ -107,6 +107,16 @@ export class RegistryNotFound extends Schema.TaggedError<
 	server: Schema.String,
 }) {}
 
+/** pi's package manager refused or failed an install, remove or update. */
+export class PackageFailed extends Schema.TaggedError<
+	PackageFailed,
+	{ readonly brand: unique symbol }
+>()("PackageFailed", {
+	/** The source pi was working on, when the failure is about one. */
+	source: Schema.optional(Schema.String),
+	reason: Schema.String,
+}) {}
+
 /** A skill import Epsilon could not complete, with the sentence the page shows. */
 export class ImportFailed extends Schema.TaggedError<
 	ImportFailed,
