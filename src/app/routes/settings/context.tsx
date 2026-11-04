@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { SectionPending } from "@/features/settings/shell/section-pending";
+import { SettingsContext } from "@/features/settings/context/context-page";
 
 export const Route = createFileRoute("/settings/context")({
 	head: () => ({ meta: [{ title: "Context · Settings" }] }),
-	component: () => <SectionPending title="Context" />,
+	component: SettingsContext,
 });
