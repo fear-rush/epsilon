@@ -107,6 +107,12 @@ export class RegistryNotFound extends Schema.TaggedError<
 	server: Schema.String,
 }) {}
 
+/** A staged skill import expired or was discarded. */
+export class StageGone extends Schema.TaggedError<StageGone, { readonly brand: unique symbol }>()(
+	"StageGone",
+	{},
+) {}
+
 /** A skill file or folder Epsilon refused to read or write. */
 export class SkillRefused extends Schema.TaggedError<
 	SkillRefused,
