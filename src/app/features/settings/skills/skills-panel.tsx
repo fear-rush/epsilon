@@ -1,14 +1,15 @@
 import { Link, useMatchRoute, useSearch } from "@tanstack/react-router";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, UploadIcon } from "lucide-react";
 import { useState } from "react";
 
 import { ListGroup } from "@/components/patterns/list/list-group";
 import { ListItem } from "@/components/patterns/list/list-item";
 import { ListPane } from "@/components/patterns/list/list-pane";
 import { MasterDetail } from "@/components/patterns/pane/master-detail";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 import { useSettings, useSettingsProject } from "../queries.ts";
+import { ImportSkillsDialog } from "./import/import-dialog.tsx";
 import { groupSkills } from "./skill-groups.ts";
 import { skillKey, skillSearch } from "./skill-search.ts";
 
@@ -22,6 +23,7 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 	const current = useSearch({ from: "/settings/skills" });
 	const inProject = project !== undefined;
 	const [query, setQuery] = useState("");
+	const [importing, setImporting] = useState(false);
 	const skills = settings.data?.skills.skills ?? [];
 	const needle = query.trim().toLowerCase();
 	const visible = skills.filter((skill) =>
@@ -52,10 +54,17 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 			}
 			error={settings.error}
 			footer={
-				<Link to="/settings/skills/new" search className={buttonVariants({ variant: "outline" })}>
-					<PlusIcon />
-					Add skill
-				</Link>
+				<>
+					<Button type="button" variant="outline" onClick={() => setImporting(true)}>
+						<UploadIcon />
+						Import
+					</Button>
+					<Link to="/settings/skills/new" search className={buttonVariants({ variant: "outline" })}>
+						<PlusIcon />
+						Add skill
+					</Link>
+					<ImportSkillsDialog open={importing} onOpenChange={setImporting} />
+				</>
 			}
 			onQueryChange={setQuery}
 			pending={settings.isPending}

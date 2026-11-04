@@ -268,7 +268,9 @@ const makeSkills = (home: AgentHomeApi, cwd: string): PiSkillsApi => {
 					agentDir: home.agentDir,
 					cwd,
 					includeDefaults: false,
-					skillPaths: [...paths],
+					// pi's resolver can hand back a resource it could not place, which has no
+					// path at runtime; one of those makes pi's own validator refuse every path.
+					skillPaths: paths.filter((path) => typeof path === "string"),
 				}),
 			),
 		resolve: Effect.tryPromise({

@@ -1,5 +1,8 @@
 import { spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { until } from "../until.ts";
 
@@ -41,8 +44,12 @@ export async function launchEpsilon({
 }: LaunchOptions): Promise<RunningApp> {
 	const url = `http://127.0.0.1:${port}`;
 
+	// A sandboxed `~`, as `bun run dev` gives its server: a spec never reads the
+	// developer's own `~/.agents`, packages or skills.
+	const userHome = mkdtempSync(join(tmpdir(), "epsilon-e2e-home-"));
 	const env: NodeJS.ProcessEnv = {
 		...process.env,
+		HOME: userHome,
 		EPSILON_AGENT_HOME: home,
 		EPSILON_PORT: String(port),
 		EPSILON_TOKEN: token,

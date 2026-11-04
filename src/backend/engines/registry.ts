@@ -384,7 +384,11 @@ export const makeEngines = (options: {
 						.pipe(
 							Effect.match({
 								onFailure: () => undefined,
-								onSuccess: (result) => ({ result, sessionId: entry.sessionId }),
+								onSuccess: (result) => ({
+									cwd: entry.cwd,
+									result,
+									sessionId: entry.sessionId,
+								}),
 							}),
 						),
 				{ concurrency: "unbounded" },
