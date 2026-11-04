@@ -6,12 +6,17 @@ import {
 	SettingsManager,
 	ModelRuntime,
 	hasTrustRequiringProjectResources,
+	loadSkills,
 } from "@earendil-works/pi-coding-agent";
-import type { PackageSource, ResolvedPaths } from "@earendil-works/pi-coding-agent";
+import type {
+	LoadSkillsResult,
+	PackageSource,
+	ResolvedPaths,
+} from "@earendil-works/pi-coding-agent";
 import { Context, Effect, Layer } from "effect";
 
 import type { SettingsProblem } from "#protocol/config/general";
-import { PackageFailed, ProjectRefused } from "#protocol/errors";
+import { PackageFailed, ProjectRefused, SkillRefused } from "#protocol/errors";
 
 import { AgentHome } from "./agent-home.ts";
 import type { AgentHomeApi } from "./agent-home.ts";
@@ -31,6 +36,12 @@ import { RuntimeUnavailable } from "./errors.ts";
 export type { SettingsManager } from "@earendil-works/pi-coding-agent";
 export type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 export type { PackageSource, ResolvedPaths } from "@earendil-works/pi-coding-agent";
+export type {
+	LoadSkillsResult,
+	ResolvedResource,
+	ResourceDiagnostic,
+	Skill,
+} from "@earendil-works/pi-coding-agent";
 
 /** pi's default for a folder that nothing else decides. */
 export type ProjectTrustDefault = "always" | "never" | "ask";
@@ -51,6 +62,21 @@ export type PiProjectTrustApi = {
 	) => Effect.Effect<void, ProjectRefused>;
 	/** `defaultProjectTrust`, read from the home's settings alone. */
 	readonly defaultTrust: (cwd: string) => Effect.Effect<ProjectTrustDefault>;
+};
+
+/**
+ * pi's `skills` setting for one folder, plus the resolver and loader the inventory asks.
+ * The array is settings, not a pi format Epsilon owns; a write goes through pi's own
+ * setters so merge order and locking stay pi's.
+ */
+export type PiSkillsApi = {
+	readonly resolve: Effect.Effect<ResolvedPaths, SkillRefused>;
+	readonly load: (paths: ReadonlyArray<string>) => Effect.Effect<LoadSkillsResult>;
+	readonly entries: (scope: PackageScope) => Effect.Effect<ReadonlyArray<string>>;
+	readonly writeEntries: (
+		scope: PackageScope,
+		entries: ReadonlyArray<string>,
+	) => Effect.Effect<void, SkillRefused>;
 };
 
 /** pi's two package scopes; the manager's `temporary` scope is never stored. */
@@ -97,6 +123,8 @@ export type PiConfigApi = {
 	readonly builtinModels: Effect.Effect<ModelRuntime, RuntimeUnavailable>;
 	/** pi's package manager for one folder, built with a settings writer for that folder. */
 	readonly packages: (cwd: string) => PiPackagesApi;
+	/** pi's skill resolver, loader and `skills` setting for one folder. */
+	readonly skills: (cwd: string) => PiSkillsApi;
 	/** pi's `trust.json`, shared with a terminal pi on the same home. */
 	readonly projectTrust: PiProjectTrustApi;
 	/** The load errors pi's settings managers recorded for a folder, both scopes. */
@@ -134,6 +162,47 @@ const makeProjectTrust = (home: AgentHomeApi): PiProjectTrustApi => {
 			Effect.try({
 				try: () => store.setMany(updates.map(({ path, decision }) => ({ decision, path }))),
 				catch: trustFailure,
+			}),
+	};
+};
+
+const skillFailure = (cause: unknown): SkillRefused =>
+	new SkillRefused({ reason: describe(cause) });
+
+const makeSkills = (home: AgentHomeApi, cwd: string): PiSkillsApi => {
+	const settings = SettingsManager.create(cwd, home.agentDir);
+	const manager = new DefaultPackageManager({
+		agentDir: home.agentDir,
+		cwd,
+		settingsManager: settings,
+	});
+	return {
+		entries: (scope) =>
+			Effect.sync(() => [
+				...((scope === "user" ? settings.getGlobalSettings() : settings.getProjectSettings())
+					.skills ?? []),
+			]),
+		load: (paths) =>
+			Effect.sync(() =>
+				loadSkills({
+					agentDir: home.agentDir,
+					cwd,
+					includeDefaults: false,
+					skillPaths: [...paths],
+				}),
+			),
+		resolve: Effect.tryPromise({
+			try: () => manager.resolve(() => Promise.resolve("skip")),
+			catch: skillFailure,
+		}),
+		writeEntries: (scope, entries) =>
+			Effect.tryPromise({
+				try: () => {
+					if (scope === "user") settings.setSkillPaths([...entries]);
+					else settings.setProjectSkillPaths([...entries]);
+					return settings.flush();
+				},
+				catch: skillFailure,
 			}),
 	};
 };
@@ -228,6 +297,7 @@ export const PiConfigLive: Layer.Layer<PiConfig, never, AgentHome> = Layer.effec
 				return makePackages(manager, settings);
 			},
 			projectTrust: makeProjectTrust(home),
+			skills: (cwd: string): PiSkillsApi => makeSkills(home, cwd),
 			settingsProblems: (cwd) =>
 				Effect.sync(() => {
 					const manager = SettingsManager.create(cwd, home.agentDir);

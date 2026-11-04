@@ -365,6 +365,12 @@
 			}
 		},
 		{
+			"files": ["src/backend/config/skills/frontmatter.ts"],
+			"rules": {
+				"typescript/no-unsafe-type-assertion": "off"
+			}
+		},
+		{
 			"files": [
 				"src/engine/main.ts",
 				"src/engine/translate.ts",

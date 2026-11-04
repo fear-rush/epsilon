@@ -107,6 +107,15 @@ export class RegistryNotFound extends Schema.TaggedError<
 	server: Schema.String,
 }) {}
 
+/** A skill file or folder Epsilon refused to read or write. */
+export class SkillRefused extends Schema.TaggedError<
+	SkillRefused,
+	{ readonly brand: unique symbol }
+>()("SkillRefused", {
+	path: Schema.optional(Schema.String),
+	reason: Schema.String,
+}) {}
+
 /** A project folder Epsilon could not open, list or change trust for. */
 export class ProjectRefused extends Schema.TaggedError<
 	ProjectRefused,

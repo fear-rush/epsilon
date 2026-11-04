@@ -131,14 +131,14 @@ const dedupeTools = (tools: ReadonlyArray<McpLiveTool>): ReadonlyArray<McpLiveTo
  * build, so that is a defect, and the rest of the panel still works.
  */
 export const mcpLiveReader = (deps: {
-	readonly queryAll: Effect.Effect<ReadonlyArray<unknown>>;
+	readonly queryAll: Effect.Effect<ReadonlyArray<{ readonly result: unknown }>>;
 	readonly log: LogApi;
 }) => {
 	return Effect.fn("Mcp.liveEngines")(function* (names: ReadonlyArray<string>) {
 		const answers = yield* deps.queryAll;
 		const states: McpLive[] = [];
 		for (const answer of answers) {
-			const decoded = Schema.decodeUnknownOption(McpEngineLiveSchema)(answer);
+			const decoded = Schema.decodeUnknownOption(McpEngineLiveSchema)(answer.result);
 			if (Option.isNone(decoded)) {
 				yield* deps.log.write("warn", "an engine's MCP answer could not be decoded");
 				continue;

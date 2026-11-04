@@ -86,7 +86,9 @@ export type EnginesApi = {
 	 */
 	readonly queryAll: (
 		kind: QueryKind,
-	) => Effect.Effect<ReadonlyArray<{ readonly sessionId: string; readonly result: unknown }>>;
+	) => Effect.Effect<
+		ReadonlyArray<{ readonly sessionId: string; readonly cwd: string; readonly result: unknown }>
+	>;
 };
 
 export class Engines extends Context.Service<Engines, EnginesApi>()("epsilon/Engines") {}
@@ -97,6 +99,7 @@ type Entry = {
 	readonly engine: RemoteEngine;
 	readonly aliases: Set<string>;
 	readonly tabs: Set<string>;
+	readonly cwd: string;
 	sessionId: string;
 	lastUsed: number;
 	rss: number;
@@ -249,6 +252,7 @@ export const makeEngines = (options: {
 				const entry: Entry = {
 					aliases: new Set([input.sessionId]),
 					closed: false,
+					cwd,
 					engine,
 					lastUsed: now,
 					rss: 0,
@@ -337,8 +341,13 @@ export const makeEngines = (options: {
 		).pipe(
 			Effect.map((rows) =>
 				rows.filter(
-					(row): row is { readonly sessionId: string; readonly result: unknown } =>
-						row !== undefined,
+					(
+						row,
+					): row is {
+						readonly cwd: string;
+						readonly result: unknown;
+						readonly sessionId: string;
+					} => row !== undefined,
 				),
 			),
 		);

@@ -43,7 +43,10 @@ const mcpLayer = (name: string, answers: ReadonlyArray<McpEngineLive> = []) => {
 			const mcpStore = yield* McpStore;
 			const log = yield* Log;
 			return makeMcpService({
-				live: mcpLiveReader({ log, queryAll: Effect.succeed(answers) }),
+				live: mcpLiveReader({
+					log,
+					queryAll: Effect.succeed(answers.map((result) => ({ result }))),
+				}),
 				store: mcpStore,
 			});
 		}),

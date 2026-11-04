@@ -7,6 +7,7 @@ import type { FileSystem, Scope } from "effect";
 import { Deferred, Effect, Queue } from "effect";
 
 import type { McpAttention, McpEngineLive } from "#protocol/config/mcp";
+import type { ExtensionSkillsAnswer } from "#protocol/config/skills";
 import type { Command } from "#protocol/conversation/commands";
 import type { DialogAnswer } from "#protocol/conversation/extui";
 import type {
@@ -23,6 +24,7 @@ import { CommandRefused } from "#protocol/errors";
 import { readMcpAttention } from "../domain/mcp/attention.ts";
 import { MCP_RESOURCE_TOOL_NAMES } from "../domain/mcp/tools.ts";
 import { withDefined } from "../domain/object.ts";
+import { EXTENSION_SKILL_SOURCE } from "../domain/skills/rules.ts";
 import { bindEngineSession } from "./bindings.ts";
 import { dispatchCommand } from "./commands.ts";
 import type { CommandHost } from "./commands.ts";
@@ -357,7 +359,19 @@ export class EngineSession {
 						tools,
 					} satisfies McpEngineLive;
 				}
-				case "extensionSkills":
+				case "extensionSkills": {
+					const skills = agent.resourceLoader
+						.getSkills()
+						.skills.filter((skill) => skill.sourceInfo.source.startsWith(EXTENSION_SKILL_SOURCE))
+						.map((skill) => ({
+							baseDir: skill.baseDir,
+							description: skill.description,
+							disableModelInvocation: skill.disableModelInvocation,
+							filePath: skill.filePath,
+							name: skill.name,
+						}));
+					return { skills } satisfies ExtensionSkillsAnswer;
+				}
 				case "contextLive":
 					return yield* new CommandRefused({
 						command: kind,
