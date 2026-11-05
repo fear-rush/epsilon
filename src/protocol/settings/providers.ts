@@ -183,6 +183,16 @@ export const ProviderModelCost = Schema.Struct({
 });
 export type ProviderModelCost = typeof ProviderModelCost.Type;
 
+/** pi merges an override's cost per field, so an override may name only some rates. */
+export const ModelOverrideCost = Schema.Struct({
+	input: Schema.optional(Schema.Finite),
+	output: Schema.optional(Schema.Finite),
+	cacheRead: Schema.optional(Schema.Finite),
+	cacheWrite: Schema.optional(Schema.Finite),
+	tiers: Schema.optional(Schema.Array(ProviderModelCostTier)),
+});
+export type ModelOverrideCost = typeof ModelOverrideCost.Type;
+
 /** A count of bytes or pixels a request may not pass. */
 const PositiveInt = Schema.Int.check(Schema.isGreaterThan(0));
 
@@ -228,9 +238,8 @@ export const SamplingParamsByThinkingLevel = Schema.Record(
 );
 export type SamplingParamsByThinkingLevel = typeof SamplingParamsByThinkingLevel.Type;
 
-/** One model a provider declares in `models.json`; unset fields keep pi's defaults. */
-export const ProviderModelInput = Schema.Struct({
-	id: Schema.NonEmptyString,
+/** What a model entry and an override both carry, so an override can name any of it. */
+const modelFields = {
 	name: Schema.optional(Schema.String),
 	/** A model's own family and endpoint; unset keeps the provider's. */
 	api: Schema.optional(ProviderApi),
@@ -247,9 +256,22 @@ export const ProviderModelInput = Schema.Struct({
 	headers: Schema.optional(Schema.Record(Schema.String, Schema.String)),
 	contextWindow: Schema.optional(PositiveInt),
 	maxTokens: Schema.optional(PositiveInt),
+} as const;
+
+/** One model a provider declares in `models.json`; unset fields keep pi's defaults. */
+export const ProviderModelInput = Schema.Struct({
+	id: Schema.NonEmptyString,
+	...modelFields,
 	cost: Schema.optional(ProviderModelCost),
 });
 export type ProviderModelInput = typeof ProviderModelInput.Type;
+
+/** A change to a model pi ships: only the fields the operator touched travel. */
+export const ModelOverride = Schema.Struct({
+	...modelFields,
+	cost: Schema.optional(ModelOverrideCost),
+});
+export type ModelOverride = typeof ModelOverride.Type;
 
 /** The stored `models.json` fields the editor may prefill. The key is never carried. */
 export const ProviderStored = Schema.Struct({
