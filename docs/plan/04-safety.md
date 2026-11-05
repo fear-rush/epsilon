@@ -54,7 +54,18 @@ keys); the index conformance test against `SessionManager.listAll`
       second run), `catalog-append` 65 ms (≤100; 124 ms on a machine at load 5.5),
       `open-window` 3 ms (≤50) with a 69 KiB window frame (≤2048), `engine-spawn` 379 ms
       (≤600), `client-stream` 0.04 ms (≤50).
-      Two reasons it is not green:
+      The remaining failure is attributed. Building first paint at five commits:
+      310.1 KiB before the chat port, **360.3 KiB at the first checkpoint after S2's
+      composer, palette and transcript landed** (`b53af23`'s checkout, though its own
+      diff is 44 lines), then 364.7 and 368.4/368.5 through S7–S9, 369.1 today. So the
+      58 KiB is the ported chat surface itself — the composer's palette (cmdk), its model
+      popover and the transcript — not one stray import. React (66.8), Effect (51) and
+      TanStack (38.5) are 156 KiB of the 369 and are the foundation's own cost, below
+      main's-era 315 that predates the port. Meeting 315 now needs a first-paint split
+      (deferring the palette and the model menu is worth ~21–30 KiB) **and** a smaller
+      framework floor, so the realistic choice is a revised budget — the owner's call,
+      with this figure.
+      Two other reasons it is not green:
       `client-stream` was a placeholder that failed the whole run at step 8; it is built
       now (`scripts/bench/client-stream.ts`, the reducer over 200 deltas in a 2,000-row
       chat), which let the run reach `bundle-size` for the first time:
@@ -79,11 +90,16 @@ keys); the index conformance test against `SessionManager.listAll`
       11–14 ms with the slicing and 653 ms without it. Two tests pin it: `catalog.test.ts`, "a long
       reconcile lets other work run between slices" (it fails with zero turns when the
       yield is removed), and the benchmark.
-- [ ] **A warm reconcile costs ~100 ms on the real home.** `sessions.list` re-stats every
+- [x] **A warm reconcile costs ~100 ms on the real home.** `sessions.list` re-stats every
       session file: 89 ms before the slicing, 119 ms with it, on 955 files. It does not
       freeze for seconds, but it sits at the line the item above cares about, and every
       list read pays it. Either stat only the folders the watcher reported, or serve the
       index as it stands and reconcile in the background. Needs the owner's pick.
+      Settled: the extra ~30 ms was the slicing itself — one `Effect.yieldNow` per four
+      files, paid even when a slice only stats. The loop now yields on the clock (a slice
+      may run 40 ms before handing control back), so a warm reconcile is **90 ms** on the
+      real home again and the stall budget still holds (49 ms of 100). A new
+      `catalog-warm` budget (150 ms) guards it: 6 ms on 500 synthetic sessions.
 - [x] **"N models can run a turn" counts models that cannot.** The General page's Status row
       reads `settings.providers.models`, which is pi's whole composed catalog — 1693 rows on
       the dev sandbox, against main's 94 — so a provider with no credential inflates the

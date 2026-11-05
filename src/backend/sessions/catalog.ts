@@ -1,7 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { dirname } from "node:path";
 
-import { Context, Effect, FileSystem, Layer, PubSub, Stream } from "effect";
+import { Clock, Context, Effect, FileSystem, Layer, PubSub, Stream } from "effect";
 import type { Scope } from "effect";
 
 import type { FileUnreadable } from "../platform/errors.ts";
@@ -68,10 +68,13 @@ export const makeCatalog = (
 ): CatalogApi => {
 	let version = 0;
 	/**
-	 * Files per slice of a reconcile. A slice runs synchronously, so it decides the longest
-	 * the server cannot answer during a cold build; four real session files measure ~60 ms.
+	 * Files per slice of a reconcile, and how long a slice may run before the loop hands
+	 * control back. Four real session files measure ~60 ms of parsing on a cold build; a
+	 * slice that only stats unchanged files is microseconds, so yielding on the clock keeps
+	 * a warm reconcile as cheap as it was before the slicing.
 	 */
 	const SYNC_SLICE_FILES = 4;
+	const SYNC_SLICE_MS = 40;
 
 	const syncFile = (path: string): Effect.Effect<"added" | "updated" | null, FileUnreadable> =>
 		Effect.gen(function* () {
@@ -122,13 +125,19 @@ export const makeCatalog = (
 			// measured — and Effect does not preempt synchronous work, so the socket would
 			// answer nothing for all of it. The loop hands control back every few files, so
 			// one slice is the longest the server is deaf (tens of milliseconds).
+			let lastYield = yield* Clock.currentTimeMillis;
 			for (let at = 0; at < files.length; at += SYNC_SLICE_FILES) {
 				for (const path of files.slice(at, at + SYNC_SLICE_FILES)) {
 					const outcome = yield* syncFile(path).pipe(Effect.orElseSucceed(() => null));
 					if (outcome === "added") added++;
 					if (outcome === "updated") updated++;
 				}
-				if (at + SYNC_SLICE_FILES < files.length) yield* Effect.yieldNow;
+				// Only a slow slice is worth handing control back: stat-only slices are
+				// microseconds, and yielding per slice cost a warm reconcile a third of it.
+				const now = yield* Clock.currentTimeMillis;
+				if (now - lastYield < SYNC_SLICE_MS) continue;
+				lastYield = now;
+				yield* Effect.yieldNow;
 			}
 			for (const path of stalePaths(db, roots)) {
 				if (!seen.has(path)) {

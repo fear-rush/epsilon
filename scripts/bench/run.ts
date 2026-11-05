@@ -4,6 +4,7 @@ const scripts = [
 	"catalog-cold.ts",
 	"catalog-append.ts",
 	"catalog-stall.ts",
+	"catalog-warm.ts",
 	"open-window.ts",
 	"engine-spawn.ts",
 	"client-stream.ts",
