@@ -10,7 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Field, FieldLabel } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 
-import { formatBytes } from "./read-files.ts";
+import { formatBytes } from "./read-folder.ts";
 
 const Disclosure = ({
 	label,

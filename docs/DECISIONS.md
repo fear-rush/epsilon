@@ -453,6 +453,19 @@ read, and a link would still need the same setting entry to be found.
 Cost accepted: the page may only link a folder Epsilon detected, so a path pasted or typed
 into a request is refused.
 
+## A pasted skill archive is unpacked on the server
+
+The import sends a picked `.zip`, `.tar`, `.tar.gz` or `.tgz` as one file. The server
+unpacks it with the same `src/domain/skills/archive.ts` that the upload path already used,
+and every entry goes through one set of path rules there.
+
+Why: one unpacker cannot disagree with another about what a path means, the checks that
+matter run where the files are written, and the page stops shipping a zip parser. The old
+dialog unzipped in the browser and uploaded the entries, so two implementations had to
+agree on stripped paths, modes and size limits.
+
+Not: unzipping in the page. Not trusting the archive's own paths.
+
 ## A project's chats are chosen by the server
 
 `sessions.removeProject` takes a folder, asks the index which chats ran in it, checks
