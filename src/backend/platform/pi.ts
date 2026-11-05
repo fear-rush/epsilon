@@ -182,6 +182,12 @@ export type PiConfigApi = {
 	readonly settings: (cwd: string) => Effect.Effect<SettingsManager>;
 	/** The settings file Epsilon writes with pi's lock. */
 	readonly settingsPath: Effect.Effect<string>;
+	/**
+	 * Whether pi still enables one of its own extensions for a folder, resolved the way a
+	 * session resolves it: `-builtin:<name>` and a project `+builtin:<name>` add up, and a
+	 * broken package source answers "enabled" rather than taking a page down.
+	 */
+	readonly builtinEnabled: (cwd: string, name: string) => Effect.Effect<boolean>;
 	/** pi's composed model catalog and credential store, built from this home. */
 	readonly models: Effect.Effect<ModelRuntime, RuntimeUnavailable>;
 	/**
@@ -454,6 +460,24 @@ export const PiConfigLive: Layer.Layer<PiConfig, never, AgentHome> = Layer.effec
 						return problem.path === undefined ? view : Object.assign(view, { path: problem.path });
 					});
 				}),
+			builtinEnabled: (cwd: string, name: string): Effect.Effect<boolean> =>
+				Effect.promise(async () => {
+					const manager = new DefaultPackageManager({
+						agentDir: home.agentDir,
+						builtinExtensions: [name],
+						cwd,
+						settingsManager: SettingsManager.create(cwd, home.agentDir),
+					});
+					// pi's own resolver: `-builtin:<name>` in either file, and a project's
+					// `+builtin:<name>`, add up to one answer. Nothing is installed.
+					const resolved = await manager.resolve(() => Promise.resolve("skip" as const));
+					return (
+						resolved.extensions.find((entry) => entry.path === `builtin:${name}`)?.enabled !== false
+					);
+				}).pipe(
+					// A broken package source is the session's error to report, not this page's.
+					Effect.orElseSucceed(() => true),
+				),
 			settings: (cwd: string): Effect.Effect<SettingsManager> =>
 				Effect.sync(() => SettingsManager.create(cwd, home.agentDir)),
 			settingsPath: Effect.succeed(join(home.agentDir, "settings.json")),

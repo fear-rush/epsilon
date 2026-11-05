@@ -48,6 +48,7 @@ const mcpLayer = (name: string, answers: ReadonlyArray<McpEngineLive> = []) => {
 			const document = yield* JsonDocument;
 			const config = yield* PiConfig;
 			return makeMcpService({
+				builtinEnabled: config.builtinEnabled,
 				document,
 				home,
 				live: mcpLiveReader({
@@ -659,5 +660,56 @@ describe("settings.mcp.setDefaultTool", () => {
 		expect(outcome.afterOn).toEqual(["+codemode"]);
 		expect(outcome.afterOff).toBeUndefined();
 		expect(outcome.refused).toBeInstanceOf(SettingRefused);
+	});
+});
+
+describe("settings.mcp.list reach", () => {
+	test("a codemode server is unreachable while auto-enable is off, and a named tool fixes it", async () => {
+		const { agentDir, file, layer, project } = mcpLayer("reach");
+		writeFileSync(
+			file,
+			`${JSON.stringify({
+				autoEnableCodemode: false,
+				mcpServers: { searchy: { command: "npx", exposure: "codemode" } },
+			})}\n`,
+		);
+
+		const before = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(McpRpcs, layer);
+				return yield* client["settings.mcp.list"]({ folder: null });
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+		expect(before.reach.codemodeDefault).toBe(false);
+		expect(before.reach.autoEnableCodemode.global).toBe(false);
+		expect(before.reach.unreachable).toEqual([{ exposures: ["codemode"], name: "searchy" }]);
+
+		// Naming the tool is pi's other half: the file decides, not the switch.
+		writeFileSync(
+			join(agentDir, "settings.json"),
+			`${JSON.stringify({ defaultTools: ["+codemode"] })}\n`,
+		);
+		const after = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(McpRpcs, layer);
+				return yield* client["settings.mcp.list"]({ folder: null });
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+		expect(after.reach.codemodeDefault).toBe(true);
+		expect(after.reach.unreachable).toEqual([]);
+
+		// A project that sets its own list owns it.
+		mkdirSync(join(project, ".pi"), { recursive: true });
+		writeFileSync(
+			join(project, ".pi", "settings.json"),
+			`${JSON.stringify({ defaultTools: ["codemode"] })}\n`,
+		);
+		const projectView = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(McpRpcs, layer);
+				return yield* client["settings.mcp.list"]({ folder: project });
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+		expect(projectView.reach.defaultToolsProject).toBe(true);
 	});
 });

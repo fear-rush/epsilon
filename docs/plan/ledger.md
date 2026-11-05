@@ -142,6 +142,10 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 
 ## S4 Settings: MCP
 
+The list's data is on the wire: `McpListView.reach` carries pi's two reaching rules
+(defaultTools, autoEnableCodemode, a disabled built-in, a project's own list) and the
+servers nothing can call. `settings.mcp.setDefaultTool` writes the home's list.
+
 Owner question before `mcp-signin.tsx`, `mcp-oauth.tsx` and `POST /api/settings/mcp/command`:
 main signs in from the page, while AGENTS.md invariant 5 keeps MCP sign-in in the terminal.
 Porting those needs a yes, or the rows need one to differ.

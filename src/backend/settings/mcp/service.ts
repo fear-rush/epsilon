@@ -6,6 +6,7 @@ import { McpRefused, SettingRefused } from "#protocol/errors";
 import type {
 	McpInProjectValue,
 	McpInvalidEntry,
+	McpExposure,
 	McpLive,
 	McpListView,
 	McpOAuthInput,
@@ -227,6 +228,10 @@ const invalidRow = (entry: Extract<McpServer, { kind: "invalid" }>): McpInvalidE
 		"overrideKeys",
 		entry.overrideKeys,
 	);
+
+/** A stored flag as three states: pi's default is neither `true` nor `false`. */
+const flag = (value: JsonValue | undefined): boolean | null =>
+	value === true ? true : value === false ? false : null;
 
 const toRow = (entry: McpServer): McpServerRow => {
 	if (entry.kind === "override") return overrideRow(entry);
@@ -498,6 +503,7 @@ export const makeMcpService = (deps: {
 	readonly store: McpStoreApi;
 	readonly live: (names: ReadonlyArray<string>) => Effect.Effect<McpLive>;
 	readonly settings: (folder: string) => Effect.Effect<SettingsManager>;
+	readonly builtinEnabled: (folder: string, name: string) => Effect.Effect<boolean>;
 }): McpServiceApi => {
 	const editFile = Effect.fn("Mcp.editFile")(function* (
 		scope: McpScope,
@@ -525,13 +531,68 @@ export const makeMcpService = (deps: {
 			(problem): problem is string => problem !== undefined,
 		);
 		return {
+			autoEnableCodemode: {
+				global: flag(global.autoEnableCodemode),
+				project: project === undefined ? null : flag(project.autoEnableCodemode),
+			},
 			entries: entriesOf(global.servers, project === undefined ? {} : project.servers),
 			problems,
 		};
 	});
 
+	/**
+	 * Whether the model can call each server's tools, in pi's own two rules: a codemode
+	 * server is reachable while auto-enable is on, a deferred one through `tool_search`,
+	 * and either reaching tool can call both kinds.
+	 */
+	const reachOf = Effect.fn("Mcp.reach")(function* (
+		folder: string | null,
+		entries: ReadonlyArray<McpServer>,
+		autoEnableCodemode: { readonly global: boolean | null; readonly project: boolean | null },
+	) {
+		const target = folder ?? deps.home.agentDir;
+		const settings = yield* deps.settings(target);
+		const defaults = settings.getDefaultTools() ?? [];
+		const [codemodeBuilt, toolSearchBuilt] = yield* Effect.all([
+			deps.builtinEnabled(target, "codemode"),
+			deps.builtinEnabled(target, "tool-search"),
+		] as const);
+		const enabled = entries.filter(
+			(entry): entry is Exclude<McpServer, { kind: "invalid" }> =>
+				entry.kind !== "invalid" && entry.config.enabled !== false,
+		);
+		const needs = (exposure: "codemode" | "deferred"): boolean =>
+			enabled.some((entry) => indirectExposuresOf(entry.config).includes(exposure));
+		const auto = autoEnableCodemode.project ?? autoEnableCodemode.global ?? true;
+		const codemodeDefault = defaults.includes("codemode");
+		const toolSearchDefault = defaults.includes("tool_search");
+		const codemode = codemodeBuilt && (codemodeDefault || (needs("codemode") && auto));
+		const toolSearch = toolSearchBuilt && (toolSearchDefault || needs("deferred"));
+		// A project entry that replaces a global one of its name is the one pi loads, so
+		// the replaced entry is not listed twice.
+		const held = new Map<string, ReadonlyArray<McpExposure>>();
+		if (!codemode && !toolSearch) {
+			for (const entry of enabled) {
+				if (entry.kind === "server" && entry.relation === "replaced-by-project") continue;
+				const exposures = indirectExposuresOf(entry.config);
+				if (exposures.length > 0) held.set(entry.name, exposures);
+			}
+		}
+		return {
+			autoEnableCodemode,
+			codemodeDefault,
+			codemodeDisabled: !codemodeBuilt,
+			defaultToolsProject:
+				folder !== null && settings.getProjectSettings().defaultTools !== undefined,
+			toolSearchDefault,
+			toolSearchDisabled: !toolSearchBuilt,
+			unreachable: [...held].map(([name, exposures]) => ({ exposures, name })),
+		};
+	});
+
 	const list: McpServiceApi["list"] = Effect.fn("Mcp.list")(function* (folder) {
-		const { entries, problems } = yield* readFiles(folder);
+		const { autoEnableCodemode, entries, problems } = yield* readFiles(folder);
+		const reach = yield* reachOf(folder, entries, autoEnableCodemode);
 		const servers = entries
 			.map(toRow)
 			.toSorted((left, right) =>
@@ -541,7 +602,7 @@ export const makeMcpService = (deps: {
 						? -1
 						: 1,
 			);
-		return { problems, servers };
+		return { problems, reach, servers };
 	});
 
 	const live: McpServiceApi["live"] = Effect.fn("Mcp.live")(function* (folder) {
@@ -889,6 +950,7 @@ export const McpServiceLive: Layer.Layer<
 		const document = yield* JsonDocument;
 		const pi = yield* PiConfig;
 		return makeMcpService({
+			builtinEnabled: pi.builtinEnabled,
 			document,
 			home,
 			live: mcpLiveReader({ log, queryAll: engines.queryAll("mcpLive") }),

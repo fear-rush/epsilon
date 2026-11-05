@@ -266,10 +266,43 @@ export const McpEngineLive = Schema.Struct({
 });
 export type McpEngineLive = typeof McpEngineLive.Type;
 
+/** One server the model cannot call because no reaching tool is active. */
+export const McpUnreachable = Schema.Struct({
+	name: Schema.String,
+	/** Which exposures it holds, so the page can say why it needs a reaching tool. */
+	exposures: Schema.Array(McpExposure),
+});
+export type McpUnreachable = typeof McpUnreachable.Type;
+
+/**
+ * Whether the model can call the MCP tools a server exposes for this folder: pi activates
+ * `codemode` for a codemode server while auto-enable is on, and `tool_search` for a
+ * deferred one. Each half is pi's own rule, read from settings.json and both mcp.json files.
+ */
+export const McpReach = Schema.Struct({
+	/** Whether the resolved `defaultTools` names the tool. */
+	codemodeDefault: Schema.Boolean,
+	toolSearchDefault: Schema.Boolean,
+	/** The built-in itself is turned off, so naming it would not help. */
+	codemodeDisabled: Schema.Boolean,
+	toolSearchDisabled: Schema.Boolean,
+	/** The project's own settings set `defaultTools`, so only that file can name tools. */
+	defaultToolsProject: Schema.Boolean,
+	/** Each file's `autoEnableCodemode`, or null when it does not set it. */
+	autoEnableCodemode: Schema.Struct({
+		global: Schema.NullOr(Schema.Boolean),
+		project: Schema.NullOr(Schema.Boolean),
+	}),
+	/** Every enabled server no reaching tool can call, which is empty when one can. */
+	unreachable: Schema.Array(McpUnreachable),
+});
+export type McpReach = typeof McpReach.Type;
+
 export const McpListView = Schema.Struct({
 	servers: Schema.Array(McpServerRow),
 	/** A file pi or Epsilon could not read, so nothing of it is listed. */
 	problems: Schema.Array(Schema.String),
+	reach: McpReach,
 });
 export type McpListView = typeof McpListView.Type;
 

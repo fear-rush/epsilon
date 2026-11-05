@@ -87,6 +87,7 @@ const configLayer = (name: string) => {
 			const document = yield* JsonDocument;
 			const config = yield* PiConfig;
 			return makeMcpService({
+				builtinEnabled: config.builtinEnabled,
 				document,
 				home: agentHome,
 				live: () => Effect.succeed(emptyLive),
