@@ -137,27 +137,35 @@ export const ThinkingLevelMap = Schema.Record(
 );
 export type ThinkingLevelMap = typeof ThinkingLevelMap.Type;
 
+/** Where a reasoning level goes in a request body. */
+export const ThinkingFormat = Schema.Literals([
+	"openai",
+	"openrouter",
+	"deepseek",
+	"together",
+	"baseten",
+	"zai",
+	"qwen",
+	"chat-template",
+	"qwen-chat-template",
+	"string-thinking",
+	"ant-ling",
+]);
+export type ThinkingFormat = typeof ThinkingFormat.Type;
+
+/** The request field that caps reasoning tokens for an endpoint sharing `max_tokens`. */
+export const ThinkingTokenBudgetField = Schema.Literals([
+	"thinking_token_budget",
+	"thinking_budget",
+	"thinking_budget_tokens",
+]);
+export type ThinkingTokenBudgetField = typeof ThinkingTokenBudgetField.Type;
+
 /** How a reasoning level travels. Empty means pi auto-detects from the API family. */
 export const ReasoningCompat = Schema.Struct({
-	thinkingFormat: Schema.optional(
-		Schema.Literals([
-			"openai",
-			"openrouter",
-			"deepseek",
-			"together",
-			"baseten",
-			"zai",
-			"qwen",
-			"chat-template",
-			"qwen-chat-template",
-			"string-thinking",
-			"ant-ling",
-		]),
-	),
+	thinkingFormat: Schema.optional(ThinkingFormat),
 	supportsReasoningEffort: Schema.optional(Schema.Boolean),
-	thinkingTokenBudgetField: Schema.optional(
-		Schema.Literals(["thinking_token_budget", "thinking_budget", "thinking_budget_tokens"]),
-	),
+	thinkingTokenBudgetField: Schema.optional(ThinkingTokenBudgetField),
 	requiresReasoningContentOnAssistantMessages: Schema.optional(Schema.Boolean),
 	forceAdaptiveThinking: Schema.optional(Schema.Boolean),
 });
