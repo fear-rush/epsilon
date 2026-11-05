@@ -1,8 +1,9 @@
 # Plan: finish the rebuild
 
-> **Archived.** This plan is done: every phase below is finished and the ledger is fully
-> ticked. It is kept as the record of what `main` had and why a ported screen differs —
-> never as instructions. Live status: [docs/NEXT.md](../../../docs/NEXT.md).
+> **Archived.** Every phase's work below is finished and the ledger is fully ticked. The
+> one thing phase 4 left open — the first-paint budget — moved to
+> [docs/NEXT.md](../../../docs/NEXT.md), which is the live status. This file is the record
+> of what `main` had and why a ported screen differs; never instructions.
 
 Status board for `refactor/rebuild`. Started 2026-11-04; `main` is at `48226bb`.
 

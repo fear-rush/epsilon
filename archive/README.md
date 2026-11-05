@@ -6,7 +6,9 @@ checkbox that is already ticked, or a plan whose work is done. The live docs are
 [../docs/](../docs/README.md), and where the code and an archived plan disagree, the code
 wins.
 
-## `docs/plan/`: the rebuild's plan and parity ledger
+## The rebuild's plan and parity ledger
+
+These were `docs/plan/` until the port finished.
 
 The plan that rebuilt this branch from `main` (`48226bb`): five phases, every feature and
 screen ported 1:1, and a ledger of 282 rows — one per file, route and server gap — each
