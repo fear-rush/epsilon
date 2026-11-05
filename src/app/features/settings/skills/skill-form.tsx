@@ -13,13 +13,11 @@ import { Notice } from "@/components/patterns/status/notice";
 import { useDraftForm } from "@/components/patterns/use-draft-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 
 import { useSettings, useSettingsProject, useSettingsRefresh } from "../queries.ts";
 import { removeSkill, saveSkill, setSkillEnabled } from "./api.ts";
-import { SKILL_FIELDS, toDraft, toInput, validate } from "./skill-draft.ts";
+import { SkillCard } from "./skill-card.tsx";
+import { skillFields, toDraft, toInput, validate } from "./skill-draft.ts";
 import type { SkillDraft, SkillField } from "./skill-draft.ts";
 import { SkillInstructions } from "./skill-instructions.tsx";
 import { SKILL_MODES, SKILLS_BACK } from "./skill-modes.ts";
@@ -46,7 +44,7 @@ export function SkillForm({
 	const project = useSettingsProject();
 	const creating = file === undefined;
 	const form = useDraftForm<SkillDraft, SkillField>({
-		fields: SKILL_FIELDS,
+		fields: skillFields,
 		initial: () => toDraft(file, view?.name),
 	});
 	const { draft, update, errors } = form;
@@ -152,74 +150,7 @@ export function SkillForm({
 
 				{tab === "form" && !unreadable ? (
 					<>
-						<Section title="Skill">
-							{creating && (
-								<Row
-									stacked
-									title="Name"
-									description="The folder under the skills root, and the URL."
-								>
-									<Field data-invalid={errors.name !== undefined}>
-										<FieldLabel htmlFor="skill-name" className="sr-only">
-											Name
-										</FieldLabel>
-										<Input
-											id="skill-name"
-											aria-invalid={errors.name !== undefined}
-											autoComplete="off"
-											value={draft.name}
-											onChange={(event) => update({ name: event.target.value })}
-										/>
-										{errors.name !== undefined && <FieldError>{errors.name}</FieldError>}
-									</Field>
-								</Row>
-							)}
-							<Row
-								stacked
-								title="Description"
-								description="What pi tells the model about this skill."
-							>
-								<Field data-invalid={errors.description !== undefined}>
-									<FieldLabel htmlFor="skill-description" className="sr-only">
-										Description
-									</FieldLabel>
-									<Textarea
-										id="skill-description"
-										aria-invalid={errors.description !== undefined}
-										rows={3}
-										value={draft.description}
-										onChange={(event) => update({ description: event.target.value })}
-									/>
-									{errors.description !== undefined && (
-										<FieldError>{errors.description}</FieldError>
-									)}
-								</Field>
-							</Row>
-							<Row
-								title="Model invocation"
-								description="Whether the model may load this skill on its own."
-							>
-								<EnabledSwitch
-									checked={draft.modelInvocation}
-									label="model invocation"
-									onCheckedChange={(modelInvocation) => update({ modelInvocation })}
-								/>
-							</Row>
-							<Row title="License" description="Kept in the file; blank removes the key.">
-								<Input
-									aria-label="License"
-									value={draft.license}
-									onChange={(event) => update({ license: event.target.value })}
-								/>
-							</Row>
-							<Row title="Compatibility" description="Kept in the file; blank removes the key.">
-								<Input
-									aria-label="Compatibility"
-									value={draft.compatibility}
-									onChange={(event) => update({ compatibility: event.target.value })}
-								/>
-							</Row>
-						</Section>
+						<SkillCard draft={draft} errors={errors} creating={creating} update={update} />
 
 						<SkillInstructions value={draft.body} onChange={(body) => update({ body })} />
 

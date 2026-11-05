@@ -1,3 +1,7 @@
+/**
+ * The editable state of one skill page and the conversions around it: the draft the form
+ * holds until Save, the check the server repeats, and the write input.
+ */
 import type { SkillFile, SkillInput, SkillView } from "#protocol/settings/skills";
 
 import { skillDescriptionProblem, skillNameProblem } from "./rules.ts";
@@ -8,49 +12,56 @@ export type SkillDraft = {
 	name: string;
 	description: string;
 	modelInvocation: boolean;
-	license: string;
-	compatibility: string;
 	body: string;
 };
 
 /** The fields that can carry a message. */
-export const SKILL_FIELDS = ["name", "description"] as const;
-export type SkillField = (typeof SKILL_FIELDS)[number];
+export type SkillField = "name" | "description" | "body";
+
+export const skillFields: readonly SkillField[] = ["name", "description", "body"];
+
+export type SkillErrors = Partial<Record<SkillField, string>>;
 
 export const toDraft = (file: SkillFile | undefined, name: string | undefined): SkillDraft => ({
 	name: file?.name ?? name ?? "",
 	description: file?.description ?? "",
 	modelInvocation: file?.modelInvocation ?? true,
-	license: file?.license ?? "",
-	compatibility: file?.compatibility ?? "",
-	body: file?.body ?? SKILL_BODY_STARTER,
+	// Only a new skill starts from the template; an existing empty body stays empty.
+	body: file === undefined ? SKILL_BODY_STARTER : file.body,
 });
 
-/** A blank optional field removes that key; a blank required one refuses the save. */
-export const toInput = (draft: SkillDraft): SkillInput => ({
-	body: draft.body,
-	compatibility: draft.compatibility.trim(),
-	description: draft.description.trim(),
-	license: draft.license.trim(),
-	modelInvocation: draft.modelInvocation,
-});
-
-/** Every problem the form can catch before the server is asked. */
+/** Checks the draft the way the server will; returns one message per bad field. */
 export const validate = (
 	draft: SkillDraft,
 	creating: boolean,
 	taken: ReadonlySet<string>,
-): Partial<Record<SkillField, string>> => {
-	const errors: Partial<Record<SkillField, string>> = {};
+): SkillErrors => {
+	const found: SkillErrors = {};
 	if (creating) {
 		const problem = skillNameProblem(draft.name);
-		if (problem !== undefined) errors.name = problem;
-		else if (taken.has(draft.name.trim())) errors.name = "A skill with that name is already here";
+		if (problem !== undefined) {
+			found.name = draft.name.trim() === "" ? "A skill needs a name." : problem;
+		} else if (taken.has(draft.name.trim())) {
+			found.name = `A skill named ${draft.name} already exists here. Pick another name.`;
+		}
 	}
 	const description = skillDescriptionProblem(draft.description);
-	if (description !== undefined) errors.description = description;
-	return errors;
+	if (description !== undefined) {
+		found.description =
+			draft.description.trim() === "" ? "Say what the skill does and when to use it." : description;
+	}
+	return found;
 };
+
+/**
+ * `license`, `compatibility` and `metadata` are left out, so the server keeps them as the
+ * file has them; the Raw tab is where they are edited.
+ */
+export const toInput = (draft: SkillDraft): SkillInput => ({
+	body: draft.body,
+	description: draft.description.trim(),
+	modelInvocation: draft.modelInvocation,
+});
 
 /** The listed skill row this page edits, for its status and switches. */
 export const viewOf = (
