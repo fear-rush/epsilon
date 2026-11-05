@@ -20,6 +20,7 @@ import { HOSTNAME, ServeLive } from "./serve.ts";
 import { Catalog, CatalogLive } from "./sessions/catalog.ts";
 import { SessionsLive } from "./sessions/operations.ts";
 import { PinsLive } from "./sessions/pins.ts";
+import { syncSessionRoots } from "./sessions/roots.ts";
 import { ConfigChangesLive } from "./settings/changes.ts";
 import { ContextServiceLive } from "./settings/context/service.ts";
 import { EpsilonSettings, EpsilonSettingsLive } from "./settings/epsilon.ts";
@@ -196,7 +197,7 @@ const program = Effect.gen(function* () {
 		agentDir: home.agentDir,
 		maxRunning: current.settings.maxRunning,
 	});
-	yield* catalogService.sync([home.sessionsDir]);
+	yield* syncSessionRoots(catalogService, home);
 	const running = yield* engineService.running;
 	yield* log.write("info", "engines ready", { running: running.length });
 	yield* log.write("info", "epsilon listening", { url: `http://${HOSTNAME}:${port}` });

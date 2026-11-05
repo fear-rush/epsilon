@@ -67,6 +67,22 @@ export type PiProviderLoginApi = {
 	) => Effect.Effect<void, ProviderRefused>;
 };
 
+/** Where pi reads and writes one folder's sessions, and which file decided it. */
+export const sessionDirOf = (cwd: string, home: AgentHomeApi) => {
+	const settings = SettingsManager.create(cwd, home.agentDir);
+	const dir = settings.getSessionDir();
+	// A relative `sessionDir` follows pi's own rule: resolved against the folder it runs in.
+	const project = settings.getProjectSettings().sessionDir;
+	const global = settings.getGlobalSettings().sessionDir;
+	// The nearer file wins: a project that moved its sessions keeps that folder on its tab.
+	const source = (): string | null => {
+		if (project !== undefined) return join(cwd, ".pi", "settings.json");
+		if (global !== undefined) return join(home.agentDir, "settings.json");
+		return null;
+	};
+	return { dir: dir === undefined ? home.sessionsDir : resolve(cwd, dir), source: source() };
+};
+
 /**
  * A new session in `targetCwd` holding the whole history of `sourceFile`, which is pi's
  * own fork: the file is written at once and records the source as its parent. Answers the

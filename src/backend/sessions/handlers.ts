@@ -9,6 +9,7 @@ import { Catalog } from "./catalog.ts";
 import type { StoredSummary } from "./ingest.ts";
 import { Sessions } from "./operations.ts";
 import { Pins } from "./pins.ts";
+import { syncSessionRoots } from "./roots.ts";
 
 /**
  * The chat list over the socket, its rename and delete, and the pin Epsilon owns.
@@ -26,10 +27,9 @@ export const SessionsHandlersLive = SessionsRpcs.toLayer(
 		const home = yield* AgentHome;
 		const projects = yield* ProjectService;
 		const fs = yield* FileSystem.FileSystem;
-		const roots = [home.sessionsDir];
 
 		const list = Effect.gen(function* () {
-			const rows = yield* catalog.sync(roots).pipe(Effect.andThen(catalog.list));
+			const rows = yield* syncSessionRoots(catalog, home).pipe(Effect.andThen(catalog.list));
 			// One stat per distinct folder, not per chat: a deleted project is the case this
 			// flags, and every chat in it answers the same.
 			const folders = [...new Set(rows.map((row) => row.cwd))];

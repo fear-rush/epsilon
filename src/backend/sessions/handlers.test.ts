@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { BunServices } from "@effect/platform-bun";
@@ -85,6 +85,25 @@ describe("sessions.list", () => {
 		const missing = new Map(list.sessions.map((row) => [row.id, row.cwdMissing]));
 		expect(missing.get("s-here")).toBe(false);
 		expect(missing.get("s-gone")).toBe(true);
+	});
+
+	test("lists a home chat from the folder a sessionDir in settings.json names", async () => {
+		const { agentDir, root } = sandbox("session-dir");
+		const moved = join(root, "moved-sessions");
+		mkdirSync(moved, { recursive: true });
+		writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ sessionDir: moved }));
+		writeSession(moved, "s-moved", linearSession("s-moved", join(agentDir, "chats"), 2));
+
+		const layer = handlerLayer(agentDir, root);
+		const list = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SessionsRpcs, layer);
+				return yield* client["sessions.list"]();
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		// pi writes a home chat there, so the list has to read there: the default root is empty.
+		expect(list.sessions.map((row) => row.id)).toEqual(["s-moved"]);
 	});
 });
 
