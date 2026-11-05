@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useMatchRoute } from "@tanstack/react-router";
+import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 
 import type { McpReach, McpScope, McpServerRow } from "#protocol/settings/mcp";
@@ -13,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { useSettings, useSettingsProject, useSettingsRefresh } from "@/features/settings/queries";
 
 import { setMcpAutoEnableCodemode, setMcpDefaultTool } from "./commands.ts";
+import { McpAddDialog } from "./mcp-add-dialog";
 import { asScope } from "./mcp-detail.ts";
 
 /**
@@ -118,6 +120,7 @@ function McpPanel({ selected }: { selected: { scope: McpScope; name: string } | 
 	const projectPath = useSettingsProject();
 	const scope: McpScope = projectPath === undefined ? "global" : "project";
 	const [query, setQuery] = useState("");
+	const [adding, setAdding] = useState(false);
 
 	const servers = settings.data?.mcp.servers ?? [];
 	const view = settings.data?.mcp;
@@ -227,49 +230,58 @@ function McpPanel({ selected }: { selected: { scope: McpScope; name: string } | 
 	].filter((notice) => notice !== undefined);
 
 	return (
-		<ListPane
-			title="MCP servers"
-			count={own.length}
-			error={settings.error}
-			notices={notices.length === 0 ? undefined : <div className="grid gap-2">{notices}</div>}
-			scope="/settings/mcp"
-			query={query}
-			onQueryChange={setQuery}
-			searchLabel="Search MCP servers"
-			pending={settings.isPending}
-			pendingLabel="Reading MCP servers…"
-			empty={
-				visible.length === 0
-					? own.length === 0
-						? scope === "global"
-							? "No MCP server configured yet."
-							: "No servers in this project."
-						: "Nothing matches."
-					: undefined
-			}
-			footerStacked
-			footer={
-				<>
-					{reach !== undefined && (
-						<CodemodeBlock
-							reach={reach}
-							scope={scope}
-							pending={codemode.isPending}
-							onToggle={(target, enabled) => codemode.mutate({ enabled, scope: target })}
-						/>
-					)}
-				</>
-			}
-		>
-			<ServerGroup servers={visible} selected={selected} />
-			{unlisted.length > 0 && (
-				<ListGroup title="Registered by an extension">
-					{unlisted.map((server) => (
-						<ListItem key={server.name} name={server.name} />
-					))}
-				</ListGroup>
-			)}
-		</ListPane>
+		<>
+			<ListPane
+				title="MCP servers"
+				count={own.length}
+				error={settings.error}
+				notices={notices.length === 0 ? undefined : <div className="grid gap-2">{notices}</div>}
+				scope="/settings/mcp"
+				query={query}
+				onQueryChange={setQuery}
+				searchLabel="Search MCP servers"
+				pending={settings.isPending}
+				pendingLabel="Reading MCP servers…"
+				empty={
+					visible.length === 0
+						? own.length === 0
+							? scope === "global"
+								? "No MCP server configured yet."
+								: "No servers in this project."
+							: "Nothing matches."
+						: undefined
+				}
+				footerStacked
+				footer={
+					<>
+						{reach !== undefined && (
+							<CodemodeBlock
+								reach={reach}
+								scope={scope}
+								pending={codemode.isPending}
+								onToggle={(target, enabled) => codemode.mutate({ enabled, scope: target })}
+							/>
+						)}
+						<Button type="button" variant="outline" onClick={() => setAdding(true)}>
+							<PlusIcon />
+							{scope === "global"
+								? "Add MCP server"
+								: `Add to ${settings.data?.project?.name ?? "project"}`}
+						</Button>
+					</>
+				}
+			>
+				<ServerGroup servers={visible} selected={selected} />
+				{unlisted.length > 0 && (
+					<ListGroup title="Registered by an extension">
+						{unlisted.map((server) => (
+							<ListItem key={server.name} name={server.name} />
+						))}
+					</ListGroup>
+				)}
+			</ListPane>
+			<McpAddDialog open={adding} onOpenChange={setAdding} />
+		</>
 	);
 }
 

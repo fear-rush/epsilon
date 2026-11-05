@@ -11,4 +11,8 @@ export const settingsKeys = {
 		[...all, "package-resources", project ?? null, scope, source] as const,
 	packageUpdates: (project: string | undefined) =>
 		[...all, "package-updates", project ?? null] as const,
+	mcpRegistrySearch: (source: string, q: string) =>
+		[...all, "mcp-registry-search", source, q] as const,
+	mcpRegistryServer: (source: string, name: string | undefined) =>
+		[...all, "mcp-registry-server", source, name ?? ""] as const,
 };
