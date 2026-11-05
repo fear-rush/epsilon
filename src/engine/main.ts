@@ -141,7 +141,13 @@ const handle = (message: SupervisorToEngine) => {
 				),
 			);
 		case "subscribe":
-			return Effect.sync(() => current?.subscribeTab(message.tab));
+			return Effect.sync(() => {
+				if (current === undefined) {
+					log("warn", "a tab subscribed before the session existed", { tab: message.tab });
+					return;
+				}
+				current.subscribeTab(message.tab);
+			});
 		case "unsubscribe":
 			return Effect.sync(() => current?.unsubscribeTab(message.tab));
 		case "editor":
@@ -149,7 +155,10 @@ const handle = (message: SupervisorToEngine) => {
 		case "answer":
 			return Effect.gen(function* () {
 				const session = current;
-				if (session === undefined) return;
+				if (session === undefined) {
+					log("warn", "a dialog answer arrived before the session existed");
+					return;
+				}
 				yield* session
 					.answer(message.answer)
 					.pipe(

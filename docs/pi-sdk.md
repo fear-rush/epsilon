@@ -83,6 +83,12 @@ Other facts worth having before embedding:
   `mode === "tui"`. The mode names a presentation, not a transport, and the
   combination `"json"` **with** a `uiContext` is one pi never produces itself, so
   `hasUI` (true here) is the field to branch on, not the mode.
+- `bindExtensions()` resolves only after every `session_start` handler has settled,
+  because pi awaits each handler (`dist/core/extensions/runner.js`, `emit`). A handler
+  that calls `ctx.ui.confirm` therefore holds the bind open until the question is
+  answered, so a host must report the session ready and take a tab **before** the bind
+  resolves, and hold commands until it does. Epsilon gates commands on that binding
+  rather than on `ready`.
 - `InputSource` is `"interactive" | "rpc" | "extension"`. A prompt typed by a person
   in the browser is `"interactive"`.
 - Adding to a run that is already going goes through `prompt`, never `steer`: while

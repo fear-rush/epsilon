@@ -81,19 +81,25 @@ view, built from the shared patterns.
 1. The page attaches to a session: `conversation.attach` returns a stream of frames.
 2. The registry either reuses the engine for that session or asks the supervisor to
    spawn one inside a scope. The engine builds its runtime from the session file.
-3. The engine sends a windowed snapshot (entry ids, recent entries, notices); older
+3. The engine reports ready once the session exists, before pi's extensions finish
+   `session_start`: pi awaits those handlers, and one that asks a question needs an
+   attached page to answer it. Commands wait for the binding, and a bind that fails
+   refuses them with the reason and a notice.
+4. The engine sends a windowed snapshot (entry ids, recent entries, notices); older
    pages arrive when the transcript asks. The flat tree arrives when the picker opens,
    and the reducer nests it so the picker draws main's shape. The composer's readings
    (pi's context usage, the session's totals, the cache warmer) follow the snapshot and
    again whenever pi's numbers change, and the keyed statuses extensions set travel as a
    `statuses` frame.
-4. Commands go down the same socket as tagged values; extension dialogs come back as
-   frames and their answers go back as commands. A prompt whose text starts with a name in
+5. Commands go down the same socket as tagged values; extension dialogs come back as
+   frames and their answers go back as commands. A question asked before a tab attaches
+   is replayed when it does, so an extension blocking `session_start` gets answered
+   rather than waited on. A prompt whose text starts with a name in
    the built-in table is answered by the engine before pi, so a `/compact` never reaches
    the model; the browser answers its own surfaces before sending.
-5. The reducer in `src/domain/` turns frames into state; the view renders state. A
+6. The reducer in `src/domain/` turns frames into state; the view renders state. A
    state-only resync replaces the transcript without replaying frames.
-6. A crash sends `EngineStopped` to that chat's tabs only; the next command respawns.
+7. A crash sends `EngineStopped` to that chat's tabs only; the next command respawns.
 
 ## Where state lives
 

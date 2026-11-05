@@ -51,6 +51,27 @@ parent). pi's `--mode rpc` (no reload, no tree navigation, no tools or system-pr
 listing, `getEditorText()` empty). Engines outliving the server: they would need
 version-skew handling and orphan adoption.
 
+## `ready` before extension binding
+
+An engine reports ready, and accepts tabs, as soon as its runtime and session exist. Its
+commands and queries wait on a separate `bound` gate until pi's extensions have finished
+`session_start`.
+
+Why: pi awaits every `session_start` handler, and an extension may ask a question there.
+The question needs an attached page, the page needs a tab, and the tab needs `ready`, so
+binding inside `ready` deadlocks: the chat does not open, and pi stays blocked. Splitting
+the two breaks the cycle and keeps a half-bound session from answering a prompt with the
+wrong tool list. A bind that fails refuses commands with the reason and raises a notice
+instead of killing the engine before its first frame.
+
+Cost accepted: a chat can be open, and look idle, while binding is still in flight; the
+status line reports it busy. A prompt sent in that window waits rather than failing.
+
+Not: answering a question asked during `session_start` with pi's default, which decides
+for the operator (a permission confirm would read as "no"). Not: buffering the question
+until a tab attaches without gating commands, which lets a prompt run with an
+unfinished tool set.
+
 ## The session index is derived
 
 A SQLite index in `<home>/.epsilon/session-index.sqlite`, with one write connection,

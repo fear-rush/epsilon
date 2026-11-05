@@ -4,7 +4,18 @@ import type {
 	PromptOptions,
 } from "@earendil-works/pi-coding-agent";
 import type { Scope } from "effect";
-import { Clock, Deferred, Effect, Fiber, FileSystem, Option, Queue, Schema } from "effect";
+import {
+	Cause,
+	Clock,
+	Deferred,
+	Effect,
+	Exit,
+	Fiber,
+	FileSystem,
+	Option,
+	Queue,
+	Schema,
+} from "effect";
 
 import type { Command } from "#protocol/conversation/commands";
 import type { DialogAnswer, UiWidget } from "#protocol/conversation/extui";
@@ -159,6 +170,13 @@ export class EngineSession {
 	private readonly frames: FrameOut;
 	private events!: Queue.Queue<SessionInput>;
 	private readonly tabs = new Set<string>();
+	/**
+	 * Settles when pi's extensions have finished `session_start`; commands wait on it.
+	 * Binding cannot gate `ready`: pi awaits a `session_start` handler that asks a
+	 * question, so the page must be able to attach and answer it first.
+	 */
+	private readonly bound: Deferred.Deferred<void, CommandRefused>;
+	private binding = true;
 	private readonly dialogs: Dialogs;
 	private readonly ui: UiBridge;
 	private readonly notices: Notice[] = [];
@@ -201,6 +219,7 @@ export class EngineSession {
 		this.log = log;
 		this.onShutdown = onShutdown;
 		this.frames = new FrameOut(emit);
+		this.bound = Deferred.makeUnsafe<void, CommandRefused>();
 		this.dialogs = new Dialogs(
 			(frame) => this.frames.to("all", frame),
 			() => this.sendStatus(),
@@ -250,6 +269,7 @@ export class EngineSession {
 			agent.isStreaming ||
 			agent.isCompacting ||
 			agent.isRetrying ||
+			this.binding ||
 			this.toolRunning > 0 ||
 			this.dialogs.needsInput
 		);
@@ -260,8 +280,16 @@ export class EngineSession {
 		return Effect.gen(function* () {
 			self.events = yield* Queue.unbounded<SessionInput>();
 			self.subscribe(self.runtime.session);
-			yield* self.bind(self.runtime.session);
-			self.reportShadowedCommands();
+			// Forked, not awaited: see `bound`. The event loop below must already be running
+			// when a handler fires `session_start`, and a question it asks needs an attached
+			// page, which needs `ready`, which would otherwise wait for this.
+			yield* Effect.forkScoped(
+				Effect.gen(function* () {
+					const outcome = yield* Effect.exit(self.bind(self.runtime.session));
+					self.settleBinding(outcome);
+					self.reportShadowedCommands();
+				}),
+			);
 			yield* Effect.forkScoped(
 				Effect.gen(function* () {
 					for (;;) {
@@ -298,6 +326,26 @@ export class EngineSession {
 		});
 	}
 
+	/** Release the gate on commands, or refuse them with the reason binding failed. */
+	private settleBinding(outcome: Exit.Exit<void, EngineStartFailed>): void {
+		this.binding = false;
+		if (Exit.isSuccess(outcome)) {
+			Deferred.doneUnsafe(this.bound, Effect.void);
+		} else {
+			const failed = Cause.findErrorOption(outcome.cause);
+			const reason = Option.isSome(failed)
+				? failed.value.reason
+				: describe(Cause.squash(outcome.cause));
+			Deferred.doneUnsafe(
+				this.bound,
+				Effect.fail(new CommandRefused({ command: "engine", reason })),
+			);
+			this.notice(`This chat's extensions did not start: ${reason}`, "error");
+		}
+		// The gate was part of `busy`, so the page has to hear that it opened.
+		this.sendStatus();
+	}
+
 	private subscribe(session: AgentSession): void {
 		this.unsubscribe?.();
 		this.unsubscribe = session.subscribe((event) => {
@@ -332,7 +380,10 @@ export class EngineSession {
 		tab: string,
 		command: Command,
 	): Effect.Effect<void, CommandRefused, FileSystem.FileSystem | Scope.Scope> {
-		return dispatchCommand(this.controls(), tab, command);
+		const self = this;
+		return Effect.flatMap(Deferred.await(self.bound), () =>
+			dispatchCommand(self.controls(), tab, command),
+		);
 	}
 
 	answer(answer: DialogAnswer): Effect.Effect<void, CommandRefused> {
@@ -347,6 +398,9 @@ export class EngineSession {
 	query(question: EngineQuery): Effect.Effect<unknown, CommandRefused, FileSystem.FileSystem> {
 		const self = this;
 		return Effect.gen(function* () {
+			// An extension's tools and commands are part of these answers, so they come
+			// from a bound session.
+			yield* Deferred.await(self.bound);
 			const agent = self.runtime.session;
 			switch (question.kind) {
 				case "tools":

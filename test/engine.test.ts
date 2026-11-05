@@ -7,6 +7,7 @@ import { Clock, Effect, Option, Schema, Stream } from "effect";
 
 import type { Command } from "#protocol/conversation/commands";
 import { ExportedSession } from "#protocol/conversation/export";
+import { DialogQuestion } from "#protocol/conversation/extui";
 import type { ServerFrame } from "#protocol/conversation/frames";
 
 import { startEngine } from "../src/backend/conversation/engine.ts";
@@ -73,6 +74,88 @@ test("a session that already has entries opens with a window of them", async () 
 	if (Option.isNone(result)) throw new Error("no snapshot");
 	expect(result.value.entries).toHaveLength(40);
 });
+
+test("an extension's question during session_start opens the chat and reaches its tab", async () => {
+	const home = join(testPaths.scratch, "ask-on-start-home");
+	const project = join(testPaths.scratch, "ask-on-start-project");
+	mkdirSync(home, { recursive: true });
+	mkdirSync(project, { recursive: true });
+	// pi awaits a `session_start` handler, so the question holds binding back. The chat
+	// must still open, take the answer and only then let a command through.
+	writeFileSync(
+		join(home, "settings.json"),
+		`${JSON.stringify(
+			{ extensions: [new URL("./fixtures/test-extension.ts", import.meta.url).pathname] },
+			null,
+			2,
+		)}\n`,
+	);
+	const env: Record<string, string> = {};
+	for (const [key, value] of Object.entries(process.env)) if (value !== undefined) env[key] = value;
+	env["HOME"] = testPaths.sandboxHome;
+	env["PI_CODING_AGENT_DIR"] = home;
+	env["EPSILON_TEST_EXTENSION"] = "ask-on-start";
+
+	const result = await Effect.runPromise(
+		Effect.gen(function* () {
+			const engine = yield* startEngine({
+				cwd: project,
+				file: undefined,
+				homeDir: home,
+				place: null,
+				sessionId: "s-ask-on-start",
+				spec: {
+					command: [
+						process.execPath,
+						"run",
+						new URL("../src/engine/main.ts", import.meta.url).pathname,
+					],
+					env,
+				},
+				userHome: testPaths.sandboxHome,
+			});
+			yield* engine.attachTab("tab");
+			const asked = required(yield* frameOf(engine, (frame) => frame.t === "dialog"));
+			if (asked.t !== "dialog") throw new Error("the extension's question did not arrive");
+			// The wire carries the question as unknown, so the test decodes it as the page does.
+			const question = yield* Schema.decodeUnknownEffect(DialogQuestion)(asked.question);
+			if (question.kind !== "confirm") {
+				throw new Error("the extension's question did not arrive as a confirm");
+			}
+			yield* engine.send({
+				answer: { confirmed: true, id: question.id, kind: "confirm" },
+				dialogId: question.id,
+				t: "answer",
+			});
+			// The extension reports what pi handed it, so this frame is the answer it got.
+			const settled = required(
+				yield* frameOf(
+					engine,
+					(frame) =>
+						frame.t === "statuses" &&
+						frame.statuses.some((entry) => entry.key === "asked" && entry.text === "allowed"),
+				),
+			);
+			// Binding is what `busy` held while the question was open, so its release shows.
+			const idle = required(yield* frameOf(engine, (frame) => frame.t === "busy" && !frame.busy));
+			if (idle.t !== "busy") throw new Error("no busy frame");
+			// Binding has finished by now, so a command is no longer held back.
+			const systemPrompt = yield* engine.request((id) => ({
+				id,
+				kind: "systemPrompt",
+				t: "query",
+			}));
+			yield* engine.stop(2_000);
+			return { idle, question, settled, systemPrompt };
+			// oxlint-disable-next-line effecttsgo/strict-effect-provide -- the test entry point builds the runtime
+		}).pipe(Effect.provide(BunServices.layer)),
+	);
+	expect(result.question.title).toBe("Allow?");
+	expect(result.question.message).toBe("An extension asks during session_start.");
+	expect(result.settled.t).toBe("statuses");
+	expect(result.idle.busy).toBe(false);
+	expect(typeof result.systemPrompt).toBe("string");
+}, 20_000);
 
 test("a real engine opens a chat, streams a turn and answers its tree", async () => {
 	const home = testPaths.agentHome;

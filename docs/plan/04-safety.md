@@ -46,13 +46,24 @@ keys); the index conformance test against `SessionManager.listAll`
       strings and templates itself, skipping a template's substitutions; its test covers
       both shapes (`scripts/parity-surface.test.ts`).
 
-- [ ] **An extension's question at session start never reached the page.** While proving the
-      dialogs row, a sandbox extension on `session_start` did `await ctx.ui.confirm(...)`; its
-      `setStatus` reached the page, the question did not appear within 20 s, and the dialog
-      row stayed unphotographed. `subscribeTab` replays pending questions after the snapshot,
-      so the pending set should have covered a late tab; find out why it did not. A question
-      nobody sees is pi blocked until its timeout, which is the hang invariant 10 forbids.
-      Reproduce with `ctx.ui.confirm` in `session_start`, watch the engine's frames.
+- [x] **An extension's question at session start never reached the page.** While proving
+      the dialogs row, a sandbox extension on `session_start` did `await ctx.ui.confirm(...)`;
+      its `setStatus` reached the page, the question did not appear within 20 s, and the dialog
+      row stayed unphotographed.
+      Cause: pi awaits every `session_start` handler (`runner.js`, `emit`), and the engine
+      bound extensions inside `start()`, before `EngineSession.open` resolved. `current` was
+      unset, so the supervisor's `subscribe` was dropped silently, no tab existed to receive
+      the question, and `ready` waited for a handler that waited for an answer. The chat did
+      not open at all: `startEngine` failed with `EngineStopped` after 10 s. The title of
+      this item was the mild reading; the real one is a chat that cannot open.
+      Fix: `session_start` binding runs in a scoped fiber, `ready` is sent first, and
+      `command`/`query` wait on a `bound` deferred, so a page can attach and answer while
+      pi is still binding. A bind failure no longer kills the engine before ready; it
+      refuses commands with the reason and raises an error notice. `main.ts` logs a dropped
+      `subscribe` or `answer` instead of swallowing it. Test: `test/engine.test.ts`, "an
+      extension's question during session_start opens the chat and reaches its tab" (fails
+      without the fix, passing in 370 ms with it). Still open: a dialog whose tab never
+      attaches sits until the chat is reopened, which replays it.
 
 - [ ] **Features still render a thrown error's message.** The translator rule
       (ARCHITECTURE, "One translator") wants `Notice error`/`StatusView error`, with an
