@@ -52,7 +52,7 @@ export function ProviderModelDialog({
 	mode: "model" | "override";
 	model: ProviderModelInput | undefined;
 	/** The stored override, when this dialog edits one instead of a model entry. */
-	override?: ModelOverride;
+	override?: ModelOverride | undefined;
 	providerApi: ProviderApi | undefined;
 	lockId: boolean;
 	onSave: (model: ModelValue, touched: ReadonlySet<ModelField>) => void;

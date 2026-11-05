@@ -1,4 +1,10 @@
-import type { ProviderImportInput, ProviderInput } from "#protocol/settings/providers";
+import { Effect } from "effect";
+
+import type {
+	ProviderImportInput,
+	ProviderInput,
+	ProviderTestInput,
+} from "#protocol/settings/providers";
 import { call } from "@/core/runtime";
 
 export const readProvider = (id: string) =>
@@ -15,6 +21,11 @@ export const setProviderKey = (id: string, apiKey: string) =>
 
 export const importProviderModels = (input: ProviderImportInput) =>
 	call((client) => client["settings.providers.import"](input));
+
+export const testProvider = (input: ProviderTestInput) =>
+	call((client) =>
+		Effect.map(client["settings.providers.test"](input), (result) => result.message),
+	);
 
 export const answerProviderLogin = (providerId: string, promptId: string, value: string) =>
 	call((client) => client["settings.providers.answerLogin"]({ promptId, providerId, value }));
