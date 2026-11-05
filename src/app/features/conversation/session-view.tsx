@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { call } from "@/core/runtime";
 import { useReportStatus } from "@/core/status";
 import { ContinueSession, TrustGate } from "@/features/projects";
-import { findSessionRow, useRecentProjects, useSessionList } from "@/features/sessions";
+import { useRecentProjects, useSessionRow } from "@/features/sessions";
 
 import { ChatBar } from "./chat-bar";
 import { Composer } from "./composer";
@@ -48,7 +48,7 @@ export function SessionView({
 	/** The operator chose a folder for this open because the recorded one is gone. */
 	continued?: boolean | undefined;
 }) {
-	const session = findSessionRow(useSessionList().data, sessionId);
+	const session = useSessionRow(sessionId);
 	// Folders that already hold chats, offered first by the folder picker.
 	const recent = useRecentProjects();
 	if (session?.cwdMissing === true && continued !== true) {

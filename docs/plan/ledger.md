@@ -126,19 +126,19 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 
 ## S3 Sessions sidebar and projects
 
-| Done | main file (`client/src/…`)              | Lines | Branch today                                         | Missing exports                         |
-| ---- | --------------------------------------- | ----- | ---------------------------------------------------- | --------------------------------------- |
-| [ ]  | `features/projects/folder-dialog.tsx`   | 408   | exists, changed (69 lines)                           |                                         |
-| [ ]  | `features/projects/index.ts`            | 5     | exists, changed (6 lines)                            |                                         |
-| [ ]  | `features/projects/queries.ts`          | 38    | partial                                              | `useProjectStatus`, `useRecentProjects` |
-| [ ]  | `features/projects/trust-notice.tsx`    | 39    | exists, changed (6 lines)                            |                                         |
-| [ ]  | `features/sessions/format.ts`           | 26    | exists, changed (2 lines)                            |                                         |
-| [ ]  | `features/sessions/index.ts`            | 2     | exists, changed (7 lines)                            |                                         |
-| [ ]  | `features/sessions/rename-dialog.tsx`   | 88    | exists, changed (10 lines)                           |                                         |
-| [ ]  | `features/sessions/session-item.tsx`    | 146   | exists, changed (5 lines)                            |                                         |
-| [ ]  | `features/sessions/session-sidebar.tsx` | 588   | exists, changed (159 lines)                          |                                         |
-| [ ]  | `features/sessions/sidebar-account.tsx` | 78    | exists, changed (4 lines)                            |                                         |
-| [ ]  | `features/sessions/use-session-row.ts`  | 28    | `findSessionRow` in `list.ts`; the hook waits for S3 | `useSessionRow`                         |
+| Done | main file (`client/src/…`)              | Lines | Branch today                                                                            | Missing exports    |
+| ---- | --------------------------------------- | ----- | --------------------------------------------------------------------------------------- | ------------------ |
+| [x]  | `features/projects/folder-dialog.tsx`   | 408   | `refactor(sessions): settle the sidebar rows`; parity green                             |                    |
+| [x]  | `features/projects/index.ts`            | 5     | `refactor(sessions): settle the sidebar rows`                                           |                    |
+| [x]  | `features/projects/queries.ts`          | 38    | `refactor(sessions): settle the sidebar rows` (recent list lives in `sessions/list.ts`) | `useProjectStatus` |
+| [x]  | `features/projects/trust-notice.tsx`    | 39    | `refactor(sessions): settle the sidebar rows` (main's copy)                             |                    |
+| [x]  | `features/sessions/format.ts`           | 26    | verified: parity green                                                                  |                    |
+| [x]  | `features/sessions/index.ts`            | 2     | `refactor(sessions): settle the sidebar rows`                                           |                    |
+| [x]  | `features/sessions/rename-dialog.tsx`   | 88    | verified: parity green                                                                  |                    |
+| [x]  | `features/sessions/session-item.tsx`    | 146   | verified: parity green (row menu photographed)                                          |                    |
+| [x]  | `features/sessions/session-sidebar.tsx` | 588   | verified: parity green (sidebar photographed)                                           |                    |
+| [x]  | `features/sessions/sidebar-account.tsx` | 78    | verified: parity green                                                                  |                    |
+| [x]  | `features/sessions/use-session-row.ts`  | 28    | `refactor(sessions): settle the sidebar rows`                                           | `useSessionRow`    |
 
 ## S4 Settings: MCP
 

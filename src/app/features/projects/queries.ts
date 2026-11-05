@@ -1,7 +1,11 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { ProjectTrustAction } from "#protocol/settings/projects";
+import { projectStatusQuery } from "@/core/queries";
 import { call } from "@/core/runtime";
+
+/** pi's trust decision for one folder, read before anything attaches to it. */
+export const useProjectStatus = (path: string) => useQuery(projectStatusQuery(path));
 
 /**
  * Trust a folder in pi's `trust.json`, or change the decision it already holds.

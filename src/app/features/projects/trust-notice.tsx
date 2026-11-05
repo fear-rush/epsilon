@@ -23,7 +23,7 @@ export function TrustNotice({ status }: { status: ProjectStatus }) {
 				</p>
 			)}
 			{status.settingsProblems !== undefined && status.settingsProblems.length > 0 && (
-				<Notice tone="warning" title="pi cannot load these project settings">
+				<Notice tone="warning" title="pi cannot load this project's settings">
 					<ul className="grid gap-1">
 						{status.settingsProblems.map((problem) => (
 							<li key={`${problem.path ?? ""}:${problem.message}`}>

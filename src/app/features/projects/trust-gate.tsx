@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 /**
  * The page a project session shows until its folder is trusted. Nothing attaches
  * before this answers yes, so no engine starts and no project file loads in a
@@ -14,9 +13,8 @@ import { Notice } from "@/components/patterns/status/notice";
 import { StatusView } from "@/components/patterns/status/status-view";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { projectStatusQuery } from "@/core/queries";
 
-import { useSetProjectTrust } from "./queries.ts";
+import { useProjectStatus, useSetProjectTrust } from "./queries.ts";
 import { TrustNotice } from "./trust-notice.tsx";
 
 export function TrustGate({
@@ -30,7 +28,7 @@ export function TrustGate({
 	children: ReactNode;
 }) {
 	const navigate = useNavigate();
-	const status = useQuery(projectStatusQuery(project));
+	const status = useProjectStatus(project);
 	const trust = useSetProjectTrust();
 
 	if (status.data?.trusted === true) return <>{children}</>;
