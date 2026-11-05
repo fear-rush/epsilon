@@ -67,23 +67,32 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 
 ## S1 Feedback system (status line, route error, not found, notices, confirms)
 
-| Done | main file (`client/src/…`)                       | Lines | Branch today                   | Missing exports         |
-| ---- | ------------------------------------------------ | ----- | ------------------------------ | ----------------------- |
-| [x]  | `app/route-error.tsx`                            | 26    | on `StatusView`, per layout    |                         |
-| [x]  | `app/route-not-found.tsx`                        | 25    | on `StatusView`, per layout    |                         |
-| [x]  | `app/route-pending.tsx`                          | 10    | per layout (`LoadingState`)    |                         |
-| [ ]  | `components/patterns/dialog/confirm-dialogs.tsx` | 210   | exists, changed (8 lines)      |                         |
-| [x]  | `components/patterns/status/app-banner.tsx`      | 38    | deleted                        | replaced by `AppStatus` |
-| [ ]  | `components/patterns/status/error-view.ts`       | 59    | exists, changed (51 lines)     |                         |
-| [ ]  | `components/patterns/status/inline-status.tsx`   | 23    | identical                      |                         |
-| [ ]  | `components/patterns/status/loading-state.tsx`   | 11    | exists, changed (15 lines)     |                         |
-| [ ]  | `components/patterns/status/notice.tsx`          | 45    | identical                      |                         |
-| [ ]  | `components/patterns/status/status-tone.ts`      | 15    | identical                      |                         |
-| [ ]  | `components/patterns/status/status-view.tsx`     | 34    | exists, changed (2 lines)      |                         |
-| [ ]  | `components/ui/alert-dialog.tsx`                 | 160   | exists, changed (8 lines)      |                         |
-| [ ]  | `components/ui/alert.tsx`                        | 77    | exists, changed (5 lines)      |                         |
-| [x]  | `features/app-shell/app-health-banner.tsx`       | 32    | **missing**                    | replaced by `AppStatus` |
-| [ ]  | `features/app-shell/use-app-health.ts`           | 39    | exists elsewhere (names found) |                         |
+These rows are the feedback system itself, so their differences from main are the change
+phase 2 was for: one `Tone` (`StatusTone`/`NoticeTone` are gone), `Notice` and `StatusView`
+take `error` through `errorView`, `errorView` switches exhaustively over the protocol's
+tags, and `LoadingState`'s spinner is decorative because the status line is the page's one
+live region. `use-app-health` became `src/app/core/status.tsx`: `useAppHealth` reads the
+socket and the out-of-date flag, and `AppStatus` replaces the banner. The confirm
+dialogs, `InlineStatus`, `Notice` and the alert primitives carry main's words and classes;
+`alert`/`alert-dialog` differ only in class order.
+
+| Done | main file (`client/src/…`)                       | Lines | Branch today                                                                       | Missing exports         |
+| ---- | ------------------------------------------------ | ----- | ---------------------------------------------------------------------------------- | ----------------------- |
+| [x]  | `app/route-error.tsx`                            | 26    | on `StatusView`, per layout                                                        |                         |
+| [x]  | `app/route-not-found.tsx`                        | 25    | on `StatusView`, per layout                                                        |                         |
+| [x]  | `app/route-pending.tsx`                          | 10    | per layout (`LoadingState`)                                                        |                         |
+| [x]  | `components/patterns/dialog/confirm-dialogs.tsx` | 210   | `fix(settings): the pending confirm spins`                                         |                         |
+| [x]  | `components/patterns/status/app-banner.tsx`      | 38    | deleted                                                                            | replaced by `AppStatus` |
+| [x]  | `components/patterns/status/error-view.ts`       | 59    | `refactor(feedback): every feature reports through the surfaces`                   |                         |
+| [x]  | `components/patterns/status/inline-status.tsx`   | 23    | `refactor(feedback): one tone vocabulary for every surface`                        |                         |
+| [x]  | `components/patterns/status/loading-state.tsx`   | 11    | `feat(client): the chat's drift rule, long chats, providers and diagnostics fixes` |                         |
+| [x]  | `components/patterns/status/notice.tsx`          | 45    | `refactor(feedback): every feature reports through the surfaces`                   |                         |
+| [x]  | `components/patterns/status/status-tone.ts`      | 15    | `refactor(feedback): one tone vocabulary for every surface`                        |                         |
+| [x]  | `components/patterns/status/status-view.tsx`     | 34    | `refactor(feedback): every feature reports through the surfaces`                   |                         |
+| [x]  | `components/ui/alert-dialog.tsx`                 | 160   | `feat(client): the socket runtime, the shell and the chat`                         |                         |
+| [x]  | `components/ui/alert.tsx`                        | 77    | `feat(client): the socket runtime, the shell and the chat`                         |                         |
+| [x]  | `features/app-shell/app-health-banner.tsx`       | 32    | **missing**                                                                        | replaced by `AppStatus` |
+| [x]  | `features/app-shell/use-app-health.ts`           | 39    | `refactor(feedback): one tone vocabulary for every surface`                        |                         |
 
 ## S2 Chat (session view, composer, transcript, branches, dialogs)
 
