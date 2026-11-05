@@ -27,6 +27,7 @@ import { SkillNotices } from "./skill-notices.tsx";
 import { SkillRaw } from "./skill-raw.tsx";
 import { useSkillLinks } from "./skill-references.ts";
 import { useSkillToggle } from "./skill-status.ts";
+import { SkillUnreadable } from "./skill-unreadable.tsx";
 
 /**
  * One editable skill, written as `<root>/<name>/SKILL.md`. The Form tab edits the
@@ -64,6 +65,11 @@ export function SkillForm({
 		else setTab(next);
 	};
 	const unreadable = file?.parseError !== undefined;
+	/** A file pi cannot parse: why, and the text as written, instead of the cards. */
+	const unreadableCard =
+		file?.parseError === undefined ? undefined : (
+			<SkillUnreadable error={file.parseError} raw={file.raw ?? ""} />
+		);
 
 	const taken = new Set(
 		(settings.data?.skills.skills ?? [])
@@ -97,7 +103,7 @@ export function SkillForm({
 	const toggle = useSkillToggle();
 	const links = useSkillLinks();
 	/** The folder's files, which the editor links against and a preview link can open. */
-	const fileList = useSkillFiles(root, file?.name ?? "");
+	const fileList = useSkillFiles(root, creating || unreadable ? undefined : file.name);
 	const filePaths = fileList.data?.files.map((entry) => entry.path);
 	const references = {
 		skillExists: links.exists,
@@ -123,7 +129,7 @@ export function SkillForm({
 			back={SKILLS_BACK}
 			title={view?.name ?? (draft.name === "" ? "New skill" : draft.name)}
 			tabs={
-				unreadable ? undefined : (
+				creating ? undefined : (
 					<ModeTabs items={SKILL_MODES} value={tab} onValueChange={requestTab} />
 				)
 			}
@@ -154,11 +160,6 @@ export function SkillForm({
 					body={draft.body}
 					errors={[save.error, remove.error, toggle.error]}
 				/>
-				{file?.parseError !== undefined && (
-					<Notice tone="danger" title="The frontmatter does not parse">
-						{file.parseError} Only the Raw tab can edit this file.
-					</Notice>
-				)}
 				{(file?.bodyWarnings ?? []).map((warning) => (
 					<Notice key={warning} tone="warning" title="pi passes this through as text">
 						{warning}
@@ -166,47 +167,49 @@ export function SkillForm({
 				))}
 				{save.error !== null && <Notice error={save.error} title="The skill was not saved" />}
 
-				{tab === "form" && !unreadable ? (
-					<>
-						<SkillCard draft={draft} errors={errors} creating={creating} update={update} />
+				{tab === "form" ? (
+					(unreadableCard ?? (
+						<>
+							<SkillCard draft={draft} errors={errors} creating={creating} update={update} />
 
-						<SkillInstructions
-							value={draft.body}
-							onChange={(body) => update({ body })}
-							files={filePaths}
-							references={references}
-						/>
+							<SkillInstructions
+								value={draft.body}
+								onChange={(body) => update({ body })}
+								files={filePaths}
+								references={references}
+							/>
 
-						{!creating && (
-							<Section
-								title="Files"
-								description="Bundled next to SKILL.md. Each one is written on its own."
-							>
-								<div className="p-3">
-									<SkillFiles
-										root={root}
-										name={file.name}
-										// The page-level leave guard is main's form row, still open; until then
-										// the card guards its own dialogs.
-										onDirtyChange={() => undefined}
-									/>
-								</div>
-							</Section>
-						)}
+							{!creating && (
+								<Section
+									title="Files"
+									description="Bundled next to SKILL.md. Each one is written on its own."
+								>
+									<div className="p-3">
+										<SkillFiles
+											root={root}
+											name={file.name}
+											// The page-level leave guard is main's form row, still open; until then
+											// the card guards its own dialogs.
+											onDirtyChange={() => undefined}
+										/>
+									</div>
+								</Section>
+							)}
 
-						{(file?.fields ?? []).length > 0 && (
-							<Section
-								description="pi ignores these; they survive every save."
-								title="Other frontmatter"
-							>
-								{file?.fields.map((field) => (
-									<Row key={field.key} title={field.key} description={field.value}>
-										<Badge variant="outline">{field.owner}</Badge>
-									</Row>
-								))}
-							</Section>
-						)}
-					</>
+							{(file?.fields ?? []).length > 0 && (
+								<Section
+									description="pi ignores these; they survive every save."
+									title="Other frontmatter"
+								>
+									{file?.fields.map((field) => (
+										<Row key={field.key} title={field.key} description={field.value}>
+											<Badge variant="outline">{field.owner}</Badge>
+										</Row>
+									))}
+								</Section>
+							)}
+						</>
+					))
 				) : creating ? (
 					<Notice tone="info">Save the skill once, then its file can be edited as text.</Notice>
 				) : (

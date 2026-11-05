@@ -274,7 +274,7 @@ that replacement, not missing markup.
 | [ ]  | `features/settings/skills/skill-search.ts`               | 25    | partial                                                                          | `skillSearchSchema`                                                             |
 | [x]  | `features/settings/skills/skill-starter.ts`              | 14    | identical                                                                        |                                                                                 |
 | [x]  | `features/settings/skills/skill-status.ts`               | 41    | `feat(skills): the loaded switch and the page's notices`                         | `isOn`, `readOnlyReason`, `useSkillToggle`                                      |
-| [ ]  | `features/settings/skills/skill-unreadable.tsx`          | 18    | **missing**                                                                      | `SkillUnreadable`                                                               |
+| [x]  | `features/settings/skills/skill-unreadable.tsx`          | 18    | `feat(skills): a SKILL.md pi cannot parse` (photographed)                        | `SkillUnreadable`                                                               |
 | [ ]  | `features/settings/skills/skill-viewer.tsx`              | 110   | exists, changed (158 lines)                                                      |                                                                                 |
 | [ ]  | `features/settings/skills/skills-panel.tsx`              | 154   | exists, changed (97 lines)                                                       |                                                                                 |
 

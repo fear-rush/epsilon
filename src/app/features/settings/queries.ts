@@ -101,12 +101,16 @@ export const useSkillDocument = (filePath: string | undefined) => {
 	});
 };
 
-/** Every file in one skill folder, `SKILL.md` included, for the Files card and its paths. */
-export const useSkillFiles = (root: SkillRoot, name: string) => {
+/**
+ * Every file in one skill folder, `SKILL.md` included, for the Files card and its paths.
+ * A skill that is not written yet, or whose `SKILL.md` does not parse, reads nothing.
+ */
+export const useSkillFiles = (root: SkillRoot, name: string | undefined) => {
 	const project = useSettingsProject();
 	return useQuery({
-		queryKey: settingsKeys.skillFiles(project, root, name),
-		queryFn: ({ signal }) => readSkillFiles(project, root, name, signal),
+		queryKey: settingsKeys.skillFiles(project, root, name ?? ""),
+		queryFn:
+			name === undefined ? skipToken : ({ signal }) => readSkillFiles(project, root, name, signal),
 		staleTime: SETTINGS_STALE_MS,
 	});
 };
