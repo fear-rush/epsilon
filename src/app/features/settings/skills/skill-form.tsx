@@ -1,9 +1,9 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import type { SkillFile, SkillInput, SkillRoot, SkillView } from "#protocol/settings/skills";
-import { DeleteDialog } from "@/components/patterns/confirm-dialogs";
+import { CancelDialog, DeleteDialog } from "@/components/patterns/confirm-dialogs";
 import { EnabledSwitch } from "@/components/patterns/enabled-switch";
 import { ModeTabs } from "@/components/patterns/mode-tabs";
 import { DetailPage } from "@/components/patterns/pane/detail-page";
@@ -49,6 +49,16 @@ export function SkillForm({
 	});
 	const { draft, update, errors } = form;
 	const [tab, setTab] = useState<SkillTab>("form");
+	/** The open raw file, which is `SKILL.md` until a click in the tree moves it. */
+	const [rawPath, setRawPath] = useState("SKILL.md");
+	/** Text typed in the raw tab and not saved: leaving the tab would drop it. */
+	const rawDirty = useRef(false);
+	const [pendingTab, setPendingTab] = useState<SkillTab | undefined>();
+	const requestTab = (next: SkillTab): void => {
+		if (next === tab) return;
+		if (tab === "raw" && rawDirty.current) setPendingTab(next);
+		else setTab(next);
+	};
 	const unreadable = file?.parseError !== undefined;
 
 	const taken = new Set(
@@ -97,7 +107,9 @@ export function SkillForm({
 			back={SKILLS_BACK}
 			title={view?.name ?? (draft.name === "" ? "New skill" : draft.name)}
 			tabs={
-				unreadable ? undefined : <ModeTabs items={SKILL_MODES} value={tab} onValueChange={setTab} />
+				unreadable ? undefined : (
+					<ModeTabs items={SKILL_MODES} value={tab} onValueChange={requestTab} />
+				)
 			}
 			actions={
 				view === undefined || view.toggle !== "settings" ? undefined : (
@@ -170,9 +182,32 @@ export function SkillForm({
 				) : creating ? (
 					<Notice tone="info">Save the skill once, then its file can be edited as text.</Notice>
 				) : (
-					<SkillRaw name={file.name} root={root} />
+					<SkillRaw
+						source={{ kind: "editable", name: file.name, root }}
+						path={rawPath}
+						onPathChange={setRawPath}
+						onDirtyChange={(dirty) => {
+							rawDirty.current = dirty;
+						}}
+						onSaved={refresh}
+					/>
 				)}
 			</div>
+
+			<CancelDialog
+				open={pendingTab !== undefined}
+				title="Discard unsaved changes?"
+				description={`${rawPath} has changes that are not saved. Switching now loses them.`}
+				onOpenChange={(next) => {
+					if (next) return;
+					setPendingTab(undefined);
+				}}
+				onDiscard={() => {
+					rawDirty.current = false;
+					if (pendingTab !== undefined) setTab(pendingTab);
+					setPendingTab(undefined);
+				}}
+			/>
 
 			<DeleteDialog
 				open={form.deleteOpen}

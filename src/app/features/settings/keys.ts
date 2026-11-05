@@ -20,4 +20,8 @@ export const settingsKeys = {
 		[...all, "provider-detail", providerId ?? ""] as const,
 	providerModels: (providerId: string | undefined, baseUrl: string, api: string, apiKey: string) =>
 		[...all, "provider-models", providerId ?? "", baseUrl, api, apiKey] as const,
+	skillFiles: (project: string | undefined, root: string, name: string) =>
+		[...all, "skill-files", project ?? null, root, name] as const,
+	skillFile: (project: string | undefined, root: string, name: string, path: string) =>
+		[...all, "skill-file", project ?? null, root, name, path] as const,
 };
