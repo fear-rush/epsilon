@@ -51,7 +51,7 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | [x]  | chat `set_coding_tools`                                                       | S2        | `feat(conversation): the composer menus`                                            |
 | [x]  | `POST /api/sessions/{id}/export`                                              | S2        | `feat(conversation): the transcript as a file` (`conversation.query` kind `export`) |
 | [x]  | `POST /api/sessions/{id}/clone`                                               | S2        | `feat(conversation): the branch rows` (`clone`, pi's fork at the leaf)              |
-| [ ]  | `POST /api/sessions/{id}/move`                                                | S3        | verify                                                                              |
+| [x]  | `POST /api/sessions/{id}/move`                                                | S3        | `feat(conversation): the move` (`sessions.move`, pi's `forkFrom`)                   |
 | [ ]  | `DELETE /api/projects/sessions` (delete a project's chats)                    | S3        | **missing**                                                                         |
 | [ ]  | `PUT /api/settings/mcp/default-tool`                                          | S4        | **missing**                                                                         |
 | [ ]  | `POST /api/settings/mcp/command`                                              | S4        | **missing**                                                                         |

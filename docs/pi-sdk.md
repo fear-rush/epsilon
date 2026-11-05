@@ -171,8 +171,12 @@ Other facts worth having before embedding:
   turns a pick into new lines and a cursor position. pi's RPC host ignores the whole
   method, so a host that wants it must build the chain itself.
 - `NewSessionOptions.id` creates a session with an exact id. `SessionManager` lists,
-  opens, finds, creates and owns `getEntries()`, `getTree()` and `getSessionName()`;
-  `AgentSessionRuntime` owns `newSession`, `switchSession`, `fork` and
+  opens, finds, creates and owns `getEntries()`, `getTree()` and `getSessionName()`.
+  `SessionManager.forkFrom(sourcePath, targetCwd, sessionDir?)` copies a file's history
+  into a new session under a new id in another folder, which is how a chat moves into a
+  project: Epsilon uses it in `src/backend/platform/pi.ts`, and the target folder must be
+  trusted first because the fork loads its resources. `AgentSessionRuntime` owns
+  `newSession`, `switchSession`, `fork` and
   `importFromJsonl`, and replaces the active session. It is built by
   `createAgentSessionRuntime(createRuntime, { cwd, agentDir, sessionManager })`, and
   `createRuntime({ cwd, agentDir, sessionManager, sessionStartEvent, projectTrustContext })`

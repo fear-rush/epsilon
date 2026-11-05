@@ -56,9 +56,9 @@ retired.
 
 ## Invariants
 
-1. pi's runtime is imported only in `src/engine/`. pi's exporters, `ModelRuntime`, trust
-   and `SettingsManager` reads are imported only in `src/backend/platform/pi.ts`.
-   `src/protocol/pi.ts` is type-only.
+1. pi's runtime is imported only in `src/engine/`. pi's exporters, `ModelRuntime`, trust,
+   `SettingsManager` reads and `SessionManager` are imported only in
+   `src/backend/platform/pi.ts`. `src/protocol/pi.ts` is type-only.
 2. `src/protocol/` and `src/domain/` import no `node:*`, no React, no Effect services or
    layers (Schema and data types only). The reducer stays pure.
 3. One boundary: `src/protocol/rpc.ts`. No HTTP routes except serving the page.
@@ -126,6 +126,13 @@ There is no line limit; split files by meaning, as
   longer is a finding about the code or the harness, not something to sit through.
 - Run the long thing once, on the smallest input that proves the point. Do not photograph
   every state in one sitting when one state answers the question; report what is left.
+- Bound anything that starts a browser or a server with
+  `bun run scripts/limit.ts <seconds> -- <command…>`. It runs the command detached,
+  SIGKILLs its group at the deadline, and captures its output, so a browser that outlives
+  its script cannot hold the caller's pipe open. Do not use `perl -e 'alarm'` or a shell
+  `timeout`: macOS has none, and neither kills the browser's group. A screenshot script
+  must also exit by itself: a watchdog, a deadline on every DevTools call, and a kill of its
+  own browser on every path.
 - Kill what you started: a server, a browser or an engine from a check is gone before the
   next command, and a stray process is itself a failure to report.
 - A check that starts a server or an engine sets `EPSILON_AGENT_HOME` to a scratch

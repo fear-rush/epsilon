@@ -1,7 +1,13 @@
 import { Schema } from "effect";
 import { Rpc, RpcGroup } from "effect/rpc";
 
-import { FileUnwritable, SessionNotFound, SessionRunning } from "./errors.ts";
+import {
+	FileUnwritable,
+	ProjectNotTrusted,
+	ProjectRefused,
+	SessionNotFound,
+	SessionRunning,
+} from "./errors.ts";
 
 /**
  * The chat list, read from the derived index.
@@ -50,6 +56,22 @@ export const SessionsRpcs = RpcGroup.make(
 		payload: { sessionId: Schema.String, name: Schema.String },
 		success: Schema.Void,
 		error: Schema.Union([SessionNotFound, SessionRunning, FileUnwritable]),
+	}),
+	/**
+	 * Move a chat into another folder, as pi's own fork: the history is written as a new
+	 * session there and the old file goes, so the page follows the new id. The folder must
+	 * be trusted first, because pi loads its resources the moment it forks into it.
+	 */
+	Rpc.make("sessions.move", {
+		payload: { sessionId: Schema.String, toDirectory: Schema.String },
+		success: Schema.Struct({ sessionId: Schema.String }),
+		error: Schema.Union([
+			SessionNotFound,
+			SessionRunning,
+			FileUnwritable,
+			ProjectNotTrusted,
+			ProjectRefused,
+		]),
 	}),
 	Rpc.make("sessions.remove", {
 		payload: { sessionId: Schema.String },

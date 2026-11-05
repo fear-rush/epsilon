@@ -98,7 +98,13 @@ const build = (
 /**
  * The chat list plus one trust read per folder. It waits for the reads so a folder's
  * chats never appear as plain chats first and then move under a project.
- */ /** One chat from the grouped list, whether it is a chat or a project's. */
+ */ /** Folders that already hold chats, for the folder picker. The sidebar reads the same list. */
+export function useRecentProjects(): ReadonlyArray<ProjectStatus> {
+	const list = useSessionList();
+	return list.data?.projects.map((entry) => entry.project) ?? [];
+}
+
+/** One chat from the grouped list, whether it is a chat or a project's. */
 export function findSessionRow(
 	list: SessionList | undefined,
 	sessionId: string,

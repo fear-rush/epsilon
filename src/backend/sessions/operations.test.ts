@@ -10,6 +10,8 @@ import { SessionRunning } from "#protocol/errors";
 
 import { linearSession, writeSession } from "../../../test/sessions.ts";
 import { testPaths } from "../../../test/setup.ts";
+import { AgentHomeLive } from "../platform/agent-home.ts";
+import type { AgentHome } from "../platform/agent-home.ts";
 import { Catalog, CatalogLive } from "./catalog.ts";
 import { SessionLocks, makeSessionLocks } from "./locks.ts";
 import { Sessions, SessionsLive } from "./operations.ts";
@@ -22,13 +24,18 @@ const meta = { formatVersion: 3, piVersion: "1.4.0", schemaVersion: "1" };
 
 const running = new Set(["s-running"]);
 const locks = Layer.succeed(SessionLocks, makeSessionLocks(running));
+const home = AgentHomeLive(testPaths.agentHome, testPaths.sandboxHome);
 const catalog = Layer.provide(CatalogLive(indexPath, meta), BunServices.layer);
-const sessions = Layer.provide(SessionsLive, Layer.mergeAll(catalog, locks, BunServices.layer));
+const sessions = Layer.provide(
+	SessionsLive,
+	Layer.mergeAll(catalog, locks, home, BunServices.layer),
+);
 
-const environment = Layer.mergeAll(sessions, catalog, BunServices.layer);
+const environment = Layer.mergeAll(sessions, catalog, home, BunServices.layer);
 
-const run = <A, E>(effect: Effect.Effect<A, E, Catalog | Sessions | FileSystem.FileSystem>) =>
-	Effect.runPromise(effect.pipe(Effect.provide(environment)));
+const run = <A, E>(
+	effect: Effect.Effect<A, E, AgentHome | Catalog | Sessions | FileSystem.FileSystem>,
+) => Effect.runPromise(effect.pipe(Effect.provide(environment)));
 
 describe("session operations", () => {
 	test("moving a running chat is refused and the file stays where it is (F1)", async () => {
@@ -47,7 +54,7 @@ describe("session operations", () => {
 				const service = yield* Sessions;
 				const catalogService = yield* Catalog;
 				yield* catalogService.sync([root]);
-				return yield* Effect.flip(service.move("s-running", otherDir));
+				return yield* Effect.flip(service.moveToProject("s-running", otherDir));
 			}),
 		);
 
@@ -57,30 +64,34 @@ describe("session operations", () => {
 		expect(existsSync(join(projectDir, files[0] ?? ""))).toBe(true);
 	});
 
-	test("an idle chat moves, and the index follows it", async () => {
+	test("a move is pi's fork: a new session in the folder, and the old file goes", async () => {
 		mkdirSync(otherDir, { recursive: true });
 		writeSession(projectDir, "s-idle", linearSession("s-idle", "/tmp/ops", 3));
-		const moved = await run(
+		const outcome = await run(
 			Effect.gen(function* () {
 				const service = yield* Sessions;
 				const catalogService = yield* Catalog;
 				yield* catalogService.sync([root]);
-				return yield* service.move("s-idle", otherDir);
+				const moved = yield* service.moveToProject("s-idle", otherDir);
+				return { moved, row: yield* catalogService.locate(moved.sessionId) };
 			}),
 		);
-		expect(moved.path.startsWith(otherDir)).toBe(true);
-		expect(readdirSync(otherDir).some((file) => file.endsWith("_s-idle.jsonl"))).toBe(true);
+		expect(outcome.moved.sessionId).not.toBe("s-idle");
+		expect(outcome.row?.cwd).toBe(otherDir);
+		// The history lives on in the fork, so the file it came from is not left behind.
+		expect(readdirSync(projectDir).some((file) => file.endsWith("_s-idle.jsonl"))).toBe(false);
 	});
 
 	test("renaming appends a session_info entry, as pi does", async () => {
+		writeSession(projectDir, "s-rename", linearSession("s-rename", "/tmp/ops", 3));
 		const renamed = await run(
 			Effect.gen(function* () {
 				const service = yield* Sessions;
 				const catalogService = yield* Catalog;
 				yield* catalogService.sync([root]);
-				return yield* service.rename("s-idle", "Moved chat");
+				return yield* service.rename("s-rename", "Renamed chat");
 			}),
 		);
-		expect(renamed?.name).toBe("Moved chat");
+		expect(renamed?.name).toBe("Renamed chat");
 	});
 });

@@ -1,11 +1,12 @@
-import { basename, dirname, join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { Context, Effect, FileSystem, Layer } from "effect";
 
-import { SessionNotFound, SessionRunning } from "#protocol/errors";
+import { FileUnwritable, SessionNotFound, SessionRunning } from "#protocol/errors";
 
-import type { FileUnwritable } from "../platform/errors.ts";
-import { appendText, removePath, renamePath } from "../platform/files.ts";
+import { AgentHome } from "../platform/agent-home.ts";
+import { appendText, removePath } from "../platform/files.ts";
+import { forkSession } from "../platform/pi.ts";
 import { Catalog } from "./catalog.ts";
 import type { StoredSummary } from "./ingest.ts";
 import { SessionLocks } from "./locks.ts";
@@ -21,11 +22,17 @@ import { SessionLocks } from "./locks.ts";
 
 export type RenameResult = StoredSummary | undefined;
 
+export type MoveResult = { readonly sessionId: string };
+
 export type SessionsApi = {
-	readonly move: (
+	/**
+	 * Move a chat into another folder as pi's own fork: the whole history is written as a
+	 * new session there, and the old file goes. Nothing is left in two places.
+	 */
+	readonly moveToProject: (
 		sessionId: string,
 		toDirectory: string,
-	) => Effect.Effect<StoredSummary, SessionNotFound | SessionRunning | FileUnwritable>;
+	) => Effect.Effect<MoveResult, SessionNotFound | SessionRunning | FileUnwritable>;
 	readonly rename: (
 		sessionId: string,
 		name: string,
@@ -42,6 +49,7 @@ export const SessionsLive = Layer.effect(
 	Effect.gen(function* () {
 		const catalog = yield* Catalog;
 		const locks = yield* SessionLocks;
+		const home = yield* AgentHome;
 		const fs = yield* FileSystem.FileSystem;
 		const withFs = <A, E>(effect: Effect.Effect<A, E, FileSystem.FileSystem>) =>
 			Effect.provideService(effect, FileSystem.FileSystem, fs);
@@ -57,13 +65,22 @@ export const SessionsLive = Layer.effect(
 				return row;
 			});
 
-		const move: SessionsApi["move"] = (sessionId, toDirectory) =>
+		const moveToProject: SessionsApi["moveToProject"] = (sessionId, toDirectory) =>
 			Effect.gen(function* () {
 				const row = yield* locatable(sessionId);
-				const to = join(toDirectory, basename(row.path));
-				yield* withFs(renamePath(row.path, to));
-				yield* catalog.sync([dirname(row.path), toDirectory]);
-				return (yield* catalog.locate(sessionId)) ?? row;
+				if (row.cwd === toDirectory) return { sessionId };
+				const forked = yield* Effect.try({
+					try: () => forkSession(row.path, toDirectory, home),
+					catch: (cause) =>
+						new FileUnwritable({
+							path: row.path,
+							reason: cause instanceof Error ? cause.message : String(cause),
+						}),
+				});
+				// A second copy would only confuse: the history lives on in the fork.
+				yield* withFs(removePath(row.path));
+				yield* catalog.sync([dirname(row.path), join(home.agentDir, "sessions")]);
+				return { sessionId: forked };
 			});
 
 		const rename: SessionsApi["rename"] = (sessionId, name) =>
@@ -89,6 +106,6 @@ export const SessionsLive = Layer.effect(
 				yield* catalog.sync([dirname(row.path)]);
 			});
 
-		return { move, remove, rename };
+		return { moveToProject, remove, rename };
 	}),
 );

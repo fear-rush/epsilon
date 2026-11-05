@@ -21,14 +21,13 @@ import { Input } from "@/components/ui/input";
 import { call } from "@/core/runtime";
 import { useReportStatus } from "@/core/status";
 import { ContinueSession, TrustGate } from "@/features/projects";
-import { findSessionRow, useSessionList } from "@/features/sessions";
+import { findSessionRow, useRecentProjects, useSessionList } from "@/features/sessions";
 
 import { ChatBar } from "./chat-bar";
 import { Composer } from "./composer";
 import { ConfirmDialog, QuestionDialog } from "./dialogs";
 import { RunStatus } from "./run-status";
-import { SessionControls } from "./session-controls";
-import { ComposerPlace, PlaceBadge, SessionLoader } from "./session-header";
+import { ComposerPlace, SessionHeader, SessionLoader } from "./session-header";
 import { Transcript, matchingRowIds } from "./transcript";
 import type { Jump } from "./transcript";
 import { useBranching } from "./use-branching";
@@ -49,11 +48,9 @@ export function SessionView({
 	/** The operator chose a folder for this open because the recorded one is gone. */
 	continued?: boolean | undefined;
 }) {
-	const list = useSessionList();
-	const session = findSessionRow(list.data, sessionId);
-	// Folders that already hold chats, offered first by the folder picker. The sidebar
-	// reads the same list, so this adds no request of its own.
-	const recent = list.data?.projects.map((entry) => entry.project) ?? [];
+	const session = findSessionRow(useSessionList().data, sessionId);
+	// Folders that already hold chats, offered first by the folder picker.
+	const recent = useRecentProjects();
 	if (session?.cwdMissing === true && continued !== true) {
 		return (
 			<div className="flex min-h-0 flex-1 flex-col">
@@ -213,42 +210,42 @@ export function Conversation({ sessionId, place }: { sessionId: string; place: s
 		/>
 	);
 
-	/** The chat's own bar while S3 moves main's `SessionHeader` here: the branch controls
-	 * and the in-chat search have no home in it yet. */
+	/** The branch's own controls, kept in the header until they have a home of their own. */
+	const extras = (
+		<>
+			<Button
+				size="icon-sm"
+				variant="ghost"
+				aria-label="Search conversation"
+				onClick={() => setSearching((open) => !open)}
+			>
+				<SearchIcon />
+			</Button>
+			{state.busy && (
+				<Button variant="outline" size="sm" onClick={() => void conversation.abort()}>
+					Stop
+				</Button>
+			)}
+		</>
+	);
 	const header = (
-		<ChatBar
+		<SessionHeader
+			actions={extras}
+			autoCompaction={state.autoCompaction}
+			autoRetry={state.autoRetry}
+			blocked={blocked}
+			busy={state.busy}
+			cloning={cloning}
+			conversation={conversation}
+			empty={empty}
+			hideThinkingBlock={state.hideThinking}
+			isCompacting={state.compacting}
+			onClone={clone}
+			onFork={openFork}
+			onTree={openTree}
+			place={place}
+			sessionId={sessionId}
 			title={state.title ?? "New chat"}
-			actions={
-				<div className="flex items-center gap-2">
-					{place !== null && <PlaceBadge path={place} />}
-					<SessionControls
-						autoCompaction={state.autoCompaction}
-						autoRetry={state.autoRetry}
-						blocked={blocked}
-						cloning={cloning}
-						conversation={conversation}
-						empty={empty}
-						hideThinkingBlock={state.hideThinking}
-						isCompacting={state.compacting}
-						onClone={clone}
-						onFork={openFork}
-						onTree={openTree}
-					/>
-					<Button
-						size="icon-sm"
-						variant="ghost"
-						aria-label="Search conversation"
-						onClick={() => setSearching((open) => !open)}
-					>
-						<SearchIcon />
-					</Button>
-					{state.busy && (
-						<Button variant="outline" size="sm" onClick={() => void conversation.abort()}>
-							Stop
-						</Button>
-					)}
-				</div>
-			}
 		/>
 	);
 

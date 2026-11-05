@@ -12,6 +12,8 @@ import { linearSession, writeSession } from "../../../test/sessions.ts";
 import { testPaths } from "../../../test/setup.ts";
 import { AgentHomeLive } from "../platform/agent-home.ts";
 import { JsonDocumentLive } from "../platform/json-document.ts";
+import { PiConfigLive } from "../platform/pi.ts";
+import { ProjectServiceLive } from "../settings/projects/service.ts";
 import { CatalogLive } from "./catalog.ts";
 import { SessionsHandlersLive } from "./handlers.ts";
 import { SessionLocksLive } from "./locks.ts";
@@ -43,6 +45,8 @@ const handlerLayer = (agentDir: string, root: string) => {
 		Layer.provideMerge(platform),
 	);
 	const json = JsonDocumentLive.pipe(Layer.provideMerge(platform));
+	const pi = PiConfigLive.pipe(Layer.provideMerge(platform));
+	const projects = ProjectServiceLive.pipe(Layer.provideMerge(platform), Layer.provideMerge(pi));
 	const pins = PinsLive.pipe(Layer.provideMerge(platform), Layer.provideMerge(json));
 	const sessions = SessionsLive.pipe(
 		Layer.provideMerge(platform),
@@ -54,6 +58,7 @@ const handlerLayer = (agentDir: string, root: string) => {
 		Layer.provideMerge(catalog),
 		Layer.provideMerge(pins),
 		Layer.provideMerge(sessions),
+		Layer.provideMerge(projects),
 	);
 };
 

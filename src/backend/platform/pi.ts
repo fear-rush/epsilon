@@ -1,10 +1,11 @@
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import {
 	DefaultPackageManager,
 	ProjectTrustStore,
 	SettingsManager,
 	ModelRuntime,
+	SessionManager,
 	hasTrustRequiringProjectResources,
 	loadProjectContextFiles,
 	loadSkills,
@@ -63,6 +64,21 @@ export type PiProviderLoginApi = {
 			readonly notify: (event: AuthEvent) => void;
 		},
 	) => Effect.Effect<void, ProviderRefused>;
+};
+
+/**
+ * A new session in `targetCwd` holding the whole history of `sourceFile`, which is pi's
+ * own fork: the file is written at once and records the source as its parent. Answers the
+ * new id. pi resolves a folder's `sessionDir` itself, so a project that moved its session
+ * files keeps writing them there.
+ */
+export const forkSession = (sourceFile: string, targetCwd: string, home: AgentHomeApi): string => {
+	const dir = SettingsManager.create(targetCwd, home.agentDir).getSessionDir();
+	return SessionManager.forkFrom(
+		sourceFile,
+		targetCwd,
+		dir === undefined ? undefined : resolve(targetCwd, dir),
+	).getSessionId();
 };
 
 /** pi's own types, re-exported so no other backend file imports the package. */

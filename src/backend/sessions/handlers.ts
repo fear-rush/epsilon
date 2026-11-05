@@ -6,6 +6,7 @@ import { SessionNotFound } from "#protocol/errors";
 import { SessionsRpcs } from "#protocol/sessions";
 
 import { AgentHome } from "../platform/agent-home.ts";
+import { ProjectService } from "../settings/projects/service.ts";
 import { Catalog } from "./catalog.ts";
 import type { StoredSummary } from "./ingest.ts";
 import { Sessions } from "./operations.ts";
@@ -25,6 +26,7 @@ export const SessionsHandlersLive = SessionsRpcs.toLayer(
 		const sessions = yield* Sessions;
 		const pins = yield* Pins;
 		const home = yield* AgentHome;
+		const projects = yield* ProjectService;
 		const fs = yield* FileSystem.FileSystem;
 		const roots = [join(home.agentDir, "sessions")];
 
@@ -68,6 +70,12 @@ export const SessionsHandlersLive = SessionsRpcs.toLayer(
 			"sessions.changes": () => catalog.changes,
 			"sessions.rename": ({ name, sessionId }) =>
 				sessions.rename(sessionId, name).pipe(Effect.asVoid),
+			"sessions.move": ({ sessionId, toDirectory }) =>
+				Effect.gen(function* () {
+					// A fork loads the folder's own resources, so its answer comes first.
+					const folder = yield* projects.trusted(toDirectory);
+					return yield* sessions.moveToProject(sessionId, folder);
+				}),
 			"sessions.remove": ({ sessionId }) => sessions.remove(sessionId),
 			"sessions.setPinned": ({ pinned, sessionId }) =>
 				Effect.gen(function* () {
