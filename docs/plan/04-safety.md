@@ -54,6 +54,14 @@ keys); the index conformance test against `SessionManager.listAll`
       **369.5 KiB against 315** for both `/` and `/sessions/$id`. That is a first-paint
       budget to meet by code-splitting the shell or the route entries — or to revise —
       and it is the owner's call which.
+      Attribution (built at three commits in throwaway worktrees): 310.1 KiB at
+      `7316187` (the S6 skills commit, which recorded 310.2), **368.4 at `f6df284`**
+      (the S7 Context commit), 368.4 at S8's end, 368.5 at S9's end, 369.1 today. So
+      ~369 was reached inside S6's tail, not by S7–S9; the last three commits of this
+      session add 0.6 KiB. Which S6-tail commit is still open (17 builds to bisect).
+      The new chunks are a `popover` (21 KiB) reachable from the composer's palette and
+      model menu, `session-view` (42.4) split out of the old `chat` chunk (21.6), and
+      Base UI's label/focus guards (`useAriaLabelledBy` 8.1 KiB).
 - [ ] **The index blocks the event loop.** The catalog syncs synchronously inside the
       `epsilon` process; the worker in the original design was never built. A cold build
       measured 375–677 ms on 500 sessions, and during it the socket answers nothing. The
