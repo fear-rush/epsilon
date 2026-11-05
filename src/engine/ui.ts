@@ -6,7 +6,7 @@ import type {
 	ThemeBg,
 	ThemeColor,
 } from "@earendil-works/pi-coding-agent";
-import { Effect } from "effect";
+import { Effect, Option } from "effect";
 
 import type { DialogAnswer, DialogQuestion } from "#protocol/conversation/extui";
 
@@ -20,7 +20,7 @@ import type { AskOptions, Dialogs } from "./dialogs.ts";
  * value. Everywhere else in the engine yields Effects.
  *
  * A method with no wire yet is refused once per method with a notice, never silently
- * dropped (AGENTS.md, "Every failure is visible"). Keyed statuses have a frame; widgets,
+ * dropped (AGENTS.md, "Every failure is visible"). Keyed statuses and widgets have a frame;
  * the working label and the editor text do not yet.
  */
 
@@ -31,6 +31,12 @@ export type UiHost = {
 	readonly addAutocompleteProvider: (factory: AutocompleteProviderFactory) => void;
 	/** One keyed status line, or its removal when `text` is undefined. */
 	readonly setStatus: (key: string, text: string | undefined) => void;
+	/** One keyed widget above or below the composer, or its removal when `lines` is undefined. */
+	readonly setWidget: (
+		key: string,
+		lines: ReadonlyArray<string> | undefined,
+		placement: "aboveEditor" | "belowEditor" | undefined,
+	) => void;
 	readonly unsupported: (method: string) => void;
 	readonly toolsExpanded: () => boolean;
 	readonly setToolsExpanded: (expanded: boolean) => void;
@@ -64,6 +70,7 @@ export class UiBridge {
 		unsupported: (method: string) => void,
 		notice: UiHost["notice"],
 		setStatus: UiHost["setStatus"],
+		setWidget: UiHost["setWidget"],
 	) {
 		this.host = {
 			ask: (question, options) => Effect.runPromise(dialogs.ask(question, options)),
@@ -73,6 +80,7 @@ export class UiBridge {
 				this.wrappers.push(factory);
 			},
 			setStatus,
+			setWidget,
 			unsupported,
 			toolsExpanded: () => this.expanded,
 			setToolsExpanded: (expanded) => {
@@ -97,6 +105,17 @@ export class UiBridge {
 		this.wrappers = [];
 	}
 }
+
+/** pi's widget content as its text lines, or none when it is a component factory. */
+const textLinesOf = (content: unknown): Option.Option<ReadonlyArray<string>> => {
+	if (!Array.isArray(content)) return Option.none();
+	const lines: string[] = [];
+	for (const line of content) {
+		if (typeof line !== "string") return Option.none();
+		lines.push(line);
+	}
+	return Option.some(lines);
+};
 
 const answerSelection = (question: DialogQuestion, answer: DialogAnswer): string | undefined => {
 	if (question.kind !== "select" || answer.kind !== "select") return undefined;
@@ -175,9 +194,18 @@ export const createUiContext = (host: UiHost): ExtensionUIContext => ({
 	setStatus(key, text) {
 		host.setStatus(key, text);
 	},
-	setWidget(_key: string, _content: unknown, _options?: ExtensionWidgetOptions) {
-		// Neither text lines nor a pi-tui component has a frame yet.
-		host.unsupported("setWidget");
+	setWidget(key: string, content: unknown, options?: ExtensionWidgetOptions) {
+		// Undefined clears the keyed widget; a pi-tui component or a non-text line is refused.
+		if (content === undefined) {
+			host.setWidget(key, undefined, options?.placement);
+			return;
+		}
+		const lines = textLinesOf(content);
+		if (Option.isNone(lines)) {
+			host.unsupported("setWidget");
+			return;
+		}
+		host.setWidget(key, lines.value, options?.placement);
 	},
 	setTitle() {
 		host.unsupported("setTitle");

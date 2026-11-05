@@ -70,3 +70,14 @@ export const UiStatus = Schema.Struct({
 	text: Schema.String,
 });
 export type UiStatus = typeof UiStatus.Type;
+
+/**
+ * One block an extension put above or below the composer, as the text lines pi gave. A
+ * component factory has no browser equivalent and is refused by the engine instead.
+ */
+export const UiWidget = Schema.Struct({
+	key: Schema.String,
+	placement: Schema.Literals(["aboveEditor", "belowEditor"]),
+	lines: Schema.Array(Schema.String),
+});
+export type UiWidget = typeof UiWidget.Type;

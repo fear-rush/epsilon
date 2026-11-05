@@ -105,7 +105,7 @@ dialogs, `InlineStatus`, `Notice` and the alert primitives carry main's words an
 | [x]  | `features/conversation/composer/attachments.tsx`     | 49    | `feat(conversation): the composer's images`                         | `Attachment`, `AttachmentStrip`                                    |
 | [x]  | `features/conversation/composer/builtin-commands.ts` | 227   | `feat(conversation): the palette and its commands`                  | `ComposerCommandContext`, `RouteTarget`, `runComposerCommand`      |
 | [x]  | `features/conversation/composer/cache-warming.tsx`   | 50    | `feat(conversation): the composer's readings`                       | `CacheWarmingState`                                                |
-| [ ]  | `features/conversation/composer/composer.tsx`        | 669   | exists elsewhere (names found)                                      |                                                                    |
+| [x]  | `features/conversation/composer/composer.tsx`        | 669   | `feat(conversation): the extension's widget`                        |                                                                    |
 | [x]  | `features/conversation/composer/context-meter.tsx`   | 62    | `feat(conversation): the composer's readings`                       | `ContextMeter`                                                     |
 | [x]  | `features/conversation/composer/model-menu.tsx`      | 126   | `feat(conversation): the composer menus`                            | `ModelMenu`                                                        |
 | [x]  | `features/conversation/composer/palette.tsx`         | 115   | `feat(conversation): the palette and its commands`                  | `Palette`, `PaletteEntry`                                          |

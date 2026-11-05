@@ -82,6 +82,10 @@ describe("frames", () => {
 				t: "statuses",
 				statuses: [{ key: "permission", text: "perm:ask" }],
 			},
+			{
+				t: "widgets",
+				widgets: [{ key: "card", placement: "aboveEditor", lines: ["a", "b"] }],
+			},
 			{ t: "editorText", sessionId: "s1", text: "the message a move undid", nonce: "n1" },
 			{
 				t: "tree",
@@ -101,7 +105,7 @@ describe("frames", () => {
 		// The version covers exactly the tags the socket can carry: adding a frame without
 		// naming it here means a stale tab would meet a frame it cannot decode.
 		expect(new Set(samples.map((sample) => sample.t))).toEqual(new Set(frameTags));
-		expect(PROTOCOL_VERSION).toBe("17");
+		expect(PROTOCOL_VERSION).toBe("18");
 		for (const sample of samples) expect(() => decodeServerFrame(sample)).not.toThrow();
 	});
 });

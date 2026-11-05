@@ -14,6 +14,7 @@ import {
 	promptImagesBase64Length,
 } from "#protocol/conversation/commands";
 import type { ExportedSession, ExportFormat } from "#protocol/conversation/export";
+import type { UiWidget } from "#protocol/conversation/extui";
 import type { ImageBlock } from "#protocol/conversation/frames";
 import type { AutocompleteReply, CommandOffer } from "#protocol/conversation/palette";
 import type { ModelOption, ThinkingLevel } from "#protocol/conversation/session";
@@ -98,6 +99,17 @@ const readAttachment = async (file: File): Promise<Attachment | undefined> => {
 		return undefined;
 	}
 };
+
+/** The lines an extension set for one placement, above or below the box. */
+const widgetLines = (list: ReadonlyArray<UiWidget>) => (
+	<div className="flex flex-col gap-1 px-1 font-mono text-code whitespace-pre-wrap text-muted-foreground">
+		{list.map((widget) => (
+			<div key={widget.key} data-placement={widget.placement}>
+				{widget.lines.join("\n")}
+			</div>
+		))}
+	</div>
+);
 
 /**
  * The one input of a chat.
@@ -393,6 +405,15 @@ export function Composer({
 			await runCommand(parsed.command, parsed.argument, message);
 			return;
 		}
+		// pi refuses a prompt while compaction is in progress, and its refusal arrives after
+		// the draft would already be gone. The text stays where the user typed it.
+		if (state.compacting) {
+			setNotice({
+				text: "pi refuses a prompt while it compacts. Your draft stays here until it finishes.",
+				tone: "warning",
+			});
+			return;
+		}
 		setSending(true);
 		try {
 			await onSend(
@@ -469,6 +490,8 @@ export function Composer({
 	// Every keyed status an extension set, except the permission mode: the footer's menu
 	// already draws that one, in the browser's words rather than the extension's.
 	const rail = state.statuses.filter((status) => status.key !== PERMISSION_STATUS_KEY);
+	const aboveEditor = state.widgets.filter((widget) => widget.placement === "aboveEditor");
+	const belowEditor = state.widgets.filter((widget) => widget.placement === "belowEditor");
 
 	const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
 		if (paletteOpen) {
@@ -508,6 +531,7 @@ export function Composer({
 		<div className="border-t p-3">
 			<div ref={surfaceRef} className="mx-auto w-full max-w-4xl">
 				{header !== undefined && <div className="min-w-0 pb-2">{header}</div>}
+				{aboveEditor.length > 0 && <div className="pb-2">{widgetLines(aboveEditor)}</div>}
 				{rail.length > 0 && (
 					<div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-1 pb-1 text-meta text-muted-foreground">
 						{rail.map((status) => (
@@ -647,6 +671,7 @@ export function Composer({
 							</div>
 						</div>
 					)}
+				{belowEditor.length > 0 && <div className="pt-1">{widgetLines(belowEditor)}</div>}
 				<Palette
 					open={paletteOpen}
 					anchor={surfaceRef}

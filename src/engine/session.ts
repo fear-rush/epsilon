@@ -7,7 +7,7 @@ import type { Scope } from "effect";
 import { Clock, Deferred, Effect, Fiber, FileSystem, Option, Queue, Schema } from "effect";
 
 import type { Command } from "#protocol/conversation/commands";
-import type { DialogAnswer } from "#protocol/conversation/extui";
+import type { DialogAnswer, UiWidget } from "#protocol/conversation/extui";
 import type {
 	ImageBlock,
 	Notice,
@@ -169,6 +169,8 @@ export class EngineSession {
 	private readonly toolEntries = new Map<string, string>();
 	/** The keyed statuses extensions set and have not cleared, in the order they first did. */
 	private readonly statuses = new Map<string, string>();
+	/** The keyed widgets extensions set and have not cleared, in the order they first did. */
+	private readonly widgets = new Map<string, UiWidget>();
 	/** The servers pi last reported a problem with, replaced by each attention notice. */
 	private mcpAttention = new Map<string, McpAttention>();
 	private streamId: string | undefined;
@@ -207,6 +209,7 @@ export class EngineSession {
 			(method) => this.unsupportedMethod(method),
 			(message, kind) => this.notice(message, kind),
 			(key, text) => this.setStatus(key, text),
+			(key, lines, placement) => this.setWidget(key, lines, placement),
 		);
 	}
 
@@ -1148,6 +1151,7 @@ export class EngineSession {
 		this.frames.to(to, sessionMeta(agent));
 		this.frames.to(to, readingsOf(agent));
 		this.frames.to(to, this.statusesFrame());
+		this.frames.to(to, this.widgetsFrame());
 		// The snapshot carries the warmer's reading, so its timer is armed here too: a chat
 		// that opens while a warm is scheduled sees the bar change when pi warms it.
 		Queue.offerUnsafe(this.events, { kind: "arm" });
@@ -1199,6 +1203,22 @@ export class EngineSession {
 		if (text === undefined) this.statuses.delete(key);
 		else this.statuses.set(key, text);
 		this.frames.to("all", this.statusesFrame());
+	}
+
+	/** Every widget an extension holds, so a late tab sees what the composer shows. */
+	private widgetsFrame(): Extract<ServerFrame, { t: "widgets" }> {
+		return { t: "widgets", widgets: [...this.widgets.values()] };
+	}
+
+	/** One extension widget above or below the composer, or its removal. */
+	private setWidget(
+		key: string,
+		lines: ReadonlyArray<string> | undefined,
+		placement: "aboveEditor" | "belowEditor" | undefined,
+	): void {
+		if (lines === undefined) this.widgets.delete(key);
+		else this.widgets.set(key, { key, lines: [...lines], placement: placement ?? "aboveEditor" });
+		this.frames.to("all", this.widgetsFrame());
 	}
 
 	/** The composer's readings now, and the warmer's timer re-armed from pi's answer. */

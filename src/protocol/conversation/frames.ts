@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 import { CacheWarming, ContextUsage, SessionStats } from "../usage.ts";
-import { UiStatus } from "./extui.ts";
+import { UiStatus, UiWidget } from "./extui.ts";
 import { CommandOffer } from "./palette.ts";
 import { ThinkingLevel } from "./session.ts";
 
@@ -249,6 +249,15 @@ export const StatusesFrame = Schema.Struct({
 	statuses: Schema.Array(UiStatus),
 });
 
+/**
+ * Every extension widget the engine holds, keyed like the status rail. `setWidget` with no
+ * content removes one, so the whole short list travels and the page replaces it.
+ */
+export const WidgetsFrame = Schema.Struct({
+	t: Schema.Literals(["widgets"]),
+	widgets: Schema.Array(UiWidget),
+});
+
 /** Something outside Epsilon wrote the session file; the chat is read-only until reloaded. */
 export const DriftFrame = Schema.Struct({
 	t: Schema.Literals(["drift"]),
@@ -316,6 +325,7 @@ export const ServerFrame = Schema.Union([
 	BashFrame,
 	DriftFrame,
 	StatusesFrame,
+	WidgetsFrame,
 	SessionMetaFrame,
 	ReadingsFrame,
 	EditorTextFrame,

@@ -1,4 +1,4 @@
-import type { DialogQuestion, UiStatus } from "#protocol/conversation/extui";
+import type { DialogQuestion, UiStatus, UiWidget } from "#protocol/conversation/extui";
 import type {
 	ImageBlock,
 	Notice,
@@ -88,6 +88,8 @@ export type ConversationState = {
 	readonly readings: Readings | undefined;
 	/** One line per extension that set a keyed status; the permission mode has its own menu. */
 	readonly statuses: ReadonlyArray<UiStatus>;
+	/** The text blocks extensions put above or below the composer, keyed like the statuses. */
+	readonly widgets: ReadonlyArray<UiWidget>;
 	/** pi's automatic behaviours, which its own settings file owns. */
 	readonly autoCompaction: boolean;
 	readonly autoRetry: boolean;
@@ -126,6 +128,7 @@ export const emptyConversation: ConversationState = {
 	bash: { command: "", output: "", running: false },
 	readings: undefined,
 	statuses: [],
+	widgets: [],
 	autoCompaction: false,
 	autoRetry: false,
 	hideThinking: false,

@@ -162,7 +162,14 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 					t: "query",
 				}));
 				yield* engine.attachTab("tab2");
-				const opening = [...(yield* engine.frames("tab2").pipe(Stream.take(5), Stream.runCollect))];
+				// A late tab gets the snapshot and what follows it; take through the queue frame
+				// instead of counting frames, so a new one does not hide the rest.
+				const opening = [
+					...(yield* engine.frames("tab2").pipe(
+						Stream.takeUntil((frame) => frame.t === "queue"),
+						Stream.runCollect,
+					)),
+				];
 				const meta = opening.find((frame) => frame.t === "sessionMeta");
 				const queue = opening.find((frame) => frame.t === "queue");
 				const readings = opening.find((frame) => frame.t === "readings");
