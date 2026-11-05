@@ -36,7 +36,13 @@ const folderName = (path: string): string =>
  * Where the conversation runs, above the composer. A chat needs no line: its folder is
  * Epsilon's own and says nothing. A project names the folder it works in.
  */
-export function ComposerPlace({ path, onChange }: { path: string; onChange?: () => void }) {
+export function ComposerPlace({
+	path,
+	onChange,
+}: {
+	path: string;
+	onChange?: (() => void) | undefined;
+}) {
 	const content = (
 		<>
 			<FolderIcon className="size-4 shrink-0" />

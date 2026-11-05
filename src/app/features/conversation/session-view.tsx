@@ -77,7 +77,16 @@ export function SessionView({
  * to the app's status line rather than drawn here; the engine's notices, which are about a
  * turn, stay beside the transcript.
  */
-export function Conversation({ sessionId, place }: { sessionId: string; place: string | null }) {
+export function Conversation({
+	sessionId,
+	place,
+	onChangeProject,
+}: {
+	sessionId: string;
+	place: string | null;
+	/** The new chat page's Change action; an existing chat keeps its folder. */
+	onChangeProject?: (() => void) | undefined;
+}) {
 	const conversation = useConversation({ place, sessionId });
 	const { state } = conversation;
 	const navigate = useNavigate();
@@ -186,7 +195,9 @@ export function Conversation({ sessionId, place }: { sessionId: string; place: s
 			codingTools={state.codingTools}
 			commands={state.commands}
 			draft={state.draft}
-			header={place === null ? undefined : <ComposerPlace path={place} />}
+			header={
+				place === null ? undefined : <ComposerPlace path={place} onChange={onChangeProject} />
+			}
 			model={models.find((candidate) => `${candidate.provider}/${candidate.id}` === state.model)}
 			models={models}
 			sessionId={sessionId}
@@ -245,7 +256,8 @@ export function Conversation({ sessionId, place }: { sessionId: string; place: s
 			onTree={openTree}
 			place={place}
 			sessionId={sessionId}
-			title={state.title ?? "New chat"}
+			// pi names a chat only when it is renamed; an unnamed one shows no title, as main did.
+			title={state.title}
 		/>
 	);
 

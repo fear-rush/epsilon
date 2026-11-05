@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { useCallback, useState } from "react";
 
-import { TrustGate } from "@/features/projects";
+import { FolderDialog, TrustGate } from "@/features/projects";
+import { useRecentProjects } from "@/features/sessions";
 
 import { Conversation } from "./session-view";
 
@@ -13,10 +15,27 @@ import { Conversation } from "./session-view";
  */
 export function NewChat({ place }: { place: string | null }) {
 	const [sessionId] = useState(() => crypto.randomUUID());
-	if (place === null) return <Conversation place={null} sessionId={sessionId} />;
+	const [choosing, setChoosing] = useState(false);
+	const openChooser = useCallback(() => setChoosing(true), []);
+	const recent = useRecentProjects();
+	const navigate = useNavigate();
 	return (
-		<TrustGate project={place} header={null}>
-			<Conversation place={place} sessionId={sessionId} />
-		</TrustGate>
+		<>
+			{place === null ? (
+				<Conversation place={null} sessionId={sessionId} />
+			) : (
+				<TrustGate project={place} header={null}>
+					<Conversation place={place} sessionId={sessionId} onChangeProject={openChooser} />
+				</TrustGate>
+			)}
+			<FolderDialog
+				open={choosing}
+				onOpenChange={setChoosing}
+				title="Open a project"
+				action="Open"
+				recent={recent}
+				onPick={(path) => void navigate({ to: "/", search: { place: path }, replace: true })}
+			/>
+		</>
 	);
 }
