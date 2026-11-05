@@ -83,6 +83,39 @@ export const ProviderAuth = Schema.Struct({
 });
 export type ProviderAuth = typeof ProviderAuth.Type;
 
+/** The account sign-in pi declares for a provider, when it declares one. */
+export const ProviderOauth = Schema.Struct({
+	name: Schema.String,
+	/** pi's own button label, e.g. "Sign in with ChatGPT". */
+	label: Schema.optional(Schema.String),
+	/** True when the account is a paid plan, not an API key. */
+	subscription: Schema.Boolean,
+});
+export type ProviderOauth = typeof ProviderOauth.Type;
+
+/** pi's API-key method. Ambient-only providers omit `login`, so the page cannot start one. */
+export const ProviderApiKeyAuth = Schema.Struct({
+	/** pi's name for the method, e.g. "Anthropic API key". */
+	name: Schema.String,
+	/** True when pi prompts for the key and any provider-scoped env values. */
+	interactive: Schema.Boolean,
+});
+export type ProviderApiKeyAuth = typeof ProviderApiKeyAuth.Type;
+
+/**
+ * How pi can sign in to one provider: the account it offers, the API-key method it
+ * declares, and the credential it already stores. Both a stored credential and a
+ * `models.json` key may exist, and pi uses the stored one first, so the page names the one
+ * in use.
+ */
+export const ProviderAuthView = Schema.Struct({
+	/** The kind of credential `auth.json` holds for this provider. */
+	credential: Schema.optional(ProviderLoginType),
+	oauth: Schema.optional(ProviderOauth),
+	apiKey: Schema.optional(ProviderApiKeyAuth),
+});
+export type ProviderAuthView = typeof ProviderAuthView.Type;
+
 export const ProviderRow = Schema.Struct({
 	id: Schema.String,
 	name: Schema.String,
@@ -95,10 +128,27 @@ export const ProviderRow = Schema.Struct({
 });
 export type ProviderRow = typeof ProviderRow.Type;
 
+/**
+ * One provider pi knows, for the add picker: whether it takes a key or an account, and
+ * whether it already has one.
+ */
+export const BuiltinProvider = Schema.Struct({
+	id: Schema.String,
+	name: Schema.String,
+	/** Already has a `models.json` entry or a stored credential. */
+	configured: Schema.Boolean,
+	/** What pi can be signed in with, so the add picker offers what exists. */
+	auth: ProviderAuthView,
+});
+export type BuiltinProvider = typeof BuiltinProvider.Type;
+
 export const ProvidersView = Schema.Struct({
 	/** pi's sentence when it could not compose the catalog at all. */
 	error: Schema.optional(Schema.String),
+	/** The providers a `models.json` entry or a credential configures, never merely shipped. */
 	providers: Schema.Array(ProviderRow),
+	/** Every provider pi knows, for the add picker. */
+	builtins: Schema.Array(BuiltinProvider),
 });
 export type ProvidersView = typeof ProvidersView.Type;
 
@@ -306,39 +356,6 @@ export const ProviderCatalogModel = Schema.Struct({
 	cost: Schema.optional(ProviderModelCost),
 });
 export type ProviderCatalogModel = typeof ProviderCatalogModel.Type;
-
-/** The account sign-in pi declares for a provider, when it declares one. */
-export const ProviderOauth = Schema.Struct({
-	name: Schema.String,
-	/** pi's own button label, e.g. "Sign in with ChatGPT". */
-	label: Schema.optional(Schema.String),
-	/** True when the account is a paid plan, not an API key. */
-	subscription: Schema.Boolean,
-});
-export type ProviderOauth = typeof ProviderOauth.Type;
-
-/** pi's API-key method. Ambient-only providers omit `login`, so the page cannot start one. */
-export const ProviderApiKeyAuth = Schema.Struct({
-	/** pi's name for the method, e.g. "Anthropic API key". */
-	name: Schema.String,
-	/** True when pi prompts for the key and any provider-scoped env values. */
-	interactive: Schema.Boolean,
-});
-export type ProviderApiKeyAuth = typeof ProviderApiKeyAuth.Type;
-
-/**
- * How pi can sign in to one provider: the account it offers, the API-key method it
- * declares, and the credential it already stores. Both a stored credential and a
- * `models.json` key may exist, and pi uses the stored one first, so the page names the one
- * in use.
- */
-export const ProviderAuthView = Schema.Struct({
-	/** The kind of credential `auth.json` holds for this provider. */
-	credential: Schema.optional(ProviderLoginType),
-	oauth: Schema.optional(ProviderOauth),
-	apiKey: Schema.optional(ProviderApiKeyAuth),
-});
-export type ProviderAuthView = typeof ProviderAuthView.Type;
 
 /** One provider as the editor needs it: pi's row, the stored entry, and its models. */
 export const ProviderDetail = Schema.Struct({

@@ -4,10 +4,12 @@ import { isProviderApi } from "#domain/providers/rules";
 import { ProviderRefused } from "#protocol/errors";
 import { ProviderCatalogModel } from "#protocol/settings/providers";
 import type {
+	BuiltinProvider,
 	ProviderCatalogModel as CatalogModel,
 	ProviderDetail,
 	ProviderImportInput,
 	ProviderInput,
+	ProviderLoginType,
 	ProviderModelInput,
 	ProviderModelsView,
 	ProviderRow,
@@ -105,12 +107,67 @@ const catalogModelOf = (provider: string, model: RuntimeModel): Option.Option<Ca
 		provider,
 	});
 
+/**
+ * The providers the page lists: ones a `models.json` entry or a credential configures.
+ * pi ships many more, and they belong in the add picker, not in a page of configured ones.
+ */
 const rowsOf = (
 	runtime: ModelRuntime,
 	builtin: ReadonlySet<string>,
 	custom: ReadonlySet<string>,
 ): ReadonlyArray<ProviderRow> =>
-	runtime.getProviders().map((provider) => rowOf(runtime, builtin, custom, provider));
+	runtime
+		.getProviders()
+		.filter(
+			(provider) =>
+				custom.has(provider.id) || runtime.getProviderAuthStatus(provider.id).configured,
+		)
+		.map((provider) => rowOf(runtime, builtin, custom, provider));
+
+/** Every provider pi knows, for the add picker, in the order the picker draws them. */
+const builtinsOf = (
+	runtime: ModelRuntime,
+	custom: ReadonlySet<string>,
+	credentials: ReadonlyMap<string, ProviderLoginType>,
+): ReadonlyArray<BuiltinProvider> =>
+	runtime
+		.getProviders()
+		.map((provider) => ({
+			auth: {
+				apiKey: apiKeyOf(provider),
+				credential: credentials.get(provider.id),
+				oauth: oauthOf(provider),
+			},
+			configured: custom.has(provider.id) || runtime.getProviderAuthStatus(provider.id).configured,
+			id: provider.id,
+			name: provider.name,
+		}))
+		.toSorted((left, right) => left.name.localeCompare(right.name));
+
+/**
+ * Every stored credential, keyed by provider. The add picker's badge reads it, so a
+ * failure names its reason in the log and leaves the badge at `configured`: the list is
+ * still the page's answer, and losing it over a badge would be worse.
+ */
+const credentialsOf = (
+	runtime: ModelRuntime,
+	log: LogApi,
+): Effect.Effect<ReadonlyMap<string, ProviderLoginType>> =>
+	Effect.tryPromise({
+		try: () => runtime.listCredentials(),
+		catch: (cause) => (cause instanceof Error ? cause.message : String(cause)),
+	}).pipe(
+		Effect.map(
+			(credentials) => new Map(credentials.map((entry) => [entry.providerId, entry.type] as const)),
+		),
+		Effect.matchEffect({
+			onFailure: (reason) =>
+				log
+					.write("warn", "the stored credentials could not be read", { reason })
+					.pipe(Effect.as(new Map<string, ProviderLoginType>())),
+			onSuccess: (credentials) => Effect.succeed(credentials),
+		}),
+	);
 
 const rowOf = (
 	runtime: ModelRuntime,
@@ -163,7 +220,7 @@ export const makeProvidersService = (deps: {
 						.pipe(Effect.as(Option.none<ModelRuntime>())),
 				),
 			);
-			if (Option.isNone(composed)) return { providers: [] };
+			if (Option.isNone(composed)) return { builtins: [], providers: [] };
 			const runtime = composed.value;
 			const custom = yield* deps.store.customIds;
 			const builtin = yield* builtinIds.pipe(
@@ -177,10 +234,12 @@ export const makeProvidersService = (deps: {
 					onSuccess: (ids) => Effect.succeed(ids),
 				}),
 			);
+			const view: ProvidersView = {
+				builtins: builtinsOf(runtime, custom, yield* credentialsOf(runtime, deps.log)),
+				providers: rowsOf(runtime, builtin, custom),
+			};
 			const error = runtime.getError();
-			return error === undefined
-				? { providers: rowsOf(runtime, builtin, custom) }
-				: { error, providers: rowsOf(runtime, builtin, custom) };
+			return error === undefined ? view : { ...view, error };
 		});
 
 		const models: Effect.Effect<ProviderModelsView> = deps.runtime.pipe(

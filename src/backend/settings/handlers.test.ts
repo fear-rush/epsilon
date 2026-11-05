@@ -161,7 +161,10 @@ describe("settings.snapshot", () => {
 		expect(snapshot.project).toBeNull();
 		expect(snapshot.epsilon.settings.maxRunning).toBeGreaterThan(0);
 		expect(snapshot.settings.rows.length).toBeGreaterThan(0);
-		expect(snapshot.providers.providers.some((provider) => provider.id === "anthropic")).toBe(true);
+		expect(snapshot.providers.builtins.some((provider) => provider.id === "anthropic")).toBe(true);
+		expect(
+			snapshot.providers.providers.every((provider) => provider.custom || provider.auth.configured),
+		).toBe(true);
 		expect(snapshot.mcp.servers.map((server) => server.name)).toContain("docs");
 		expect(snapshot.mcpLive.sessions).toBe(0);
 		expect(snapshot.packages.packages.map((entry) => entry.source)).toContain(pkg);

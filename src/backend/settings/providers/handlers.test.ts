@@ -120,7 +120,7 @@ const readFile = (path: string) =>
 
 describe("settings.providers", () => {
 	itEffect(
-		"lists pi's providers and names the one models.json declares",
+		"lists the providers a file entry or a credential configures, and every builtin to add",
 		() => {
 			const { agentDir, layer } = providerLayer("list");
 			writeStubModels(agentDir, "http://127.0.0.1:1");
@@ -131,10 +131,16 @@ describe("settings.providers", () => {
 				expect(stub?.custom).toBe(true);
 				expect(stub?.builtin).toBe(false);
 				expect(stub?.models).toBe(1);
-				// pi's own catalog is in the same list, marked built in.
-				const builtin = view.providers.find((provider) => provider.id === "anthropic");
-				expect(builtin?.builtin).toBe(true);
-				expect(builtin?.custom).toBe(false);
+				// A provider pi merely ships is not the page's business: it belongs in the add picker.
+				for (const provider of view.providers) {
+					expect(provider.custom || provider.auth.configured).toBe(true);
+				}
+				// The picker offers pi's whole catalog, saying how each one signs in and where to start.
+				const anthropic = view.builtins.find((provider) => provider.id === "anthropic");
+				expect(anthropic?.auth.oauth?.name).toBeTruthy();
+				expect(view.builtins.find((provider) => provider.id === "stub")?.configured).toBe(true);
+				const names = view.builtins.map((provider) => provider.name);
+				expect(names).toEqual(names.toSorted((left, right) => left.localeCompare(right)));
 				// No credential is configured for a file-only provider, and no secret is on the wire.
 				expect(stub?.auth).toEqual({ configured: true, source: "models_json_key" });
 				expect(JSON.stringify(view)).not.toContain("stub-key");
@@ -770,15 +776,27 @@ describe("settings.providers", () => {
 		() =>
 			Effect.gen(function* () {
 				const document = yield* JsonDocument;
+				const dir = join(testPaths.scratch, "providers-f8l");
+				const file = join(dir, "models.json");
+				// A models.json entry is what puts a provider on the page; the cache decides `builtin`.
+				mkdirSync(dir, { recursive: true });
+				writeFileSync(
+					file,
+					`${JSON.stringify({
+						providers: {
+							anthropic: {
+								baseUrl: "http://127.0.0.1:1",
+								models: [{ id: "anthropic-test" }],
+							},
+						},
+					})}\n`,
+				);
 				const runtime = yield* Effect.tryPromise(() =>
-					ModelRuntime.create({ modelsPath: null, refreshOnCreate: false }),
+					ModelRuntime.create({ modelsPath: file, refreshOnCreate: false }),
 				);
 				const ids = new Set(runtime.getProviders().map((row) => row.id));
 				const attempts = yield* Ref.make(0);
-				const store = makeProvidersStore({
-					document,
-					path: join(testPaths.scratch, "providers-f8l", "models.json"),
-				});
+				const store = makeProvidersStore({ document, path: file });
 				const service = yield* makeProvidersService({
 					builtin: Effect.gen(function* () {
 						const attempt = yield* Ref.updateAndGet(attempts, (count) => count + 1);
