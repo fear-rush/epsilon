@@ -36,6 +36,9 @@ const ESTIMATE: Record<TranscriptEntry["role"] | "streaming", number> = {
 	user: 72,
 };
 
+/** pi's own word for the label that stands in for thinking it hides. */
+const DEFAULT_HIDDEN_THINKING_LABEL = "Thinking...";
+
 const GAP = 24;
 const PADDING = 32;
 const END_THRESHOLD = 48;
@@ -303,7 +306,13 @@ function AssistantRow({
 	const silent = text === "" && thinking === "" && !entry.blocks.some((b) => b.type === "toolCall");
 	return (
 		<div className={cn("grid gap-2", silent && "hidden")}>
-			{thinking !== "" && (
+			{thinking === "" ? null : state.hideThinking ? (
+				// pi draws a label where it hid thinking instead of dropping the block, so a
+				// reply that only thought still has a row to stand on.
+				<p className="mb-2 text-meta whitespace-pre-wrap text-muted-foreground">
+					{state.hiddenThinkingLabel ?? DEFAULT_HIDDEN_THINKING_LABEL}
+				</p>
+			) : (
 				<details className="text-meta text-muted-foreground">
 					<summary className="cursor-pointer select-none">Thinking</summary>
 					<p className="mt-1 whitespace-pre-wrap">{thinking}</p>

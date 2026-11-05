@@ -356,6 +356,22 @@ describe("reduce", () => {
 		expect(meta.thinking).toBe("high");
 		expect(meta.activeTools).toEqual(["bash"]);
 		expect(meta.treeFilterMode).toBe("labeled-only");
+		// An extension's label survives a later meta without one, and a later label wins.
+		const labelled = reduce(meta, {
+			t: "sessionMeta",
+			sessionId: "s1",
+			hiddenThinkingLabel: "Working it out",
+		});
+		expect(labelled.hiddenThinkingLabel).toBe("Working it out");
+		expect(reduce(labelled, { t: "sessionMeta", sessionId: "s1" }).hiddenThinkingLabel).toBe(
+			"Working it out",
+		);
+		const reLabelled = reduce(labelled, {
+			t: "sessionMeta",
+			sessionId: "s1",
+			hiddenThinkingLabel: "Pondering",
+		});
+		expect(reLabelled.hiddenThinkingLabel).toBe("Pondering");
 		const drafted = reduce(meta, {
 			t: "editorText",
 			sessionId: "s1",

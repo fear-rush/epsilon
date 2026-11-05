@@ -94,6 +94,8 @@ export type ConversationState = {
 	readonly autoCompaction: boolean;
 	readonly autoRetry: boolean;
 	readonly hideThinking: boolean;
+	/** The label an extension set in place of the thinking pi hides; absent means pi's own. */
+	readonly hiddenThinkingLabel: string | undefined;
 	/** Whether pi's coding tools are declared now, and the thinking levels it offers. */
 	readonly codingTools: boolean;
 	readonly thinkingLevels: ReadonlyArray<ThinkingLevel>;
@@ -132,6 +134,7 @@ export const emptyConversation: ConversationState = {
 	autoCompaction: false,
 	autoRetry: false,
 	hideThinking: false,
+	hiddenThinkingLabel: undefined,
 	codingTools: false,
 	thinkingLevels: [],
 	commands: [],

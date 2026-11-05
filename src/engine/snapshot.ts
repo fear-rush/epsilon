@@ -133,6 +133,7 @@ type MutableSessionMeta = {
 	autoRetry?: boolean;
 	codingTools?: boolean;
 	hideThinking?: boolean;
+	hiddenThinkingLabel?: string;
 	thinkingLevels?: ThinkingLevel[];
 	treeFilterMode?: TreeFilterMode;
 	commands?: CommandOffer[];
@@ -245,8 +246,14 @@ export const shadowedCommandsOf = (agent: AgentSession): string[] => {
 	return [...shadowed];
 };
 
-/** What the page needs to draw the session controls, from pi's own state. */
-export const sessionMeta = (agent: AgentSession): Extract<ServerFrame, { t: "sessionMeta" }> => {
+/**
+ * What the page needs to draw the session controls, from pi's own state. The hidden
+ * thinking label is the engine's to add: an extension sets it, pi's settings do not hold it.
+ */
+export const sessionMeta = (
+	agent: AgentSession,
+	hiddenThinkingLabel?: string,
+): Extract<ServerFrame, { t: "sessionMeta" }> => {
 	const title = agent.sessionManager.getSessionName();
 	const model = agent.model === undefined ? undefined : `${agent.model.provider}/${agent.model.id}`;
 	const frame: MutableSessionMeta = {
@@ -264,5 +271,6 @@ export const sessionMeta = (agent: AgentSession): Extract<ServerFrame, { t: "ses
 	};
 	if (title !== undefined) frame.title = title;
 	if (model !== undefined) frame.model = model;
+	if (hiddenThinkingLabel !== undefined) frame.hiddenThinkingLabel = hiddenThinkingLabel;
 	return frame;
 };

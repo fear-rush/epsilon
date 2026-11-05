@@ -20,8 +20,9 @@ import type { AskOptions, Dialogs } from "./dialogs.ts";
  * value. Everywhere else in the engine yields Effects.
  *
  * A method with no wire yet is refused once per method with a notice, never silently
- * dropped (AGENTS.md, "Every failure is visible"). Keyed statuses and widgets have a frame;
- * the working label and the editor text do not yet.
+ * dropped (AGENTS.md, "Every failure is visible"). Keyed statuses and widgets have a frame,
+ * and the hidden-thinking label rides `sessionMeta`; the working label and the editor text
+ * do not yet.
  */
 
 export type UiHost = {
@@ -37,6 +38,8 @@ export type UiHost = {
 		lines: ReadonlyArray<string> | undefined,
 		placement: "aboveEditor" | "belowEditor" | undefined,
 	) => void;
+	/** The label that stands in for hidden thinking, when an extension sets one. */
+	readonly setHiddenThinkingLabel: (label: string) => void;
 	readonly unsupported: (method: string) => void;
 	readonly toolsExpanded: () => boolean;
 	readonly setToolsExpanded: (expanded: boolean) => void;
@@ -71,6 +74,7 @@ export class UiBridge {
 		notice: UiHost["notice"],
 		setStatus: UiHost["setStatus"],
 		setWidget: UiHost["setWidget"],
+		setHiddenThinkingLabel: UiHost["setHiddenThinkingLabel"],
 	) {
 		this.host = {
 			ask: (question, options) => Effect.runPromise(dialogs.ask(question, options)),
@@ -81,6 +85,7 @@ export class UiBridge {
 			},
 			setStatus,
 			setWidget,
+			setHiddenThinkingLabel,
 			unsupported,
 			toolsExpanded: () => this.expanded,
 			setToolsExpanded: (expanded) => {
@@ -229,8 +234,8 @@ export const createUiContext = (host: UiHost): ExtensionUIContext => ({
 	setWorkingIndicator() {
 		host.unsupported("setWorkingIndicator");
 	},
-	setHiddenThinkingLabel() {
-		host.unsupported("setHiddenThinkingLabel");
+	setHiddenThinkingLabel(label: string) {
+		host.setHiddenThinkingLabel(label);
 	},
 	setFooter() {
 		host.unsupported("setFooter");

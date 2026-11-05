@@ -171,6 +171,8 @@ export class EngineSession {
 	private readonly statuses = new Map<string, string>();
 	/** The keyed widgets extensions set and have not cleared, in the order they first did. */
 	private readonly widgets = new Map<string, UiWidget>();
+	/** The label an extension set in place of hidden thinking; pi's settings do not hold it. */
+	private hiddenThinkingLabel: string | undefined;
 	/** The servers pi last reported a problem with, replaced by each attention notice. */
 	private mcpAttention = new Map<string, McpAttention>();
 	private streamId: string | undefined;
@@ -210,6 +212,7 @@ export class EngineSession {
 			(message, kind) => this.notice(message, kind),
 			(key, text) => this.setStatus(key, text),
 			(key, lines, placement) => this.setWidget(key, lines, placement),
+			(label) => this.setHiddenThinkingLabel(label),
 		);
 	}
 
@@ -763,7 +766,7 @@ export class EngineSession {
 		return Effect.try({
 			try: () => setCodingTools(agent, enabled),
 			catch: (cause) => new CommandRefused({ command: "setCodingTools", reason: describe(cause) }),
-		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(self.metaOf(agent)))));
 	}
 
 	/** pi's setting writers, so a terminal reading the same home sees the same choice. */
@@ -774,7 +777,7 @@ export class EngineSession {
 			try: () => agent.setAutoCompactionEnabled(enabled),
 			catch: (cause) =>
 				new CommandRefused({ command: "setAutoCompaction", reason: describe(cause) }),
-		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(self.metaOf(agent)))));
 	}
 
 	private setAutoRetry(enabled: boolean): Effect.Effect<void, CommandRefused> {
@@ -783,7 +786,7 @@ export class EngineSession {
 		return Effect.try({
 			try: () => agent.setAutoRetryEnabled(enabled),
 			catch: (cause) => new CommandRefused({ command: "setAutoRetry", reason: describe(cause) }),
-		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(self.metaOf(agent)))));
 	}
 
 	private setHideThinking(hidden: boolean): Effect.Effect<void, CommandRefused> {
@@ -792,7 +795,7 @@ export class EngineSession {
 		return Effect.try({
 			try: () => agent.settingsManager.setHideThinkingBlock(hidden),
 			catch: (cause) => new CommandRefused({ command: "setHideThinking", reason: describe(cause) }),
-		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(self.metaOf(agent)))));
 	}
 
 	private setLabel(label: string): Effect.Effect<void, CommandRefused> {
@@ -801,7 +804,7 @@ export class EngineSession {
 		return Effect.try({
 			try: () => agent.setSessionName(label),
 			catch: (cause) => new CommandRefused({ command: "setLabel", reason: describe(cause) }),
-		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(self.metaOf(agent)))));
 	}
 
 	private abortCompaction(): Effect.Effect<void, CommandRefused> {
@@ -839,7 +842,7 @@ export class EngineSession {
 		return Effect.tryPromise({
 			try: () => agent.setModel(model),
 			catch: (cause) => new CommandRefused({ command: "setModel", reason: describe(cause) }),
-		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(self.metaOf(agent)))));
 	}
 
 	private setThinking(level: ThinkingLevel): Effect.Effect<void, CommandRefused> {
@@ -848,7 +851,7 @@ export class EngineSession {
 		return Effect.try({
 			try: () => agent.setThinkingLevel(level),
 			catch: (cause) => new CommandRefused({ command: "setThinking", reason: describe(cause) }),
-		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(self.metaOf(agent)))));
 	}
 
 	/** pi ignores an unknown or hidden tool name, so the broadcast carries the real set. */
@@ -858,7 +861,7 @@ export class EngineSession {
 		return Effect.try({
 			try: () => agent.setActiveToolsByName([...names]),
 			catch: (cause) => new CommandRefused({ command: "setTools", reason: describe(cause) }),
-		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(self.metaOf(agent)))));
 	}
 
 	/**
@@ -931,7 +934,7 @@ export class EngineSession {
 		return Effect.tryPromise({
 			try: () => agent.compact(instructions),
 			catch: (cause) => new CommandRefused({ command: "compact", reason: describe(cause) }),
-		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(self.metaOf(agent)))));
 	}
 
 	/**
@@ -1044,7 +1047,7 @@ export class EngineSession {
 			},
 			catch: (cause) =>
 				new CommandRefused({ command: "setTreeFilterMode", reason: describe(cause) }),
-		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(sessionMeta(agent)))));
+		}).pipe(Effect.andThen(Effect.sync(() => self.broadcast(self.metaOf(agent)))));
 	}
 
 	private sendTree(tab: string): void {
@@ -1069,7 +1072,7 @@ export class EngineSession {
 			});
 			self.ui.clearAutocompleteProviders();
 			self.mcpAttention.clear();
-			self.broadcast(sessionMeta(agent));
+			self.broadcast(self.metaOf(agent));
 		});
 	}
 
@@ -1148,7 +1151,7 @@ export class EngineSession {
 		};
 		const to: To = tab === undefined ? "all" : { tab };
 		this.frames.to(to, frame);
-		this.frames.to(to, sessionMeta(agent));
+		this.frames.to(to, this.metaOf(agent));
 		this.frames.to(to, readingsOf(agent));
 		this.frames.to(to, this.statusesFrame());
 		this.frames.to(to, this.widgetsFrame());
@@ -1203,6 +1206,18 @@ export class EngineSession {
 		if (text === undefined) this.statuses.delete(key);
 		else this.statuses.set(key, text);
 		this.frames.to("all", this.statusesFrame());
+	}
+
+	/** What the page draws from pi's state, plus the label only an extension can set. */
+	private metaOf(agent: AgentSession): Extract<ServerFrame, { t: "sessionMeta" }> {
+		return sessionMeta(agent, this.hiddenThinkingLabel);
+	}
+
+	/** The label that stands in for hidden thinking, from an extension; sent back to tabs. */
+	private setHiddenThinkingLabel(label: string): void {
+		this.hiddenThinkingLabel = label;
+		const agent = this.runtime.session;
+		this.frames.to("all", this.metaOf(agent));
 	}
 
 	/** Every widget an extension holds, so a late tab sees what the composer shows. */

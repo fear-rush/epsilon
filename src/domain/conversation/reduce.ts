@@ -175,6 +175,7 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				autoCompaction: frame.autoCompaction ?? state.autoCompaction,
 				autoRetry: frame.autoRetry ?? state.autoRetry,
 				hideThinking: frame.hideThinking ?? state.hideThinking,
+				hiddenThinkingLabel: frame.hiddenThinkingLabel ?? state.hiddenThinkingLabel,
 				codingTools: frame.codingTools ?? state.codingTools,
 				thinkingLevels: frame.thinkingLevels ?? state.thinkingLevels,
 				treeFilterMode: frame.treeFilterMode ?? state.treeFilterMode,

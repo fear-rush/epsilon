@@ -275,6 +275,8 @@ export const SessionMetaFrame = Schema.Struct({
 	autoCompaction: Schema.optional(Schema.Boolean),
 	autoRetry: Schema.optional(Schema.Boolean),
 	hideThinking: Schema.optional(Schema.Boolean),
+	/** The label an extension set in place of the thinking pi hides, when it set one. */
+	hiddenThinkingLabel: Schema.optional(Schema.String),
 	/** Whether pi's coding tools (shell, edit, write) are declared right now. */
 	codingTools: Schema.optional(Schema.Boolean),
 	/** The thinking levels pi offers for the current model, as the model picker shows them. */

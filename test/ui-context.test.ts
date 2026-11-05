@@ -15,11 +15,13 @@ const hostOf = (log: {
 		placement: string | undefined;
 	}>;
 	refused: string[];
+	labels: string[];
 }): UiHost => ({
 	addAutocompleteProvider: () => undefined,
 	ask: () => Promise.reject(new Error("no question expected")),
 	editorText: () => "",
 	notice: () => undefined,
+	setHiddenThinkingLabel: (label) => log.labels.push(label),
 	setStatus: () => undefined,
 	setWidget: (key, lines, placement) => log.widgets.push({ key, lines, placement }),
 	setToolsExpanded: () => undefined,
@@ -28,7 +30,11 @@ const hostOf = (log: {
 });
 
 test("a text widget travels keyed, and a component factory is refused", () => {
-	const log = { refused: [] as string[], widgets: [] as Parameters<typeof hostOf>[0]["widgets"] };
+	const log = {
+		labels: [] as string[],
+		refused: [] as string[],
+		widgets: [] as Parameters<typeof hostOf>[0]["widgets"],
+	};
 	const ui = createUiContext(hostOf(log));
 
 	ui.setWidget("card", ["one", "two"], { placement: "belowEditor" });
@@ -44,4 +50,13 @@ test("a text widget travels keyed, and a component factory is refused", () => {
 		{ key: "card", lines: undefined, placement: undefined },
 	]);
 	expect(log.refused).toEqual(["setWidget"]);
+});
+
+test("the hidden-thinking label reaches the engine", () => {
+	const log = { labels: [] as string[], refused: [] as string[] };
+	const ui = createUiContext(hostOf({ ...log, widgets: [] }));
+
+	ui.setHiddenThinkingLabel("Working it out");
+
+	expect(log.labels).toEqual(["Working it out"]);
 });
