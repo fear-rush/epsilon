@@ -10,5 +10,5 @@ export const Route = createFileRoute("/settings/skills/$name")({
 function SkillRoute() {
 	const { name } = Route.useParams();
 	const { path, root } = Route.useSearch();
-	return <SkillEditor name={name} path={path} root={root ?? "home"} />;
+	return <SkillEditor key={`${path ?? root}\0${name}`} name={name} path={path} root={root} />;
 }

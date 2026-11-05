@@ -1,17 +1,26 @@
+/**
+ * The page of one editable skill, written as `<root>/<name>/SKILL.md`. The Form tab has
+ * cards for the skill, its instructions and its files; the Raw tab edits any file of the
+ * folder as text. The form edits the frontmatter pi acts on (description, whether the
+ * model may load it) and the body; every other key is kept as the file has it. A draft
+ * holds the edits until Save; a new skill becomes a real route after its first save.
+ */
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 
 import type { SkillFile, SkillInput, SkillRoot, SkillView } from "#protocol/settings/skills";
-import { CancelDialog, DeleteDialog } from "@/components/patterns/confirm-dialogs";
+import {
+	CancelDialog,
+	DeleteDialog,
+	UnsavedChangesBlock,
+} from "@/components/patterns/confirm-dialogs";
 import { ModeTabs } from "@/components/patterns/mode-tabs";
 import { DetailPage } from "@/components/patterns/pane/detail-page";
-import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";
-import { Notice } from "@/components/patterns/status/notice";
 import { useDraftForm } from "@/components/patterns/use-draft-form";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 
 import { useSettings, useSettingsProject, useSettingsRefresh, useSkillFiles } from "../queries.ts";
 import { removeSkill, saveSkill } from "./api.ts";
@@ -29,225 +38,247 @@ import { useSkillLinks } from "./skill-references.ts";
 import { useSkillToggle } from "./skill-status.ts";
 import { SkillUnreadable } from "./skill-unreadable.tsx";
 
-/**
- * One editable skill, written as `<root>/<name>/SKILL.md`. The Form tab edits the
- * frontmatter pi acts on and the body; the Raw tab edits the file as text. Every other
- * frontmatter key is kept as the file has it. A new skill becomes a route after Save.
- */
+/** The Form or Raw choice and the open raw file, kept by the page so a reload keeps them. */
+export type SkillPageState = {
+	tab: SkillTab;
+	setTab: (tab: SkillTab) => void;
+	rawPath: string;
+	setRawPath: (path: string) => void;
+	/** Switch to Raw and open this file in one navigation. */
+	openRawFile: (path: string) => void;
+	/** Reads the skill again and drops the form's draft. */
+	reload: () => void;
+};
+
 export function SkillForm({
-	file,
 	root,
+	detail,
 	view,
+	page,
 }: {
-	file: SkillFile | undefined;
 	root: SkillRoot;
+	detail: SkillFile | undefined;
 	view: SkillView | undefined;
+	/** Absent for a new skill, which has nothing to show in Raw yet. */
+	page?: SkillPageState | undefined;
 }) {
 	const navigate = useNavigate();
 	const refresh = useSettingsRefresh();
 	const settings = useSettings();
-	const project = useSettingsProject();
-	const creating = file === undefined;
+	const projectPath = useSettingsProject();
+	const creating = detail === undefined;
 	const form = useDraftForm<SkillDraft, SkillField>({
+		// The name field shows pi's name; the route and every write use the folder.
+		initial: () => toDraft(detail, view?.name),
 		fields: skillFields,
-		initial: () => toDraft(file, view?.name),
 	});
 	const { draft, update, errors } = form;
-	const [tab, setTab] = useState<SkillTab>("form");
-	/** The open raw file, which is `SKILL.md` until a click in the tree moves it. */
-	const [rawPath, setRawPath] = useState("SKILL.md");
-	/** Text typed in the raw tab and not saved: leaving the tab would drop it. */
-	const rawDirty = useRef(false);
-	const [pendingTab, setPendingTab] = useState<SkillTab | undefined>();
-	const requestTab = (next: SkillTab): void => {
-		if (next === tab) return;
-		if (tab === "raw" && rawDirty.current) setPendingTab(next);
-		else setTab(next);
-	};
-	const unreadable = file?.parseError !== undefined;
-	/** A file pi cannot parse: why, and the text as written, instead of the cards. */
-	const unreadableCard =
-		file?.parseError === undefined ? undefined : (
-			<SkillUnreadable error={file.parseError} raw={file.raw ?? ""} />
-		);
+	const links = useSkillLinks();
+	const toggle = useSkillToggle();
+	// A tab switch that waits for the answer to "discard changes?".
+	const [leaving, setLeaving] = useState<SkillTab | undefined>();
 
 	const taken = new Set(
 		(settings.data?.skills.skills ?? [])
 			.filter((skill) => skill.root === root)
 			.map((skill) => skill.folder),
 	);
+
 	const save = useMutation({
-		mutationFn: (input: SkillInput) => saveSkill(project, root, file?.name ?? draft.name, input),
+		mutationFn: (input: SkillInput) =>
+			saveSkill(projectPath, root, detail?.name ?? draft.name, input),
 		onSuccess: () => {
 			form.markSaved();
 			refresh();
 			if (creating) {
 				form.allowLeave();
 				void navigate({
-					params: { name: draft.name },
-					replace: true,
-					search: (previous) => ({ project: previous.project, root }),
 					to: "/settings/skills/$name",
+					params: { name: draft.name },
+					search: (previous) => ({ ...previous, root, path: undefined }),
+					replace: true,
 				});
 			}
 		},
 	});
 	const remove = useMutation({
-		mutationFn: (name: string) => removeSkill(project, root, name),
+		mutationFn: (name: string) => removeSkill(projectPath, root, name),
 		onSuccess: () => {
 			form.allowLeave();
-			void navigate({ search: true, to: "/settings/skills" });
-			refresh();
+			// Leave first: a refresh while this page is mounted refetches the deleted entry.
+			void navigate({ to: "/settings/skills" }).then(refresh);
 		},
 	});
-	const toggle = useSkillToggle();
-	const links = useSkillLinks();
-	/** The folder's files, which the editor links against and a preview link can open. */
-	const fileList = useSkillFiles(root, creating || unreadable ? undefined : file.name);
-	const filePaths = fileList.data?.files.map((entry) => entry.path);
-	const references = {
-		skillExists: links.exists,
-		openSkill: links.open,
-		openFile: (path: string) => {
-			if (filePaths?.includes(path) !== true) return;
-			// The raw view opens that file; unsaved text there still asks first.
-			setRawPath(path);
-			if (tab === "raw" && rawDirty.current) setPendingTab("raw");
-			else setTab("raw");
-		},
-	};
 
-	const submit = (): void => {
+	const submit = () => {
 		const found = validate(draft, creating, taken);
 		form.setErrors(found);
 		if (Object.keys(found).length > 0) return;
 		save.mutate(toInput(draft));
 	};
+	const unreadable = detail?.parseError !== undefined;
+	// A file with unsaved text blocks leaving the page just as the form does.
+	const filesDirty = useRef(false);
+	const rawDirty = useRef(false);
+	const [rawChanged, setRawChanged] = useState(false);
+	const fileList = useSkillFiles(root, creating || unreadable ? undefined : detail.name);
+	const filePaths = fileList.data?.files.map((file) => file.path);
+	const tab = page?.tab ?? "form";
+
+	const requestTab = (next: SkillTab) => {
+		if (page === undefined || next === tab) return;
+		if ((tab === "raw" && rawDirty.current) || (tab === "form" && form.dirty)) setLeaving(next);
+		else page.setTab(next);
+	};
+	const references = {
+		skillExists: links.exists,
+		openSkill: links.open,
+		openFile: (path: string) => {
+			if (page === undefined || filePaths?.includes(path) !== true) return;
+			if ((tab === "raw" && rawDirty.current) || (tab === "form" && form.dirty)) {
+				page.setRawPath(path);
+				setLeaving("raw");
+				return;
+			}
+			page.openRawFile(path);
+		},
+	};
+
+	const formCards = unreadable ? (
+		<SkillUnreadable error={detail.parseError ?? ""} raw={detail.raw ?? ""} />
+	) : (
+		<>
+			<SkillCard draft={draft} errors={errors} creating={creating} update={update} />
+			<SkillInstructions
+				value={draft.body}
+				onChange={(body) => update({ body })}
+				files={filePaths}
+				references={references}
+			/>
+			{!creating && (
+				<Section title="Files">
+					<div className="pad-row">
+						<SkillFiles
+							root={root}
+							name={detail.name}
+							onDirtyChange={(dirty) => {
+								filesDirty.current = dirty;
+							}}
+						/>
+					</div>
+				</Section>
+			)}
+		</>
+	);
+	const showRaw = tab === "raw" && page !== undefined && detail !== undefined;
+	const dirty = tab === "raw" ? rawChanged : form.dirty;
 
 	return (
 		<DetailPage
+			title={detail?.name ?? "New skill"}
 			back={SKILLS_BACK}
-			title={view?.name ?? (draft.name === "" ? "New skill" : draft.name)}
+			bodyKey={tab}
+			actions={view === undefined ? undefined : <LoadedSwitch skill={view} toggle={toggle} />}
 			tabs={
-				creating ? undefined : (
+				page === undefined || detail === undefined ? undefined : (
 					<ModeTabs items={SKILL_MODES} value={tab} onValueChange={requestTab} />
 				)
 			}
-			actions={view === undefined ? undefined : <LoadedSwitch skill={view} toggle={toggle} />}
+			fill={showRaw}
+			footerStatus={dirty ? "Unsaved changes" : creating ? "Not saved yet" : undefined}
 			footer={
-				<>
-					{creating ? undefined : (
+				unreadable && tab === "form" ? undefined : (
+					<>
 						<Button
 							type="button"
 							variant="destructive"
 							onClick={() => {
-								remove.reset();
-								form.setDeleteOpen(true);
+								if (creating) {
+									form.setCancelOpen(true);
+								} else {
+									remove.reset();
+									form.setDeleteOpen(true);
+								}
 							}}
 						>
-							Delete
+							{creating ? "Cancel" : "Delete"}
 						</Button>
-					)}
-					<Button type="button" disabled={save.isPending} onClick={submit}>
-						{save.isPending ? "Saving…" : "Save"}
-					</Button>
-				</>
+						{tab !== "raw" && (
+							<Button type="button" disabled={save.isPending} onClick={submit}>
+								{save.isPending && <Spinner data-icon="inline-start" />}
+								Save
+							</Button>
+						)}
+					</>
+				)
 			}
 		>
-			<div className="grid gap-section">
-				<SkillNotices
-					skill={view}
-					body={draft.body}
-					errors={[save.error, remove.error, toggle.error]}
+			<SkillNotices skill={view} body={draft.body} errors={[toggle.error, save.error]} />
+
+			{showRaw ? (
+				<SkillRaw
+					source={{ kind: "editable", root, name: detail.name }}
+					path={page.rawPath}
+					onPathChange={page.setRawPath}
+					onDirtyChange={(isDirty) => {
+						rawDirty.current = isDirty;
+						setRawChanged(isDirty);
+					}}
+					onSaved={page.reload}
 				/>
-				{(file?.bodyWarnings ?? []).map((warning) => (
-					<Notice key={warning} tone="warning" title="pi passes this through as text">
-						{warning}
-					</Notice>
-				))}
-				{save.error !== null && <Notice error={save.error} title="The skill was not saved" />}
+			) : (
+				formCards
+			)}
 
-				{tab === "form" ? (
-					(unreadableCard ?? (
-						<>
-							<SkillCard draft={draft} errors={errors} creating={creating} update={update} />
+			{creating && (
+				<CancelDialog
+					open={form.cancelOpen}
+					title="Cancel this skill?"
+					description="Nothing is saved until you press Save. What you entered will be lost."
+					onOpenChange={form.setCancelOpen}
+					onDiscard={() => {
+						form.allowLeave();
+						void navigate({ to: "/settings/skills" });
+					}}
+				/>
+			)}
 
-							<SkillInstructions
-								value={draft.body}
-								onChange={(body) => update({ body })}
-								files={filePaths}
-								references={references}
-							/>
-
-							{!creating && (
-								<Section
-									title="Files"
-									description="Bundled next to SKILL.md. Each one is written on its own."
-								>
-									<div className="p-3">
-										<SkillFiles
-											root={root}
-											name={file.name}
-											// The page-level leave guard is main's form row, still open; until then
-											// the card guards its own dialogs.
-											onDirtyChange={() => undefined}
-										/>
-									</div>
-								</Section>
-							)}
-
-							{(file?.fields ?? []).length > 0 && (
-								<Section
-									description="pi ignores these; they survive every save."
-									title="Other frontmatter"
-								>
-									{file?.fields.map((field) => (
-										<Row key={field.key} title={field.key} description={field.value}>
-											<Badge variant="outline">{field.owner}</Badge>
-										</Row>
-									))}
-								</Section>
-							)}
-						</>
-					))
-				) : creating ? (
-					<Notice tone="info">Save the skill once, then its file can be edited as text.</Notice>
-				) : (
-					<SkillRaw
-						source={{ kind: "editable", name: file.name, root }}
-						path={rawPath}
-						onPathChange={setRawPath}
-						onDirtyChange={(dirty) => {
-							rawDirty.current = dirty;
-						}}
-						onSaved={refresh}
-					/>
-				)}
-			</div>
+			<UnsavedChangesBlock
+				blocked={() => form.blocked() || filesDirty.current || rawDirty.current}
+				subject="skill"
+			/>
 
 			<CancelDialog
-				open={pendingTab !== undefined}
+				open={leaving !== undefined}
 				title="Discard unsaved changes?"
-				description={`${rawPath} has changes that are not saved. Switching now loses them.`}
+				description={
+					tab === "raw"
+						? "The open file has changes that are not saved."
+						: "The form has changes that are not saved."
+				}
 				onOpenChange={(next) => {
-					if (next) return;
-					setPendingTab(undefined);
+					if (!next) setLeaving(undefined);
 				}}
 				onDiscard={() => {
-					rawDirty.current = false;
-					if (pendingTab !== undefined) setTab(pendingTab);
-					setPendingTab(undefined);
+					if (leaving !== undefined && page !== undefined) {
+						page.setTab(leaving);
+						// Leaving the form drops its draft; a raw file drops its own text when it unmounts.
+						if (tab === "form") page.reload();
+					}
+					setLeaving(undefined);
 				}}
 			/>
 
 			<DeleteDialog
 				open={form.deleteOpen}
-				title={`Delete ${view?.name ?? draft.name}?`}
-				description="Its folder and every file in it are removed. This cannot be undone."
+				title={`Remove ${detail?.name ?? draft.name}?`}
+				description="The skill directory and every file in it are deleted."
 				error={remove.error}
 				pending={remove.isPending}
 				onOpenChange={form.setDeleteOpen}
-				onConfirm={() => remove.mutate(file?.name ?? draft.name)}
+				onConfirm={() => {
+					if (detail !== undefined) remove.mutate(detail.name);
+				}}
 			/>
 		</DetailPage>
 	);
