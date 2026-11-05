@@ -8,7 +8,7 @@ import type { SkillRoot } from "#protocol/settings/skills";
 import { call } from "@/core/runtime";
 
 import { settingsKeys } from "./keys.ts";
-import { readProviderLogin } from "./providers/api.ts";
+import { readProvider, readProviderLogin } from "./providers/api.ts";
 import { readSkill, readSkillDocument, readSkillRaw } from "./skills/api.ts";
 
 /**
@@ -45,6 +45,14 @@ export const useSettingsRefresh = (): (() => void) => {
 		void queryClient.invalidateQueries({ queryKey: ["config", "readiness"] });
 	}, [queryClient]);
 };
+
+/** The editable detail of one provider. `undefined` means a new, unsaved one. */
+export const useProviderDetail = (providerId: string | undefined) =>
+	useQuery({
+		queryKey: settingsKeys.providerDetail(providerId),
+		queryFn: providerId === undefined ? skipToken : () => readProvider(providerId),
+		staleTime: SETTINGS_STALE_MS,
+	});
 
 /**
  * What one provider's sign-in last reported. A running flow streams its progress; this
