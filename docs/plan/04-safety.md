@@ -69,31 +69,21 @@ keys); the index conformance test against `SessionManager.listAll`
       The new chunks are a `popover` (21 KiB) reachable from the composer's palette and
       model menu, `session-view` (42.4) split out of the old `chat` chunk (21.6), and
       Base UI's label/focus guards (`useAriaLabelledBy` 8.1 KiB).
-- [ ] **The index blocks the event loop.** The catalog syncs synchronously inside the
-      `epsilon` process; the worker in the original design was never built.
-      **Measured on a copy of the owner's real home, 2026-11-05: cold build 14,712 ms for
-      955 sessions (1.8 GB of session files), warm re-sync 89 ms, 955 rows.** During the
-      cold build the socket answers nothing, so a fresh index or a reset index freezes
-      every open tab. The synthetic benchmark (500 sessions) reads 578–631 ms, and an
-      incremental reconcile after one append 65 ms (124 ms at load 5.5) — the real home is
-      ~25x that because its files are large. This is past the 100 ms line, so the choice is
-      a Worker (one write connection, as designed) or a chunked async sync; the owner
-      picks. Measure
-      a cold build on a copy of the owner's home; if it exceeds 100 ms, move the sync into a
-      Worker (one write connection, as designed) or chunk it, and add a benchmark budget.
-      Ask the owner before choosing.
-- [x] **The sessions root is spelled by hand.** `join(home.agentDir, "sessions")` appeared
-      in `backend/main.ts`, `sessions/handlers.ts` and twice in `sessions/operations.ts`.
-      Now `AgentHomeApi.sessionsDir`, beside `chatsDir`, is the one spelling; the tests that
-      hand-built an `AgentHomeApi` literal call `makeAgentHome` instead. Structure hygiene:
-      no behaviour change, so no new test, only `bun run check`.
-      `refactor(backend): one name for the sessions root`
-- [ ] **"N models can run a turn" counts models that cannot.** The General page's Status row
-      reads `settings.providers.models`, which is pi's whole composed catalog — 1693 rows on
-      the dev sandbox, against main's 94 — so a provider with no credential inflates the
-      number the row promises. Found while settling S8 against main's screenshot; the fix is
-      main's enabled set (`readEnabledModels`), not a rewording, unless the owner prefers the
-      catalog count. Test: the count equals what the Default model picker offers.
+- [x] **The index blocks the event loop.** The catalog syncs inside the `epsilon` process
+      and Effect does not preempt synchronous work, so a build held every socket request.
+      **Measured on a copy of the owner's real home (2026-11-05): cold 14,712 ms for 955
+      sessions and 1.8 GB of files, warm re-sync 89 ms.** The owner chose chunking over a
+      Worker: the loop yields (`Effect.yieldNow`) every four files (`SYNC_SLICE_FILES`),
+      so one slice is the longest the server is deaf. Measured after: cold 16,264 ms (10%
+      slower, paid once), warm 119 ms, and the new `catalog-stall` budget (100 ms) reads
+      11–14 ms with the slicing and 653 ms without it. Two tests pin it: `catalog.test.ts`, "a long
+      reconcile lets other work run between slices" (it fails with zero turns when the
+      yield is removed), and the benchmark.
+- [ ] **A warm reconcile costs ~100 ms on the real home.** `sessions.list` re-stats every
+      session file: 89 ms before the slicing, 119 ms with it, on 955 files. It does not
+      freeze for seconds, but it sits at the line the item above cares about, and every
+      list read pays it. Either stat only the folders the watcher reported, or serve the
+      index as it stands and reconcile in the background. Needs the owner's pick.
 - [ ] **Large files**: read `src/engine/session.ts` (1,347 lines) and
       `src/backend/settings/mcp/service.ts` (784; `config/` before phase 1). Split only
       what holds two concepts, per the File rules; otherwise leave them.

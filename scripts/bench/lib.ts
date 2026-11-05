@@ -5,6 +5,7 @@ export type BudgetName =
 	| "catalog-list"
 	| "catalog-cold"
 	| "catalog-append"
+	| "catalog-stall"
 	| "open-window"
 	| "engine-spawn"
 	| "client-stream"

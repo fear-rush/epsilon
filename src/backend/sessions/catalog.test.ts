@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { SessionManager } from "@earendil-works/pi-coding-agent";
 import { BunServices } from "@effect/platform-bun";
-import { Deferred, Effect, Layer, Option, Stream } from "effect";
+import { Deferred, Effect, Layer, Option, Ref, Stream } from "effect";
 
 const runEffect = Effect.runPromise;
 
@@ -278,3 +278,45 @@ test("the watcher publishes a version after a file changes", async () => {
 	);
 	expect(version).toBeGreaterThan(0);
 }, 10_000);
+
+/**
+ * A cold build on the operator's real home holds the runtime for 14.7 s. Effect does not
+ * preempt synchronous work, so before the loop handed control back between slices, no
+ * other fiber — the socket's handlers included — could run at all until it finished.
+ */
+test("a long reconcile lets other work run between slices", async () => {
+	rmSync(root, { recursive: true, force: true });
+	mkdirSync(projectDir, { recursive: true });
+	// Enough files that the build takes real time: 40 sessions of 60 entries.
+	for (let index = 0; index < 40; index++) {
+		writeSession(
+			projectDir,
+			`s-slice-${index}`,
+			linearSession(`s-slice-${index}`, "/tmp/project", 60),
+		);
+	}
+
+	const ticks = await runEffect(
+		Effect.scoped(
+			Effect.gen(function* () {
+				const catalog = yield* Catalog;
+				const count = yield* Ref.make(0);
+				// A fiber that asks to run again after every turn: it only advances while
+				// the sync is handing control back.
+				yield* Effect.forkScoped(
+					Effect.forever(
+						Effect.andThen(
+							Effect.yieldNow,
+							Ref.update(count, (n) => n + 1),
+						),
+					),
+				);
+				const result = yield* catalog.sync([root]);
+				expect(result.added).toBeGreaterThanOrEqual(40);
+				return yield* Ref.get(count);
+			}),
+		).pipe(Effect.provide(catalogLayer)),
+	);
+
+	expect(ticks).toBeGreaterThan(0);
+});
