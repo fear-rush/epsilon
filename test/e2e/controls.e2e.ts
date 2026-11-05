@@ -4,7 +4,7 @@ import { expect, test } from "./fixture.ts";
  * The session controls are pi's own knobs: a model switch, a thinking level, the tools
  * declared to the model, and manual compaction. Every value shown is the engine's answer.
  */
-test("the session controls switch model, thinking and tools, and compact refuses a tiny chat", async ({
+test("the composer's menus switch model, thinking and tools, and compact refuses a tiny chat", async ({
 	app,
 	page,
 }) => {
@@ -16,38 +16,29 @@ test("the session controls switch model, thinking and tools, and compact refuses
 	await composer.press("Enter");
 	await expect(page.getByText("stub reply")).toBeVisible();
 
-	await page.getByRole("button", { name: "Session settings" }).click();
+	// The model menu lists every model pi composed; picking one switches the chat.
+	await page.getByRole("button", { name: "Stub Model" }).click();
+	await page.getByRole("option", { name: /Stub Model Two/ }).click();
+	await expect(page.getByRole("button", { name: "Stub Model Two" })).toBeVisible();
+
+	// The thinking menu shows pi's level and writes the one chosen.
+	await page.getByRole("button", { name: /thinking level:/i }).click();
+	await page.getByRole("menuitemradio", { name: "High" }).click();
+	await expect(page.getByRole("button", { name: /thinking level: high/i })).toBeVisible();
+
+	// The tools menu is pi's declared tool set: read only stops bash, edit and write.
+	await page.getByRole("button", { name: /commands & edits/i }).click();
+	await page.getByRole("menuitemradio", { name: /read only/i }).click();
+	await expect(page.getByRole("button", { name: /read only/i })).toBeVisible();
+
+	// Compaction is this chat's own control; a one-reply chat has nothing to compact, and
+	// pi's refusal is what the page says.
+	await page.getByRole("button", { name: "Session controls" }).click();
+	await page.getByRole("menuitem", { name: /compact context/i }).click();
 	const dialog = page.getByRole("dialog");
-
-	await dialog.getByRole("button", { name: /Stub Model Two/ }).click();
-	// pi's model switch also chooses the thinking level, so wait for it before overriding it.
-	await expect(dialog.getByRole("button", { name: /Stub Model Two/ })).toHaveAttribute(
-		"aria-pressed",
-		"true",
-	);
-	await dialog.getByRole("button", { name: "high", exact: true }).click();
-	await expect(dialog.getByRole("button", { name: "high", exact: true })).toHaveAttribute(
-		"aria-pressed",
-		"true",
-	);
-	await dialog.getByRole("checkbox", { name: "Use bash" }).click();
-	await expect(dialog.getByRole("checkbox", { name: "Use bash" })).not.toBeChecked();
-
-	await dialog.getByRole("button", { name: "Compact this chat" }).click();
-	await expect(dialog.getByText(/nothing to compact/i)).toBeVisible();
-
-	await dialog.getByRole("button", { name: "Done" }).click();
-	// main's bar carries the title, not the model; the switches' state is read in the dialog.
-	await page.getByRole("button", { name: "Session settings" }).click();
-	const reopened = page.getByRole("dialog");
-	await expect(reopened.getByRole("button", { name: /Stub Model Two/ })).toHaveAttribute(
-		"aria-pressed",
-		"true",
-	);
-	await expect(reopened.getByRole("button", { name: "high", exact: true })).toHaveAttribute(
-		"aria-pressed",
-		"true",
-	);
+	await dialog.getByRole("button", { name: /^compact$/i }).click();
+	// The refusal lands in the composer's own status, in pi's words.
+	await expect(page.getByText(/nothing to compact/i).first()).toBeVisible();
 });
 
 /** A tree move stays in the same file: the leaf goes back and the message returns. */
@@ -60,9 +51,11 @@ test("the tree dialog moves the branch and restores the message", async ({ app, 
 	await composer.press("Enter");
 	await expect(page.getByText("stub reply")).toBeVisible();
 
-	await page.getByRole("button", { name: "Branch tree" }).click();
+	// The branch tree hangs off the session's own menu.
+	await page.getByRole("button", { name: "Session controls" }).click();
+	await page.getByRole("menuitem", { name: /session tree/i }).click();
 	const dialog = page.getByRole("dialog");
-	await dialog.getByRole("button", { name: /^branch me user$/ }).click();
+	await dialog.getByRole("button", { name: /branch me/ }).click();
 
 	await expect(composer).toHaveValue("branch me");
 	await expect(page.getByText("stub reply")).toHaveCount(0);
@@ -79,10 +72,11 @@ test("a fork copies the branch into a new chat", async ({ app, page }) => {
 	await expect(page.getByText("stub reply")).toBeVisible();
 
 	const before = page.url();
-	await page.getByRole("button", { name: "Branch tree" }).click();
+	await page.getByRole("button", { name: "Session controls" }).click();
+	await page.getByRole("menuitem", { name: /fork from a message/i }).click();
 	await page
 		.getByRole("dialog")
-		.getByRole("button", { name: /Fork from fork me/ })
+		.getByRole("button", { name: /fork me/ })
 		.click();
 
 	await expect(page).not.toHaveURL(before);

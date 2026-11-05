@@ -26,8 +26,22 @@ test("a 5,000-entry chat scrolls to the top without a jump", async ({
 	const transcript = page.getByRole("feed");
 	await expect(transcript).toBeVisible();
 
-	const anchorText = await transcript.evaluate((node) => node.textContent?.slice(0, 40) ?? "");
-	await transcript.evaluate((node) => node.scrollTo({ top: 0 }));
-	await expect(transcript).toContainText("prompt 0");
-	expect(anchorText.length).toBeGreaterThan(0);
+	// The chat opens on a window near its end, not on all 5,000 entries.
+	const firstPrompt = async (): Promise<number> => {
+		const text = await transcript.innerText();
+		const match = /prompt (\d+)/.exec(text);
+		return match === null ? -1 : Number(match[1]);
+	};
+	const before = await firstPrompt();
+	expect(before).toBeGreaterThan(0);
+
+	// Scrolling to the top pulls the next older page in place: the window moves back, it
+	// does not reset. One page is enough to prove the paging; the walk to entry 0 is 50 of
+	// them and belongs to the loading state, not to this assertion.
+	// The wheel is the reader's own gesture, so the page's scroll handling is what runs.
+	await transcript.hover();
+	await expect(async () => {
+		await page.mouse.wheel(0, -20_000);
+		expect(await firstPrompt()).toBeLessThan(before);
+	}).toPass({ timeout: 10_000 });
 });

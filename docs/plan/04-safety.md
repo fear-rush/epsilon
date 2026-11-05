@@ -33,7 +33,13 @@ keys); the index conformance test against `SessionManager.listAll`
       without bound. Two caps: the engine keeps the newest 200 (`noticeLimit` in
       `engine/session.ts`) and the reducer does the same (`reduce.test.ts`, "caps notices
       and keeps the newest").
-- [ ] **e2e**: `bun run test:e2e` passes all specs in `test/e2e/`. Record the duration.
+- [x] **e2e**: `bun run test:e2e` passes all specs in `test/e2e/`. **15 passed in 24.1 s**,
+      2026-11-05. Every flow was walked against the built app and rewritten to the
+      controls the pages draw: the seven that failed at first were written before the UI
+      existed (`269758c`, "write the specs first"). It found one app bug on the way: a
+      refused command's status line was an icon with no words, because a tagged
+      `CommandRefused` has an empty `message` and the composer printed it — refusals now
+      go through `errorView`, so "Nothing to compact" reads as pi said it.
       Ran 2026-11-05: **8 passed, 7 failed in 32.7 s** (with the build, 35 s wall); after
       the work below, **11 passed, 4 failed in 32.9 s**. They are
       stale selectors against the rebuilt UI, not crashes. Verified: `onboarding.e2e.ts`
