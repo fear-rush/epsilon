@@ -276,7 +276,7 @@ that replacement, not missing markup.
 | [x]  | `features/settings/skills/skill-status.ts`               | 41    | `feat(skills): the loaded switch and the page's notices`                         | `isOn`, `readOnlyReason`, `useSkillToggle`                                      |
 | [x]  | `features/settings/skills/skill-unreadable.tsx`          | 18    | `feat(skills): a SKILL.md pi cannot parse` (photographed)                        | `SkillUnreadable`                                                               |
 | [x]  | `features/settings/skills/skill-viewer.tsx`              | 110   | `feat(skills): a listed skill's files` (photographed)                            |                                                                                 |
-| [ ]  | `features/settings/skills/skills-panel.tsx`              | 154   | has `SkillPaths`; missing the note; live engines looked up in `.epsilon`         |                                                                                 |
+| [x]  | `features/settings/skills/skills-panel.tsx`              | 154   | `fix(skills): a home chat's extension skills` (photographed)                     |                                                                                 |
 
 ## S7 Settings: Context
 

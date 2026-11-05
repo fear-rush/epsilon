@@ -42,6 +42,8 @@ const skillsLayer = (name: string, live: ReadonlyArray<SkillEngineLive> = []) =>
 	const platform = Layer.mergeAll(home, BunServices.layer);
 	const pi = PiConfigLive.pipe(Layer.provideMerge(home));
 	const projects = ProjectServiceLive.pipe(Layer.provideMerge(platform), Layer.provideMerge(pi));
+	/** The folders the service asks for a live engine, in the order it asks. */
+	const asked: string[] = [];
 	const service = Layer.effect(
 		SkillsService,
 		Effect.gen(function* () {
@@ -50,9 +52,13 @@ const skillsLayer = (name: string, live: ReadonlyArray<SkillEngineLive> = []) =>
 			const projectService = yield* ProjectService;
 			const fs = yield* FileSystem.FileSystem;
 			return makeSkillsService({
-				extensionSkills: () => Effect.succeed(live),
+				extensionSkills: (cwd) => {
+					asked.push(cwd);
+					return Effect.succeed(live);
+				},
 				fs,
 				home: agentHome,
+				live: () => Effect.succeed(live.length > 0),
 				skills: (cwd) => config.skills(cwd),
 				trusted: (path) => projectService.trusted(path),
 			});
@@ -60,6 +66,8 @@ const skillsLayer = (name: string, live: ReadonlyArray<SkillEngineLive> = []) =>
 	).pipe(Layer.provideMerge(platform), Layer.provideMerge(pi), Layer.provideMerge(projects));
 	return {
 		agentDir,
+		asked,
+		chatsDir: join(agentDir, "chats"),
 		layer: SkillHandlersLive.pipe(Layer.provideMerge(service)),
 		root,
 		skillsDir: join(agentDir, "skills"),
@@ -106,6 +114,7 @@ describe("settings.skills", () => {
 			}).pipe(Effect.scoped, Effect.provide(layer)),
 		);
 
+		expect(view.live).toBe(false);
 		const greet = view.skills.find((skill) => skill.name === "greet");
 		expect(greet).toMatchObject({
 			editable: true,
@@ -419,7 +428,7 @@ describe("settings.skills", () => {
 						folder: null,
 					}),
 				);
-				return { refused, skill };
+				return { list, refused, skill };
 			}).pipe(Effect.scoped, Effect.provide(layer)),
 		);
 
@@ -429,8 +438,31 @@ describe("settings.skills", () => {
 			status: "active",
 			toggle: "none",
 		});
+		expect(result.list.live).toBe(true);
 		expect(result.refused).toBeInstanceOf(SkillRefused);
 		expect(result.refused.reason).toContain("cannot be turned off");
+	});
+
+	test("a home chat's engine is looked for in the chats folder, a project's in the project", async () => {
+		const { agentDir, asked, chatsDir, layer, root } = skillsLayer("live-scope");
+		const project = join(root, "project");
+		mkdirSync(project, { recursive: true });
+		writeJson(join(agentDir, "trust.json"), { [realpathSync(project)]: true });
+
+		const outcome = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				const home = yield* client["settings.skills.list"]({ folder: null });
+				const inProject = yield* client["settings.skills.list"]({ folder: project });
+				return { home, inProject };
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		// A home chat runs in <agent>/chats; `.epsilon` is only where pi's config is read.
+		// A trusted project comes back as its real path, which is what its engine runs in.
+		expect(asked).toEqual([chatsDir, realpathSync(project)]);
+		expect(outcome.home.live).toBe(false);
+		expect(outcome.inProject.live).toBe(false);
 	});
 });
 

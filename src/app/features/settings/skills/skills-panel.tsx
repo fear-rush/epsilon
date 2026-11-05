@@ -6,6 +6,7 @@ import { ListGroup } from "@/components/patterns/list/list-group";
 import { ListItem } from "@/components/patterns/list/list-item";
 import { ListPane } from "@/components/patterns/list/list-pane";
 import { MasterDetail } from "@/components/patterns/pane/master-detail";
+import { Notice } from "@/components/patterns/status/notice";
 import { Button, buttonVariants } from "@/components/ui/button";
 
 import { useSettings, useSettingsProject } from "../queries.ts";
@@ -46,6 +47,8 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 	);
 	const shown = groups.reduce((total, group) => total + group.skills.length, 0);
 	const nothing = shown === 0 && foreign.length === 0;
+	// Without a live engine the list is files only: extension skills exist in no file.
+	const fileOnly = settings.data?.skills.live === false;
 
 	return (
 		<ListPane
@@ -62,6 +65,14 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 					: undefined
 			}
 			error={settings.error}
+			notices={
+				fileOnly ? (
+					<Notice tone="info">
+						Skills an extension adds appear only while an engine runs in this scope. This list is
+						from files.
+					</Notice>
+				) : undefined
+			}
 			footer={
 				<>
 					<Button type="button" variant="outline" onClick={() => setImporting(true)}>

@@ -366,6 +366,8 @@ export const makeSkillsService = (deps: {
 	readonly skills: (cwd: string) => PiSkillsApi;
 	readonly trusted: (path: string) => Effect.Effect<string, ProjectNotTrusted | ProjectRefused>;
 	readonly extensionSkills: (cwd: string) => Effect.Effect<ReadonlyArray<SkillEngineLive>>;
+	/** True while an engine runs in that folder, so what it reports can be read at all. */
+	readonly live: (cwd: string) => Effect.Effect<boolean>;
 }): SkillsServiceApi => {
 	const scopeOf = (folder: string | null): Effect.Effect<SkillScopeInfo, SkillRefused> =>
 		folder === null
@@ -384,9 +386,15 @@ export const makeSkillsService = (deps: {
 					}),
 				);
 
+	/**
+	 * The folder a chat in this scope runs in. pi's config is read for the home's `.epsilon`,
+	 * which carries no project settings; what an engine reports belongs to the folder it runs in.
+	 */
+	const chatFolder = (scope: SkillScopeInfo): string => scope.project ?? deps.home.chatsDir;
+
 	const listFor = (scope: SkillScopeInfo): Effect.Effect<ReadonlyArray<SkillView>, SkillRefused> =>
 		Effect.gen(function* () {
-			const live = yield* deps.extensionSkills(scope.cwd);
+			const live = yield* deps.extensionSkills(chatFolder(scope));
 			return yield* listSkills({
 				cwd: scope.cwd,
 				fs: deps.fs,
@@ -421,6 +429,7 @@ export const makeSkillsService = (deps: {
 		const paths = skillSourcePaths(foreign.entries(scope.project === null ? "user" : "project"));
 		return {
 			foreignSkills: listForeignSkills(foreign),
+			live: yield* deps.live(chatFolder(scope)),
 			paths,
 			skills: [...(yield* listFor(scope))],
 		};
@@ -734,10 +743,15 @@ export const SkillsServiceLive: Layer.Layer<
 						}),
 				),
 			);
+		const live = (cwd: string): Effect.Effect<boolean> =>
+			engines.running.pipe(
+				Effect.map((rows) => rows.some((row) => resolve(row.cwd) === resolve(cwd))),
+			);
 		return makeSkillsService({
 			extensionSkills,
 			fs,
 			home,
+			live,
 			skills: (cwd) => pi.skills(cwd),
 			trusted: (path) => projects.trusted(path),
 		});

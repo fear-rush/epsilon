@@ -45,6 +45,7 @@ const contextLayer = (name: string, live: ContextEngineLive | undefined) => {
 				extensionSkills: () => Effect.succeed([]),
 				fs,
 				home: agentHome,
+				live: () => Effect.succeed(false),
 				skills: (cwd) => config.skills(cwd),
 				trusted: (path) => projectService.trusted(path),
 			});

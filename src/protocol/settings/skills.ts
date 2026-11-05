@@ -96,6 +96,8 @@ export const SkillListView = Schema.Struct({
 	skills: Schema.Array(SkillView),
 	/** What other agents keep in their own folders, whether or not pi reads it. */
 	foreignSkills: Schema.Array(ForeignSkillView),
+	/** True when an engine runs in this scope, so skills an extension adds could be read. */
+	live: Schema.Boolean,
 	/** The source paths this scope's `skills` setting adds, as written there. */
 	paths: Schema.Array(Schema.String),
 });
