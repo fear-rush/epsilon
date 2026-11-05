@@ -1,6 +1,8 @@
-import { Context, Effect, Layer, Result, Schema } from "effect";
+import { join } from "node:path";
 
-import { McpRefused } from "#protocol/errors";
+import { Context, Effect, Layer, Option, Result, Schema } from "effect";
+
+import { McpRefused, SettingRefused } from "#protocol/errors";
 import type {
 	McpInProjectValue,
 	McpInvalidEntry,
@@ -9,6 +11,7 @@ import type {
 	McpOAuthInput,
 	McpOAuthView,
 	McpOverrideEntry,
+	McpReachTool,
 	McpScope,
 	McpServerDetail,
 	McpServerDetailEntry,
@@ -28,9 +31,15 @@ import {
 } from "../../../domain/mcp/rules.ts";
 import { withDefined } from "../../../domain/object.ts";
 import { Engines } from "../../conversation/registry.ts";
+import { AgentHome } from "../../platform/agent-home.ts";
+import type { AgentHomeApi } from "../../platform/agent-home.ts";
+import { JsonDocument } from "../../platform/json-document.ts";
+import type { JsonDocumentApi } from "../../platform/json-document.ts";
 import { Log } from "../../platform/log.ts";
 import { isJsonObject, isJsonValue, setDefined, setOrDelete } from "../../platform/patch.ts";
 import type { JsonObject, JsonValue } from "../../platform/patch.ts";
+import { PiConfig } from "../../platform/pi.ts";
+import type { SettingsManager } from "../../platform/pi.ts";
 import {
 	entriesOf,
 	isRawOverride,
@@ -87,6 +96,16 @@ export type McpServiceApi = {
 		name: string,
 		value: McpInProjectValue,
 	) => Io<void, McpRefused>;
+	/**
+	 * Name codemode or tool_search in settings.json's `defaultTools`, or take it out. pi has
+	 * a getter and no setter for that key, so the file is merged; a project that sets the
+	 * list in its own settings owns it, and this refuses rather than override it.
+	 */
+	readonly setDefaultTool: (
+		folder: string | null,
+		tool: McpReachTool,
+		enabled: boolean,
+	) => Io<void, SettingRefused>;
 	readonly setAutoEnableCodemode: (
 		folder: string | null,
 		scope: McpScope,
@@ -442,9 +461,43 @@ const folderFor = (
 ): Effect.Effect<string, McpRefused> =>
 	scope === "project" ? requireProject(folder, what) : Effect.succeed(folder ?? "");
 
+/**
+ * `defaultTools` with one tool named or taken out. pi resolves plain names by replacing its
+ * own defaults and `+name`/`-name` by modifying them, so a file with no list gains `+name`
+ * rather than a list that would freeze today's defaults. A list that would end up empty is
+ * removed: pi reads an empty `defaultTools` as "no tools at all", a missing key as its own.
+ */
+const withTool = (
+	entries: ReadonlyArray<string> | undefined,
+	tool: McpReachTool,
+	enabled: boolean,
+): ReadonlyArray<string> | undefined => {
+	const current = [...(entries ?? [])];
+	const plain = (entry: string): boolean =>
+		entry !== tool && !entry.startsWith("+") && entry !== `-${tool}`;
+	if (!enabled) {
+		const next = current.filter((entry) => entry !== tool && entry !== `+${tool}`);
+		return next.length === 0 ? undefined : next;
+	}
+	// A `-tool` entry holds it out, so naming it means dropping that entry as well.
+	const on = current.filter((entry) => entry !== `-${tool}`);
+	if (on.some((entry) => entry === tool || entry === `+${tool}`)) return on;
+	const adds = entries === undefined || (current.length > 0 && !current.some(plain));
+	return [...on, adds ? `+${tool}` : tool];
+};
+
+const DefaultTools = Schema.Array(Schema.String);
+
+/** The strings in a `defaultTools` value, or undefined when the file holds another shape. */
+const stringList = (value: JsonValue | undefined): ReadonlyArray<string> | undefined =>
+	Option.getOrUndefined(Schema.decodeUnknownOption(DefaultTools)(value));
+
 export const makeMcpService = (deps: {
+	readonly home: AgentHomeApi;
+	readonly document: JsonDocumentApi;
 	readonly store: McpStoreApi;
 	readonly live: (names: ReadonlyArray<string>) => Effect.Effect<McpLive>;
+	readonly settings: (folder: string) => Effect.Effect<SettingsManager>;
 }): McpServiceApi => {
 	const editFile = Effect.fn("Mcp.editFile")(function* (
 		scope: McpScope,
@@ -755,6 +808,58 @@ export const makeMcpService = (deps: {
 		},
 	);
 
+	const setDefaultTool: McpServiceApi["setDefaultTool"] = Effect.fn("Mcp.setDefaultTool")(
+		function* (folder, tool, enabled) {
+			if (folder !== null) {
+				const project = yield* deps.settings(folder);
+				if (project.getProjectSettings().defaultTools !== undefined) {
+					return yield* new SettingRefused({
+						key: "defaultTools",
+						reason: `defaultTools is set in ${join(folder, ".pi", "settings.json")}, and pi reads that list for this project. Change it there.`,
+					});
+				}
+			}
+			return yield* deps.document
+				.edit(
+					`${deps.home.agentDir}/settings.json`,
+					(current: JsonObject) =>
+						Effect.sync(() => {
+							const next = { ...current };
+							setOrDelete(
+								next,
+								"defaultTools",
+								withTool(stringList(current["defaultTools"]), tool, enabled)?.slice(),
+							);
+							return next;
+						}),
+					{ lock: "pi" },
+				)
+				.pipe(
+					Effect.asVoid,
+					Effect.catchTags({
+						FileUnreadable: (error) =>
+							Effect.fail(new SettingRefused({ key: "defaultTools", reason: error.reason })),
+						FileUnwritable: (error) =>
+							Effect.fail(new SettingRefused({ key: "defaultTools", reason: error.reason })),
+						Locked: () =>
+							Effect.fail(
+								new SettingRefused({
+									key: "defaultTools",
+									reason: "pi holds settings.json; try again.",
+								}),
+							),
+						NotJson: (error) =>
+							Effect.fail(
+								new SettingRefused({
+									key: "defaultTools",
+									reason: `settings.json could not be read: ${error.reason}`,
+								}),
+							),
+					}),
+				);
+		},
+	);
+
 	return {
 		list,
 		live,
@@ -763,22 +868,32 @@ export const makeMcpService = (deps: {
 		remove,
 		save,
 		setAutoEnableCodemode,
+		setDefaultTool,
 		setEnabled,
 		setInProject,
 		writeRaw,
 	};
 };
 
-export const McpServiceLive: Layer.Layer<McpService, never, McpStore | Engines | Log> =
-	Layer.effect(
-		McpService,
-		Effect.gen(function* () {
-			const store = yield* McpStore;
-			const engines = yield* Engines;
-			const log = yield* Log;
-			return makeMcpService({
-				live: mcpLiveReader({ log, queryAll: engines.queryAll("mcpLive") }),
-				store,
-			});
-		}),
-	);
+export const McpServiceLive: Layer.Layer<
+	McpService,
+	never,
+	AgentHome | JsonDocument | McpStore | Engines | Log | PiConfig
+> = Layer.effect(
+	McpService,
+	Effect.gen(function* () {
+		const store = yield* McpStore;
+		const engines = yield* Engines;
+		const log = yield* Log;
+		const home = yield* AgentHome;
+		const document = yield* JsonDocument;
+		const pi = yield* PiConfig;
+		return makeMcpService({
+			document,
+			home,
+			live: mcpLiveReader({ log, queryAll: engines.queryAll("mcpLive") }),
+			settings: pi.settings,
+			store,
+		});
+	}),
+);

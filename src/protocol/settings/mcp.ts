@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import { Rpc, RpcGroup } from "effect/rpc";
 
-import { McpRefused } from "../errors.ts";
+import { McpRefused, SettingRefused } from "../errors.ts";
 
 /**
  * Settings → MCP: the two `mcp.json` files as pi resolves them, one server's detail, and
@@ -320,6 +320,10 @@ const serverTarget = {
 	name: Schema.String,
 } as const;
 
+/** The two tools that reach MCP tools the model cannot call directly. */
+export const McpReachTool = Schema.Literals(["codemode", "tool_search"]);
+export type McpReachTool = typeof McpReachTool.Type;
+
 export const McpRpcs = RpcGroup.make(
 	Rpc.make("settings.mcp.list", {
 		payload: { folder: Schema.NullOr(Schema.String) },
@@ -357,6 +361,19 @@ export const McpRpcs = RpcGroup.make(
 		},
 		success: Schema.Void,
 		error: McpRefused,
+	}),
+	/**
+	 * Name codemode or tool_search in settings.json's `defaultTools`, or take it out. A
+	 * project that sets the list itself owns it, so this refuses rather than override it.
+	 */
+	Rpc.make("settings.mcp.setDefaultTool", {
+		payload: {
+			folder: Schema.NullOr(Schema.String),
+			tool: McpReachTool,
+			enabled: Schema.Boolean,
+		},
+		success: Schema.Void,
+		error: SettingRefused,
 	}),
 	Rpc.make("settings.mcp.setAutoEnableCodemode", {
 		payload: {

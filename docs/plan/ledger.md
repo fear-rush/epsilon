@@ -53,7 +53,7 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | [x]  | `POST /api/sessions/{id}/clone`                                               | S2        | `feat(conversation): the branch rows` (`clone`, pi's fork at the leaf)              |
 | [x]  | `POST /api/sessions/{id}/move`                                                | S3        | `feat(conversation): the move` (`sessions.move`, pi's `forkFrom`)                   |
 | [ ]  | `DELETE /api/projects/sessions` (delete a project's chats)                    | S3        | **missing**                                                                         |
-| [ ]  | `PUT /api/settings/mcp/default-tool`                                          | S4        | **missing**                                                                         |
+| [x]  | `PUT /api/settings/mcp/default-tool`                                          | S4        | `feat(settings): the MCP default tool` (`settings.mcp.setDefaultTool`)              |
 | [ ]  | `POST /api/settings/mcp/command`                                              | S4        | **missing**                                                                         |
 | [ ]  | `POST /api/settings/providers/test`                                           | S5        | **missing**                                                                         |
 | [ ]  | `POST /api/settings/providers/{id}/logout` (through `ModelRuntime.logout()`)  | S5        | **missing**                                                                         |
@@ -141,6 +141,10 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | [x]  | `features/sessions/use-session-row.ts`  | 28    | `refactor(sessions): settle the sidebar rows`                                           | `useSessionRow`    |
 
 ## S4 Settings: MCP
+
+Owner question before `mcp-signin.tsx`, `mcp-oauth.tsx` and `POST /api/settings/mcp/command`:
+main signs in from the page, while AGENTS.md invariant 5 keeps MCP sign-in in the terminal.
+Porting those needs a yes, or the rows need one to differ.
 
 | Done | main file (`client/src/…`)                       | Lines | Branch today | Missing exports                                                                                                                           |
 | ---- | ------------------------------------------------ | ----- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |

@@ -12,7 +12,7 @@ import type { McpLive } from "#protocol/settings/mcp";
 import { testClient } from "../../../test/rpc.ts";
 import { testPaths } from "../../../test/setup.ts";
 import { AgentHome, AgentHomeLive } from "../platform/agent-home.ts";
-import { JsonDocumentLive } from "../platform/json-document.ts";
+import { JsonDocument, JsonDocumentLive } from "../platform/json-document.ts";
 import { LogLive } from "../platform/log.ts";
 import { PiConfig, PiConfigLive } from "../platform/pi.ts";
 import { ConfigChangesLive } from "./changes.ts";
@@ -83,7 +83,16 @@ const configLayer = (name: string) => {
 		McpService,
 		Effect.gen(function* () {
 			const store = yield* McpStore;
-			return makeMcpService({ live: () => Effect.succeed(emptyLive), store });
+			const agentHome = yield* AgentHome;
+			const document = yield* JsonDocument;
+			const config = yield* PiConfig;
+			return makeMcpService({
+				document,
+				home: agentHome,
+				live: () => Effect.succeed(emptyLive),
+				settings: config.settings,
+				store,
+			});
 		}),
 	).pipe(Layer.provideMerge(mcpStore));
 	const packages = PackageServiceLive.pipe(Layer.provideMerge(platform), Layer.provideMerge(pi));

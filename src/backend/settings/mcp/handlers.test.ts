@@ -5,15 +5,16 @@ import { dirname, join } from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { Effect, Layer, Schema } from "effect";
 
-import { McpRefused } from "#protocol/errors";
+import { McpRefused, SettingRefused } from "#protocol/errors";
 import { McpRpcs } from "#protocol/settings/mcp";
 import type { McpEngineLive } from "#protocol/settings/mcp";
 
 import { testClient } from "../../../../test/rpc.ts";
 import { testPaths } from "../../../../test/setup.ts";
-import { AgentHomeLive } from "../../platform/agent-home.ts";
-import { JsonDocumentLive } from "../../platform/json-document.ts";
+import { AgentHome, AgentHomeLive } from "../../platform/agent-home.ts";
+import { JsonDocument, JsonDocumentLive } from "../../platform/json-document.ts";
 import { Log, LogLive } from "../../platform/log.ts";
+import { PiConfig, PiConfigLive } from "../../platform/pi.ts";
 import { McpHandlersLive } from "./handlers.ts";
 import { mcpLiveReader } from "./live.ts";
 import { makeMcpService, McpService } from "./service.ts";
@@ -37,20 +38,27 @@ const mcpLayer = (name: string, answers: ReadonlyArray<McpEngineLive> = []) => {
 		Layer.provideMerge(BunServices.layer),
 	);
 	const store = McpStoreLive.pipe(Layer.provideMerge(platform));
+	const pi = PiConfigLive.pipe(Layer.provideMerge(platform));
 	const service = Layer.effect(
 		McpService,
 		Effect.gen(function* () {
 			const mcpStore = yield* McpStore;
 			const log = yield* Log;
+			const home = yield* AgentHome;
+			const document = yield* JsonDocument;
+			const config = yield* PiConfig;
 			return makeMcpService({
+				document,
+				home,
 				live: mcpLiveReader({
 					log,
 					queryAll: Effect.succeed(answers.map((result) => ({ result }))),
 				}),
+				settings: config.settings,
 				store: mcpStore,
 			});
 		}),
-	).pipe(Layer.provideMerge(store));
+	).pipe(Layer.provideMerge(store), Layer.provideMerge(pi));
 	return {
 		agentDir,
 		file: join(agentDir, "mcp.json"),
@@ -590,5 +598,66 @@ describe("settings.mcp", () => {
 		expect(serversIn(file)["fresh"]).toBeUndefined();
 		// A project entry that only changes keys is exactly what an override is.
 		expect(serversIn(projectFile)["docs"]).toEqual({ enabled: false });
+	});
+});
+
+describe("settings.mcp.setDefaultTool", () => {
+	const SettingsFile = Schema.Struct({
+		defaultTools: Schema.optional(Schema.Array(Schema.String)),
+	});
+
+	test("names codemode once in defaultTools, and a project's own list is refused", async () => {
+		const { agentDir, layer, project } = mcpLayer("default-tool");
+		const settingsPath = join(agentDir, "settings.json");
+		const readTools = (): ReadonlyArray<string> | undefined =>
+			Schema.decodeUnknownSync(SettingsFile)(JSON.parse(readFileSync(settingsPath, "utf8")))
+				.defaultTools;
+
+		const outcome = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(McpRpcs, layer);
+				yield* client["settings.mcp.setDefaultTool"]({
+					enabled: true,
+					folder: null,
+					tool: "codemode",
+				});
+				// A second enable is the same file: `+name`, not the resolved list.
+				yield* client["settings.mcp.setDefaultTool"]({
+					enabled: true,
+					folder: null,
+					tool: "codemode",
+				});
+				yield* client["settings.mcp.setDefaultTool"]({
+					enabled: false,
+					folder: null,
+					tool: "tool_search",
+				});
+				const afterOn = readTools();
+				yield* client["settings.mcp.setDefaultTool"]({
+					enabled: false,
+					folder: null,
+					tool: "codemode",
+				});
+				const afterOff = readTools();
+
+				mkdirSync(join(project, ".pi"), { recursive: true });
+				writeFileSync(
+					join(project, ".pi", "settings.json"),
+					`${JSON.stringify({ defaultTools: ["read"] })}\n`,
+				);
+				const refused = yield* Effect.flip(
+					client["settings.mcp.setDefaultTool"]({
+						enabled: true,
+						folder: project,
+						tool: "tool_search",
+					}),
+				);
+				return { afterOff, afterOn, refused };
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(outcome.afterOn).toEqual(["+codemode"]);
+		expect(outcome.afterOff).toBeUndefined();
+		expect(outcome.refused).toBeInstanceOf(SettingRefused);
 	});
 });
