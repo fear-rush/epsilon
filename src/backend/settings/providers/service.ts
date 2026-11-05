@@ -47,6 +47,8 @@ export type ProvidersServiceApi = {
 	) => Effect.Effect<ReadonlyArray<ProviderModelInput>, ProviderRefused>;
 	/** One draft's model, tried through pi's client before the entry is saved. */
 	readonly test: (input: ProviderTestInput) => Effect.Effect<ProviderTestResult, ProviderRefused>;
+	/** Remove the credential `auth.json` holds, leaving the `models.json` entry in place. */
+	readonly logout: (id: string) => Effect.Effect<void, ProviderRefused>;
 };
 
 export class ProvidersService extends Context.Service<ProvidersService, ProvidersServiceApi>()(
@@ -55,6 +57,41 @@ export class ProvidersService extends Context.Service<ProvidersService, Provider
 
 /** One model pi composed, without importing pi's own type into this feature. */
 type RuntimeModel = ReturnType<ModelRuntime["getModels"]>[number];
+
+/** A provider as the runtime returns it, without importing pi's own type here. */
+type RuntimeProvider = NonNullable<ReturnType<ModelRuntime["getProvider"]>>;
+
+/** The account pi declares for a provider, in the shape the page draws. */
+const oauthOf = (provider: RuntimeProvider): ProviderDetail["auth"]["oauth"] => {
+	const oauth = provider.auth.oauth;
+	if (oauth === undefined) return undefined;
+	return {
+		label: oauth.loginLabel,
+		name: oauth.name,
+		subscription: oauth.isSubscription === true,
+	};
+};
+
+/** pi's API-key method. Ambient-only providers omit `login`, so the page cannot start one. */
+const apiKeyOf = (provider: RuntimeProvider): ProviderDetail["auth"]["apiKey"] => {
+	const apiKey = provider.auth.apiKey;
+	if (apiKey === undefined) return undefined;
+	return { interactive: apiKey.login !== undefined, name: apiKey.name };
+};
+
+/** The device credential pi lists for one provider, which it uses ahead of a file key. */
+const credentialOf = (
+	runtime: ModelRuntime,
+	id: string,
+): Effect.Effect<ProviderDetail["auth"]["credential"], ProviderRefused> =>
+	Effect.tryPromise({
+		try: () => runtime.listCredentials(),
+		catch: (cause) =>
+			new ProviderRefused({
+				providerId: id,
+				reason: `The stored credentials could not be read (${cause instanceof Error ? cause.message : String(cause)}).`,
+			}),
+	}).pipe(Effect.map((credentials) => credentials.find((entry) => entry.providerId === id)?.type));
 
 /**
  * One composed model as the page seeds an override from. pi composes more families than
@@ -67,12 +104,6 @@ const catalogModelOf = (provider: string, model: RuntimeModel): Option.Option<Ca
 		api: isProviderApi(model.api) ? model.api : undefined,
 		provider,
 	});
-
-type MutableAuth = {
-	configured: boolean;
-	source?: string;
-	label?: string;
-};
 
 const rowsOf = (
 	runtime: ModelRuntime,
@@ -201,11 +232,18 @@ export const makeProvidersService = (deps: {
 				}
 				const stored = yield* deps.store.read(id);
 				const auth = runtime.getProviderAuthStatus(id);
-				const authRow: MutableAuth = { configured: auth.configured };
-				if (auth.source !== undefined) authRow.source = auth.source;
-				if (auth.label !== undefined) authRow.label = auth.label;
+				const providerApi = stored.stored.api;
+				const api =
+					providerApi !== undefined && isProviderApi(providerApi) ? providerApi : undefined;
 				return {
-					auth: authRow,
+					auth: {
+						apiKey: apiKeyOf(provider),
+						credential: yield* credentialOf(runtime, id),
+						oauth: oauthOf(provider),
+					},
+					// The effective endpoint: the entry's, then pi's own for a built-in.
+					baseUrl: stored.stored.baseUrl ?? provider.baseUrl,
+					configured: auth.configured,
 					builtin: (yield* builtinIds.pipe(
 						Effect.match({
 							onFailure: () => new Set<string>(),
@@ -215,11 +253,15 @@ export const makeProvidersService = (deps: {
 					// The composed model, so the override dialog seeds from pi's effective values.
 					catalog: yield* catalogOf(runtime, id),
 					custom: (yield* deps.store.customIds).has(id),
+					hasKey: stored.hasKey,
 					headerKeys: stored.headerKeys,
 					id,
+					api,
 					modelOverrides: stored.modelOverrides,
 					models: stored.models,
 					name: provider.name,
+					source: auth.source,
+					sourceLabel: auth.label,
 					stored: stored.stored,
 				} satisfies ProviderDetail;
 			});
@@ -236,6 +278,35 @@ export const makeProvidersService = (deps: {
 				Effect.flatMap((runtime) => importModelsFor(runtime, deps.store, input)),
 			);
 
+		const logout: ProvidersServiceApi["logout"] = (id) =>
+			Effect.gen(function* () {
+				const runtime = yield* deps.runtime.pipe(
+					Effect.mapError(
+						(error) =>
+							new ProviderRefused({
+								providerId: id,
+								reason: `pi could not compose its catalog: ${error.reason}`,
+							}),
+					),
+				);
+				const credential = yield* credentialOf(runtime, id);
+				if (credential === undefined) {
+					return yield* new ProviderRefused({
+						providerId: id,
+						reason: "This provider has no stored credential to remove.",
+					});
+				}
+				yield* Effect.tryPromise({
+					catch: (cause) =>
+						new ProviderRefused({
+							providerId: id,
+							reason: cause instanceof Error ? cause.message : String(cause),
+						}),
+					try: () => runtime.logout(id),
+				});
+				return undefined;
+			});
+
 		const test: ProvidersServiceApi["test"] = (input) =>
 			Effect.gen(function* () {
 				const authHeader =
@@ -251,6 +322,7 @@ export const makeProvidersService = (deps: {
 			models,
 			read,
 			remove: deps.store.remove,
+			logout,
 			save: deps.store.save,
 			setApiKey: deps.store.setApiKey,
 			test,

@@ -271,16 +271,16 @@ function ProviderBody({ detail }: { detail: ProviderDetail }) {
 						<Row title="Models">{String(detail.catalog.length)}</Row>
 						<Row
 							title="Credential"
-							description={detail.auth.label ?? detail.auth.source ?? "none stored on this machine"}
+							description={detail.sourceLabel ?? detail.source ?? "none stored on this machine"}
 						/>
 					</Section>
 				)}
 
 				<Section
 					description={
-						detail.stored.apiKeyForm === undefined
-							? "pi has no key for this provider in models.json."
-							: `A key is stored as ${detail.stored.apiKeyForm}; a blank field keeps it.`
+						detail.hasKey
+							? "A key is stored in models.json; a blank field keeps it."
+							: "pi has no key for this provider in models.json."
 					}
 					title="API key"
 				>

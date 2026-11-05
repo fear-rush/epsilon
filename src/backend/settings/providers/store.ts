@@ -47,8 +47,10 @@ import type { JsonValue } from "../../platform/patch.ts";
 
 /** What `models.json` holds for one provider, as the editor needs it. */
 export type StoredProvider = {
-	/** The provider's own fields, with the key reduced to its form. */
+	/** The provider's own fields. */
 	readonly stored: ProviderStored;
+	/** Whether `models.json` holds a literal key. The key itself never leaves the server. */
+	readonly hasKey: boolean;
 	/** Names only; a stored header's value never leaves the server. */
 	readonly headerKeys: ReadonlyArray<string>;
 	/** The models the entry declares. */
@@ -367,12 +369,10 @@ const headerKeysOnly = <Value extends { readonly headers?: Record<string, string
 const hasEntries = (value: JsonValue | undefined): boolean =>
 	isJsonObject(value) && Object.keys(value).length > 0;
 
-/** A stored key's form; the value itself never leaves the file. */
-const keyForm = (value: JsonValue | undefined): ProviderStored["apiKeyForm"] => {
-	if (!Schema.is(Schema.String)(value)) return undefined;
-	if (value.startsWith("$")) return "environment";
-	if (value.startsWith("!")) return "command";
-	return "literal";
+/** Whether the entry holds a key the page may name but never read. */
+const hasKey = (entry: JsonObject): boolean => {
+	const key = entry["apiKey"];
+	return Schema.is(Schema.String)(key) && key !== "";
 };
 
 /** Whether the entry configures anything, which is what pi refuses to load without. */
@@ -391,7 +391,6 @@ type StoredFields = {
 	name?: string;
 	baseUrl?: string;
 	api?: string;
-	apiKeyForm?: ProviderStored["apiKeyForm"];
 	compat?: ProviderStored["compat"];
 	authHeader?: boolean;
 	oauth?: ProviderStored["oauth"];
@@ -405,12 +404,10 @@ const storedFieldsOf = (entry: JsonObject): ProviderStored => {
 	const compat = entry["compat"];
 	const authHeader = entry["authHeader"];
 	const oauth = entry["oauth"];
-	const form = keyForm(entry["apiKey"]);
 	const stored: StoredFields = {};
 	if (Schema.is(Schema.String)(name)) stored.name = name;
 	if (Schema.is(Schema.String)(baseUrl)) stored.baseUrl = baseUrl;
 	if (Schema.is(Schema.String)(api)) stored.api = api;
-	if (form !== undefined) stored.apiKeyForm = form;
 	const parsedCompat = Schema.decodeUnknownOption(ReasoningCompat)(compat);
 	if (Option.isSome(parsedCompat)) stored.compat = parsedCompat.value;
 	if (Schema.is(Schema.Boolean)(authHeader)) stored.authHeader = authHeader;
@@ -462,6 +459,7 @@ export const makeProvidersStore = (deps: {
 					modelOverrides[modelId] = headerKeysOnly(decoded.value);
 				}
 				return {
+					hasKey: hasKey(entry),
 					headerKeys: Object.keys(stringMapOf(entry["headers"])),
 					modelOverrides,
 					models,

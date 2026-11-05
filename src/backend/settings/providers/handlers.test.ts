@@ -187,6 +187,17 @@ describe("settings.providers", () => {
 					oauth: "radius",
 				});
 				expect(detail.headerKeys).toEqual(["X-Key"]);
+				// The effective entry and the credential facts the page names.
+				expect(detail).toMatchObject({
+					api: "openai-completions",
+					baseUrl: "http://127.0.0.1:1",
+					configured: false,
+					hasKey: false,
+					name: "Stub",
+					// The entry declares radius OAuth, which pi exposes as the provider's sign-in.
+					auth: { oauth: { name: "Stub", subscription: false } },
+				});
+				expect(detail.auth.credential).toBeUndefined();
 				// Every header value stays on the server, on the provider and on a model.
 				expect(detail.models).toMatchObject([
 					{
@@ -688,6 +699,26 @@ describe("settings.providers", () => {
 					}),
 				);
 				expect(rejected.reason).toContain("failed with the typed key");
+			}).pipe(Effect.scoped, Effect.provide(layer));
+		},
+		15000,
+	);
+
+	itEffect(
+		"names pi's own sign-in for a built-in, and refuses to sign out without one",
+		() => {
+			const { agentDir, layer } = providerLayer("logout");
+			writeStubModels(agentDir, "http://127.0.0.1:1");
+			return Effect.gen(function* () {
+				const client = yield* testClient(ProviderRpcs, ProvidersHandlersLive);
+				const detail = yield* client["settings.providers.read"]({ id: "anthropic" });
+				expect(detail.auth.oauth?.name).not.toBe("");
+				expect(detail.auth.apiKey?.name).not.toBe("");
+				const refused = yield* Effect.flip(
+					client["settings.providers.logout"]({ id: "anthropic" }),
+				);
+				expect(refused).toBeInstanceOf(ProviderRefused);
+				expect(refused.reason).toContain("no stored credential");
 			}).pipe(Effect.scoped, Effect.provide(layer));
 		},
 		15000,

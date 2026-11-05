@@ -57,7 +57,7 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | [x]  | `POST /api/settings/mcp/command`                                              | S4        | `feat(settings): the MCP sign-in line` (`settings.mcp.command`)                     |
 | [x]  | `POST /api/settings/providers/models` (read a provider's model list)          | S5        | `feat(settings): the model import` (`settings.providers.import`)                    |
 | [x]  | `POST /api/settings/providers/test`                                           | S5        | `feat(settings): the provider test` (`settings.providers.test`)                     |
-| [ ]  | `POST /api/settings/providers/{id}/logout` (through `ModelRuntime.logout()`)  | S5        | **missing**                                                                         |
+| [x]  | `POST /api/settings/providers/{id}/logout` (through `ModelRuntime.logout()`)  | S5        | `feat(settings): the provider account` (`settings.providers.logout`)                |
 | [ ]  | `POST /api/settings/skills/folders/link`, `…/unlink`                          | S6        | verify                                                                              |
 | [ ]  | `GET /api/settings/skills/listed-files`, `POST …/listed-file`, `PUT …/listed` | S6        | verify                                                                              |
 | [ ]  | `PUT /api/settings/skills/paths`, `DELETE …/paths`                            | S6        | verify                                                                              |

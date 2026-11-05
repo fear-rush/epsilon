@@ -21,6 +21,7 @@ export const ProvidersHandlersLive = ProviderRpcs.toLayer(
 			"settings.providers.import": (input) =>
 				providers.import(input).pipe(Effect.map((models) => ({ models }))),
 			"settings.providers.test": (input) => providers.test(input),
+			"settings.providers.logout": ({ id }) => providers.logout(id),
 		};
 	}),
 );
