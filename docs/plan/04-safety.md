@@ -35,6 +35,11 @@ keys); the index conformance test against `SessionManager.listAll`
       a cold build on a copy of the owner's home; if it exceeds 100 ms, move the sync into a
       Worker (one write connection, as designed) or chunk it, and add a benchmark budget.
       Ask the owner before choosing.
+- [ ] **The sessions root is spelled by hand.** `join(home.agentDir, "sessions")` appears
+      in `backend/main.ts`, `sessions/handlers.ts` and twice in `sessions/operations.ts`
+      (the delete guard of the S3 pin row added the second). `AgentHomeApi` should name it
+      once, beside `chatsDir`, so the home's layout is decided in one place. Structure
+      hygiene: no behaviour change, so no test, only `bun run check`.
 - [ ] **Large files**: read `src/engine/session.ts` (1,347 lines) and
       `src/backend/settings/mcp/service.ts` (784; `config/` before phase 1). Split only
       what holds two concepts, per the File rules; otherwise leave them.
