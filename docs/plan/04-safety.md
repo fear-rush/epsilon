@@ -75,6 +75,9 @@ keys); the index conformance test against `SessionManager.listAll`
       login question, a parse problem) are not thrown errors and stay. The phase 2 grep
       misses variables named otherwise (`failed.message`, `models.error.message`), so
       re-run it and read every hit.
+      The shared `DeleteDialog` now renders `Notice error` instead of `error.message`,
+      because a tagged error's `message` is empty and the alert drew as an empty box: every
+      delete refusal in the app has the translator's words from S3 on.
 
 - [ ] **A session pi cannot total.** pi's `getSessionStats()` reads `message.usage.input`
       on every assistant message, so a file whose assistant entry has no `usage` throws it,

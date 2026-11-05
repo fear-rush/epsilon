@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { Effect, Layer } from "effect";
 
+import { SessionNotFound } from "#protocol/errors";
 import { SessionsRpcs } from "#protocol/sessions";
 
 import { testClient } from "../../../test/rpc.ts";
@@ -52,6 +53,7 @@ const handlerLayer = (agentDir: string, root: string) => {
 		Layer.provideMerge(platform),
 		Layer.provideMerge(catalog),
 		Layer.provideMerge(SessionLocksLive),
+		Layer.provideMerge(pins),
 	);
 	return SessionsHandlersLive.pipe(
 		Layer.provideMerge(platform),
@@ -83,5 +85,33 @@ describe("sessions.list", () => {
 		const missing = new Map(list.sessions.map((row) => [row.id, row.cwdMissing]));
 		expect(missing.get("s-here")).toBe(false);
 		expect(missing.get("s-gone")).toBe(true);
+	});
+});
+
+describe("sessions.removeProject", () => {
+	test("deletes a folder's chats together, then has nothing left to delete", async () => {
+		const { agentDir, root } = sandbox("remove-project");
+		const project = join(root, "project");
+		mkdirSync(project, { recursive: true });
+		const folder = join(agentDir, "sessions", "--tmp-project--");
+		writeSession(folder, "s-remove-a", linearSession("s-remove-a", project, 2));
+		writeSession(folder, "s-remove-b", linearSession("s-remove-b", project, 2));
+
+		const layer = handlerLayer(agentDir, root);
+		const outcome = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SessionsRpcs, layer);
+				const removed = yield* client["sessions.removeProject"]({ directory: project });
+				const after = yield* client["sessions.list"]();
+				// pi's own route answered 404 once the folder held no chat; the folder is still the
+				// only name the page has for it.
+				const again = yield* Effect.flip(client["sessions.removeProject"]({ directory: project }));
+				return { after, again, removed };
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(outcome.removed.removed).toBe(2);
+		expect(outcome.after.sessions).toHaveLength(0);
+		expect(outcome.again).toBeInstanceOf(SessionNotFound);
 	});
 });

@@ -127,12 +127,13 @@ const engines = EnginesLive.pipe(
 // The chat's own operations and Epsilon's pin file. The lock service answers "does an
 // engine hold this chat?", which is what makes a rename or delete refuse a live chat.
 const sessionLocks = SessionLocksFromEngines.pipe(Layer.provideMerge(engines));
+const pins = PinsLive.pipe(Layer.provideMerge(core));
 const sessions = SessionsLive.pipe(
 	Layer.provideMerge(core),
 	Layer.provideMerge(catalog),
 	Layer.provideMerge(sessionLocks),
+	Layer.provideMerge(pins),
 );
-const pins = PinsLive.pipe(Layer.provideMerge(core));
 
 const infra = Layer.mergeAll(core, settings, catalog, pi, projects, engines, sessions, pins);
 

@@ -2,7 +2,6 @@ import { Block } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -14,6 +13,8 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Spinner } from "@/components/ui/spinner";
+
+import { Notice } from "./status/notice";
 
 /**
  * A new entry is a route with a draft, so leaving it needs its own exit. The
@@ -161,11 +162,7 @@ export function DeleteDialog({
 					<AlertDialogTitle>{title}</AlertDialogTitle>
 					<AlertDialogDescription>{description}</AlertDialogDescription>
 				</AlertDialogHeader>
-				{error !== null && (
-					<Alert variant="destructive">
-						<AlertDescription>{error.message}</AlertDescription>
-					</Alert>
-				)}
+				{error !== null && <Notice error={error} />}
 				<AlertDialogFooter>
 					<AlertDialogCancel>Cancel</AlertDialogCancel>
 					<AlertDialogAction variant="destructive" disabled={pending} onClick={onConfirm}>

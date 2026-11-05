@@ -12,9 +12,11 @@ import { linearSession, writeSession } from "../../../test/sessions.ts";
 import { testPaths } from "../../../test/setup.ts";
 import { AgentHomeLive } from "../platform/agent-home.ts";
 import type { AgentHome } from "../platform/agent-home.ts";
+import { JsonDocumentLive } from "../platform/json-document.ts";
 import { Catalog, CatalogLive } from "./catalog.ts";
 import { SessionLocks, makeSessionLocks } from "./locks.ts";
 import { Sessions, SessionsLive } from "./operations.ts";
+import { PinsLive } from "./pins.ts";
 
 const root = join(testPaths.agentHome, "sessions");
 const projectDir = join(root, "--ops-project--");
@@ -22,16 +24,18 @@ const otherDir = join(root, "--elsewhere--");
 const indexPath = join(testPaths.scratch, "ops", "index.sqlite");
 const meta = { formatVersion: 3, piVersion: "1.4.0", schemaVersion: "1" };
 
-const running = new Set(["s-running"]);
+const running = new Set(["s-running", "s-project-running"]);
 const locks = Layer.succeed(SessionLocks, makeSessionLocks(running));
 const home = AgentHomeLive(testPaths.agentHome, testPaths.sandboxHome);
 const catalog = Layer.provide(CatalogLive(indexPath, meta), BunServices.layer);
+const json = Layer.provide(JsonDocumentLive, BunServices.layer);
+const pins = Layer.provide(PinsLive, Layer.mergeAll(home, json, BunServices.layer));
 const sessions = Layer.provide(
 	SessionsLive,
-	Layer.mergeAll(catalog, locks, home, BunServices.layer),
+	Layer.mergeAll(catalog, locks, home, pins, BunServices.layer),
 );
 
-const environment = Layer.mergeAll(sessions, catalog, home, BunServices.layer);
+const environment = Layer.mergeAll(sessions, catalog, home, pins, BunServices.layer);
 
 const run = <A, E>(
 	effect: Effect.Effect<A, E, AgentHome | Catalog | Sessions | FileSystem.FileSystem>,
@@ -80,6 +84,26 @@ describe("session operations", () => {
 		expect(outcome.row?.cwd).toBe(otherDir);
 		// The history lives on in the fork, so the file it came from is not left behind.
 		expect(readdirSync(projectDir).some((file) => file.endsWith("_s-idle.jsonl"))).toBe(false);
+	});
+
+	test("removing a project refuses every chat when one is running, and deletes none (F1)", async () => {
+		const folder = join(root, "--remove-project--");
+		const project = join(testPaths.scratch, "remove-project-running");
+		mkdirSync(folder, { recursive: true });
+		writeSession(folder, "s-project-running", linearSession("s-project-running", project, 2));
+		writeSession(folder, "s-project-idle", linearSession("s-project-idle", project, 2));
+
+		const outcome = await run(
+			Effect.gen(function* () {
+				const service = yield* Sessions;
+				return yield* Effect.flip(service.removeProject(project));
+			}),
+		);
+
+		expect(outcome).toBeInstanceOf(SessionRunning);
+		// The idle chat beside it is still pi's: the refusal happens before any file goes.
+		const left = readdirSync(folder).filter((file) => file.endsWith(".jsonl"));
+		expect(left).toHaveLength(2);
 	});
 
 	test("renaming appends a session_info entry, as pi does", async () => {

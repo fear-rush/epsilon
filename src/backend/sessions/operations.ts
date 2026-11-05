@@ -10,6 +10,7 @@ import { forkSession } from "../platform/pi.ts";
 import { Catalog } from "./catalog.ts";
 import type { StoredSummary } from "./ingest.ts";
 import { SessionLocks } from "./locks.ts";
+import { Pins } from "./pins.ts";
 
 /**
  * Changing a chat's file, which is the only way Epsilon writes to pi's sessions.
@@ -40,6 +41,16 @@ export type SessionsApi = {
 	readonly remove: (
 		sessionId: string,
 	) => Effect.Effect<void, SessionNotFound | SessionRunning | FileUnwritable>;
+	/**
+	 * Delete every chat pi recorded in one folder. Refusing is all-or-nothing: a chat an
+	 * engine holds stops the whole answer before a file is touched.
+	 */
+	readonly removeProject: (
+		directory: string,
+	) => Effect.Effect<
+		{ readonly removed: number },
+		SessionNotFound | SessionRunning | FileUnwritable
+	>;
 };
 
 export class Sessions extends Context.Service<Sessions, SessionsApi>()("epsilon/Sessions") {}
@@ -49,6 +60,7 @@ export const SessionsLive = Layer.effect(
 	Effect.gen(function* () {
 		const catalog = yield* Catalog;
 		const locks = yield* SessionLocks;
+		const pins = yield* Pins;
 		const home = yield* AgentHome;
 		const fs = yield* FileSystem.FileSystem;
 		const withFs = <A, E>(effect: Effect.Effect<A, E, FileSystem.FileSystem>) =>
@@ -106,6 +118,37 @@ export const SessionsLive = Layer.effect(
 				yield* catalog.sync([dirname(row.path)]);
 			});
 
-		return { moveToProject, remove, rename };
+		const removeProject: SessionsApi["removeProject"] = (directory) =>
+			Effect.gen(function* () {
+				// A chat a terminal pi wrote since the last reconcile is still the operator's chat,
+				// so the index is brought up to date before anything is chosen or deleted.
+				yield* catalog.sync([join(home.agentDir, "sessions")]);
+				// The agent's own chat folder is not a project, so its chats are never candidates:
+				// the folder a chat ran in is what makes it a project's chat.
+				const rows =
+					directory === home.chatsDir
+						? []
+						: (yield* catalog.list).filter((row) => row.cwd === directory);
+				if (rows.length === 0) {
+					// pi's own route answered 404 here; the page names the folder, so the folder
+					// stands in for the id the tag carries.
+					return yield* new SessionNotFound({ sessionId: directory });
+				}
+				// Every chat is checked before any file goes (F1): a half-deleted project is the
+				// failure this operation exists to prevent, and the old page loop could produce it.
+				const running: string[] = [];
+				for (const row of rows) {
+					if (yield* locks.isRunning(row.id)) running.push(row.id);
+				}
+				const first = running[0];
+				if (first !== undefined) return yield* new SessionRunning({ sessionId: first });
+				// Pins first: a pin write that fails refuses before a single file is gone.
+				for (const row of rows) yield* pins.set(row.id, false);
+				for (const row of rows) yield* withFs(removePath(row.path));
+				yield* catalog.sync([...new Set(rows.map((row) => dirname(row.path)))]);
+				return { removed: rows.length };
+			});
+
+		return { moveToProject, remove, removeProject, rename };
 	}),
 );

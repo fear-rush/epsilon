@@ -121,18 +121,10 @@ export function SessionSidebar() {
 	});
 	const forgetProject = useMutation({
 		// Epsilon has no project record: removing a project removes its chats, and the
-		// folder stays where it is. One refusal fails the whole answer.
-		mutationFn: async (entry: ProjectSessions) => {
-			const results = await Promise.allSettled(
-				entry.sessions.map((session) =>
-					call((client) => client["sessions.remove"]({ sessionId: session.id })),
-				),
-			);
-			const failed = results.find((result) => result.status === "rejected");
-			if (failed !== undefined) {
-				throw failed.reason instanceof Error ? failed.reason : new Error(String(failed.reason));
-			}
-		},
+		// folder stays where it is. The server checks every chat before deleting one, so a
+		// refusal leaves the project exactly as it was.
+		mutationFn: (entry: ProjectSessions) =>
+			call((client) => client["sessions.removeProject"]({ directory: entry.project.path })),
 		onSuccess: async (_removed, entry) => {
 			setPendingProject(undefined);
 			if (entry.sessions.some((session) => session.id === activeId)) {

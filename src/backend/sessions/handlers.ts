@@ -77,6 +77,7 @@ export const SessionsHandlersLive = SessionsRpcs.toLayer(
 					return yield* sessions.moveToProject(sessionId, folder);
 				}),
 			"sessions.remove": ({ sessionId }) => sessions.remove(sessionId),
+			"sessions.removeProject": ({ directory }) => sessions.removeProject(directory),
 			"sessions.setPinned": ({ pinned, sessionId }) =>
 				Effect.gen(function* () {
 					const row = yield* catalog.locate(sessionId);

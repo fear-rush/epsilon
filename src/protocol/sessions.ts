@@ -78,6 +78,17 @@ export const SessionsRpcs = RpcGroup.make(
 		success: Schema.Void,
 		error: Schema.Union([SessionNotFound, SessionRunning, FileUnwritable]),
 	}),
+	/**
+	 * Take a folder's chats off the list together: pi records the folder a chat ran in, so
+	 * this is where a project's chats are. Every chat is checked before any file goes, so a
+	 * running one refuses the whole answer and leaves the project as it was. The folder and
+	 * pi's trust record stay.
+	 */
+	Rpc.make("sessions.removeProject", {
+		payload: { directory: Schema.String },
+		success: Schema.Struct({ removed: Schema.Finite }),
+		error: Schema.Union([SessionNotFound, SessionRunning, FileUnwritable]),
+	}),
 	/** Pin is Epsilon's own preference, so only an existing chat may be pinned. */
 	Rpc.make("sessions.setPinned", {
 		payload: { sessionId: Schema.String, pinned: Schema.Boolean },
