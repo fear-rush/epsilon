@@ -109,6 +109,8 @@ type MutableSessionMeta = {
 	codingTools?: boolean;
 	hideThinking?: boolean;
 	hiddenThinkingLabel?: string;
+	workingMessage?: string | null;
+	workingVisible?: boolean;
 	thinkingLevels?: ThinkingLevel[];
 	treeFilterMode?: TreeFilterMode;
 	commands?: CommandOffer[];
@@ -227,7 +229,8 @@ export const shadowedCommandsOf = (agent: AgentSession): string[] => {
  */
 export const sessionMeta = (
 	agent: AgentSession,
-	hiddenThinkingLabel?: string,
+	hiddenThinkingLabel: string | undefined,
+	working: { readonly message: string | undefined; readonly visible: boolean },
 ): Extract<ServerFrame, { t: "sessionMeta" }> => {
 	const title = agent.sessionManager.getSessionName();
 	const model = agent.model === undefined ? undefined : `${agent.model.provider}/${agent.model.id}`;
@@ -247,5 +250,7 @@ export const sessionMeta = (
 	if (title !== undefined) frame.title = title;
 	if (model !== undefined) frame.model = model;
 	if (hiddenThinkingLabel !== undefined) frame.hiddenThinkingLabel = hiddenThinkingLabel;
+	frame.workingMessage = working.message ?? null;
+	frame.workingVisible = working.visible;
 	return frame;
 };

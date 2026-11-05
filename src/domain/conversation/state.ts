@@ -55,6 +55,10 @@ export type ToolRun = {
 	readonly images: ReadonlyArray<ImageBlock>;
 	readonly status: "running" | "ok" | "error";
 	readonly durationMs: number | undefined;
+	/** The call this one ran inside, when a tool made it (`codemode`'s scripts). */
+	readonly parentToolCallId?: string;
+	/** The calls this tool made while it ran, in pi's record order. */
+	readonly children: ReadonlyArray<ToolRun>;
 	/** Why the run is not what its status alone says, such as a settle that cut a tool short. */
 	readonly note?: string;
 };
@@ -98,6 +102,10 @@ export type ConversationState = {
 	readonly hideThinking: boolean;
 	/** The label an extension set in place of the thinking pi hides; absent means pi's own. */
 	readonly hiddenThinkingLabel: string | undefined;
+	/** What an extension calls the working row; absent means pi's own word. */
+	readonly workingMessage: string | undefined;
+	/** Whether an extension hid the working row while a run goes. */
+	readonly workingVisible: boolean;
 	/** Whether pi's coding tools are declared now, and the thinking levels it offers. */
 	readonly codingTools: boolean;
 	readonly thinkingLevels: ReadonlyArray<ThinkingLevel>;
@@ -137,6 +145,8 @@ export const emptyConversation: ConversationState = {
 	autoRetry: false,
 	hideThinking: false,
 	hiddenThinkingLabel: undefined,
+	workingMessage: undefined,
+	workingVisible: true,
 	codingTools: false,
 	thinkingLevels: [],
 	commands: [],

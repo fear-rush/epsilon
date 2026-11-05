@@ -33,9 +33,26 @@ export function appendStreamingDelta(
 
 /** Inserts or updates a tool run, preserving the order the calls were first seen in. */
 export function upsertTool(tools: ReadonlyArray<ToolRun>, next: ToolRun): ReadonlyArray<ToolRun> {
+	const parentId = next.parentToolCallId;
+	const parent =
+		parentId === undefined ? -1 : tools.findIndex((tool) => tool.toolCallId === parentId);
+	if (parent !== -1) {
+		// A call a tool made while it ran belongs inside that tool's card, not beside it.
+		return tools.map((tool, at) =>
+			at === parent ? { ...tool, children: upsertTool(tool.children, next) } : tool,
+		);
+	}
 	const index = tools.findIndex((tool) => tool.toolCallId === next.toolCallId);
 	if (index === -1) return [...tools, next];
-	return tools.map((tool, at) => (at === index ? { ...tool, ...next } : tool));
+	return tools.map((tool, at) => {
+		if (at !== index) return tool;
+		// A parent's own update keeps the children it already holds; a result brings its own.
+		return {
+			...tool,
+			...next,
+			children: next.children.length === 0 ? tool.children : next.children,
+		};
+	});
 }
 
 /** Prepends an older page, skipping entries the window already holds. */

@@ -92,3 +92,49 @@ test("a bookkeeping custom entry never becomes a row", () => {
 	});
 	expect(row).toBeUndefined();
 });
+
+test("a tool's own calls are kept on its result, as the wire's nested rows", () => {
+	const row = transcriptOf({
+		type: "message",
+		id: "t1",
+		parentId: "a1",
+		timestamp: "2026-01-01T00:00:00.000Z",
+		message: {
+			role: "toolResult",
+			toolCallId: "c1",
+			toolName: "codemode",
+			content: [{ type: "text", text: "done" }],
+			isError: false,
+			timestamp: 1,
+			nestedCalls: {
+				calls: [
+					{
+						id: "c1/1",
+						name: "bash",
+						arguments: { command: "ls" },
+						status: "error",
+						durationMs: 12,
+						error: "ls: no such directory",
+					},
+					{ id: "c1/2", name: "read", status: "ok", durationMs: 3 },
+				],
+				complete: true,
+			},
+		},
+	});
+
+	expect(row?.role === "toolResult" ? row.nested : undefined).toEqual({
+		calls: [
+			{
+				args: { command: "ls" },
+				durationMs: 12,
+				error: "ls: no such directory",
+				id: "c1/1",
+				name: "bash",
+				status: "error",
+			},
+			{ durationMs: 3, id: "c1/2", name: "read", status: "ok" },
+		],
+		complete: true,
+	});
+});

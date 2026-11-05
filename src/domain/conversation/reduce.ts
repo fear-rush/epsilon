@@ -33,10 +33,11 @@ export const SETTLED_TOOL_NOTE = "Not executed: the run ended before this tool f
  * and its result. A row left at `running` would claim work is still happening, so the
  * settle closes it and says why.
  */
+const settledTool = (tool: ToolRun): ToolRun =>
+	tool.status === "running" ? { ...tool, status: "error", note: SETTLED_TOOL_NOTE } : tool;
+
 const settleTools = (tools: ReadonlyArray<ToolRun>): ReadonlyArray<ToolRun> =>
-	tools.map((tool) =>
-		tool.status === "running" ? { ...tool, status: "error", note: SETTLED_TOOL_NOTE } : tool,
-	);
+	tools.map((tool) => ({ ...settledTool(tool), children: tool.children.map(settledTool) }));
 
 const toolFromDelta = (
 	frame: Extract<ServerFrame, { t: "toolDelta" }>,
@@ -50,20 +51,46 @@ const toolFromDelta = (
 	images: existing?.images ?? [],
 	status: frame.status,
 	durationMs: frame.durationMs ?? existing?.durationMs,
+	children: existing?.children ?? [],
+	...(frame.parentToolCallId === undefined
+		? existing?.parentToolCallId === undefined
+			? {}
+			: { parentToolCallId: existing.parentToolCallId }
+		: { parentToolCallId: frame.parentToolCallId }),
 });
+
+/**
+ * The calls a tool made while it ran, as runs of their own: they lose their result, which
+ * pi does not record, but keep the error it saw and what it cost.
+ */
+const childrenOf = (entry: ToolResultEntry, entryId: string): ReadonlyArray<ToolRun> =>
+	(entry.nested?.calls ?? []).map((call) => ({
+		toolCallId: call.id,
+		toolName: call.name,
+		entryId,
+		args: call.args,
+		output: call.error ?? "",
+		images: [],
+		status: call.status === "ok" ? "ok" : "error",
+		durationMs: call.durationMs,
+		parentToolCallId: entry.toolCallId,
+		children: [],
+	}));
 
 /** A tool result entry is authoritative for its run: it ends it and carries the output. */
 const toolFromResult = (entry: ToolResultEntry, tools: ReadonlyArray<ToolRun>): ToolRun => {
 	const existing = tools.find((tool) => tool.toolCallId === entry.toolCallId);
+	const entryId = existing?.entryId ?? entry.parentId ?? entry.id;
 	return {
 		toolCallId: entry.toolCallId,
 		toolName: entry.toolName,
-		entryId: existing?.entryId ?? entry.parentId ?? entry.id,
+		entryId,
 		args: existing?.args,
 		output: entry.output,
 		images: entry.images,
 		status: entry.isError ? "error" : "ok",
 		durationMs: existing?.durationMs,
+		children: childrenOf(entry, entryId),
 	};
 };
 
@@ -190,13 +217,22 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				autoRetry: frame.autoRetry ?? state.autoRetry,
 				hideThinking: frame.hideThinking ?? state.hideThinking,
 				hiddenThinkingLabel: frame.hiddenThinkingLabel ?? state.hiddenThinkingLabel,
+				// `null` is the extension clearing its word, which restores pi's own.
+				workingMessage:
+					frame.workingMessage === null
+						? undefined
+						: (frame.workingMessage ?? state.workingMessage),
+				workingVisible: frame.workingVisible ?? state.workingVisible,
 				codingTools: frame.codingTools ?? state.codingTools,
 				thinkingLevels: frame.thinkingLevels ?? state.thinkingLevels,
 				treeFilterMode: frame.treeFilterMode ?? state.treeFilterMode,
 				commands: frame.commands ?? state.commands,
 			};
-		case "editorText":
-			return { ...state, draft: { nonce: frame.nonce, text: frame.text } };
+		case "editorText": {
+			// pi's two meanings: a replacement discards the draft, a paste adds to it.
+			const text = frame.mode === "append" ? `${state.draft?.text ?? ""}${frame.text}` : frame.text;
+			return { ...state, draft: { nonce: frame.nonce, text } };
+		}
 		default: {
 			// Every frame is handled above; a new one must add a case, not fall through.
 			const unreachable: never = frame;

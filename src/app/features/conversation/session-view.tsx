@@ -170,8 +170,8 @@ export function Conversation({
 	/** The rows above the composer change with a queue or a run state, never with a token. */
 	const runStatus = (
 		<RunStatus
-			working={state.busy}
-			workingMessage={undefined}
+			working={state.busy && state.workingVisible}
+			workingMessage={state.workingMessage}
 			isCompacting={state.compacting}
 			isRetrying={state.retrying}
 			isBashRunning={state.bash.running}

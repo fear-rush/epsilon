@@ -40,10 +40,19 @@ export type UiHost = {
 	) => void;
 	/** The label that stands in for hidden thinking, when an extension sets one. */
 	readonly setHiddenThinkingLabel: (label: string) => void;
+	/** Text an extension puts in the composer: `replace` overwrites the draft, `append` adds. */
+	readonly putEditorText: (text: string, mode: "replace" | "append") => void;
+	/** What an extension calls the working row; `undefined` restores pi's own word. */
+	readonly setWorkingMessage: (message: string | undefined) => void;
+	/** Whether an extension hides the working row. */
+	readonly setWorkingVisible: (visible: boolean) => void;
 	readonly unsupported: (method: string) => void;
 	readonly toolsExpanded: () => boolean;
 	readonly setToolsExpanded: (expanded: boolean) => void;
 };
+
+/** What an extension calls the working row, and whether it hid it. */
+export type WorkingState = { readonly message: string | undefined; readonly visible: boolean };
 
 type QuestionOptions = { readonly signal?: AbortSignal; readonly timeoutMs?: number };
 type MutableQuestionOptions = { signal?: AbortSignal; timeoutMs?: number };
@@ -66,6 +75,8 @@ export class UiBridge {
 	private expanded = false;
 	/** The autocomplete factories extensions registered, in pi's wrapping order. */
 	private wrappers: AutocompleteProviderFactory[] = [];
+	/** What an extension calls the working row, and whether it hid it. */
+	private working: WorkingState = { message: undefined, visible: true };
 	readonly host: UiHost;
 
 	constructor(
@@ -75,6 +86,9 @@ export class UiBridge {
 		setStatus: UiHost["setStatus"],
 		setWidget: UiHost["setWidget"],
 		setHiddenThinkingLabel: UiHost["setHiddenThinkingLabel"],
+		putEditorText: UiHost["putEditorText"],
+		setWorkingMessage: UiHost["setWorkingMessage"],
+		setWorkingVisible: UiHost["setWorkingVisible"],
 	) {
 		this.host = {
 			ask: (question, options) => Effect.runPromise(dialogs.ask(question, options)),
@@ -86,6 +100,16 @@ export class UiBridge {
 			setStatus,
 			setWidget,
 			setHiddenThinkingLabel,
+			putEditorText,
+			// The bridge keeps what an extension set, so a late tab's meta still carries it.
+			setWorkingMessage: (message) => {
+				this.working = { ...this.working, message };
+				setWorkingMessage(message);
+			},
+			setWorkingVisible: (visible) => {
+				this.working = { ...this.working, visible };
+				setWorkingVisible(visible);
+			},
 			unsupported,
 			toolsExpanded: () => this.expanded,
 			setToolsExpanded: (expanded) => {
@@ -96,6 +120,11 @@ export class UiBridge {
 
 	setEditorText(text: string): void {
 		this.editor = text;
+	}
+
+	/** The working row's label and visibility, as an extension last set them. */
+	get workingState(): WorkingState {
+		return this.working;
 	}
 
 	get autocompleteProviders(): ReadonlyArray<AutocompleteProviderFactory> {
@@ -215,21 +244,21 @@ export const createUiContext = (host: UiHost): ExtensionUIContext => ({
 	setTitle() {
 		host.unsupported("setTitle");
 	},
-	setEditorText() {
-		host.unsupported("setEditorText");
+	setEditorText(text: string) {
+		host.putEditorText(text, "replace");
 	},
-	pasteToEditor() {
-		host.unsupported("pasteToEditor");
+	pasteToEditor(text: string) {
+		host.putEditorText(text, "append");
 	},
 	onTerminalInput() {
 		host.unsupported("onTerminalInput");
 		return () => undefined;
 	},
-	setWorkingMessage() {
-		host.unsupported("setWorkingMessage");
+	setWorkingMessage(message?: string) {
+		host.setWorkingMessage(message);
 	},
-	setWorkingVisible() {
-		host.unsupported("setWorkingVisible");
+	setWorkingVisible(visible: boolean) {
+		host.setWorkingVisible(visible);
 	},
 	setWorkingIndicator() {
 		host.unsupported("setWorkingIndicator");

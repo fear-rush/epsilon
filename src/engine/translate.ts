@@ -7,6 +7,7 @@ import type {
 import type {
 	AssistantBlock,
 	ImageBlock,
+	NestedCall,
 	TranscriptEntry,
 	TreeRow,
 } from "#protocol/conversation/frames";
@@ -113,19 +114,43 @@ const assistantEntry = (entry: MessageEntry & { message: AssistantMessage }): Tr
 	ts: tsOf(entry.timestamp),
 });
 
+const nestedOf = (
+	result: ToolResultMessage,
+): { calls: NestedCall[]; complete: boolean } | undefined => {
+	const record = result.nestedCalls;
+	if (record === undefined || record.calls.length === 0) return undefined;
+	const calls = record.calls.map((call) =>
+		withDefined(
+			withDefined(
+				withDefined({ id: call.id, name: call.name, status: call.status }, "args", call.arguments),
+				"durationMs",
+				call.durationMs,
+			),
+			"error",
+			call.error,
+		),
+	);
+	return { calls, complete: record.complete };
+};
+
 const toolResultEntry = (entry: MessageEntry & { message: ToolResultMessage }): TranscriptEntry => {
 	const text = textOf(entry.message.content);
-	return {
-		id: entry.id,
-		parentId: entry.parentId,
-		role: "toolResult",
-		toolCallId: entry.message.toolCallId,
-		toolName: entry.message.toolName,
-		isError: entry.message.isError,
-		output: cut(text),
-		images: imagesOf(entry.message.content),
-		ts: tsOf(entry.timestamp),
-	};
+	const nested = nestedOf(entry.message);
+	return withDefined(
+		{
+			id: entry.id,
+			parentId: entry.parentId,
+			role: "toolResult",
+			toolCallId: entry.message.toolCallId,
+			toolName: entry.message.toolName,
+			isError: entry.message.isError,
+			output: cut(text),
+			images: imagesOf(entry.message.content),
+			ts: tsOf(entry.timestamp),
+		},
+		"nested",
+		nested,
+	);
 };
 
 /**

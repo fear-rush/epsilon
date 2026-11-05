@@ -231,6 +231,9 @@ export class EngineSession {
 			(key, text) => this.setStatus(key, text),
 			(key, lines, placement) => this.setWidget(key, lines, placement),
 			(label) => this.setHiddenThinkingLabel(label),
+			(text, mode) => this.putEditorText(text, mode),
+			(message) => this.setWorkingMessage(message),
+			() => this.setWorkingVisible(),
 		);
 	}
 
@@ -1261,9 +1264,33 @@ export class EngineSession {
 		this.frames.to("all", this.statusesFrame());
 	}
 
-	/** What the page draws from pi's state, plus the label only an extension can set. */
+	/** What the page draws from pi's state, plus the label and working row only an extension sets. */
 	private metaOf(agent: AgentSession): Extract<ServerFrame, { t: "sessionMeta" }> {
-		return sessionMeta(agent, this.hiddenThinkingLabel);
+		return sessionMeta(agent, this.hiddenThinkingLabel, this.ui.workingState);
+	}
+
+	/**
+	 * Text an extension puts in the composer. pi's two meanings stay apart: `setEditorText`
+	 * replaces the draft, `pasteToEditor` adds to it, and the page decides which.
+	 */
+	private putEditorText(text: string, mode: "replace" | "append"): void {
+		this.frames.to("all", {
+			mode,
+			nonce: crypto.randomUUID(),
+			sessionId: this.runtime.session.sessionId,
+			text,
+			t: "editorText",
+		});
+	}
+
+	/** The working row's label, or pi's own word when an extension clears it. */
+	private setWorkingMessage(_message: string | undefined): void {
+		this.frames.to("all", this.metaOf(this.runtime.session));
+	}
+
+	/** Whether the working row is drawn while a run is going. */
+	private setWorkingVisible(): void {
+		this.frames.to("all", this.metaOf(this.runtime.session));
 	}
 
 	/** The label that stands in for hidden thinking, from an extension; sent back to tabs. */
@@ -1586,7 +1613,7 @@ export class EngineSession {
 				}
 				case "entry_appended":
 					if (event.entry.type === "session_info") {
-						self.broadcast(sessionMeta(self.runtime.session));
+						self.broadcast(self.metaOf(self.runtime.session));
 					}
 					return;
 				case "agent_start":
@@ -1603,37 +1630,55 @@ export class EngineSession {
 					return;
 				case "tool_execution_start":
 					self.toolRunning++;
-					self.broadcast({
-						entryId: self.toolEntries.get(event.toolCallId) ?? "",
-						output: undefined,
-						status: "running",
-						t: "toolDelta",
-						toolCallId: event.toolCallId,
-						toolName: event.toolName,
-					});
+					self.broadcast(
+						withDefined(
+							{
+								entryId: self.toolEntries.get(event.toolCallId) ?? "",
+								output: undefined,
+								status: "running" as const,
+								t: "toolDelta" as const,
+								toolCallId: event.toolCallId,
+								toolName: event.toolName,
+							},
+							"parentToolCallId",
+							event.parentToolCallId,
+						),
+					);
 					self.sendStatus();
 					return;
 				case "tool_execution_update":
-					self.broadcast({
-						entryId: self.toolEntries.get(event.toolCallId) ?? "",
-						output: toolTextOf(event.partialResult),
-						status: "running",
-						t: "toolDelta",
-						toolCallId: event.toolCallId,
-						toolName: event.toolName,
-					});
+					self.broadcast(
+						withDefined(
+							{
+								entryId: self.toolEntries.get(event.toolCallId) ?? "",
+								output: toolTextOf(event.partialResult),
+								status: "running" as const,
+								t: "toolDelta" as const,
+								toolCallId: event.toolCallId,
+								toolName: event.toolName,
+							},
+							"parentToolCallId",
+							event.parentToolCallId,
+						),
+					);
 					return;
 				case "tool_execution_end":
 					self.toolRunning = Math.max(0, self.toolRunning - 1);
-					self.broadcast({
-						durationMs: event.durationMs,
-						entryId: self.toolEntries.get(event.toolCallId) ?? "",
-						output: toolTextOf(event.result),
-						status: event.isError ? "error" : "ok",
-						t: "toolDelta",
-						toolCallId: event.toolCallId,
-						toolName: event.toolName,
-					});
+					self.broadcast(
+						withDefined(
+							{
+								durationMs: event.durationMs,
+								entryId: self.toolEntries.get(event.toolCallId) ?? "",
+								output: toolTextOf(event.result),
+								status: event.isError ? ("error" as const) : ("ok" as const),
+								t: "toolDelta" as const,
+								toolCallId: event.toolCallId,
+								toolName: event.toolName,
+							},
+							"parentToolCallId",
+							event.parentToolCallId,
+						),
+					);
 					self.sendStatus();
 					return;
 				case "compaction_start":
@@ -1652,7 +1697,7 @@ export class EngineSession {
 					self.sendStatus();
 					return;
 				case "session_info_changed":
-					self.broadcast(sessionMeta(self.runtime.session));
+					self.broadcast(self.metaOf(self.runtime.session));
 					return;
 				case "queue_update":
 					self.sendQueue();

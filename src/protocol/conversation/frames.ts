@@ -70,6 +70,21 @@ export const AssistantEntry = Schema.Struct({
 });
 export type AssistantEntry = typeof AssistantEntry.Type;
 
+/**
+ * One call a tool made while it ran, kept on its result: a `codemode` script's calls, which
+ * the model never issued. `unfinished` is a call still running when its caller returned.
+ */
+export const NestedCall = Schema.Struct({
+	id: Schema.String,
+	name: Schema.String,
+	/** Omitted by pi when the arguments were over its size limit. */
+	args: Schema.optional(Schema.Unknown),
+	status: Schema.Literals(["ok", "error", "unfinished"]),
+	durationMs: Schema.optional(Schema.Finite),
+	error: Schema.optional(Schema.String),
+});
+export type NestedCall = typeof NestedCall.Type;
+
 export const ToolResultEntry = Schema.Struct({
 	...entryBase,
 	role: Schema.Literals(["toolResult"]),
@@ -78,6 +93,14 @@ export const ToolResultEntry = Schema.Struct({
 	isError: Schema.Boolean,
 	output: Schema.String,
 	images: Schema.Array(ImageBlock),
+	/** The calls this tool made while it ran, when it made any. */
+	nested: Schema.optional(
+		Schema.Struct({
+			calls: Schema.Array(NestedCall),
+			/** False when pi dropped calls or arguments over its limits. */
+			complete: Schema.Boolean,
+		}),
+	),
 });
 export type ToolResultEntry = typeof ToolResultEntry.Type;
 
@@ -209,6 +232,8 @@ export const StreamingEndFrame = Schema.Struct({
 export const ToolDeltaFrame = Schema.Struct({
 	t: Schema.Literals(["toolDelta"]),
 	toolCallId: Schema.String,
+	/** The call this one runs inside, when a tool made it (`codemode`'s scripts). */
+	parentToolCallId: Schema.optional(Schema.String),
 	entryId: Schema.String,
 	toolName: Schema.String,
 	status: Schema.Literals(["running", "ok", "error"]),
@@ -294,6 +319,10 @@ export const SessionMetaFrame = Schema.Struct({
 	hideThinking: Schema.optional(Schema.Boolean),
 	/** The label an extension set in place of the thinking pi hides, when it set one. */
 	hiddenThinkingLabel: Schema.optional(Schema.String),
+	/** What an extension calls the working row; `null` restores pi's own word. */
+	workingMessage: Schema.optional(Schema.NullOr(Schema.String)),
+	/** Whether an extension hid the working row; absent keeps the current answer. */
+	workingVisible: Schema.optional(Schema.Boolean),
 	/** Whether pi's coding tools (shell, edit, write) are declared right now. */
 	codingTools: Schema.optional(Schema.Boolean),
 	/** The thinking levels pi offers for the current model, as the model picker shows them. */
@@ -327,6 +356,11 @@ export const EditorTextFrame = Schema.Struct({
 	sessionId: Schema.String,
 	text: Schema.String,
 	nonce: Schema.String,
+	/**
+	 * How the page puts the text in its draft. pi's `setEditorText` replaces it and
+	 * `pasteToEditor` adds to it; absent is a replacement, which is what a restore does.
+	 */
+	mode: Schema.optional(Schema.Literals(["replace", "append"])),
 });
 
 export const ServerFrame = Schema.Union([

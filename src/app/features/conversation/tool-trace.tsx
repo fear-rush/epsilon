@@ -36,8 +36,8 @@ import {
  * is never blank. Main's file, taking the call's arguments from the message the way this
  * branch holds them.
  *
- * A call that made other calls inside itself (codemode's scripts) is not grouped here yet:
- * the wire carries no parent id, so those calls have no card to nest under.
+ * A call that made other calls inside itself (codemode's scripts) draws them as compact
+ * rows inside its own card: the model never issued them, so they have no card of their own.
  */
 
 const ICONS = new Map<string, ReactNode>([
@@ -96,6 +96,7 @@ export function ToolTrace({
 }) {
 	const known = argsOf(name, args);
 	const body = toolBody(run, known, args);
+	const children = run?.children ?? [];
 	const line = (
 		<TraceLine
 			status={run?.status === "error" ? "error" : run?.status === "running" ? "running" : undefined}
@@ -105,12 +106,29 @@ export function ToolTrace({
 			<TraceDescription>{detail(run)}</TraceDescription>
 		</TraceLine>
 	);
-	if (body === null) return <Trace>{line}</Trace>;
+	if (body === null && children.length === 0) return <Trace>{line}</Trace>;
 	return (
 		<Trace>
 			<TraceCollapsible open={open} onOpenChange={() => onToggle()}>
 				<TraceCollapsibleTrigger>{line}</TraceCollapsibleTrigger>
-				<TraceCollapsibleContent>{body}</TraceCollapsibleContent>
+				<TraceCollapsibleContent>
+					{children.length === 0 ? undefined : (
+						<div className="grid gap-1 pb-1">
+							{children.map((child) => (
+								<div key={child.toolCallId} className="flex min-w-0 items-center gap-2">
+									<TraceIcon>{ICONS.get(child.toolName) ?? <WrenchIcon />}</TraceIcon>
+									<span className="truncate text-meta font-medium">{child.toolName}</span>
+									<span className="truncate text-meta text-muted-foreground">
+										{child.output === ""
+											? detail(child)
+											: `${detail(child)}: ${child.output.split("\n")[0] ?? ""}`}
+									</span>
+								</div>
+							))}
+						</div>
+					)}
+					{body}
+				</TraceCollapsibleContent>
 			</TraceCollapsible>
 		</Trace>
 	);

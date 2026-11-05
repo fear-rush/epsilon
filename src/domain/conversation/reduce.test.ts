@@ -306,6 +306,95 @@ describe("reduce", () => {
 		expect(reduce(running, { t: "busy", busy: true }).tools[1]?.status).toBe("running");
 	});
 
+	test("a call a tool made draws inside that tool, not beside it", () => {
+		const parent = reduce(emptyConversation, {
+			t: "toolDelta",
+			toolCallId: "c1",
+			entryId: "a1",
+			toolName: "codemode",
+			status: "running",
+		});
+		const child = reduce(parent, {
+			t: "toolDelta",
+			toolCallId: "c1/1",
+			parentToolCallId: "c1",
+			entryId: "a1",
+			toolName: "bash",
+			status: "running",
+			output: "ls\n",
+		});
+		expect(child.tools).toHaveLength(1);
+		expect(child.tools[0]?.children.map((run) => run.toolName)).toEqual(["bash"]);
+		const ended = reduce(child, {
+			t: "toolDelta",
+			toolCallId: "c1/1",
+			parentToolCallId: "c1",
+			entryId: "a1",
+			toolName: "bash",
+			status: "ok",
+			output: "AGENTS.md\n",
+			durationMs: 8,
+		});
+		expect(ended.tools[0]?.children[0]).toMatchObject({ output: "AGENTS.md\n", status: "ok" });
+	});
+
+	test("a result's nested record becomes the parent's children, and a settle closes them", () => {
+		const result = reduce(emptyConversation, {
+			t: "append",
+			entry: {
+				id: "t1",
+				parentId: "a1",
+				role: "toolResult",
+				toolCallId: "c1",
+				toolName: "codemode",
+				isError: false,
+				output: "done",
+				images: [],
+				ts: 1,
+				nested: {
+					calls: [
+						{
+							id: "c1/1",
+							name: "bash",
+							args: { command: "ls" },
+							status: "error",
+							durationMs: 12,
+							error: "ls: no such directory",
+						},
+						{ id: "c1/2", name: "read", status: "unfinished" },
+					],
+					complete: true,
+				},
+			},
+		});
+		const children = result.tools[0]?.children ?? [];
+		expect(children.map((run) => [run.toolName, run.status, run.output])).toEqual([
+			["bash", "error", "ls: no such directory"],
+			["read", "error", ""],
+		]);
+		// A live call still running at the settle is closed there, note and all.
+		const running = reduce(emptyConversation, {
+			t: "toolDelta",
+			toolCallId: "c1",
+			entryId: "a1",
+			toolName: "codemode",
+			status: "running",
+		});
+		const withChild = reduce(running, {
+			t: "toolDelta",
+			toolCallId: "c1/1",
+			parentToolCallId: "c1",
+			entryId: "a1",
+			toolName: "bash",
+			status: "running",
+		});
+		const settled = reduce(withChild, { t: "busy", busy: false });
+		expect(settled.tools[0]?.children[0]).toMatchObject({
+			note: "Not executed: the run ended before this tool finished.",
+			status: "error",
+		});
+	});
+
 	test("tool deltas replace the output instead of appending it", () => {
 		const first = reduce(emptyConversation, {
 			t: "toolDelta",
@@ -406,6 +495,18 @@ describe("reduce", () => {
 			hiddenThinkingLabel: "Pondering",
 		});
 		expect(reLabelled.hiddenThinkingLabel).toBe("Pondering");
+		const working = reduce(meta, {
+			t: "sessionMeta",
+			sessionId: "s1",
+			workingMessage: "Reading files",
+			workingVisible: false,
+		});
+		expect(working.workingMessage).toBe("Reading files");
+		expect(working.workingVisible).toBe(false);
+		// An extension's word can be taken back, which restores pi's own.
+		expect(
+			reduce(working, { t: "sessionMeta", sessionId: "s1", workingMessage: null }).workingMessage,
+		).toBeUndefined();
 		const drafted = reduce(meta, {
 			t: "editorText",
 			sessionId: "s1",
@@ -413,6 +514,23 @@ describe("reduce", () => {
 			nonce: "n1",
 		});
 		expect(drafted.draft).toEqual({ nonce: "n1", text: "back to here" });
+		// pi's paste adds to what is in the box; its set replaces it.
+		const appended = reduce(drafted, {
+			t: "editorText",
+			sessionId: "s1",
+			text: " and this",
+			nonce: "n2",
+			mode: "append",
+		});
+		expect(appended.draft).toEqual({ nonce: "n2", text: "back to here and this" });
+		const replaced = reduce(appended, {
+			t: "editorText",
+			sessionId: "s1",
+			text: "only this",
+			nonce: "n3",
+			mode: "replace",
+		});
+		expect(replaced.draft).toEqual({ nonce: "n3", text: "only this" });
 	});
 
 	test("a 50,000-row tree nests without recursion", () => {

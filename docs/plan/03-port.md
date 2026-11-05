@@ -87,17 +87,20 @@ One slice is one or more commits; each leaves the app running.
 ## Done when
 
 - [x] Every ledger row is ticked or carries the owner's dated yes to differ.
-- [ ] `src/domain/` and `src/app/` carry `main`'s tests for what they port.
+- [x] `src/domain/` and `src/app/` carry `main`'s tests for what they port.
       `mcp/tools.test.ts` and `providers/endpoints.test.ts` are ported
       (`domain/mcp/tools.test.ts`, `domain/providers/rules.test.ts`).
       `conversation/replay.test.ts` is partly covered: `domain/conversation/reduce.test.ts`
       replays recorded frame fixtures, and `test/translate.test.ts` covers entry
       translation, but nothing replays a whole pi session file through both.
-      `conversation/events.test.ts` and `conversation/display.test.ts` point at three
-      behaviours the branch has no counterpart for, and the owner asked for all of them
-      on 2026-11-05: an extension's draft writes into the composer (`setEditorText`,
-      `pasteToEditor`), `setWorkingMessage`/`setWorkingVisible`, and nested tool calls
-      drawn inside the parent codemode card. Two of their siblings are ported: a
-      `custom_message` entry is a row again (hidden when `display` is false), and a
-      settle closes a tool that never reported an end with "Not executed" — both with
-      tests.
+      `conversation/events.test.ts` and `conversation/display.test.ts` pointed at three
+      behaviours the branch had no counterpart for; the owner asked for all of them on
+      2026-11-05 and they are ported, with tests: an extension's draft writes into the
+      composer (`setEditorText` replaces, `pasteToEditor` appends), `setWorkingMessage`
+      and `setWorkingVisible` ride `sessionMeta`, and a `codemode` call's own calls draw
+      inside its card (live deltas and the record on its result). Two siblings from the
+      same files are ported too: a `custom_message` entry is a row again (hidden when
+      `display` is false), and a settle closes a tool that never reported an end with
+      "Not executed". The nested card's pixels are unphotographed: its card re-closed
+      under a late frame in the screenshot run, and the DOM probe plus the reducer and
+      translate tests are the evidence instead.
