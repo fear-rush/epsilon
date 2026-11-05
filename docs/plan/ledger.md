@@ -145,6 +145,8 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 The list's data is on the wire: `McpListView.reach` carries pi's two reaching rules
 (defaultTools, autoEnableCodemode, a disabled built-in, a project's own list) and the
 servers nothing can call, and `mcpDisabled` says pi's own MCP extension is off.
+The add flow's data layer is ported: `domain/mcp/import.ts` reads a config pasted from
+another client (all five wrappers, the kept keys, the refusals) with main's 21 tests.
 `settings.mcp.setDefaultTool` writes the home's list; `settings.mcp.command` runs
 `/mcp login|logout|reconnect` in a live chat. The server page is ported. What is left:
 the list pane with the master/detail layout, then the add flow (dialog, source, values,
