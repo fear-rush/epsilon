@@ -162,11 +162,12 @@ export const createUiContext = (host: UiHost): ExtensionUIContext => ({
 		);
 		return answer.kind === "input" ? answer.text : undefined;
 	},
-	// pi 1.4.0's `editor` takes no timeout or signal, and the wire has no editor dialog
-	// yet, so the extension gets no text instead of a question nobody can answer.
-	editor() {
-		host.unsupported("editor");
-		return Promise.resolve(undefined);
+	// pi 1.4.0's `editor` takes no timeout or signal, so the question is asked without
+	// either and the page's own Cancel closes it.
+	async editor(title, prefill) {
+		const question: DialogQuestion = { id: crypto.randomUUID(), kind: "editor", title };
+		const answer = await host.ask(prefill === undefined ? question : { ...question, prefill });
+		return answer.kind === "editor" ? answer.text : undefined;
 	},
 	notify(message, type) {
 		host.notice(message, type === undefined || type === "info" ? "notice" : type);

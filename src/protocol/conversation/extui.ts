@@ -2,7 +2,10 @@ import { Schema } from "effect";
 
 /**
  * An extension's question, as it arrives at the page. pi's handlers answer with a
- * confirmation, one of several choices, or a line of text.
+ * confirmation, one of several choices, a line of text, or a block of text.
+ *
+ * `deadlineAt` is the clock time the question closes at, so a tab that attaches late
+ * counts down from pi's deadline instead of from its own arrival.
  */
 export const DialogQuestion = Schema.Union([
 	Schema.Struct({
@@ -10,6 +13,7 @@ export const DialogQuestion = Schema.Union([
 		id: Schema.String,
 		title: Schema.String,
 		message: Schema.optional(Schema.String),
+		deadlineAt: Schema.optional(Schema.Finite),
 	}),
 	Schema.Struct({
 		kind: Schema.Literals(["select"]),
@@ -17,6 +21,7 @@ export const DialogQuestion = Schema.Union([
 		title: Schema.String,
 		message: Schema.optional(Schema.String),
 		options: Schema.Array(Schema.String),
+		deadlineAt: Schema.optional(Schema.Finite),
 	}),
 	Schema.Struct({
 		kind: Schema.Literals(["input"]),
@@ -24,6 +29,16 @@ export const DialogQuestion = Schema.Union([
 		title: Schema.String,
 		message: Schema.optional(Schema.String),
 		placeholder: Schema.optional(Schema.String),
+		deadlineAt: Schema.optional(Schema.Finite),
+	}),
+	Schema.Struct({
+		kind: Schema.Literals(["editor"]),
+		id: Schema.String,
+		title: Schema.String,
+		message: Schema.optional(Schema.String),
+		/** pi's `editor(title, prefill)`; the box opens with this text in it. */
+		prefill: Schema.optional(Schema.String),
+		deadlineAt: Schema.optional(Schema.Finite),
 	}),
 ]);
 
@@ -38,6 +53,7 @@ export const DialogAnswer = Schema.Union([
 	}),
 	Schema.Struct({ id: Schema.String, kind: Schema.Literals(["select"]), index: Schema.Finite }),
 	Schema.Struct({ id: Schema.String, kind: Schema.Literals(["input"]), text: Schema.String }),
+	Schema.Struct({ id: Schema.String, kind: Schema.Literals(["editor"]), text: Schema.String }),
 	/** A timeout, an abort or a closed engine. pi's default for the question kind. */
 	Schema.Struct({ id: Schema.String, kind: Schema.Literals(["cancelled"]) }),
 ]);

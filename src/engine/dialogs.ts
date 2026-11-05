@@ -1,4 +1,4 @@
-import { Deferred, Effect } from "effect";
+import { Clock, Deferred, Effect } from "effect";
 
 import type { DialogAnswer, DialogQuestion } from "#protocol/conversation/extui";
 import type { ServerFrame } from "#protocol/conversation/frames";
@@ -26,6 +26,7 @@ export const defaultAnswer = (question: DialogQuestion): DialogAnswer => {
 			return { id: question.id, kind: "confirm", confirmed: false };
 		case "select":
 		case "input":
+		case "editor":
 			return { id: question.id, kind: "cancelled" };
 		default: {
 			const unreachable: never = question;
@@ -77,22 +78,35 @@ export class Dialogs {
 	 */
 	ask(question: DialogQuestion, options: AskOptions = {}): Effect.Effect<DialogAnswer> {
 		if (options.signal?.aborted === true) return Effect.succeed(defaultAnswer(question));
-		const deferred = Deferred.makeUnsafe<DialogAnswer>();
-		this.pending.set(question.id, { closed: false, deferred, question });
-		this.emit({ t: "dialog", question });
-		this.changed();
+		const timeoutMs =
+			options.timeoutMs === undefined || options.timeoutMs <= 0 ? undefined : options.timeoutMs;
 
-		const answered = Deferred.await(deferred);
-		const timedOut =
-			options.timeoutMs === undefined || options.timeoutMs <= 0
-				? Effect.never
-				: Effect.sleep(options.timeoutMs).pipe(Effect.as(defaultAnswer(question)));
-		const aborted =
-			options.signal === undefined ? Effect.never : abortAnswer(options.signal, question);
+		/** Registers the question and returns the answer it settles with. */
+		const open = (deadlineAt: number | undefined): Effect.Effect<DialogAnswer> => {
+			// The page counts down from this clock time, so a tab that attaches late sees the
+			// time pi's own deadline has left instead of starting the count again.
+			const framed: DialogQuestion =
+				deadlineAt === undefined ? question : { ...question, deadlineAt };
+			const deferred = Deferred.makeUnsafe<DialogAnswer>();
+			this.pending.set(question.id, { closed: false, deferred, question: framed });
+			this.emit({ t: "dialog", question: framed });
+			this.changed();
 
-		return Effect.raceFirst(answered, Effect.raceFirst(timedOut, aborted)).pipe(
-			Effect.ensuring(Effect.sync(() => this.close(question.id))),
-		);
+			const answered = Deferred.await(deferred);
+			const timedOut =
+				timeoutMs === undefined
+					? Effect.never
+					: Effect.sleep(timeoutMs).pipe(Effect.as(defaultAnswer(question)));
+			const aborted =
+				options.signal === undefined ? Effect.never : abortAnswer(options.signal, question);
+
+			return Effect.raceFirst(answered, Effect.raceFirst(timedOut, aborted)).pipe(
+				Effect.ensuring(Effect.sync(() => this.close(question.id))),
+			);
+		};
+
+		if (timeoutMs === undefined) return open(undefined);
+		return Clock.currentTimeMillis.pipe(Effect.flatMap((now) => open(now + timeoutMs)));
 	}
 
 	/** The page's answer. A question that is no longer pending is refused, not ignored. */
@@ -101,6 +115,16 @@ export class Dialogs {
 		if (pending === undefined) {
 			return Effect.fail(
 				new CommandRefused({ command: "answerDialog", reason: "That dialog is no longer open." }),
+			);
+		}
+		// A stale tab answers with the kind it drew: a select value must not settle a
+		// confirmation, or the run continues on an answer nobody gave.
+		if (answer.kind !== "cancelled" && answer.kind !== pending.question.kind) {
+			return Effect.fail(
+				new CommandRefused({
+					command: "answerDialog",
+					reason: `That answer does not belong to a ${pending.question.kind} question.`,
+				}),
 			);
 		}
 		this.complete(pending, answer);

@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 
 import { transcript } from "#domain/conversation/selectors";
 import type { ConversationState } from "#domain/conversation/state";
+import type { DialogQuestion } from "#protocol/conversation/extui";
 import type { ImageBlock, Notice as NoticeFrame } from "#protocol/conversation/frames";
 import type { ModelOption } from "#protocol/conversation/session";
 import type { ContextView } from "#protocol/settings/context";
@@ -24,7 +25,7 @@ import { findSessionRow, useSessionList } from "@/features/sessions";
 
 import { ChatBar } from "./chat-bar";
 import { Composer } from "./composer";
-import { ConversationDialogs } from "./dialogs";
+import { ConfirmDialog, QuestionDialog } from "./dialogs";
 import { RunStatus } from "./run-status";
 import { SessionControls } from "./session-controls";
 import { ComposerPlace, PlaceBadge, SessionLoader } from "./session-header";
@@ -35,6 +36,9 @@ import { useConversation } from "./use-conversation";
 import { ConversationWelcome } from "./welcome";
 
 /** `project` names the folder of a project session; without it the page is a chat. */
+const isConfirm = (
+	question: DialogQuestion,
+): question is Extract<DialogQuestion, { kind: "confirm" }> => question.kind === "confirm";
 export function SessionView({
 	sessionId,
 	project,
@@ -121,6 +125,8 @@ export function Conversation({ sessionId, place }: { sessionId: string; place: s
 
 	const rows = transcript(state);
 	const empty = rows.length === 0;
+	const confirmations = state.dialogs.filter(isConfirm);
+	const questions = state.dialogs.filter((dialog) => !isConfirm(dialog));
 	const { blocked, cloning, openTree, openFork, clone, dialogs } = useBranching({
 		busy: state.busy,
 		conversation,
@@ -313,6 +319,20 @@ export function Conversation({ sessionId, place }: { sessionId: string; place: s
 					</Button>
 				</div>
 			)}
+			{questions.map((question) => (
+				<QuestionDialog
+					key={question.id}
+					question={question}
+					onAnswer={(answer) => void conversation.answer(answer)}
+				/>
+			))}
+			{confirmations.map((question) => (
+				<ConfirmDialog
+					key={question.id}
+					question={question}
+					onAnswer={(answer) => void conversation.answer(answer)}
+				/>
+			))}
 			{empty ? (
 				// A conversation opens on the box that starts it, not a card above a footer.
 				<ConversationWelcome
@@ -341,7 +361,6 @@ export function Conversation({ sessionId, place }: { sessionId: string; place: s
 					<div className="animate-enter-rise">{composer}</div>
 				</>
 			)}
-			<ConversationDialogs dialogs={state.dialogs} onAnswer={conversation.answer} />
 			{dialogs}
 		</div>
 	);
