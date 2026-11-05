@@ -13,7 +13,7 @@ import { useDraftForm } from "@/components/patterns/use-draft-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-import { useSettings, useSettingsProject, useSettingsRefresh } from "../queries.ts";
+import { useSettings, useSettingsProject, useSettingsRefresh, useSkillFiles } from "../queries.ts";
 import { removeSkill, saveSkill } from "./api.ts";
 import { SkillCard } from "./skill-card.tsx";
 import { skillFields, toDraft, toInput, validate } from "./skill-draft.ts";
@@ -25,6 +25,7 @@ import { SKILL_MODES, SKILLS_BACK } from "./skill-modes.ts";
 import type { SkillTab } from "./skill-modes.ts";
 import { SkillNotices } from "./skill-notices.tsx";
 import { SkillRaw } from "./skill-raw.tsx";
+import { useSkillLinks } from "./skill-references.ts";
 import { useSkillToggle } from "./skill-status.ts";
 
 /**
@@ -94,6 +95,21 @@ export function SkillForm({
 		},
 	});
 	const toggle = useSkillToggle();
+	const links = useSkillLinks();
+	/** The folder's files, which the editor links against and a preview link can open. */
+	const fileList = useSkillFiles(root, file?.name ?? "");
+	const filePaths = fileList.data?.files.map((entry) => entry.path);
+	const references = {
+		skillExists: links.exists,
+		openSkill: links.open,
+		openFile: (path: string) => {
+			if (filePaths?.includes(path) !== true) return;
+			// The raw view opens that file; unsaved text there still asks first.
+			setRawPath(path);
+			if (tab === "raw" && rawDirty.current) setPendingTab("raw");
+			else setTab("raw");
+		},
+	};
 
 	const submit = (): void => {
 		const found = validate(draft, creating, taken);
@@ -154,7 +170,12 @@ export function SkillForm({
 					<>
 						<SkillCard draft={draft} errors={errors} creating={creating} update={update} />
 
-						<SkillInstructions value={draft.body} onChange={(body) => update({ body })} />
+						<SkillInstructions
+							value={draft.body}
+							onChange={(body) => update({ body })}
+							files={filePaths}
+							references={references}
+						/>
 
 						{!creating && (
 							<Section
