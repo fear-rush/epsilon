@@ -21,14 +21,16 @@ test("an untrusted project folder is gated, then a chat runs in it", async ({
 
 	const dialog = page.getByRole("dialog");
 	await expect(dialog).toBeVisible();
+	// One click walks into the folder, the footer opens the one it stopped in.
 	await dialog.getByRole("button", { name: "gated-project" }).click();
 	await dialog.getByRole("button", { name: "Use this folder" }).click();
 
-	await expect(page.getByText("This folder is not trusted")).toBeVisible();
+	// A folder with its own .pi resources waits for the decision, with no composer to type in.
+	await expect(page.getByText("Trust gated-project?")).toBeVisible();
 	const composer = page.getByRole("textbox", { name: /message/i });
 	await expect(composer).toHaveCount(0);
 
-	await page.getByRole("button", { name: "Trust this folder" }).click();
+	await page.getByRole("button", { name: "Trust folder" }).click();
 	await expect(composer).toBeVisible();
 
 	await composer.fill("hello from the project");

@@ -17,18 +17,22 @@ test("a zipped skill is imported through the wizard", async ({ app, page }) => {
 	await page.getByRole("button", { name: "App menu" }).click();
 	await page.getByRole("menuitem", { name: /skills/i }).click();
 
-	await page.getByRole("button", { name: /import/i }).click();
+	await page.getByRole("button", { name: /^import$/i }).click();
 	const dialog = page.getByRole("dialog");
 	await expect(dialog).toBeVisible();
 
+	// The source step picks a folder, an archive or a pasted `skills add` line.
+	await dialog.getByRole("tab", { name: /archive/i }).click();
 	await dialog.locator('input[accept*="zip"]').setInputFiles({
 		buffer: Buffer.from(archive),
 		mimeType: "application/zip",
 		name: "skills.zip",
 	});
 
+	// The archive is staged, then reviewed: the wizard shows what it would install.
+	await dialog.getByRole("button", { name: /^continue$/i }).click();
 	await expect(dialog.getByText("test-skill", { exact: true }).first()).toBeVisible();
-	await dialog.getByRole("button", { name: /install 1/i }).click();
+	await dialog.getByRole("button", { name: /^install$/i }).click();
 
 	// The dialog closes and the list reads the new skill from the home.
 	await expect(dialog).toBeHidden();
