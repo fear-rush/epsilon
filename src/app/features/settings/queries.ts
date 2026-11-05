@@ -32,6 +32,19 @@ export const settingsQuery = (project: string | undefined) =>
 	});
 
 /**
+ * Everything pi loads for the folder before the model answers, plus what an open chat
+ * adds. It is read beside the Settings snapshot, not from it, because a section that
+ * needs it alone must not parse every other file.
+ */
+export const contextQuery = (project: string | undefined) =>
+	queryOptions({
+		queryKey: settingsKeys.context(project),
+		queryFn: ({ signal }) =>
+			call((client) => client["settings.context.read"]({ folder: project ?? null }), { signal }),
+		staleTime: SETTINGS_STALE_MS,
+	});
+
+/**
  * The project the resource sections show beside the agent home, from the Settings URL,
  * or undefined for Global. Every settings read and write passes it on.
  */

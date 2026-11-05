@@ -6,6 +6,7 @@ const all = ["config", "settings"] as const;
 
 export const settingsKeys = {
 	all,
+	context: (project: string | undefined) => [...all, "context", project ?? null] as const,
 	snapshot: (project: string | undefined) => [...all, "snapshot", project ?? null] as const,
 	packageResources: (project: string | undefined, scope: string, source: string) =>
 		[...all, "package-resources", project ?? null, scope, source] as const,

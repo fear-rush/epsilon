@@ -14,19 +14,19 @@ names; it is a hint, not a verdict. A file that exists on the branch stays untic
 
 URLs are part of the UI: a bookmark to main's page opens the same page here.
 
-| Done | main route                                                                          | Branch today           |
-| ---- | ----------------------------------------------------------------------------------- | ---------------------- |
-| [ ]  | `/`                                                                                 | exists                 |
-| [ ]  | `/sessions/$sessionId`                                                              | exists                 |
-| [ ]  | `/settings`                                                                         | exists                 |
-| [ ]  | `/settings/general`                                                                 | exists                 |
-| [ ]  | `/settings/context`                                                                 | exists (flat file)     |
-| [ ]  | `/settings/context/$section`                                                        | **missing**            |
-| [ ]  | `/settings/mcp`                                                                     | exists (145-line stub) |
-| [ ]  | `/settings/mcp/$scope/$name`                                                        | **missing**            |
-| [ ]  | `/settings/packages`, `/settings/packages/$scope/$source`                           | exists                 |
-| [ ]  | `/settings/providers`, `/settings/providers/new`, `/settings/providers/$providerId` | exists                 |
-| [ ]  | `/settings/skills`, `/settings/skills/new`, `/settings/skills/$name`                | exists                 |
+| Done | main route                                                                          | Branch today                           |
+| ---- | ----------------------------------------------------------------------------------- | -------------------------------------- |
+| [ ]  | `/`                                                                                 | exists                                 |
+| [ ]  | `/sessions/$sessionId`                                                              | exists                                 |
+| [ ]  | `/settings`                                                                         | exists                                 |
+| [ ]  | `/settings/general`                                                                 | exists                                 |
+| [x]  | `/settings/context`                                                                 | `feat(settings): the context sections` |
+| [x]  | `/settings/context/$section`                                                        | `feat(settings): the context sections` |
+| [ ]  | `/settings/mcp`                                                                     | exists (145-line stub)                 |
+| [ ]  | `/settings/mcp/$scope/$name`                                                        | **missing**                            |
+| [ ]  | `/settings/packages`, `/settings/packages/$scope/$source`                           | exists                                 |
+| [ ]  | `/settings/providers`, `/settings/providers/new`, `/settings/providers/$providerId` | exists                                 |
+| [ ]  | `/settings/skills`, `/settings/skills/new`, `/settings/skills/$name`                | exists                                 |
 
 Branch-only routes `/settings/projects` and `/settings/diagnostics` stay; they must use
 main's settings layout and patterns, and they get rows in S8 when touched.
@@ -280,15 +280,16 @@ that replacement, not missing markup.
 
 ## S7 Settings: Context
 
-| Done | main file (`client/src/…`)                      | Lines | Branch today | Missing exports                                                                                                                  |
-| ---- | ----------------------------------------------- | ----- | ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| [ ]  | `features/settings/context/context-detail.tsx`  | 88    | **missing**  | `ContextSectionPage`                                                                                                             |
-| [ ]  | `features/settings/context/context-pages.tsx`   | 284   | **missing**  | `ContextExtensions`, `ContextFiles`, `ContextPackages`, `ContextPrompts`, `ContextSkills`, `ContextSystemPrompt`, `ContextTools` |
-| [ ]  | `features/settings/context/context-panel.tsx`   | 87    | **missing**  | `ContextLayout`                                                                                                                  |
-| [ ]  | `features/settings/context/context-sections.ts` | 123   | **missing**  | `CONTEXT_SECTIONS`, `contextSection`, `ContextSection`, `ContextSectionId`, `counted`                                            |
+| Done | main file (`client/src/…`)                      | Lines | Branch today                                          | Missing exports                                                                                                                  |
+| ---- | ----------------------------------------------- | ----- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| [x]  | `features/settings/context/context-detail.tsx`  | 88    | `feat(settings): the context sections` (photographed) | `ContextSectionPage`                                                                                                             |
+| [x]  | `features/settings/context/context-pages.tsx`   | 284   | `feat(settings): the context sections` (photographed) | `ContextExtensions`, `ContextFiles`, `ContextPackages`, `ContextPrompts`, `ContextSkills`, `ContextSystemPrompt`, `ContextTools` |
+| [x]  | `features/settings/context/context-panel.tsx`   | 87    | `feat(settings): the context sections` (photographed) | `ContextLayout`                                                                                                                  |
+| [x]  | `features/settings/context/context-sections.ts` | 123   | `feat(settings): the context sections` (photographed) | `CONTEXT_SECTIONS`, `contextSection`, `ContextSection`, `ContextSectionId`, `counted`                                            |
 
-The context read has the fault `3929b8a` fixed for skills: on Global it asks for a live
-engine in `.epsilon`, where no chat runs. Check it with the backend when this slice starts.
+The context read had the fault `3929b8a` fixed for skills: on Global it asked for a live
+engine in `.epsilon`, where no chat runs. Fixed with its test in
+`fix(settings): a home chat's context is read where it runs`.
 
 ## S8 Settings: General, Packages, shell
 
