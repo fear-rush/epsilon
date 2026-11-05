@@ -11,6 +11,8 @@ import type {
 	ProviderModelInput,
 	ProviderModelsView,
 	ProviderRow,
+	ProviderTestInput,
+	ProviderTestResult,
 	ProvidersView,
 } from "#protocol/settings/providers";
 
@@ -20,6 +22,7 @@ import type { LogApi } from "../../platform/log.ts";
 import { PiConfig } from "../../platform/pi.ts";
 import type { ModelRuntime } from "../../platform/pi.ts";
 import { importModelsFor } from "./import.ts";
+import { testProvider } from "./probe.ts";
 import { ProvidersStore } from "./store.ts";
 import type { ProvidersStoreApi } from "./store.ts";
 
@@ -42,6 +45,8 @@ export type ProvidersServiceApi = {
 	readonly import: (
 		input: ProviderImportInput,
 	) => Effect.Effect<ReadonlyArray<ProviderModelInput>, ProviderRefused>;
+	/** One draft's model, tried through pi's client before the entry is saved. */
+	readonly test: (input: ProviderTestInput) => Effect.Effect<ProviderTestResult, ProviderRefused>;
 };
 
 export class ProvidersService extends Context.Service<ProvidersService, ProvidersServiceApi>()(
@@ -231,6 +236,15 @@ export const makeProvidersService = (deps: {
 				Effect.flatMap((runtime) => importModelsFor(runtime, deps.store, input)),
 			);
 
+		const test: ProvidersServiceApi["test"] = (input) =>
+			Effect.gen(function* () {
+				const authHeader =
+					input.providerId === undefined
+						? false
+						: (yield* deps.store.read(input.providerId)).stored.authHeader === true;
+				return yield* testProvider(input, { authHeader, runtime: deps.runtime });
+			});
+
 		return {
 			import: importModels,
 			list,
@@ -239,6 +253,7 @@ export const makeProvidersService = (deps: {
 			remove: deps.store.remove,
 			save: deps.store.save,
 			setApiKey: deps.store.setApiKey,
+			test,
 		} satisfies ProvidersServiceApi;
 	});
 

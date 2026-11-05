@@ -405,6 +405,12 @@ export const ProviderImportResult = Schema.Struct({
 });
 export type ProviderImportResult = typeof ProviderImportResult.Type;
 
+/** What a provider test reports: one sentence the page shows above the form. */
+export const ProviderTestResult = Schema.Struct({
+	message: Schema.String,
+});
+export type ProviderTestResult = typeof ProviderTestResult.Type;
+
 export const ProviderRpcs = RpcGroup.make(
 	Rpc.make("settings.providers.list", {
 		success: ProvidersView,
@@ -435,6 +441,11 @@ export const ProviderRpcs = RpcGroup.make(
 	Rpc.make("settings.providers.import", {
 		payload: ProviderImportInput,
 		success: ProviderImportResult,
+		error: ProviderRefused,
+	}),
+	Rpc.make("settings.providers.test", {
+		payload: ProviderTestInput,
+		success: ProviderTestResult,
 		error: ProviderRefused,
 	}),
 );

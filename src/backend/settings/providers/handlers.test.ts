@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { BunServices } from "@effect/platform-bun";
-import { Effect, Layer, Ref, Schema } from "effect";
+import { Effect, Layer, Option, Ref, Schema } from "effect";
 
 import { ProviderRefused } from "#protocol/errors";
 import { ProviderRpcs } from "#protocol/settings/providers";
@@ -59,6 +59,61 @@ const Entry = Schema.StructWithRest(
 );
 
 const ModelsFile = Schema.Struct({ providers: Schema.Record(Schema.String, Entry) });
+
+/** The two request fields these tests read. */
+const RequestBody = Schema.Struct({
+	model: Schema.optional(Schema.String),
+	reasoning_effort: Schema.optional(Schema.String),
+});
+
+/** One assistant turn, as every OpenAI-compatible endpoint streams it. */
+const streamOf = (chunks: ReadonlyArray<unknown>): string =>
+	[...chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`), "data: [DONE]\n\n"].join("");
+
+const openaiStream = (): string =>
+	streamOf([
+		{
+			choices: [{ delta: { content: "ok", role: "assistant" }, finish_reason: null, index: 0 }],
+			created: 0,
+			id: "chatcmpl-test",
+			model: "m",
+			object: "chat.completion.chunk",
+		},
+		{
+			choices: [{ delta: {}, finish_reason: "stop", index: 0 }],
+			created: 0,
+			id: "chatcmpl-test",
+			model: "m",
+			object: "chat.completion.chunk",
+			usage: { completion_tokens: 1, prompt_tokens: 3, total_tokens: 4 },
+		},
+	]);
+
+const reasoningStream = (): string =>
+	streamOf([
+		{
+			choices: [
+				{ delta: { reasoning_content: "abc", role: "assistant" }, finish_reason: null, index: 0 },
+			],
+			created: 0,
+			id: "chatcmpl-test",
+			model: "m",
+			object: "chat.completion.chunk",
+		},
+		{
+			choices: [{ delta: { content: "ok" }, finish_reason: "stop", index: 0 }],
+			created: 0,
+			id: "chatcmpl-test",
+			model: "m",
+			object: "chat.completion.chunk",
+			usage: {
+				completion_tokens: 8,
+				completion_tokens_details: { reasoning_tokens: 7 },
+				prompt_tokens: 3,
+				total_tokens: 11,
+			},
+		},
+	]);
 
 const readFile = (path: string) =>
 	Schema.decodeUnknownSync(ModelsFile)(JSON.parse(readFileSync(path, "utf8")));
@@ -476,6 +531,163 @@ describe("settings.providers", () => {
 				);
 				expect(declined).toBeInstanceOf(ProviderRefused);
 				expect(declined.reason).toContain("no shared model list");
+			}).pipe(Effect.scoped, Effect.provide(layer));
+		},
+		15000,
+	);
+
+	itEffect(
+		"tests the unsaved draft with its key and again without one",
+		() => {
+			const { agentDir, layer } = providerLayer("test");
+			writeStubModels(agentDir, "http://127.0.0.1:1");
+			const seen: Array<{
+				readonly path: string;
+				readonly authorization: string | null;
+				readonly draft: string | null;
+				readonly model: unknown;
+			}> = [];
+			return Effect.gen(function* () {
+				const server = yield* Effect.acquireRelease(
+					Effect.sync(() =>
+						Bun.serve({
+							async fetch(request) {
+								const body = Schema.decodeUnknownOption(RequestBody)(await request.json());
+								seen.push({
+									authorization: request.headers.get("authorization"),
+									draft: request.headers.get("x-draft"),
+									model: Option.isSome(body) ? body.value.model : undefined,
+									path: new URL(request.url).pathname,
+								});
+								return new Response(openaiStream(), {
+									headers: { "content-type": "text/event-stream" },
+								});
+							},
+							port: 0,
+						}),
+					),
+					(open) =>
+						Effect.sync(() => {
+							void open.stop(true);
+						}),
+				);
+				const client = yield* testClient(ProviderRpcs, ProvidersHandlersLive);
+				const result = yield* client["settings.providers.test"]({
+					api: "openai-completions",
+					apiKey: "typed-key",
+					baseUrl: `${server.url.origin}/v1`,
+					headers: { "X-Draft": "yes" },
+					model: { id: "m" },
+					providerId: "draft",
+				});
+				expect(result.message).toContain("Reached draft/m with the typed key");
+				expect(result.message).toContain("also answers without a key");
+				expect(seen).toHaveLength(2);
+				const keyed = seen.find((request) => request.authorization === "Bearer typed-key");
+				const keyless = seen.find((request) => request.authorization === null);
+				expect(keyed?.path).toBe("/v1/chat/completions");
+				expect(keyed?.draft).toBe("yes");
+				expect(keyed?.model).toBe("m");
+				expect(keyless?.path).toBe("/v1/chat/completions");
+				expect(keyless?.draft).toBe("yes");
+			}).pipe(Effect.scoped, Effect.provide(layer));
+		},
+		15000,
+	);
+
+	itEffect(
+		"tests a level, reporting the reasoning field and tokens it sent",
+		() => {
+			const { agentDir, layer } = providerLayer("test-level");
+			writeStubModels(agentDir, "http://127.0.0.1:1");
+			let effort: unknown;
+			return Effect.gen(function* () {
+				const server = yield* Effect.acquireRelease(
+					Effect.sync(() =>
+						Bun.serve({
+							async fetch(request) {
+								const body = Schema.decodeUnknownOption(RequestBody)(await request.json());
+								effort = Option.isSome(body) ? body.value.reasoning_effort : undefined;
+								return new Response(reasoningStream(), {
+									headers: { "content-type": "text/event-stream" },
+								});
+							},
+							port: 0,
+						}),
+					),
+					(open) =>
+						Effect.sync(() => {
+							void open.stop(true);
+						}),
+				);
+				const client = yield* testClient(ProviderRpcs, ProvidersHandlersLive);
+				const result = yield* client["settings.providers.test"]({
+					api: "openai-completions",
+					apiKey: "typed-key",
+					baseUrl: `${server.url.origin}/v1`,
+					level: "high",
+					model: { id: "m", reasoning: true },
+					providerId: "draft",
+				});
+				expect(result.message).toContain("at high");
+				expect(result.message).toContain("7 reasoning tokens");
+				expect(effort).toBe("high");
+			}).pipe(Effect.scoped, Effect.provide(layer));
+		},
+		15000,
+	);
+
+	itEffect(
+		"refuses a key with a space, and a key that the provider rejects",
+		() => {
+			const { agentDir, layer } = providerLayer("test-key");
+			writeStubModels(agentDir, "http://127.0.0.1:1");
+			return Effect.gen(function* () {
+				const server = yield* Effect.acquireRelease(
+					Effect.sync(() =>
+						Bun.serve({
+							fetch(request) {
+								if (request.headers.get("authorization") === null) {
+									return new Response(openaiStream(), {
+										headers: { "content-type": "text/event-stream" },
+									});
+								}
+								return new Response(JSON.stringify({ error: { message: "bad key" } }), {
+									headers: { "content-type": "application/json" },
+									status: 401,
+								});
+							},
+							port: 0,
+						}),
+					),
+					(open) =>
+						Effect.sync(() => {
+							void open.stop(true);
+						}),
+				);
+				const client = yield* testClient(ProviderRpcs, ProvidersHandlersLive);
+				const spaced = yield* Effect.flip(
+					client["settings.providers.test"]({
+						api: "openai-completions",
+						apiKey: "secret key",
+						baseUrl: `${server.url.origin}/v1`,
+						model: { id: "m" },
+						providerId: "draft",
+					}),
+				);
+				expect(spaced).toBeInstanceOf(ProviderRefused);
+				expect(spaced.reason).toContain("cannot contain spaces");
+				// A key that fails is an error even though the endpoint answers keyless.
+				const rejected = yield* Effect.flip(
+					client["settings.providers.test"]({
+						api: "openai-completions",
+						apiKey: "wrong",
+						baseUrl: `${server.url.origin}/v1`,
+						model: { id: "m" },
+						providerId: "draft",
+					}),
+				);
+				expect(rejected.reason).toContain("failed with the typed key");
 			}).pipe(Effect.scoped, Effect.provide(layer));
 		},
 		15000,

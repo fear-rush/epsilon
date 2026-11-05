@@ -84,7 +84,11 @@ export const forkSession = (sourceFile: string, targetCwd: string, home: AgentHo
 /** pi's own types, re-exported so no other backend file imports the package. */
 export type { SettingsManager } from "@earendil-works/pi-coding-agent";
 export type { ModelRuntime } from "@earendil-works/pi-coding-agent";
-export type { PackageSource, ResolvedPaths } from "@earendil-works/pi-coding-agent";
+export type {
+	PackageSource,
+	ProviderModelConfig,
+	ResolvedPaths,
+} from "@earendil-works/pi-coding-agent";
 export type {
 	LoadSkillsResult,
 	PathMetadata,
