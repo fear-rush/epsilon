@@ -1,4 +1,4 @@
-import type { ProviderInput } from "#protocol/settings/providers";
+import type { ProviderImportInput, ProviderInput } from "#protocol/settings/providers";
 import { call } from "@/core/runtime";
 
 export const readProvider = (id: string) =>
@@ -12,6 +12,9 @@ export const removeProvider = (id: string) =>
 
 export const setProviderKey = (id: string, apiKey: string) =>
 	call((client) => client["settings.providers.setApiKey"]({ apiKey, id }));
+
+export const importProviderModels = (input: ProviderImportInput) =>
+	call((client) => client["settings.providers.import"](input));
 
 export const answerProviderLogin = (providerId: string, promptId: string, value: string) =>
 	call((client) => client["settings.providers.answerLogin"]({ promptId, providerId, value }));

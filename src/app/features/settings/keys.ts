@@ -15,4 +15,6 @@ export const settingsKeys = {
 		[...all, "mcp-registry-search", source, q] as const,
 	mcpRegistryServer: (source: string, name: string | undefined) =>
 		[...all, "mcp-registry-server", source, name ?? ""] as const,
+	providerModels: (providerId: string | undefined, baseUrl: string, api: string, apiKey: string) =>
+		[...all, "provider-models", providerId ?? "", baseUrl, api, apiKey] as const,
 };

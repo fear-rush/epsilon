@@ -400,6 +400,88 @@ describe("settings.providers", () => {
 	);
 
 	itEffect(
+		"imports a gateway's model list, once per id, with the draft's key",
+		() => {
+			const { agentDir, file, layer } = providerLayer("import");
+			writeStubModels(agentDir, "http://127.0.0.1:1");
+			const requests: Array<{ readonly headers: Headers; readonly path: string }> = [];
+			return Effect.gen(function* () {
+				const server = yield* Effect.acquireRelease(
+					Effect.sync(() =>
+						Bun.serve({
+							fetch(request) {
+								const url = new URL(request.url);
+								requests.push({ headers: request.headers, path: url.pathname });
+								if (url.pathname !== "/v1/models") {
+									return new Response("not found", { status: 404 });
+								}
+								return Response.json({
+									data: [
+										{ id: "alpha" },
+										{ id: "alpha" },
+										{ id: "beta", name: "Beta", supported_endpoints: ["/messages"] },
+									],
+								});
+							},
+							port: 0,
+						}),
+					),
+					(open) =>
+						Effect.sync(() => {
+							void open.stop(true);
+						}),
+				);
+				const baseUrl = `${server.url.origin}/v1`;
+				// The entry's `authHeader` decides whether the typed key travels as a bearer.
+				writeFileSync(
+					file,
+					`${JSON.stringify(
+						{
+							providers: {
+								gw: {
+									api: "openai-completions",
+									authHeader: true,
+									baseUrl,
+									models: [{ id: "alpha" }],
+								},
+							},
+						},
+						null,
+						2,
+					)}\n`,
+				);
+				const client = yield* testClient(ProviderRpcs, ProvidersHandlersLive);
+				const imported = yield* client["settings.providers.import"]({
+					api: "openai-completions",
+					apiKey: "typed-key",
+					baseUrl,
+					providerId: "gw",
+				});
+				expect(requests[0]?.headers.get("authorization")).toBe("Bearer typed-key");
+				// The list is read once per id, in its own order.
+				expect(imported.models.map((model) => model.id)).toEqual(["alpha", "beta"]);
+				// A model the gateway serves only through Anthropic Messages gets that family
+				// and the base above its `/v1`.
+				expect(imported.models[1]).toMatchObject({
+					api: "anthropic-messages",
+					baseUrl: server.url.origin,
+					name: "Beta",
+				});
+				// Google's list is a different shape, so the panel asks for those by hand.
+				const declined = yield* Effect.flip(
+					client["settings.providers.import"]({
+						api: "google-generative-ai",
+						baseUrl,
+					}),
+				);
+				expect(declined).toBeInstanceOf(ProviderRefused);
+				expect(declined.reason).toContain("no shared model list");
+			}).pipe(Effect.scoped, Effect.provide(layer));
+		},
+		15000,
+	);
+
+	itEffect(
 		"removes one provider and keeps the others",
 		() => {
 			const { agentDir, file, layer } = providerLayer("remove");

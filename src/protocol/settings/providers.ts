@@ -387,6 +387,24 @@ export const ProviderInput = Schema.Struct({
 });
 export type ProviderInput = typeof ProviderInput.Type;
 
+/**
+ * Reading a provider's model list. The endpoint is the provider's, and the key is the
+ * one typed in the form or the credential the home already stores.
+ */
+export const ProviderImportInput = Schema.Struct({
+	/** Reuses the stored credential when `apiKey` is empty. */
+	providerId: Schema.optional(Schema.String),
+	baseUrl: Schema.String,
+	api: ProviderApi,
+	apiKey: Schema.optional(Schema.String),
+});
+export type ProviderImportInput = typeof ProviderImportInput.Type;
+
+export const ProviderImportResult = Schema.Struct({
+	models: Schema.Array(ProviderModelInput),
+});
+export type ProviderImportResult = typeof ProviderImportResult.Type;
+
 export const ProviderRpcs = RpcGroup.make(
 	Rpc.make("settings.providers.list", {
 		success: ProvidersView,
@@ -412,6 +430,11 @@ export const ProviderRpcs = RpcGroup.make(
 	Rpc.make("settings.providers.setApiKey", {
 		payload: { id: Schema.String, apiKey: Schema.String },
 		success: Schema.Void,
+		error: ProviderRefused,
+	}),
+	Rpc.make("settings.providers.import", {
+		payload: ProviderImportInput,
+		success: ProviderImportResult,
 		error: ProviderRefused,
 	}),
 );

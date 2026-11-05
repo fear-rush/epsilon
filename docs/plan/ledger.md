@@ -55,6 +55,7 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | [ ]  | `DELETE /api/projects/sessions` (delete a project's chats)                    | S3        | **missing**                                                                         |
 | [x]  | `PUT /api/settings/mcp/default-tool`                                          | S4        | `feat(settings): the MCP default tool` (`settings.mcp.setDefaultTool`)              |
 | [x]  | `POST /api/settings/mcp/command`                                              | S4        | `feat(settings): the MCP sign-in line` (`settings.mcp.command`)                     |
+| [x]  | `POST /api/settings/providers/models` (read a provider's model list)          | S5        | `feat(settings): the model import` (`settings.providers.import`)                    |
 | [ ]  | `POST /api/settings/providers/test`                                           | S5        | **missing**                                                                         |
 | [ ]  | `POST /api/settings/providers/{id}/logout` (through `ModelRuntime.logout()`)  | S5        | **missing**                                                                         |
 | [ ]  | `POST /api/settings/skills/folders/link`, `…/unlink`                          | S6        | verify                                                                              |

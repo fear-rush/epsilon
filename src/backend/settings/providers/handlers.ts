@@ -18,6 +18,8 @@ export const ProvidersHandlersLive = ProviderRpcs.toLayer(
 			"settings.providers.remove": ({ id }) => providers.remove(id),
 			"settings.providers.save": (input) => providers.save(input),
 			"settings.providers.setApiKey": ({ id, apiKey }) => providers.setApiKey(id, apiKey),
+			"settings.providers.import": (input) =>
+				providers.import(input).pipe(Effect.map((models) => ({ models }))),
 		};
 	}),
 );

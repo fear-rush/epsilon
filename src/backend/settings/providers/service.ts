@@ -6,7 +6,9 @@ import { ProviderCatalogModel } from "#protocol/settings/providers";
 import type {
 	ProviderCatalogModel as CatalogModel,
 	ProviderDetail,
+	ProviderImportInput,
 	ProviderInput,
+	ProviderModelInput,
 	ProviderModelsView,
 	ProviderRow,
 	ProvidersView,
@@ -17,6 +19,7 @@ import { Log } from "../../platform/log.ts";
 import type { LogApi } from "../../platform/log.ts";
 import { PiConfig } from "../../platform/pi.ts";
 import type { ModelRuntime } from "../../platform/pi.ts";
+import { importModelsFor } from "./import.ts";
 import { ProvidersStore } from "./store.ts";
 import type { ProvidersStoreApi } from "./store.ts";
 
@@ -35,6 +38,10 @@ export type ProvidersServiceApi = {
 	readonly save: (input: ProviderInput) => Effect.Effect<void, ProviderRefused>;
 	readonly remove: (id: string) => Effect.Effect<void, ProviderRefused>;
 	readonly setApiKey: (id: string, apiKey: string) => Effect.Effect<void, ProviderRefused>;
+	/** The provider's own model list, read over the web with the key or the credential. */
+	readonly import: (
+		input: ProviderImportInput,
+	) => Effect.Effect<ReadonlyArray<ProviderModelInput>, ProviderRefused>;
 };
 
 export class ProvidersService extends Context.Service<ProvidersService, ProvidersServiceApi>()(
@@ -212,7 +219,20 @@ export const makeProvidersService = (deps: {
 				} satisfies ProviderDetail;
 			});
 
+		const importModels: ProvidersServiceApi["import"] = (input) =>
+			deps.runtime.pipe(
+				Effect.mapError(
+					(error) =>
+						new ProviderRefused({
+							providerId: input.providerId ?? input.baseUrl,
+							reason: `pi could not compose its catalog: ${error.reason}`,
+						}),
+				),
+				Effect.flatMap((runtime) => importModelsFor(runtime, deps.store, input)),
+			);
+
 		return {
+			import: importModels,
 			list,
 			models,
 			read,
