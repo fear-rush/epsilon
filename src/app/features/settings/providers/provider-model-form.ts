@@ -376,14 +376,24 @@ export const valueOf = (form: ModelForm, providerApi: ProviderApi | undefined): 
  */
 export const completeModelOf = (model: ModelValue): ProviderModelInput => {
 	const cost = model.cost;
+	// `modelFieldErrors` allows a model with no rates at all: `models.json` omits `cost`
+	// for one, and pi prices it as free. Only a partly filled set is a bug.
 	if (
-		cost?.input === undefined ||
+		cost?.input === undefined &&
+		cost?.output === undefined &&
+		cost?.cacheRead === undefined &&
+		cost?.cacheWrite === undefined
+	) {
+		const { cost: _omitted, ...rest } = model;
+		return rest;
+	}
+	if (
+		cost.input === undefined ||
 		cost.output === undefined ||
 		cost.cacheRead === undefined ||
 		cost.cacheWrite === undefined
 	) {
-		// `modelFieldErrors` refuses a model entry without all four rates, so this is a bug.
-		throw new Error("A model entry needs all four cost rates.");
+		throw new Error("A model entry needs all four cost rates, or none of them.");
 	}
 	const complete: Mutable<NonNullable<ProviderModelInput["cost"]>> = {
 		cacheRead: cost.cacheRead,

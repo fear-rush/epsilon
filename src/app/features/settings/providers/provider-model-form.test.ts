@@ -7,7 +7,7 @@ import { expect, test } from "bun:test";
 
 import type { ProviderModelInput } from "#protocol/settings/providers";
 
-import { formOf, overrideOf, touchedBy, valueOf } from "./provider-model-form";
+import { completeModelOf, formOf, overrideOf, touchedBy, valueOf } from "./provider-model-form";
 
 /** pi 1.4.0's `openai/gpt-5`, as the provider detail now carries it. */
 const shipped: ProviderModelInput = {
@@ -134,4 +134,37 @@ test("an override can name one cost rate", () => {
 		touchedBy(new Set(), { costInput: "1" }),
 	);
 	expect(saved.cost).toEqual({ input: 1 });
+});
+
+/**
+ * A model a provider defines itself often has no rates: pi prices a model without a
+ * `cost` as free, and `models.json` omits the block. The dialog allows leaving all four
+ * empty, so the payload has to allow it too — it used to throw, which closed nothing and
+ * left the model dialog open with no error on screen.
+ */
+test("a model with no cost rates saves without a cost block", () => {
+	const form = formOf(undefined, undefined);
+	const saved = completeModelOf(valueOf({ ...form, id: "stub-model" }, undefined));
+
+	expect(saved.id).toBe("stub-model");
+	expect(saved.cost).toBeUndefined();
+});
+
+test("a model with all four rates saves them as pi reads them", () => {
+	const form = formOf(undefined, undefined);
+	const saved = completeModelOf(
+		valueOf(
+			{
+				...form,
+				costCacheRead: "0.1",
+				costCacheWrite: "0",
+				costInput: "1",
+				costOutput: "2",
+				id: "stub-model",
+			},
+			undefined,
+		),
+	);
+
+	expect(saved.cost).toEqual({ cacheRead: 0.1, cacheWrite: 0, input: 1, output: 2 });
 });

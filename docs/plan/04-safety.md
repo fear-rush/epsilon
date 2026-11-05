@@ -35,7 +35,7 @@ keys); the index conformance test against `SessionManager.listAll`
       and keeps the newest").
 - [ ] **e2e**: `bun run test:e2e` passes all specs in `test/e2e/`. Record the duration.
       Ran 2026-11-05: **8 passed, 7 failed in 32.7 s** (with the build, 35 s wall); after
-      rewriting two flows, **10 passed, 5 failed in 32.7 s**. They are
+      the work below, **11 passed, 4 failed in 32.9 s**. They are
       stale selectors against the rebuilt UI, not crashes. Verified: `onboarding.e2e.ts`
       waits for a link named "add provider" while `providers-panel.tsx` renders a button.
       `controls.e2e.ts` times out clicking in the tree, compact and fork dialogs;
