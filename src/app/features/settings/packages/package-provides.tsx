@@ -51,8 +51,12 @@ export function PackageProvides({
 								>
 									{group.key === "skills" && (
 										<Link
-											to="/settings/skills"
-											search={(previous) => previous}
+											to="/settings/skills/$name"
+											params={{ name: entry.name }}
+											search={(previous) => ({
+												...previous,
+												path: entry.path,
+											})}
 											className={buttonVariants({ variant: "ghost", size: "sm" })}
 										>
 											Open

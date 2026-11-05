@@ -41,6 +41,12 @@ keys); the index conformance test against `SessionManager.listAll`
       hand-built an `AgentHomeApi` literal call `makeAgentHome` instead. Structure hygiene:
       no behaviour change, so no new test, only `bun run check`.
       `refactor(backend): one name for the sessions root`
+- [ ] **"N models can run a turn" counts models that cannot.** The General page's Status row
+      reads `settings.providers.models`, which is pi's whole composed catalog — 1693 rows on
+      the dev sandbox, against main's 94 — so a provider with no credential inflates the
+      number the row promises. Found while settling S8 against main's screenshot; the fix is
+      main's enabled set (`readEnabledModels`), not a rewording, unless the owner prefers the
+      catalog count. Test: the count equals what the Default model picker offers.
 - [ ] **Large files**: read `src/engine/session.ts` (1,347 lines) and
       `src/backend/settings/mcp/service.ts` (784; `config/` before phase 1). Split only
       what holds two concepts, per the File rules; otherwise leave them.
