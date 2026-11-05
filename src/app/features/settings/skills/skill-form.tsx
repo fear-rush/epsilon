@@ -4,7 +4,6 @@ import { useRef, useState } from "react";
 
 import type { SkillFile, SkillInput, SkillRoot, SkillView } from "#protocol/settings/skills";
 import { CancelDialog, DeleteDialog } from "@/components/patterns/confirm-dialogs";
-import { EnabledSwitch } from "@/components/patterns/enabled-switch";
 import { ModeTabs } from "@/components/patterns/mode-tabs";
 import { DetailPage } from "@/components/patterns/pane/detail-page";
 import { Row } from "@/components/patterns/section/row";
@@ -15,15 +14,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import { useSettings, useSettingsProject, useSettingsRefresh } from "../queries.ts";
-import { removeSkill, saveSkill, setSkillEnabled } from "./api.ts";
+import { removeSkill, saveSkill } from "./api.ts";
 import { SkillCard } from "./skill-card.tsx";
 import { skillFields, toDraft, toInput, validate } from "./skill-draft.ts";
 import type { SkillDraft, SkillField } from "./skill-draft.ts";
 import { SkillFiles } from "./skill-files.tsx";
 import { SkillInstructions } from "./skill-instructions.tsx";
+import { LoadedSwitch } from "./skill-loaded-switch.tsx";
 import { SKILL_MODES, SKILLS_BACK } from "./skill-modes.ts";
 import type { SkillTab } from "./skill-modes.ts";
+import { SkillNotices } from "./skill-notices.tsx";
 import { SkillRaw } from "./skill-raw.tsx";
+import { useSkillToggle } from "./skill-status.ts";
 
 /**
  * One editable skill, written as `<root>/<name>/SKILL.md`. The Form tab edits the
@@ -91,10 +93,7 @@ export function SkillForm({
 			refresh();
 		},
 	});
-	const toggle = useMutation({
-		mutationFn: (enabled: boolean) => setSkillEnabled(project, view?.filePath ?? "", enabled),
-		onSuccess: refresh,
-	});
+	const toggle = useSkillToggle();
 
 	const submit = (): void => {
 		const found = validate(draft, creating, taken);
@@ -112,16 +111,7 @@ export function SkillForm({
 					<ModeTabs items={SKILL_MODES} value={tab} onValueChange={requestTab} />
 				)
 			}
-			actions={
-				view === undefined || view.toggle !== "settings" ? undefined : (
-					<EnabledSwitch
-						checked={view.status !== "disabled"}
-						disabled={toggle.isPending}
-						label={view.name}
-						onCheckedChange={(enabled) => toggle.mutate(enabled)}
-					/>
-				)
-			}
+			actions={view === undefined ? undefined : <LoadedSwitch skill={view} toggle={toggle} />}
 			footer={
 				<>
 					{creating ? undefined : (
@@ -143,12 +133,11 @@ export function SkillForm({
 			}
 		>
 			<div className="grid gap-section">
-				{view?.message !== undefined && <Notice tone="danger">{view.message}</Notice>}
-				{(view?.warnings ?? []).map((warning) => (
-					<Notice key={warning} tone="warning">
-						{warning}
-					</Notice>
-				))}
+				<SkillNotices
+					skill={view}
+					body={draft.body}
+					errors={[save.error, remove.error, toggle.error]}
+				/>
 				{file?.parseError !== undefined && (
 					<Notice tone="danger" title="The frontmatter does not parse">
 						{file.parseError} Only the Raw tab can edit this file.
