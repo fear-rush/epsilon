@@ -54,8 +54,15 @@ Do not decide these yourself, and do not route around them.
 
 - [ ] Every ledger row is ticked or carries the owner's dated yes to differ.
 - [ ] `bun run check`, `bun run test:e2e` and `bun run bench` pass.
-- [ ] Run against a read-only copy of the owner's real home: the index builds, every chat
-      opens, settings round-trip.
+- [x] Run against a read-only copy of the owner's real home: the index builds, every chat
+      opens, settings round-trip. **Done on a `cp -c` clone, 2026-11-05:** 955 chats index
+      in 16.0 s cold (15.7 s measured on the same copy twice), pi's settings read as 48
+      rows with **0 problems**, and six chats opened through their engines — the three
+      largest (51 MB, 23 MB, 16 MB) and three recent ones. Opening all 955 was not done:
+      each open spawns an engine, so it was a sample. The run also found that **333 of
+      the 955 chats name a folder that no longer exists**: the list flags them
+      (`cwdMissing`) and the page gates them, and an engine started on one directly stops
+      with `EngineStopped` — which the UI never does because of that flag.
 - [ ] The owner uses `bun run dev:host` for a day with no regression.
 - [ ] Delete `docs/plan/`; ARCHITECTURE and DECISIONS already hold what lasts.
 - [ ] Merge to `main` when the owner says so.
