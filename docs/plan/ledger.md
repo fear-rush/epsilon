@@ -85,60 +85,60 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 
 ## S2 Chat (session view, composer, transcript, branches, dialogs)
 
-| Done | main file (`client/src/…`)                           | Lines | Branch today                                                        | Missing exports                                               |
-| ---- | ---------------------------------------------------- | ----- | ------------------------------------------------------------------- | ------------------------------------------------------------- |
-| [x]  | `features/conversation/branch-items.tsx`             | 71    | `feat(conversation): the branch rows`                               | `BranchItems`                                                 |
-| [x]  | `features/conversation/branch-rules.ts`              | 7     | `feat(conversation): the branch rows`                               | `branchBlocked`                                               |
-| [x]  | `features/conversation/chat-bar.tsx`                 | 31    | `feat(conversation): main's chat bar`                               |                                                               |
-| [x]  | `features/conversation/compact-context-dialog.tsx`   | 78    | `feat(conversation): the fork and compact dialogs`                  | `CompactContextDialog`                                        |
-| [x]  | `features/conversation/composer/attachments.tsx`     | 49    | `feat(conversation): the composer's images`                         | `Attachment`, `AttachmentStrip`                               |
-| [x]  | `features/conversation/composer/builtin-commands.ts` | 227   | `feat(conversation): the palette and its commands`                  | `ComposerCommandContext`, `RouteTarget`, `runComposerCommand` |
-| [x]  | `features/conversation/composer/cache-warming.tsx`   | 50    | `feat(conversation): the composer's readings`                       | `CacheWarmingState`                                           |
-| [ ]  | `features/conversation/composer/composer.tsx`        | 669   | exists elsewhere (names found)                                      |                                                               |
-| [x]  | `features/conversation/composer/context-meter.tsx`   | 62    | `feat(conversation): the composer's readings`                       | `ContextMeter`                                                |
-| [x]  | `features/conversation/composer/model-menu.tsx`      | 126   | `feat(conversation): the composer menus`                            | `ModelMenu`                                                   |
-| [x]  | `features/conversation/composer/palette.tsx`         | 115   | `feat(conversation): the palette and its commands`                  | `Palette`, `PaletteEntry`                                     |
-| [x]  | `features/conversation/composer/permission-menu.tsx` | 94    | `feat(conversation): the permission menu and the status rail`       | `PermissionMenu`                                              |
-| [x]  | `features/conversation/composer/thinking-menu.tsx`   | 87    | `feat(conversation): the composer menus`                            | `ThinkingMenu`                                                |
-| [x]  | `features/conversation/composer/tools-menu.tsx`      | 86    | `feat(conversation): the composer menus`                            | `ToolsMenu`                                                   |
-| [x]  | `features/conversation/cost.ts`                      | 6     | `feat(conversation): the composer's readings`                       |                                                               |
-| [ ]  | `features/conversation/dialogs.tsx`                  | 157   | **missing**                                                         | `ConfirmDialog`, `QuestionDialog`                             |
-| [x]  | `features/conversation/export-file.ts`               | 25    | `feat(conversation): the transcript as a file`                      | `downloadExport`                                              |
-| [x]  | `features/conversation/fork-dialog.tsx`              | 129   | `feat(conversation): the fork and compact dialogs`                  | `ForkSessionDialog`                                           |
-| [ ]  | `features/conversation/new-chat.tsx`                 | 156   | exists, changed (163 lines)                                         |                                                               |
-| [x]  | `features/conversation/pending-draft.ts`             | 18    | `draft.ts` (the engine hands the text across; no store draft)       | `—`                                                           |
-| [x]  | `features/conversation/run-status.tsx`               | 150   | `feat(conversation): the run status`                                |                                                               |
-| [x]  | `features/conversation/session-context-sentence.ts`  | 38    | `feat(conversation): the palette and its commands`                  | `contextSentence`                                             |
-| [x]  | `features/conversation/session-controls.tsx`         | 163   | `feat(conversation): the branch rows` (the bar hosts it until S3)   |                                                               |
-| [ ]  | `features/conversation/session-header.tsx`           | 194   | partial: `ComposerPlace`, `PlaceBadge` (S3 holds `SessionHeader`)   | `SessionHeader`                                               |
-| [x]  | `features/conversation/session-loader.tsx`           | 22    | `feat(conversation): where the chat runs` (in `session-header.tsx`) | `SessionLoader`                                               |
-| [ ]  | `features/conversation/session-view.tsx`             | 287   | **missing**                                                         | `SessionView`                                                 |
-| [ ]  | `features/conversation/store.ts`                     | 325   | **missing**                                                         | `ConversationSnapshot`, `ConversationStore`                   |
-| [x]  | `features/conversation/tool-trace.tsx`               | 269   | `feat(conversation): each tool's own trace`                         | `ToolTrace`                                                   |
-| [ ]  | `features/conversation/transcript.tsx`               | 318   | exists, changed (633 lines)                                         |                                                               |
-| [x]  | `features/conversation/tree-dialog.tsx`              | 386   | `feat(conversation): the branch rows`                               | `SessionTreeDialog`, `TreeMove`                               |
-| [x]  | `features/conversation/tree-filter.ts`               | 33    | `feat(conversation): the branch rows` (with main's test)            | `filterTree`                                                  |
-| [x]  | `features/conversation/use-branching.tsx`            | 114   | `feat(conversation): the branch rows` (the engine hands the text)   | `useBranching`                                                |
-| [ ]  | `features/conversation/use-conversation.ts`          | 58    | exists, changed (403 lines)                                         |                                                               |
-| [ ]  | `features/conversation/welcome.tsx`                  | 29    | exists, changed (17 lines)                                          |                                                               |
-| [ ]  | `features/projects/continue-session.tsx`             | 61    | **missing**                                                         | `ContinueSession`                                             |
-| [ ]  | `features/projects/trust-gate.tsx`                   | 85    | **missing**                                                         | `TrustGate`                                                   |
+| Done | main file (`client/src/…`)                           | Lines | Branch today                                                        | Missing exports                                                    |
+| ---- | ---------------------------------------------------- | ----- | ------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| [x]  | `features/conversation/branch-items.tsx`             | 71    | `feat(conversation): the branch rows`                               | `BranchItems`                                                      |
+| [x]  | `features/conversation/branch-rules.ts`              | 7     | `feat(conversation): the branch rows`                               | `branchBlocked`                                                    |
+| [x]  | `features/conversation/chat-bar.tsx`                 | 31    | `feat(conversation): main's chat bar`                               |                                                                    |
+| [x]  | `features/conversation/compact-context-dialog.tsx`   | 78    | `feat(conversation): the fork and compact dialogs`                  | `CompactContextDialog`                                             |
+| [x]  | `features/conversation/composer/attachments.tsx`     | 49    | `feat(conversation): the composer's images`                         | `Attachment`, `AttachmentStrip`                                    |
+| [x]  | `features/conversation/composer/builtin-commands.ts` | 227   | `feat(conversation): the palette and its commands`                  | `ComposerCommandContext`, `RouteTarget`, `runComposerCommand`      |
+| [x]  | `features/conversation/composer/cache-warming.tsx`   | 50    | `feat(conversation): the composer's readings`                       | `CacheWarmingState`                                                |
+| [ ]  | `features/conversation/composer/composer.tsx`        | 669   | exists elsewhere (names found)                                      |                                                                    |
+| [x]  | `features/conversation/composer/context-meter.tsx`   | 62    | `feat(conversation): the composer's readings`                       | `ContextMeter`                                                     |
+| [x]  | `features/conversation/composer/model-menu.tsx`      | 126   | `feat(conversation): the composer menus`                            | `ModelMenu`                                                        |
+| [x]  | `features/conversation/composer/palette.tsx`         | 115   | `feat(conversation): the palette and its commands`                  | `Palette`, `PaletteEntry`                                          |
+| [x]  | `features/conversation/composer/permission-menu.tsx` | 94    | `feat(conversation): the permission menu and the status rail`       | `PermissionMenu`                                                   |
+| [x]  | `features/conversation/composer/thinking-menu.tsx`   | 87    | `feat(conversation): the composer menus`                            | `ThinkingMenu`                                                     |
+| [x]  | `features/conversation/composer/tools-menu.tsx`      | 86    | `feat(conversation): the composer menus`                            | `ToolsMenu`                                                        |
+| [x]  | `features/conversation/cost.ts`                      | 6     | `feat(conversation): the composer's readings`                       |                                                                    |
+| [ ]  | `features/conversation/dialogs.tsx`                  | 157   | **missing**                                                         | `ConfirmDialog`, `QuestionDialog`                                  |
+| [x]  | `features/conversation/export-file.ts`               | 25    | `feat(conversation): the transcript as a file`                      | `downloadExport`                                                   |
+| [x]  | `features/conversation/fork-dialog.tsx`              | 129   | `feat(conversation): the fork and compact dialogs`                  | `ForkSessionDialog`                                                |
+| [ ]  | `features/conversation/new-chat.tsx`                 | 156   | exists, changed (163 lines)                                         |                                                                    |
+| [x]  | `features/conversation/pending-draft.ts`             | 18    | `draft.ts` (the engine hands the text across; no store draft)       | `—`                                                                |
+| [x]  | `features/conversation/run-status.tsx`               | 150   | `feat(conversation): the run status`                                |                                                                    |
+| [x]  | `features/conversation/session-context-sentence.ts`  | 38    | `feat(conversation): the palette and its commands`                  | `contextSentence`                                                  |
+| [x]  | `features/conversation/session-controls.tsx`         | 163   | `feat(conversation): the branch rows` (the bar hosts it until S3)   |                                                                    |
+| [ ]  | `features/conversation/session-header.tsx`           | 194   | partial: `ComposerPlace`, `PlaceBadge` (S3 holds `SessionHeader`)   | `SessionHeader`                                                    |
+| [x]  | `features/conversation/session-loader.tsx`           | 22    | `feat(conversation): where the chat runs` (in `session-header.tsx`) | `SessionLoader`                                                    |
+| [x]  | `features/conversation/session-view.tsx`             | 287   | `feat(conversation): the session view`                              | `SessionView` (the dialogs split waits for main's editor question) |
+| [ ]  | `features/conversation/store.ts`                     | 325   | **missing**                                                         | `ConversationSnapshot`, `ConversationStore`                        |
+| [x]  | `features/conversation/tool-trace.tsx`               | 269   | `feat(conversation): each tool's own trace`                         | `ToolTrace`                                                        |
+| [ ]  | `features/conversation/transcript.tsx`               | 318   | exists, changed (633 lines)                                         |                                                                    |
+| [x]  | `features/conversation/tree-dialog.tsx`              | 386   | `feat(conversation): the branch rows`                               | `SessionTreeDialog`, `TreeMove`                                    |
+| [x]  | `features/conversation/tree-filter.ts`               | 33    | `feat(conversation): the branch rows` (with main's test)            | `filterTree`                                                       |
+| [x]  | `features/conversation/use-branching.tsx`            | 114   | `feat(conversation): the branch rows` (the engine hands the text)   | `useBranching`                                                     |
+| [ ]  | `features/conversation/use-conversation.ts`          | 58    | exists, changed (403 lines)                                         |                                                                    |
+| [ ]  | `features/conversation/welcome.tsx`                  | 29    | exists, changed (17 lines)                                          |                                                                    |
+| [x]  | `features/projects/continue-session.tsx`             | 61    | `feat(conversation): the session view` (recent from the caller)     | `ContinueSession`, `ContinuedSession`                              |
+| [x]  | `features/projects/trust-gate.tsx`                   | 85    | `feat(conversation): the session view`                              | `TrustGate`                                                        |
 
 ## S3 Sessions sidebar and projects
 
-| Done | main file (`client/src/…`)              | Lines | Branch today                | Missing exports                         |
-| ---- | --------------------------------------- | ----- | --------------------------- | --------------------------------------- |
-| [ ]  | `features/projects/folder-dialog.tsx`   | 408   | exists, changed (69 lines)  |                                         |
-| [ ]  | `features/projects/index.ts`            | 5     | exists, changed (6 lines)   |                                         |
-| [ ]  | `features/projects/queries.ts`          | 38    | partial                     | `useProjectStatus`, `useRecentProjects` |
-| [ ]  | `features/projects/trust-notice.tsx`    | 39    | exists, changed (6 lines)   |                                         |
-| [ ]  | `features/sessions/format.ts`           | 26    | exists, changed (2 lines)   |                                         |
-| [ ]  | `features/sessions/index.ts`            | 2     | exists, changed (7 lines)   |                                         |
-| [ ]  | `features/sessions/rename-dialog.tsx`   | 88    | exists, changed (10 lines)  |                                         |
-| [ ]  | `features/sessions/session-item.tsx`    | 146   | exists, changed (5 lines)   |                                         |
-| [ ]  | `features/sessions/session-sidebar.tsx` | 588   | exists, changed (159 lines) |                                         |
-| [ ]  | `features/sessions/sidebar-account.tsx` | 78    | exists, changed (4 lines)   |                                         |
-| [ ]  | `features/sessions/use-session-row.ts`  | 28    | **missing**                 | `useSessionRow`                         |
+| Done | main file (`client/src/…`)              | Lines | Branch today                                         | Missing exports                         |
+| ---- | --------------------------------------- | ----- | ---------------------------------------------------- | --------------------------------------- |
+| [ ]  | `features/projects/folder-dialog.tsx`   | 408   | exists, changed (69 lines)                           |                                         |
+| [ ]  | `features/projects/index.ts`            | 5     | exists, changed (6 lines)                            |                                         |
+| [ ]  | `features/projects/queries.ts`          | 38    | partial                                              | `useProjectStatus`, `useRecentProjects` |
+| [ ]  | `features/projects/trust-notice.tsx`    | 39    | exists, changed (6 lines)                            |                                         |
+| [ ]  | `features/sessions/format.ts`           | 26    | exists, changed (2 lines)                            |                                         |
+| [ ]  | `features/sessions/index.ts`            | 2     | exists, changed (7 lines)                            |                                         |
+| [ ]  | `features/sessions/rename-dialog.tsx`   | 88    | exists, changed (10 lines)                           |                                         |
+| [ ]  | `features/sessions/session-item.tsx`    | 146   | exists, changed (5 lines)                            |                                         |
+| [ ]  | `features/sessions/session-sidebar.tsx` | 588   | exists, changed (159 lines)                          |                                         |
+| [ ]  | `features/sessions/sidebar-account.tsx` | 78    | exists, changed (4 lines)                            |                                         |
+| [ ]  | `features/sessions/use-session-row.ts`  | 28    | `findSessionRow` in `list.ts`; the hook waits for S3 | `useSessionRow`                         |
 
 ## S4 Settings: MCP
 

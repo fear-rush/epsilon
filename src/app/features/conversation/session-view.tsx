@@ -1,3 +1,10 @@
+/**
+ * One session: header, transcript, blocking questions, composer. The id comes from the
+ * URL, so a reload, a bookmark and a phone reattach all land on the same transcript and
+ * the same live engine. A project session passes through the trust gate first, so nothing
+ * attaches to a folder that is not trusted.
+ */
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -12,11 +19,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { call } from "@/core/runtime";
 import { useReportStatus } from "@/core/status";
+import { ContinueSession, TrustGate } from "@/features/projects";
+import { findSessionRow, useSessionList } from "@/features/sessions";
 
 import { ChatBar } from "./chat-bar";
 import { Composer } from "./composer";
 import { ConversationDialogs } from "./dialogs";
-import { ProjectGate } from "./project-gate";
 import { RunStatus } from "./run-status";
 import { SessionControls } from "./session-controls";
 import { ComposerPlace, PlaceBadge, SessionLoader } from "./session-header";
@@ -26,43 +34,67 @@ import { useBranching } from "./use-branching";
 import { useConversation } from "./use-conversation";
 import { ConversationWelcome } from "./welcome";
 
-/**
- * One chat route. A new chat in a project folder passes through the trust gate first,
- * because Epsilon starts no engine before the folder's answer exists.
- */
-export function Chat({ sessionId, place }: { sessionId: string; place: string | null }) {
-	if (place === null) return <Conversation place={null} sessionId={sessionId} />;
+/** `project` names the folder of a project session; without it the page is a chat. */
+export function SessionView({
+	sessionId,
+	project,
+	continued,
+}: {
+	sessionId: string;
+	project?: string | undefined;
+	/** The operator chose a folder for this open because the recorded one is gone. */
+	continued?: boolean | undefined;
+}) {
+	const list = useSessionList();
+	const session = findSessionRow(list.data, sessionId);
+	// Folders that already hold chats, offered first by the folder picker. The sidebar
+	// reads the same list, so this adds no request of its own.
+	const recent = list.data?.projects.map((entry) => entry.project) ?? [];
+	if (session?.cwdMissing === true && continued !== true) {
+		return (
+			<div className="flex min-h-0 flex-1 flex-col">
+				<ChatBar />
+				<ContinueSession recent={recent} session={session} />
+			</div>
+		);
+	}
+	if (project === undefined) {
+		return <Conversation sessionId={sessionId} place={null} />;
+	}
 	return (
-		<ProjectGate folder={place}>
-			<Conversation place={place} sessionId={sessionId} />
-		</ProjectGate>
+		<TrustGate project={project} header={<ChatBar />}>
+			<Conversation sessionId={sessionId} place={project} />
+		</TrustGate>
 	);
 }
 
 /**
  * One chat: the bar, the transcript, an in-chat search, the extension's questions and the
- * composer.
+ * composer. Home renders it too, for a chat that has no file yet.
  *
  * The chat's own problems (a file rewritten elsewhere, an engine that stopped) are reported
  * to the app's status line rather than drawn here; the engine's notices, which are about a
  * turn, stay beside the transcript.
  */
-function Conversation({ sessionId, place }: { sessionId: string; place: string | null }) {
+export function Conversation({ sessionId, place }: { sessionId: string; place: string | null }) {
 	const conversation = useConversation({ place, sessionId });
 	const { state } = conversation;
 	const navigate = useNavigate();
+	const queryClient = useQueryClient();
 
-	// A fork writes a new file and a new id. The old id is only an alias while the engine
-	// lives, so the page moves to the id the file now carries.
+	// A fork, a clone or `/new` writes a new file under a new id. The old id is only an
+	// alias while the engine lives, so the page moves to the id the file now carries, and
+	// the list refetches because a row appears under the new one.
 	useEffect(() => {
 		if (state.sessionId === undefined || state.sessionId === sessionId) return;
+		void queryClient.invalidateQueries({ queryKey: ["sessions"] });
 		void navigate({
 			params: { sessionId: state.sessionId },
 			replace: true,
 			search: place === null ? {} : { project: place },
 			to: "/sessions/$sessionId",
 		});
-	}, [state.sessionId, sessionId, navigate, place]);
+	}, [state.sessionId, sessionId, navigate, place, queryClient]);
 
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
@@ -87,7 +119,8 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 		};
 	}, [loadModels]);
 
-	const empty = state.entries.length === 0 && state.streaming.length === 0;
+	const rows = transcript(state);
+	const empty = rows.length === 0;
 	const { blocked, cloning, openTree, openFork, clone, dialogs } = useBranching({
 		busy: state.busy,
 		conversation,
@@ -97,7 +130,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 		tree: state.tree,
 	});
 
-	const matches = searching ? matchingRowIds(transcript(state), query) : [];
+	const matches = searching ? matchingRowIds(rows, query) : [];
 	const jumpId = matches[cursor];
 	const jump: Jump | undefined =
 		jumpId === undefined ? undefined : { id: jumpId, nonce: jumpNonce };
@@ -146,6 +179,7 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 	const composer = (
 		<Composer
 			busy={state.busy}
+			blocked={blocked}
 			codingTools={state.codingTools}
 			commands={state.commands}
 			draft={state.draft}
@@ -159,57 +193,72 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 			writable={conversation.writable}
 			onAbort={conversation.abort}
 			onBash={conversation.bash}
-			onExport={conversation.exportSession}
-			blocked={blocked}
 			onClone={clone}
+			onExport={conversation.exportSession}
 			onOpenFork={openFork}
 			onOpenTree={openTree}
 			onReadContext={readContext}
 			onSend={send}
 			onSetCodingTools={(enabled) => void conversation.setCodingTools(enabled)}
-			onSetPermission={(mode) => void conversation.setPermission(mode)}
 			onSetModel={(provider, modelId) => void conversation.setModel(provider, modelId)}
+			onSetPermission={(mode) => void conversation.setPermission(mode)}
 			onSetThinking={(level) => void conversation.setThinking(level)}
 			onSuggest={conversation.suggest}
 		/>
 	);
 
+	/** The chat's own bar while S3 moves main's `SessionHeader` here: the branch controls
+	 * and the in-chat search have no home in it yet. */
+	const header = (
+		<ChatBar
+			title={state.title ?? "New chat"}
+			actions={
+				<div className="flex items-center gap-2">
+					{place !== null && <PlaceBadge path={place} />}
+					<SessionControls
+						autoCompaction={state.autoCompaction}
+						autoRetry={state.autoRetry}
+						blocked={blocked}
+						cloning={cloning}
+						conversation={conversation}
+						empty={empty}
+						hideThinkingBlock={state.hideThinking}
+						isCompacting={state.compacting}
+						onClone={clone}
+						onFork={openFork}
+						onTree={openTree}
+					/>
+					<Button
+						size="icon-sm"
+						variant="ghost"
+						aria-label="Search conversation"
+						onClick={() => setSearching((open) => !open)}
+					>
+						<SearchIcon />
+					</Button>
+					{state.busy && (
+						<Button variant="outline" size="sm" onClick={() => void conversation.abort()}>
+							Stop
+						</Button>
+					)}
+				</div>
+			}
+		/>
+	);
+
+	// A session that has no snapshot yet shows a loader, not an empty transcript.
+	if (!conversation.loaded) {
+		return (
+			<div className="flex min-h-0 flex-1 flex-col">
+				<ChatBar />
+				<SessionLoader />
+			</div>
+		);
+	}
+
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
-			<ChatBar
-				title={state.title ?? "New chat"}
-				actions={
-					<div className="flex items-center gap-2">
-						{place !== null && <PlaceBadge path={place} />}
-						<SessionControls
-							autoCompaction={state.autoCompaction}
-							autoRetry={state.autoRetry}
-							blocked={blocked}
-							cloning={cloning}
-							conversation={conversation}
-							empty={empty}
-							hideThinkingBlock={state.hideThinking}
-							isCompacting={state.compacting}
-							onClone={clone}
-							onFork={openFork}
-							onTree={openTree}
-						/>
-						<Button
-							size="icon-sm"
-							variant="ghost"
-							aria-label="Search conversation"
-							onClick={() => setSearching((open) => !open)}
-						>
-							<SearchIcon />
-						</Button>
-						{state.busy && (
-							<Button variant="outline" size="sm" onClick={() => void conversation.abort()}>
-								Stop
-							</Button>
-						)}
-					</div>
-				}
-			/>
+			{header}
 			{searching && (
 				<div className="flex items-center gap-2 border-b px-page py-2">
 					<Input
@@ -264,38 +313,33 @@ function Conversation({ sessionId, place }: { sessionId: string; place: string |
 					</Button>
 				</div>
 			)}
-			{conversation.loaded ? (
-				empty ? (
-					// A conversation opens on the box that starts it, not a card above a footer.
-					<ConversationWelcome
-						composer={composer}
-						place={place === null ? "chat" : "project"}
-						status={
-							<>
-								{runStatus}
-								<ChatNotices notices={state.notices} />
-							</>
-						}
-					/>
-				) : (
-					<>
-						<Transcript
-							state={state}
-							onLoadOlder={() => void conversation.loadOlder()}
-							anchorFrom={anchorFrom}
-							onAnchored={() => setAnchorFrom(undefined)}
-							jump={jump}
-							toolOpen={conversation.toolOpen}
-							onToggleTool={conversation.toggleTool}
-						/>
-						<ChatNotices notices={state.notices} />
-						{runStatus}
-						<div className="animate-enter-rise">{composer}</div>
-					</>
-				)
+			{empty ? (
+				// A conversation opens on the box that starts it, not a card above a footer.
+				<ConversationWelcome
+					composer={composer}
+					place={place === null ? "chat" : "project"}
+					status={
+						<>
+							{runStatus}
+							<ChatNotices notices={state.notices} />
+						</>
+					}
+				/>
 			) : (
-				// The engine is still starting; an empty transcript would be a lie.
-				<SessionLoader />
+				<>
+					<Transcript
+						state={state}
+						onLoadOlder={() => void conversation.loadOlder()}
+						anchorFrom={anchorFrom}
+						onAnchored={() => setAnchorFrom(undefined)}
+						jump={jump}
+						toolOpen={conversation.toolOpen}
+						onToggleTool={conversation.toggleTool}
+					/>
+					<ChatNotices notices={state.notices} />
+					{runStatus}
+					<div className="animate-enter-rise">{composer}</div>
+				</>
 			)}
 			<ConversationDialogs dialogs={state.dialogs} onAnswer={conversation.answer} />
 			{dialogs}

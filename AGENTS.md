@@ -120,6 +120,14 @@ There is no line limit; split files by meaning, as
 - Never wait with a sleep. Wait on an event, or on `until(...)` with a deadline. If a run
   exceeds its budget, stop and report what was running; do not retry blindly and do not
   raise the timeout.
+- **Every check has a deadline, stated before you start it.** The guide: `bun run check`
+  15 s, one screenshot 15 s, one manual app run 60 s. A step that passes twice its deadline
+  is stopped, its process killed, and the delay reported as part of the result. Waiting
+  longer is a finding about the code or the harness, not something to sit through.
+- Run the long thing once, on the smallest input that proves the point. Do not photograph
+  every state in one sitting when one state answers the question; report what is left.
+- Kill what you started: a server, a browser or an engine from a check is gone before the
+  next command, and a stray process is itself a failure to report.
 - A check that starts a server or an engine sets `EPSILON_AGENT_HOME` to a scratch
   directory. The test preload does this for tests; do it yourself for a manual run.
 

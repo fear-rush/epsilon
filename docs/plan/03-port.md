@@ -59,8 +59,11 @@ The checklist is [ledger.md](ledger.md); its slices S2–S9 are this phase, in o
      at a time.
    - Shoot with headless Chrome:
      `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu --hide-scrollbars --user-data-dir=<scratch>/profile --window-size=1600,1000 --virtual-time-budget=6000 --screenshot=<scratch>/<name>.png http://localhost:5173/<route>`
-   - Every state the row has: data, empty, loading, error, a dialog open. Light and
-     dark. Also 390×844 for the shell, the sidebar and the chat.
+   - Every state the row has, at least one of them: data, empty, loading, error, a dialog
+     open. Add dark and 390×844 when the row changes the shell; a state that differs at
+     that width is the row's own to prove.
+   - One shot per 15 s with a hard deadline on the command. A page that has not settled by
+     then is a finding: report it with the console error, do not wait for it.
    - Motion cannot be screenshotted: step 4 proves the classes; open and close each
      dialog and menu in the running app to see it.
 7. **Check**: `bun run check` green, the suite within 10 s.

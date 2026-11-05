@@ -356,3 +356,30 @@ Why: the index reads pi's fields directly and the engine depends on pi's runtime
 A silent behaviour change there breaks chats in ways tests would otherwise miss.
 
 Not: a version range, or upgrading to pick up a feature mid-step.
+
+## A feature that needs the other direction takes data as a prop
+
+`sessions` imports `projects` (the sidebar opens the folder picker), so `projects` may not
+import `sessions`. The continue gate needs the chat list, which `sessions` owns: its caller
+reads the list once and passes `recent` down, rather than `projects/queries.ts` growing a
+hook that reads across the edge. The lint's `no-feature-internals` and `no-cycle` rules
+enforce both halves.
+
+Why: main had no such edge because every feature called its own HTTP endpoint. One socket
+with feature roots makes the direction explicit, and a cycle here is a real build-order
+problem, not a style preference.
+
+Not: lifting the read into `hooks/` or `lib/` yet. ARCHITECTURE.md's file rules say to do
+that on the third use; this is the second.
+
+## The chat's missing folder is a field of the list
+
+`SessionSummary.cwdMissing` is computed by the server when the list is read, one stat per
+distinct folder, and it travels with the row. The page gates on it before it attaches.
+
+Why: only the server can answer whether a folder still exists, and the gate must decide
+before an engine starts. A second read from the page would be a second truth for the same
+question.
+
+Not: the page checking through a folder-picker call, or the engine refusing after it
+attached. Both would show the chat first and explain second.

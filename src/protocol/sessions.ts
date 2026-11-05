@@ -17,6 +17,11 @@ export const SessionSummary = Schema.Struct({
 	/** pi's own session name, when one was set; the sidebar falls back to the first message. */
 	name: Schema.NullOr(Schema.String),
 	firstMessage: Schema.String,
+	/**
+	 * The folder the chat ran in no longer exists, checked when the list is read. A chat is
+	 * still openable: pi opens the same file with a folder chosen for this run.
+	 */
+	cwdMissing: Schema.Boolean,
 	created: Schema.Finite,
 	lastActivity: Schema.Finite,
 	messageCount: Schema.Finite,

@@ -42,7 +42,7 @@ export type SessionList = {
 const rowOf = (session: WireSummary): SessionSummary => ({
 	cwd: session.cwd,
 	created: new Date(session.created).toISOString(),
-	cwdMissing: false,
+	cwdMissing: session.cwdMissing,
 	firstMessage: session.firstMessage,
 	id: session.id,
 	messageCount: session.messageCount,
@@ -98,7 +98,21 @@ const build = (
 /**
  * The chat list plus one trust read per folder. It waits for the reads so a folder's
  * chats never appear as plain chats first and then move under a project.
- */
+ */ /** One chat from the grouped list, whether it is a chat or a project's. */
+export function findSessionRow(
+	list: SessionList | undefined,
+	sessionId: string,
+): SessionSummary | undefined {
+	if (list === undefined) return undefined;
+	const chat = list.chats.find((session) => session.id === sessionId);
+	if (chat !== undefined) return chat;
+	for (const project of list.projects) {
+		const found = project.sessions.find((session) => session.id === sessionId);
+		if (found !== undefined) return found;
+	}
+	return undefined;
+}
+
 export function useSessionList() {
 	// The list also carries the socket's change stream, so a write anywhere refreshes it.
 	const sessions = useSessions();

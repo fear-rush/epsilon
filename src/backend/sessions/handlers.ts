@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { Effect } from "effect";
+import { Effect, FileSystem } from "effect";
 
 import { SessionNotFound } from "#protocol/errors";
 import { SessionsRpcs } from "#protocol/sessions";
@@ -25,10 +25,21 @@ export const SessionsHandlersLive = SessionsRpcs.toLayer(
 		const sessions = yield* Sessions;
 		const pins = yield* Pins;
 		const home = yield* AgentHome;
+		const fs = yield* FileSystem.FileSystem;
 		const roots = [join(home.agentDir, "sessions")];
 
 		const list = Effect.gen(function* () {
 			const rows = yield* catalog.sync(roots).pipe(Effect.andThen(catalog.list));
+			// One stat per distinct folder, not per chat: a deleted project is the case this
+			// flags, and every chat in it answers the same.
+			const folders = [...new Set(rows.map((row) => row.cwd))];
+			const missing = new Map<string, boolean>();
+			for (const folder of folders) {
+				// A folder that cannot be read is missing as far as this answer goes, which is
+				// what main's directory check did.
+				const present = yield* fs.exists(folder).pipe(Effect.orElseSucceed(() => false));
+				missing.set(folder, !present);
+			}
 			const { ids, problem } = yield* pins.read;
 			const pinned = (row: StoredSummary): number => (ids.has(row.id) ? 1 : 0);
 			const sorted = rows.toSorted((left, right) => {
@@ -37,6 +48,7 @@ export const SessionsHandlersLive = SessionsRpcs.toLayer(
 			});
 			const sessionsView = sorted.map((row) => ({
 				cwd: row.cwd,
+				cwdMissing: missing.get(row.cwd) ?? false,
 				created: row.created,
 				firstMessage: row.firstMessage,
 				id: row.id,

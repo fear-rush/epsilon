@@ -32,7 +32,7 @@ type FolderDialogProps = {
 	/** The verb on the final button: "Open" or "Move". */
 	action: string;
 	/** Projects that already have sessions, offered first. */
-	recent: ProjectStatus[];
+	recent: ReadonlyArray<ProjectStatus>;
 	/** Called with a trusted folder. A rejection is shown in the dialog. */
 	onPick: (path: string) => Promise<void> | void;
 };

@@ -1,6 +1,8 @@
 import { useState } from "react";
 
-import { Chat } from "./chat";
+import { TrustGate } from "@/features/projects";
+
+import { Conversation } from "./session-view";
 
 /**
  * Home: a chat that does not exist on disk yet.
@@ -11,5 +13,10 @@ import { Chat } from "./chat";
  */
 export function NewChat({ place }: { place: string | null }) {
 	const [sessionId] = useState(() => crypto.randomUUID());
-	return <Chat place={place} sessionId={sessionId} />;
+	if (place === null) return <Conversation place={null} sessionId={sessionId} />;
+	return (
+		<TrustGate project={place} header={null}>
+			<Conversation place={place} sessionId={sessionId} />
+		</TrustGate>
+	);
 }
