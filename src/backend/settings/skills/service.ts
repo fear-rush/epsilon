@@ -58,6 +58,8 @@ import {
 	projectSkillsDir,
 	userAgentsSkillsDir,
 } from "./inventory.ts";
+import { addSkillPath, removeSkillPath, skillSourcePaths } from "./paths.ts";
+import type { SkillPathsDeps } from "./paths.ts";
 
 /**
  * Skills over pi's own resolver, loader and `skills` setting.
@@ -348,6 +350,10 @@ export type SkillsServiceApi = {
 		path: string,
 		linked: boolean,
 	) => Effect.Effect<void, SkillRefused>;
+	/** Add a folder, or one `.md` file, to this scope's `skills` setting. */
+	readonly addPath: (folder: string | null, path: string) => Effect.Effect<void, SkillRefused>;
+	/** Remove every entry that names a path from this scope's `skills` setting. */
+	readonly removePath: (folder: string | null, path: string) => Effect.Effect<void, SkillRefused>;
 };
 
 export class SkillsService extends Context.Service<SkillsService, SkillsServiceApi>()(
@@ -411,9 +417,42 @@ export const makeSkillsService = (deps: {
 
 	const list: SkillsServiceApi["list"] = Effect.fn("Skills.list")(function* (folder) {
 		const scope = yield* scopeOf(folder);
-		const foreignSkills = listForeignSkills(yield* foreignOf(scope));
-		return { foreignSkills, skills: [...(yield* listFor(scope))] };
+		const foreign = yield* foreignOf(scope);
+		const paths = skillSourcePaths(foreign.entries(scope.project === null ? "user" : "project"));
+		return {
+			foreignSkills: listForeignSkills(foreign),
+			paths,
+			skills: [...(yield* listFor(scope))],
+		};
 	});
+
+	/** The `skills` setting of the scope the page edits, with the base its entries resolve against. */
+	const pathDeps = (scope: SkillScopeInfo): Effect.Effect<SkillPathsDeps, SkillRefused> =>
+		Effect.gen(function* () {
+			const which = scope.project === null ? "user" : "project";
+			const pi = deps.skills(scope.cwd);
+			return {
+				base: settingsBaseDir(deps.home, scope.project),
+				entries: yield* pi.entries(which),
+				fs: deps.fs,
+				userHome: deps.home.userHome,
+				writeEntries: (entries) => pi.writeEntries(which, entries),
+			};
+		});
+
+	const addPath: SkillsServiceApi["addPath"] = Effect.fn("Skills.addPath")(
+		function* (folder, path) {
+			const scope = yield* scopeOf(folder);
+			yield* addSkillPath(yield* pathDeps(scope), path);
+		},
+	);
+
+	const removePath: SkillsServiceApi["removePath"] = Effect.fn("Skills.removePath")(
+		function* (folder, path) {
+			const scope = yield* scopeOf(folder);
+			yield* removeSkillPath(yield* pathDeps(scope), path);
+		},
+	);
 
 	const setFolderLinked: SkillsServiceApi["setFolderLinked"] = Effect.fn("Skills.setFolderLinked")(
 		function* (folder, path, linked) {
@@ -650,6 +689,7 @@ export const makeSkillsService = (deps: {
 	);
 
 	return {
+		addPath,
 		createFolder,
 		deleteFile,
 		deleteFolder,
@@ -662,6 +702,7 @@ export const makeSkillsService = (deps: {
 		readFile,
 		readRaw,
 		remove,
+		removePath,
 		save,
 		setEnabled,
 		setFolderLinked,

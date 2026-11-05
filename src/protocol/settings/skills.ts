@@ -96,6 +96,8 @@ export const SkillListView = Schema.Struct({
 	skills: Schema.Array(SkillView),
 	/** What other agents keep in their own folders, whether or not pi reads it. */
 	foreignSkills: Schema.Array(ForeignSkillView),
+	/** The source paths this scope's `skills` setting adds, as written there. */
+	paths: Schema.Array(Schema.String),
 });
 export type SkillListView = typeof SkillListView.Type;
 
@@ -305,6 +307,18 @@ export const SkillRpcs = RpcGroup.make(
 	 */
 	Rpc.make("settings.skills.setFolderLinked", {
 		payload: { ...folder, path: Schema.NonEmptyString, linked: Schema.Boolean },
+		success: Schema.Void,
+		error: SkillRefused,
+	}),
+	/** Add a folder, or one `.md` file, to this scope's `skills` setting. */
+	Rpc.make("settings.skills.addPath", {
+		payload: { ...folder, path: Schema.NonEmptyString },
+		success: Schema.Void,
+		error: SkillRefused,
+	}),
+	/** Remove every entry that names a path from this scope's `skills` setting. */
+	Rpc.make("settings.skills.removePath", {
+		payload: { ...folder, path: Schema.NonEmptyString },
 		success: Schema.Void,
 		error: SkillRefused,
 	}),

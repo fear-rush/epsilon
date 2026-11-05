@@ -878,3 +878,160 @@ describe("the files of a skill Epsilon does not edit", () => {
 		expect(outcome.neighbour.reason).toContain("not part of this skill");
 	});
 });
+
+describe("the paths in the skills setting", () => {
+	test("adds a folder, shows its skills, and removes it again", async () => {
+		const { agentDir, layer, root } = skillsLayer("paths-folder");
+		const shared = join(root, "shared-skills");
+		writeSkill(shared, "alpha", "name: alpha\ndescription: The alpha skill");
+		writeSkill(shared, "beta", "name: beta\ndescription: The beta skill");
+
+		const outcome = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				yield* client["settings.skills.addPath"]({ folder: null, path: shared });
+				const added = yield* client["settings.skills.list"]({ folder: null });
+				// The same path twice is still one source.
+				yield* client["settings.skills.addPath"]({ folder: null, path: shared });
+				const twice = yield* client["settings.skills.list"]({ folder: null });
+				const stored = readText(join(agentDir, "settings.json"));
+				yield* client["settings.skills.removePath"]({ folder: null, path: shared });
+				const removed = yield* client["settings.skills.list"]({ folder: null });
+				return { added, removed, stored, twice };
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		const origins = outcome.added.skills
+			.filter((skill) => skill.origin === "settings-path")
+			.map((skill) => skill.name)
+			.toSorted();
+		expect(origins).toEqual(["alpha", "beta"]);
+		expect(outcome.added.paths).toEqual([shared]);
+		expect(outcome.twice.paths).toEqual([shared]);
+		expect(JSON.parse(outcome.stored)).toMatchObject({ skills: [shared] });
+		expect(outcome.removed.paths).toEqual([]);
+		expect(outcome.removed.skills.some((skill) => skill.origin === "settings-path")).toBe(false);
+	});
+
+	test("adds one .md file as a skill", async () => {
+		const { layer, root } = skillsLayer("paths-file");
+		const solo = join(root, "solo.md");
+		writeFileSync(solo, "---\nname: solo\ndescription: A solo skill\n---\n\nBody\n");
+
+		const outcome = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				yield* client["settings.skills.addPath"]({ folder: null, path: solo });
+				const list = yield* client["settings.skills.list"]({ folder: null });
+				return { list, skill: list.skills.find((entry) => entry.filePath === solo) };
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(outcome.list.paths).toEqual([solo]);
+		expect(outcome.skill).toMatchObject({
+			name: "solo",
+			origin: "settings-path",
+			status: "active",
+		});
+	});
+
+	test("adding a skill folder a -path switch hid makes it load", async () => {
+		const { agentDir, layer, root } = skillsLayer("paths-hidden");
+		const shared = join(root, "shared-skills");
+		writeSkill(shared, "alpha", "name: alpha\ndescription: The alpha skill");
+		const alpha = join(shared, "alpha");
+		writeJson(join(agentDir, "settings.json"), { skills: [alpha, `-${alpha}`] });
+
+		const outcome = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				const before = yield* client["settings.skills.list"]({ folder: null });
+				yield* client["settings.skills.addPath"]({ folder: null, path: alpha });
+				const after = yield* client["settings.skills.list"]({ folder: null });
+				return { after, before };
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(outcome.before.skills.find((skill) => skill.name === "alpha")?.status).toBe("disabled");
+		expect(outcome.after.paths).toEqual([alpha]);
+		expect(outcome.after.skills.find((skill) => skill.name === "alpha")?.status).toBe("active");
+	});
+
+	test("refuses a missing path, a file pi cannot read as a skill, and one not listed", async () => {
+		const { layer, root } = skillsLayer("paths-refused");
+		const notes = join(root, "notes.txt");
+		writeFileSync(notes, "x");
+
+		const outcome = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				const call = (path: string) => ({ folder: null, path });
+				const missing = yield* Effect.flip(
+					client["settings.skills.addPath"](call(join(root, "missing"))),
+				);
+				const notMd = yield* Effect.flip(client["settings.skills.addPath"](call(notes)));
+				const absent = yield* Effect.flip(
+					client["settings.skills.removePath"](call(join(root, "other"))),
+				);
+				return { absent, missing, notMd };
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(outcome.missing.reason).toContain("does not exist");
+		expect(outcome.notMd.reason).toContain("folder or a .md file");
+		expect(outcome.absent.reason).toContain("not in the skills setting");
+	});
+
+	test("a project's paths are written to its own .pi/settings.json", async () => {
+		const { agentDir, layer, root } = skillsLayer("paths-project");
+		const project = join(root, "project");
+		const shared = join(root, "shared-skills");
+		mkdirSync(project, { recursive: true });
+		writeSkill(shared, "alpha", "name: alpha\ndescription: The alpha skill");
+		writeJson(join(agentDir, "trust.json"), { [realpathSync(project)]: true });
+
+		const outcome = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				yield* client["settings.skills.addPath"]({ folder: project, path: shared });
+				const list = yield* client["settings.skills.list"]({ folder: project });
+				const user = yield* client["settings.skills.list"]({ folder: null });
+				return {
+					list,
+					projectSettings: readText(join(project, ".pi", "settings.json")),
+					user,
+				};
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(outcome.list.paths).toEqual([shared]);
+		expect(JSON.parse(outcome.projectSettings)).toMatchObject({ skills: [shared] });
+		// The home's own setting is untouched.
+		expect(outcome.user.paths).toEqual([]);
+	});
+
+	test("a linked folder of another agent is a source path too", async () => {
+		const { layer, userHome } = skillsLayer("paths-linked");
+		const claude = join(userHome, ".claude", "skills");
+		writeSkill(claude, "from-claude", "name: from-claude\ndescription: Claude's skill");
+
+		const outcome = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				yield* client["settings.skills.setFolderLinked"]({
+					folder: null,
+					linked: true,
+					path: claude,
+				});
+				const linked = yield* client["settings.skills.list"]({ folder: null });
+				yield* client["settings.skills.removePath"]({ folder: null, path: claude });
+				const removed = yield* client["settings.skills.list"]({ folder: null });
+				return { linked, removed };
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(outcome.linked.paths).toEqual([claude]);
+		expect(outcome.removed.paths).toEqual([]);
+		expect(outcome.removed.foreignSkills[0]?.linked).toBe(false);
+	});
+});

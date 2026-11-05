@@ -12,6 +12,7 @@ import { useSettings, useSettingsProject } from "../queries.ts";
 import { ForeignSkills } from "./foreign-skills.tsx";
 import { ImportSkillsDialog } from "./import/import-dialog.tsx";
 import { groupSkills } from "./skill-groups.ts";
+import { SkillPaths } from "./skill-paths.tsx";
 import { skillKey, skillSearch } from "./skill-search.ts";
 
 /** A skill pi does not load as it stands: off, shadowed, refused or untrusted. */
@@ -99,6 +100,7 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 						))}
 					</ListGroup>
 				))}
+				<SkillPaths paths={settings.data?.skills.paths ?? []} />
 				<ForeignSkills skills={foreign} />
 			</div>
 		</ListPane>

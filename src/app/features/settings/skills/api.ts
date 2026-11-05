@@ -58,6 +58,14 @@ export const readSkillDocumentFile = (
 export const setSkillFolderLinked = (project: string | undefined, path: string, linked: boolean) =>
 	call((client) => client["settings.skills.setFolderLinked"]({ ...folder(project), linked, path }));
 
+/** Add a folder, or one `.md` file, to the scope's `skills` setting. */
+export const addSkillPath = (project: string | undefined, path: string) =>
+	call((client) => client["settings.skills.addPath"]({ ...folder(project), path }));
+
+/** Remove every entry naming that path from the scope's `skills` setting. */
+export const removeSkillPath = (project: string | undefined, path: string) =>
+	call((client) => client["settings.skills.removePath"]({ ...folder(project), path }));
+
 /** Every file and folder in one editable skill. */
 export const readSkillFiles = (
 	project: string | undefined,

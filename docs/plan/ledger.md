@@ -62,7 +62,7 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | [x]  | `POST /api/settings/skills/folders/link`, `…/unlink`                              | S6        | `feat(skills): the folders other agents keep` (`settings.skills.setFolderLinked`)      |
 | [x]  | a skill's bundled files: list, read, write, delete file, create and delete folder | S6        | `feat(skills): a skill's bundled files on the server` (`settings.skills.*File(s)`)     |
 | [x]  | `GET /api/settings/skills/listed-files`, `GET …/listed-file` (read-only skills)   | S6        | `feat(skills): a listed skill's files` (`listDocumentFiles`, `readDocumentFile`)       |
-| [ ]  | `PUT /api/settings/skills/paths`, `DELETE …/paths`                                | S6        | verify                                                                                 |
+| [x]  | `PUT /api/settings/skills/paths`, `DELETE …/paths` (any folder or `.md` file)     | S6        | `feat(skills): the skill paths` (`settings.skills.addPath`, `removePath`)              |
 | [x]  | `listProviders` also lists a `models.json` entry pi cannot compose                | S5        | `feat(settings): the entry pi cannot compose`                                          |
 
 ## Client files
@@ -265,8 +265,8 @@ that replacement, not missing markup.
 | [x]  | `features/settings/skills/skill-notices.tsx`             | 49    | `feat(skills): the loaded switch and the page's notices` (photographed)          | `SkillNotices`                                                                  |
 | [x]  | `features/settings/skills/skill-page-state.ts`           | 36    | `feat(skills): a listed skill's files` (photographed)                            | `useSkillPage`                                                                  |
 | [x]  | `features/settings/skills/skill-page.tsx`                | 51    | `feat(skills): a listed skill's files` (parity)                                  |                                                                                 |
-| [ ]  | `features/settings/skills/skill-path-dialog.tsx`         | 85    | **missing**                                                                      | `SkillPathDialog`                                                               |
-| [ ]  | `features/settings/skills/skill-paths.tsx`               | 66    | **missing**                                                                      | `SkillPaths`                                                                    |
+| [x]  | `features/settings/skills/skill-path-dialog.tsx`         | 85    | `feat(skills): the skill paths` (photographed: dialog and refusal)               | `SkillPathDialog`                                                               |
+| [x]  | `features/settings/skills/skill-paths.tsx`               | 66    | `feat(skills): the skill paths` (photographed: the list and the dialog)          | `SkillPaths`                                                                    |
 | [x]  | `features/settings/skills/skill-raw-pane.tsx`            | 84    | `feat(skills): the raw tab's file tree` (photographed)                           | `RawPane`                                                                       |
 | [x]  | `features/settings/skills/skill-raw-source.ts`           | 80    | `feat(skills): a listed skill's files` (photographed: the Raw tab and its files) | `RawSource`, `useRawFile`, `useRawFiles`, `useRawSave`                          |
 | [x]  | `features/settings/skills/skill-raw.tsx`                 | 282   | `feat(skills): the raw tab's file tree` (photographed)                           |                                                                                 |
@@ -276,7 +276,7 @@ that replacement, not missing markup.
 | [x]  | `features/settings/skills/skill-status.ts`               | 41    | `feat(skills): the loaded switch and the page's notices`                         | `isOn`, `readOnlyReason`, `useSkillToggle`                                      |
 | [x]  | `features/settings/skills/skill-unreadable.tsx`          | 18    | `feat(skills): a SKILL.md pi cannot parse` (photographed)                        | `SkillUnreadable`                                                               |
 | [x]  | `features/settings/skills/skill-viewer.tsx`              | 110   | `feat(skills): a listed skill's files` (photographed)                            |                                                                                 |
-| [ ]  | `features/settings/skills/skills-panel.tsx`              | 154   | exists, changed (97 lines)                                                       |                                                                                 |
+| [ ]  | `features/settings/skills/skills-panel.tsx`              | 154   | has `SkillPaths`; missing the file-only notice                                   |                                                                                 |
 
 ## S7 Settings: Context
 
