@@ -14,19 +14,19 @@ names; it is a hint, not a verdict. A file that exists on the branch stays untic
 
 URLs are part of the UI: a bookmark to main's page opens the same page here.
 
-| Done | main route                                                                          | Branch today                           |
-| ---- | ----------------------------------------------------------------------------------- | -------------------------------------- |
-| [ ]  | `/`                                                                                 | exists                                 |
-| [ ]  | `/sessions/$sessionId`                                                              | exists                                 |
-| [ ]  | `/settings`                                                                         | exists                                 |
-| [ ]  | `/settings/general`                                                                 | exists                                 |
-| [x]  | `/settings/context`                                                                 | `feat(settings): the context sections` |
-| [x]  | `/settings/context/$section`                                                        | `feat(settings): the context sections` |
-| [ ]  | `/settings/mcp`                                                                     | exists (145-line stub)                 |
-| [ ]  | `/settings/mcp/$scope/$name`                                                        | **missing**                            |
-| [ ]  | `/settings/packages`, `/settings/packages/$scope/$source`                           | exists                                 |
-| [ ]  | `/settings/providers`, `/settings/providers/new`, `/settings/providers/$providerId` | exists                                 |
-| [ ]  | `/settings/skills`, `/settings/skills/new`, `/settings/skills/$name`                | exists                                 |
+| Done | main route                                                                          | Branch today                                                                    |
+| ---- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [x]  | `/`                                                                                 | exists; opened in S9, `feat(components): the shared components and editor`      |
+| [x]  | `/sessions/$sessionId`                                                              | exists; opened in S9, `feat(components): the shared components and editor`      |
+| [x]  | `/settings`                                                                         | exists; opened in S9, `feat(components): the shared components and editor`      |
+| [x]  | `/settings/general`                                                                 | exists; opened in S9, `feat(components): the shared components and editor`      |
+| [x]  | `/settings/context`                                                                 | `feat(settings): the context sections`                                          |
+| [x]  | `/settings/context/$section`                                                        | `feat(settings): the context sections`                                          |
+| [x]  | `/settings/mcp`                                                                     | the S4 port, opened in S9: `feat(components): the shared components and editor` |
+| [x]  | `/settings/mcp/$scope/$name`                                                        | the S4 port, opened in S9: `feat(components): the shared components and editor` |
+| [x]  | `/settings/packages`, `/settings/packages/$scope/$source`                           | exists; opened in S9, `feat(components): the shared components and editor`      |
+| [x]  | `/settings/providers`, `/settings/providers/new`, `/settings/providers/$providerId` | exists; opened in S9, `feat(components): the shared components and editor`      |
+| [x]  | `/settings/skills`, `/settings/skills/new`, `/settings/skills/$name`                | exists; opened in S9, `feat(components): the shared components and editor`      |
 
 Branch-only routes `/settings/projects` and `/settings/diagnostics` stay; they must use
 main's settings layout and patterns, and they get rows in S8 when touched.
@@ -313,87 +313,87 @@ engine in `.epsilon`, where no chat runs. Fixed with its test in
 
 ## S9 Shared components, editor, styles, lib
 
-| Done | main file (`client/src/…`)                            | Lines | Branch today                   | Missing exports |
-| ---- | ----------------------------------------------------- | ----- | ------------------------------ | --------------- |
-| [ ]  | `app/app-shell.tsx`                                   | 37    | exists elsewhere (names found) |                 |
-| [ ]  | `app/query-client.ts`                                 | 23    | exists elsewhere (names found) |                 |
-| [ ]  | `app/router-context.ts`                               | 4     | exists elsewhere (names found) |                 |
-| [ ]  | `app/router.tsx`                                      | 38    | exists elsewhere (names found) |                 |
-| [x]  | `components/editor/code-editor/checks.ts`             | 66    | identical                      |                 |
-| [ ]  | `components/editor/code-editor/code-editor.tsx`       | 313   | exists, changed (5 lines)      |                 |
-| [x]  | `components/editor/code-editor/format.ts`             | 53    | identical                      |                 |
-| [ ]  | `components/editor/code-editor/markdown-commands.ts`  | 164   | exists, changed (2 lines)      |                 |
-| [x]  | `components/editor/code-editor/theme.ts`              | 120   | identical                      |                 |
-| [ ]  | `components/editor/file-tree.tsx`                     | 251   | exists, changed (19 lines)     |                 |
-| [ ]  | `components/editor/highlight.tsx`                     | 185   | exists, changed (94 lines)     |                 |
-| [ ]  | `components/editor/markdown.tsx`                      | 65    | exists, changed (102 lines)    |                 |
-| [x]  | `components/patterns/controls/enabled-switch.tsx`     | 30    | identical                      |                 |
-| [ ]  | `components/patterns/dialog/dialog-frame.tsx`         | 70    | exists, changed (2 lines)      |                 |
-| [x]  | `components/patterns/form/use-draft-form.ts`          | 72    | identical                      |                 |
-| [ ]  | `components/patterns/list/list-group.tsx`             | 18    | exists, changed (8 lines)      |                 |
-| [ ]  | `components/patterns/list/list-item.tsx`              | 70    | exists, changed (1 lines)      |                 |
-| [ ]  | `components/patterns/list/list-pane.tsx`              | 116   | exists, changed (22 lines)     |                 |
-| [x]  | `components/patterns/list/search-field.tsx`           | 30    | identical                      |                 |
-| [ ]  | `components/patterns/pane/detail-page.tsx`            | 86    | exists, changed (11 lines)     |                 |
-| [ ]  | `components/patterns/pane/detail-placeholder.tsx`     | 16    | exists, changed (1 lines)      |                 |
-| [x]  | `components/patterns/pane/gutter.ts`                  | 8     | identical                      |                 |
-| [ ]  | `components/patterns/pane/master-detail.tsx`          | 31    | exists, changed (1 lines)      |                 |
-| [ ]  | `components/patterns/pane/pane-band.tsx`              | 26    | exists, changed (1 lines)      |                 |
-| [ ]  | `components/patterns/pane/pane-bar.tsx`               | 63    | exists, changed (1 lines)      |                 |
-| [ ]  | `components/patterns/pane/pane-body.tsx`              | 33    | exists, changed (1 lines)      |                 |
-| [ ]  | `components/patterns/pane/pane-footer.tsx`            | 46    | exists, changed (1 lines)      |                 |
-| [ ]  | `components/patterns/pane/pane.tsx`                   | 22    | exists, changed (1 lines)      |                 |
-| [x]  | `components/patterns/section/animated-row.tsx`        | 14    | identical                      |                 |
-| [ ]  | `components/patterns/section/collapsible-section.tsx` | 89    | exists, changed (2 lines)      |                 |
-| [x]  | `components/patterns/section/field-stack.tsx`         | 8     | identical                      |                 |
-| [ ]  | `components/patterns/section/pair-rows.tsx`           | 134   | exists, changed (9 lines)      |                 |
-| [ ]  | `components/patterns/section/row.tsx`                 | 46    | exists, changed (3 lines)      |                 |
-| [ ]  | `components/patterns/section/section.tsx`             | 25    | exists, changed (2 lines)      |                 |
-| [x]  | `components/patterns/section/use-animated-rows.ts`    | 37    | identical                      |                 |
-| [x]  | `components/patterns/shortcut.ts`                     | 5     | identical                      |                 |
-| [x]  | `components/patterns/tabs/mode-tabs.tsx`              | 40    | identical                      |                 |
-| [ ]  | `components/patterns/tabs/scope-tabs.tsx`             | 135   | exists, changed (8 lines)      |                 |
-| [x]  | `components/patterns/tip.tsx`                         | 28    | identical                      |                 |
-| [ ]  | `components/ui/badge.tsx`                             | 51    | exists, changed (1 lines)      |                 |
-| [ ]  | `components/ui/bubble.tsx`                            | 123   | exists, changed (3 lines)      |                 |
-| [ ]  | `components/ui/button.tsx`                            | 57    | exists, changed (1 lines)      |                 |
-| [ ]  | `components/ui/checkbox.tsx`                          | 26    | exists, changed (5 lines)      |                 |
-| [ ]  | `components/ui/code-block.tsx`                        | 235   | exists, changed (6 lines)      |                 |
-| [x]  | `components/ui/collapsible.tsx`                       | 15    | identical                      |                 |
-| [ ]  | `components/ui/command.tsx`                           | 179   | exists, changed (6 lines)      |                 |
-| [ ]  | `components/ui/context-menu.tsx`                      | 241   | exists, changed (7 lines)      |                 |
-| [ ]  | `components/ui/dialog.tsx`                            | 133   | exists, changed (10 lines)     |                 |
-| [ ]  | `components/ui/dropdown-menu.tsx`                     | 252   | exists, changed (9 lines)      |                 |
-| [ ]  | `components/ui/field.tsx`                             | 224   | exists, changed (4 lines)      |                 |
-| [ ]  | `components/ui/input-group.tsx`                       | 146   | exists, changed (4 lines)      |                 |
-| [ ]  | `components/ui/input.tsx`                             | 19    | exists, changed (5 lines)      |                 |
-| [ ]  | `components/ui/item.tsx`                              | 188   | exists, changed (4 lines)      |                 |
-| [ ]  | `components/ui/label.tsx`                             | 19    | exists, changed (1 lines)      |                 |
-| [ ]  | `components/ui/marker.tsx`                            | 67    | exists, changed (3 lines)      |                 |
-| [ ]  | `components/ui/message-scroller.tsx`                  | 130   | exists, changed (6 lines)      |                 |
-| [ ]  | `components/ui/message.tsx`                           | 84    | exists, changed (1 lines)      |                 |
-| [ ]  | `components/ui/popover.tsx`                           | 79    | exists, changed (5 lines)      |                 |
-| [ ]  | `components/ui/radio-group.tsx`                       | 37    | exists, changed (1 lines)      |                 |
-| [ ]  | `components/ui/select.tsx`                            | 187   | exists, changed (9 lines)      |                 |
-| [ ]  | `components/ui/separator.tsx`                         | 18    | exists, changed (1 lines)      |                 |
-| [ ]  | `components/ui/sheet.tsx`                             | 125   | exists, changed (6 lines)      |                 |
-| [ ]  | `components/ui/sidebar.tsx`                           | 386   | exists, changed (8 lines)      |                 |
-| [ ]  | `components/ui/spinner.tsx`                           | 16    | exists, changed (3 lines)      |                 |
-| [ ]  | `components/ui/switch.tsx`                            | 29    | exists, changed (1 lines)      |                 |
-| [ ]  | `components/ui/tabs.tsx`                              | 103   | exists, changed (1 lines)      |                 |
-| [ ]  | `components/ui/textarea.tsx`                          | 17    | exists, changed (3 lines)      |                 |
-| [ ]  | `components/ui/tooltip.tsx`                           | 53    | exists, changed (3 lines)      |                 |
-| [ ]  | `components/ui/trace.tsx`                             | 149   | exists, changed (4 lines)      |                 |
-| [ ]  | `features/readiness/not-ready.tsx`                    | 28    | exists elsewhere (names found) |                 |
-| [ ]  | `features/readiness/use-readiness.ts`                 | 20    | exists elsewhere (names found) |                 |
-| [x]  | `hooks/use-dialog-motion.ts`                          | 42    | identical                      |                 |
-| [x]  | `hooks/use-last-defined.ts`                           | 15    | identical                      |                 |
-| [x]  | `hooks/use-mobile.ts`                                 | 21    | identical                      |                 |
-| [x]  | `index.css`                                           | 177   | identical                      |                 |
-| [ ]  | `lib/cn.ts`                                           | 21    | exists, changed (3 lines)      |                 |
-| [x]  | `lib/utils.ts`                                        | 6     | identical                      |                 |
-| [ ]  | `main.tsx`                                            | 23    | exists, changed (35 lines)     |                 |
-| [ ]  | `socket/link.ts`                                      | 165   | exists elsewhere (names found) |                 |
-| [x]  | `styles/motion.css`                                   | 84    | identical                      |                 |
-| [x]  | `styles/tokens.css`                                   | 131   | identical                      |                 |
-| [x]  | `typeset.css`                                         | 453   | identical                      |                 |
+| Done | main file (`client/src/…`)                            | Lines | Branch today                                                                                                               | Missing exports |
+| ---- | ----------------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| [x]  | `app/app-shell.tsx`                                   | 37    | moved to `features/app-shell/app-shell.tsx`; `feat(components): the shared components and editor`                          |                 |
+| [x]  | `app/query-client.ts`                                 | 23    | moved to `core/query-client.ts`; socket retries replace HTTP; `feat(components): the shared components and editor`         |                 |
+| [x]  | `app/router-context.ts`                               | 4     | merged into `core/router.tsx`; `feat(components): the shared components and editor`                                        |                 |
+| [x]  | `app/router.tsx`                                      | 38    | moved to `core/router.tsx`; `feat(components): the shared components and editor`                                           |                 |
+| [x]  | `components/editor/code-editor/checks.ts`             | 66    | identical                                                                                                                  |                 |
+| [x]  | `components/editor/code-editor/code-editor.tsx`       | 313   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/editor/code-editor/format.ts`             | 53    | identical                                                                                                                  |                 |
+| [x]  | `components/editor/code-editor/markdown-commands.ts`  | 164   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/editor/code-editor/theme.ts`              | 120   | identical                                                                                                                  |                 |
+| [x]  | `components/editor/file-tree.tsx`                     | 251   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/editor/highlight.tsx`                     | 185   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/editor/markdown.tsx`                      | 65    | split into `markdown-blocks.tsx` and `markdown-code-block.tsx`, lazy; `feat(components): the shared components and editor` |                 |
+| [x]  | `components/patterns/controls/enabled-switch.tsx`     | 30    | identical                                                                                                                  |                 |
+| [x]  | `components/patterns/dialog/dialog-frame.tsx`         | 70    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/form/use-draft-form.ts`          | 72    | identical                                                                                                                  |                 |
+| [x]  | `components/patterns/list/list-group.tsx`             | 18    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/list/list-item.tsx`              | 70    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/list/list-pane.tsx`              | 116   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/list/search-field.tsx`           | 30    | identical                                                                                                                  |                 |
+| [x]  | `components/patterns/pane/detail-page.tsx`            | 86    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/pane/detail-placeholder.tsx`     | 16    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/pane/gutter.ts`                  | 8     | identical                                                                                                                  |                 |
+| [x]  | `components/patterns/pane/master-detail.tsx`          | 31    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/pane/pane-band.tsx`              | 26    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/pane/pane-bar.tsx`               | 63    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/pane/pane-body.tsx`              | 33    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/pane/pane-footer.tsx`            | 46    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/pane/pane.tsx`                   | 22    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/section/animated-row.tsx`        | 14    | identical                                                                                                                  |                 |
+| [x]  | `components/patterns/section/collapsible-section.tsx` | 89    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/section/field-stack.tsx`         | 8     | identical                                                                                                                  |                 |
+| [x]  | `components/patterns/section/pair-rows.tsx`           | 134   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/section/row.tsx`                 | 46    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/section/section.tsx`             | 25    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/section/use-animated-rows.ts`    | 37    | identical                                                                                                                  |                 |
+| [x]  | `components/patterns/shortcut.ts`                     | 5     | identical                                                                                                                  |                 |
+| [x]  | `components/patterns/tabs/mode-tabs.tsx`              | 40    | identical                                                                                                                  |                 |
+| [x]  | `components/patterns/tabs/scope-tabs.tsx`             | 135   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/patterns/tip.tsx`                         | 28    | identical                                                                                                                  |                 |
+| [x]  | `components/ui/badge.tsx`                             | 51    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/bubble.tsx`                            | 123   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/button.tsx`                            | 57    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/checkbox.tsx`                          | 26    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/code-block.tsx`                        | 235   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/collapsible.tsx`                       | 15    | identical                                                                                                                  |                 |
+| [x]  | `components/ui/command.tsx`                           | 179   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/context-menu.tsx`                      | 241   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/dialog.tsx`                            | 133   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/dropdown-menu.tsx`                     | 252   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/field.tsx`                             | 224   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/input-group.tsx`                       | 146   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/input.tsx`                             | 19    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/item.tsx`                              | 188   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/label.tsx`                             | 19    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/marker.tsx`                            | 67    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/message-scroller.tsx`                  | 130   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/message.tsx`                           | 84    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/popover.tsx`                           | 79    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/radio-group.tsx`                       | 37    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/select.tsx`                            | 187   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/separator.tsx`                         | 18    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/sheet.tsx`                             | 125   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/sidebar.tsx`                           | 386   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/spinner.tsx`                           | 16    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/switch.tsx`                            | 29    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/tabs.tsx`                              | 103   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/textarea.tsx`                          | 17    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/tooltip.tsx`                           | 53    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `components/ui/trace.tsx`                             | 149   | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `features/readiness/not-ready.tsx`                    | 28    | moved to `features/app-shell/not-ready.tsx`; `feat(components): the shared components and editor`                          |                 |
+| [x]  | `features/readiness/use-readiness.ts`                 | 20    | moved to `core/status.tsx` (`useReadiness`); `feat(components): the shared components and editor`                          |                 |
+| [x]  | `hooks/use-dialog-motion.ts`                          | 42    | identical                                                                                                                  |                 |
+| [x]  | `hooks/use-last-defined.ts`                           | 15    | identical                                                                                                                  |                 |
+| [x]  | `hooks/use-mobile.ts`                                 | 21    | identical                                                                                                                  |                 |
+| [x]  | `index.css`                                           | 177   | identical                                                                                                                  |                 |
+| [x]  | `lib/cn.ts`                                           | 21    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `lib/utils.ts`                                        | 6     | identical                                                                                                                  |                 |
+| [x]  | `main.tsx`                                            | 23    | `feat(components): the shared components and editor`                                                                       |                 |
+| [x]  | `socket/link.ts`                                      | 165   | replaced by `core/runtime.ts` (one socket, effect-rpc); `feat(components): the shared components and editor`               |                 |
+| [x]  | `styles/motion.css`                                   | 84    | identical                                                                                                                  |                 |
+| [x]  | `styles/tokens.css`                                   | 131   | identical                                                                                                                  |                 |
+| [x]  | `typeset.css`                                         | 453   | identical                                                                                                                  |                 |

@@ -13,8 +13,11 @@ import "./index.css";
 const container = document.getElementById("root");
 if (container === null) throw new Error("index.html has no #root element");
 
-createRoot(container).render(
-	<StrictMode>
-		<RouterProvider router={router} />
-	</StrictMode>,
-);
+// main's guard: a re-executed module (HMR) must not mount a second root on the same node.
+if (container.innerHTML === "") {
+	createRoot(container).render(
+		<StrictMode>
+			<RouterProvider router={router} />
+		</StrictMode>,
+	);
+}

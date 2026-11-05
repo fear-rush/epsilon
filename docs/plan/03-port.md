@@ -86,5 +86,11 @@ One slice is one or more commits; each leaves the app running.
 
 ## Done when
 
-- [ ] Every ledger row is ticked or carries the owner's dated yes to differ.
-- [ ] `src/domain/` and `src/app/` carry `main`'s tests for what they port.
+- [x] Every ledger row is ticked or carries the owner's dated yes to differ.
+- [ ] `src/domain/` and `src/app/` carry `main`'s tests for what they port. Five of
+      `main`'s nine shared test files have no direct counterpart yet:
+      `conversation/display.test.ts`, `conversation/events.test.ts`,
+      `conversation/replay.test.ts`, `mcp/tools.test.ts`, `providers/endpoints.test.ts`.
+      Some of their cases are covered elsewhere (`domain/conversation/reduce.test.ts`,
+      `backend/settings/providers/handlers.test.ts`); each file needs the decision
+      "port it" or "this test covers it", not a blanket skip.
