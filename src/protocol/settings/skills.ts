@@ -207,6 +207,9 @@ const skillTarget = {
 /** The skill a bundle call names, and the file inside it. */
 const bundleFile = { ...skillTarget, path: Schema.NonEmptyString } as const;
 
+/** A skill the inventory lists, named by its file: Epsilon reads it and never writes it. */
+const documentTarget = { ...folder, filePath: Schema.NonEmptyString } as const;
+
 export const SkillRpcs = RpcGroup.make(
 	Rpc.make("settings.skills.list", {
 		payload: folder,
@@ -244,8 +247,20 @@ export const SkillRpcs = RpcGroup.make(
 		error: SkillRefused,
 	}),
 	Rpc.make("settings.skills.readDocument", {
-		payload: { ...folder, filePath: Schema.NonEmptyString },
+		payload: documentTarget,
 		success: SkillDocument,
+		error: SkillRefused,
+	}),
+	/** Every file and folder of a listed skill: its own folder, or the one markdown file. */
+	Rpc.make("settings.skills.listDocumentFiles", {
+		payload: documentTarget,
+		success: SkillBundleList,
+		error: SkillRefused,
+	}),
+	/** One file of a listed skill, `SKILL.md` included; binary and oversized files refuse. */
+	Rpc.make("settings.skills.readDocumentFile", {
+		payload: { ...documentTarget, path: Schema.NonEmptyString },
+		success: Schema.Struct({ text: Schema.String }),
 		error: SkillRefused,
 	}),
 	/** Every file and folder in one editable skill, `SKILL.md` included. */

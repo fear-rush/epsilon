@@ -81,30 +81,32 @@ export function SkillRaw({
 			<div className="flex min-h-0 shrink-0 flex-col gap-2 md:w-nav">
 				<div className="flex h-8 items-center justify-between gap-2">
 					<span className="text-meta font-medium text-muted-foreground">Files</span>
-					<div className="flex items-center">
-						<Tip label="New file">
-							<Button
-								type="button"
-								variant="ghost"
-								size="icon-sm"
-								aria-label="New file"
-								onClick={() => setCreating("file")}
-							>
-								<FilePlusIcon />
-							</Button>
-						</Tip>
-						<Tip label="New folder">
-							<Button
-								type="button"
-								variant="ghost"
-								size="icon-sm"
-								aria-label="New folder"
-								onClick={() => setCreating("folder")}
-							>
-								<FolderPlusIcon />
-							</Button>
-						</Tip>
-					</div>
+					{source.kind === "editable" && (
+						<div className="flex items-center">
+							<Tip label="New file">
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon-sm"
+									aria-label="New file"
+									onClick={() => setCreating("file")}
+								>
+									<FilePlusIcon />
+								</Button>
+							</Tip>
+							<Tip label="New folder">
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon-sm"
+									aria-label="New folder"
+									onClick={() => setCreating("folder")}
+								>
+									<FolderPlusIcon />
+								</Button>
+							</Tip>
+						</div>
+					)}
 				</div>
 				<nav className="max-h-dialog-body-sm min-h-0 flex-1 overflow-y-auto rounded-xl border bg-card p-2 md:max-h-none">
 					<FileTree
@@ -114,7 +116,7 @@ export function SkillRaw({
 						first="SKILL.md"
 						disabledHint="Binary file"
 						onSelect={select}
-						onDelete={setRemoving}
+						{...(source.kind === "editable" ? { onDelete: setRemoving } : {})}
 						protectedPaths={["SKILL.md"]}
 					/>
 				</nav>
@@ -141,32 +143,36 @@ export function SkillRaw({
 				}}
 			/>
 			<>
-				<SkillDeleteEntryDialog
-					entry={removing}
-					root={source.root}
-					name={source.name}
-					onClose={() => setRemoving(undefined)}
-					onDeleted={(entry) => {
-						setRemoving(undefined);
-						if (!entry.folder && entry.path === path) {
-							changeDirty(false);
-							onPathChange("SKILL.md");
-						}
-					}}
-				/>
-				<SkillNewEntryDialog
-					open={creating !== undefined}
-					kind={creating}
-					root={source.root}
-					name={source.name}
-					files={files.map((file) => file.path)}
-					folders={folders}
-					onClose={() => setCreating(undefined)}
-					onCreated={(created) => {
-						setCreating(undefined);
-						if (creating === "file") select(created);
-					}}
-				/>
+				{source.kind === "editable" && (
+					<>
+						<SkillDeleteEntryDialog
+							entry={removing}
+							root={source.root}
+							name={source.name}
+							onClose={() => setRemoving(undefined)}
+							onDeleted={(entry) => {
+								setRemoving(undefined);
+								if (!entry.folder && entry.path === path) {
+									changeDirty(false);
+									onPathChange("SKILL.md");
+								}
+							}}
+						/>
+						<SkillNewEntryDialog
+							open={creating !== undefined}
+							kind={creating}
+							root={source.root}
+							name={source.name}
+							files={files.map((file) => file.path)}
+							folders={folders}
+							onClose={() => setCreating(undefined)}
+							onCreated={(created) => {
+								setCreating(undefined);
+								if (creating === "file") select(created);
+							}}
+						/>
+					</>
+				)}
 			</>
 		</div>
 	);
@@ -198,6 +204,7 @@ function RawFile({
 			</div>
 		);
 	}
+	if (source.kind === "listed") return <RawPane path={path} text={query.data} />;
 	return (
 		<EditableFile
 			source={source}
@@ -216,7 +223,7 @@ function EditableFile({
 	onDirtyChange,
 	onSaved,
 }: {
-	source: RawSource;
+	source: Extract<RawSource, { kind: "editable" }>;
 	path: string;
 	initial: string;
 	onDirtyChange: (dirty: boolean) => void;

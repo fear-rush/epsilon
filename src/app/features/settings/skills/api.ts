@@ -32,6 +32,28 @@ export const writeSkillRaw = (
 export const readSkillDocument = (project: string | undefined, filePath: string) =>
 	call((client) => client["settings.skills.readDocument"]({ ...folder(project), filePath }));
 
+/** Every file and folder of a skill Epsilon does not edit. */
+export const readSkillDocumentFiles = (
+	project: string | undefined,
+	filePath: string,
+	signal?: AbortSignal,
+) =>
+	call((client) => client["settings.skills.listDocumentFiles"]({ ...folder(project), filePath }), {
+		signal,
+	});
+
+/** One file of such a skill, `SKILL.md` included. */
+export const readSkillDocumentFile = (
+	project: string | undefined,
+	filePath: string,
+	path: string,
+	signal?: AbortSignal,
+) =>
+	call(
+		(client) => client["settings.skills.readDocumentFile"]({ ...folder(project), filePath, path }),
+		{ signal },
+	).then((answer) => answer.text);
+
 /** Add another agent's skill folder to the scope's `skills` setting, or take it out. */
 export const setSkillFolderLinked = (project: string | undefined, path: string, linked: boolean) =>
 	call((client) => client["settings.skills.setFolderLinked"]({ ...folder(project), linked, path }));

@@ -35,7 +35,9 @@ import {
 	createSkillBundleFolder,
 	deleteSkillBundleFile,
 	deleteSkillBundleFolder,
+	listListedSkillFiles,
 	listSkillFiles,
+	readListedSkillFile,
 	readSkillBundleFile,
 	writeSkillBundleFile,
 } from "./files.ts";
@@ -291,6 +293,17 @@ export type SkillsServiceApi = {
 		folder: string | null,
 		filePath: string,
 	) => Effect.Effect<SkillDocument, SkillRefused>;
+	/** Every file and folder of a listed skill, `SKILL.md` included. */
+	readonly listDocumentFiles: (
+		folder: string | null,
+		filePath: string,
+	) => Effect.Effect<SkillBundleList, SkillRefused>;
+	/** One file of a listed skill, read-only; binary and oversized files are refused. */
+	readonly readDocumentFile: (
+		folder: string | null,
+		filePath: string,
+		path: string,
+	) => Effect.Effect<string, SkillRefused>;
 	/** Every file and folder in one editable skill, `SKILL.md` included. */
 	readonly listFiles: (
 		folder: string | null,
@@ -547,16 +560,40 @@ export const makeSkillsService = (deps: {
 		},
 	);
 
-	const readDocument: SkillsServiceApi["readDocument"] = Effect.fn("Skills.readDocument")(
-		function* (folder, filePath) {
+	/** The inventory's row for a listed skill, refused when it lists none at that path. */
+	const documentAt = (
+		folder: string | null,
+		filePath: string,
+	): Effect.Effect<SkillView, SkillRefused> =>
+		Effect.gen(function* () {
 			const scope = yield* scopeOf(folder);
 			const listed = (yield* listFor(scope)).find((entry) => entry.filePath === filePath);
 			if (listed === undefined) return yield* refused(filePath, "No such skill");
+			return listed;
+		});
+
+	const readDocument: SkillsServiceApi["readDocument"] = Effect.fn("Skills.readDocument")(
+		function* (folder, filePath) {
+			const listed = yield* documentAt(folder, filePath);
 			const text = yield* readText(deps.fs, listed.filePath);
 			if (text === MISSING) return yield* refused(filePath, "No such skill");
 			return parseSkillDocument(text, listed.name, listed.filePath);
 		},
 	);
+
+	const listDocumentFiles: SkillsServiceApi["listDocumentFiles"] = Effect.fn(
+		"Skills.listDocumentFiles",
+	)(function* (folder, filePath) {
+		const listed = yield* documentAt(folder, filePath);
+		return yield* listListedSkillFiles(deps.fs, listed.filePath);
+	});
+
+	const readDocumentFile: SkillsServiceApi["readDocumentFile"] = Effect.fn(
+		"Skills.readDocumentFile",
+	)(function* (folder, filePath, path) {
+		const listed = yield* documentAt(folder, filePath);
+		return yield* readListedSkillFile(deps.fs, listed.filePath, path);
+	});
 
 	/** The skill folder a bundle call edits, refused unless it is an existing skill. */
 	const bundleDir = (
@@ -617,9 +654,11 @@ export const makeSkillsService = (deps: {
 		deleteFile,
 		deleteFolder,
 		list,
+		listDocumentFiles,
 		listFiles,
 		read,
 		readDocument,
+		readDocumentFile,
 		readFile,
 		readRaw,
 		remove,

@@ -24,4 +24,8 @@ export const settingsKeys = {
 		[...all, "skill-files", project ?? null, root, name] as const,
 	skillFile: (project: string | undefined, root: string, name: string, path: string) =>
 		[...all, "skill-file", project ?? null, root, name, path] as const,
+	skillDocumentFiles: (project: string | undefined, filePath: string) =>
+		[...all, "skill-document-files", project ?? null, filePath] as const,
+	skillDocumentFile: (project: string | undefined, filePath: string, path: string) =>
+		[...all, "skill-document-file", project ?? null, filePath, path] as const,
 };

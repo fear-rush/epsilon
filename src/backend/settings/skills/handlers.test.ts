@@ -764,3 +764,117 @@ describe("the files bundled in a skill", () => {
 		expect(outcome.stray.reason).toContain("links outside");
 	});
 });
+
+describe("the files of a skill Epsilon does not edit", () => {
+	test("lists the folder and reads SKILL.md and bundled files, refusing binary and unsafe ones", async () => {
+		const { agentDir, layer, root } = skillsLayer("document-files");
+		const shared = join(root, "shared");
+		const dir = writeSkill(shared, "probe", "name: probe\ndescription: A probe");
+		mkdirSync(join(dir, "references"));
+		mkdirSync(join(dir, "node_modules"));
+		writeFileSync(join(dir, "references", "a.md"), "# A\n");
+		writeFileSync(join(dir, "logo.png"), Buffer.from([0x89, 0x50, 0, 1, 2]));
+		writeFileSync(join(dir, "node_modules", "a.js"), "x");
+		const outside = join(root, "outside");
+		mkdirSync(outside, { recursive: true });
+		writeFileSync(join(outside, "secret.txt"), "secret");
+		symlinkSync(outside, join(dir, "linked"));
+		// A skills setting path is where a listed skill comes from: Epsilon edits neither.
+		writeJson(join(agentDir, "settings.json"), { skills: [shared] });
+
+		const outcome = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				const list = yield* client["settings.skills.list"]({ folder: null });
+				const probe = list.skills.find((skill) => skill.name === "probe");
+				const filePath = probe?.filePath ?? "";
+				const files = yield* client["settings.skills.listDocumentFiles"]({
+					folder: null,
+					filePath,
+				});
+				const document = yield* client["settings.skills.readDocumentFile"]({
+					folder: null,
+					filePath,
+					path: "SKILL.md",
+				});
+				const reference = yield* client["settings.skills.readDocumentFile"]({
+					folder: null,
+					filePath,
+					path: "references/a.md",
+				});
+				const read = (path: string) =>
+					Effect.flip(client["settings.skills.readDocumentFile"]({ folder: null, filePath, path }));
+				const binary = yield* read("logo.png");
+				const symlink = yield* read("linked/secret.txt");
+				const stripped = yield* read("node_modules/a.js");
+				const escape = yield* read("../outside/secret.txt");
+				const missing = yield* Effect.flip(
+					client["settings.skills.listDocumentFiles"]({
+						folder: null,
+						filePath: join(dir, "absent", "SKILL.md"),
+					}),
+				);
+				return { binary, document, escape, files, missing, probe, reference, stripped, symlink };
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(outcome.probe).toMatchObject({
+			origin: "settings-path",
+			status: "active",
+			toggle: "settings",
+		});
+		expect(outcome.probe?.editable).toBe(false);
+		expect(outcome.files.files.map((file) => [file.path, file.text])).toEqual([
+			["SKILL.md", true],
+			["logo.png", false],
+			["references/a.md", true],
+		]);
+		expect(outcome.files.folders).toEqual(["references"]);
+		expect(outcome.document.text).toContain("name: probe");
+		expect(outcome.reference.text).toBe("# A\n");
+		expect(outcome.binary.reason).toContain("binary");
+		expect(outcome.symlink.reason).toContain("symlink");
+		expect(outcome.stripped.reason).toContain("does not manage");
+		expect(outcome.escape.reason).toBeTruthy();
+		expect(outcome.missing).toBeInstanceOf(SkillRefused);
+		expect(outcome.missing.reason).toContain("No such skill");
+	});
+
+	test("a skill that is one markdown file lists and reads only itself", async () => {
+		const { agentDir, layer, root } = skillsLayer("document-lone");
+		const shared = join(root, "shared");
+		mkdirSync(shared, { recursive: true });
+		const lone = join(shared, "lone.md");
+		writeFileSync(lone, "---\nname: lone\ndescription: One file\n---\n");
+		writeFileSync(join(shared, "neighbour.md"), "private");
+		writeJson(join(agentDir, "settings.json"), { skills: [lone] });
+
+		const outcome = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				const files = yield* client["settings.skills.listDocumentFiles"]({
+					folder: null,
+					filePath: lone,
+				});
+				const own = yield* client["settings.skills.readDocumentFile"]({
+					folder: null,
+					filePath: lone,
+					path: "lone.md",
+				});
+				const neighbour = yield* Effect.flip(
+					client["settings.skills.readDocumentFile"]({
+						folder: null,
+						filePath: lone,
+						path: "neighbour.md",
+					}),
+				);
+				return { files, neighbour, own };
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(outcome.files.files.map((file) => file.path)).toEqual(["lone.md"]);
+		expect(outcome.files.folders).toEqual([]);
+		expect(outcome.own.text).toContain("description: One file");
+		expect(outcome.neighbour.reason).toContain("not part of this skill");
+	});
+});

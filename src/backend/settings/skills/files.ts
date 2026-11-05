@@ -1,4 +1,4 @@
-import { dirname, join, resolve, sep } from "node:path";
+import { basename, dirname, join, resolve, sep } from "node:path";
 
 import { Effect, Option } from "effect";
 import type { FileSystem } from "effect";
@@ -200,6 +200,48 @@ export const readSkillBundleFile = (
 	directory: string,
 	path: string,
 ): Effect.Effect<string, SkillRefused> => readTextIn(fs, directory, path, false);
+
+const isSkillFolder = (filePath: string): boolean => basename(filePath) === SKILL_FILE_NAME;
+
+/**
+ * Every file of a skill the inventory lists, for display. A `SKILL.md` lists its folder;
+ * a skill that is one markdown file lists itself, so its neighbours stay private.
+ */
+export const listListedSkillFiles = (
+	fs: FileSystem.FileSystem,
+	filePath: string,
+): Effect.Effect<SkillBundleList, SkillRefused> =>
+	Effect.gen(function* () {
+		if (isSkillFolder(filePath)) return yield* walk(fs, dirname(filePath));
+		const info = yield* lstat(fs, filePath);
+		if (Option.isNone(info) || info.value.type !== "File") {
+			return yield* refused(filePath, `${basename(filePath)} does not exist`);
+		}
+		return {
+			files: [
+				{
+					path: basename(filePath),
+					size: Number(info.value.size),
+					text: yield* looksLikeText(fs, filePath),
+				},
+			],
+			folders: [],
+			skipped: 0,
+		};
+	});
+
+/**
+ * One file of a skill the inventory lists, under the bundle routes' path checks.
+ * `SKILL.md` is readable here, because this reader cannot write it back.
+ */
+export const readListedSkillFile = (
+	fs: FileSystem.FileSystem,
+	filePath: string,
+	path: string,
+): Effect.Effect<string, SkillRefused> =>
+	isSkillFolder(filePath) || path === basename(filePath)
+		? readTextIn(fs, dirname(filePath), path, true)
+		: Effect.fail(refused(path, `${path} is not part of this skill`));
 
 /**
  * Writes one bundled file, creating its folders. An existing file is rewritten in place,

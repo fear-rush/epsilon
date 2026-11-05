@@ -9,6 +9,9 @@ const Search = Schema.Struct({
 	project: Schema.optional(Schema.NonEmptyString),
 	root: Schema.optional(SkillRoot),
 	path: Schema.optional(Schema.NonEmptyString),
+	/** The open view and raw file belong to the page, so a reload keeps them. */
+	tab: Schema.optional(Schema.Literals(["form", "raw"])),
+	file: Schema.optional(Schema.NonEmptyString),
 });
 
 export const Route = createFileRoute("/settings/skills")({

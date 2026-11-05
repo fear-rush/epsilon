@@ -1,10 +1,15 @@
 import type { SkillRoot, SkillView } from "#protocol/settings/skills";
 
+import type { SkillTab } from "./skill-modes.ts";
+
 /** What the skills routes carry in their search string. */
 export type SkillSearch = {
 	readonly project?: string | undefined;
 	readonly root?: SkillRoot | undefined;
 	readonly path?: string | undefined;
+	/** The open view and raw file belong to the page, so a reload keeps them. */
+	readonly tab?: SkillTab | undefined;
+	readonly file?: string | undefined;
 };
 
 /** A row's identity: an editable skill's root and folder, or a listed file's path. */

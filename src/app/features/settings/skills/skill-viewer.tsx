@@ -1,66 +1,111 @@
-import { Markdown } from "@/components/editor/markdown";
-import { DetailPage } from "@/components/patterns/pane/detail-page";
-import { Row } from "@/components/patterns/section/row";
-import { Section } from "@/components/patterns/section/section";
-import { Notice } from "@/components/patterns/status/notice";
-import { Badge } from "@/components/ui/badge";
-
-import { useSkillDocument } from "../queries.ts";
-import { SKILLS_BACK } from "./skill-modes.ts";
-import { SkillReader } from "./skill-page.tsx";
-
 /**
- * A skill pi loads but Epsilon does not write: a package's, an extension's or one of
- * pi's configured paths. What pi knows is shown, and where to edit it is said plainly.
+ * The page of a skill Epsilon does not edit (a package, a settings path, a folder above
+ * the project, a nested skill). The Form tab is the editable page's cards with the controls
+ * disabled, the Raw tab shows its files read-only, and the footer says why there is no
+ * editor.
  */
+import { FileQuestionIcon } from "lucide-react";
+
+import type { SkillView } from "#protocol/settings/skills";
+import { ModeTabs } from "@/components/patterns/mode-tabs";
+import { DetailPage } from "@/components/patterns/pane/detail-page";
+import { LoadingState } from "@/components/patterns/status/loading-state";
+import { StatusView } from "@/components/patterns/status/status-view";
+
+import { useSettings, useSkillDocument } from "../queries.ts";
+import { SkillCard } from "./skill-card.tsx";
+import type { SkillDraft } from "./skill-draft.ts";
+import { SkillInstructions } from "./skill-instructions.tsx";
+import { LoadedSwitch } from "./skill-loaded-switch.tsx";
+import { SKILL_MODES, SKILLS_BACK } from "./skill-modes.ts";
+import { SkillNotices } from "./skill-notices.tsx";
+import { useSkillPage } from "./skill-page-state.ts";
+import { SkillReader, SkillStatusPage } from "./skill-page.tsx";
+import { SkillRaw } from "./skill-raw.tsx";
+import { useSkillLinks } from "./skill-references.ts";
+import { readOnlyReason, useSkillToggle } from "./skill-status.ts";
+import { SkillUnreadable } from "./skill-unreadable.tsx";
+
+const noChange = () => undefined;
+
 export function SkillViewer({ path }: { path: string }) {
-	const query = useSkillDocument(path);
+	const settings = useSettings();
+	if (settings.isPending) {
+		return (
+			<SkillStatusPage>
+				<div className="flex h-full items-center justify-center">
+					<LoadingState label="Reading the skill…" />
+				</div>
+			</SkillStatusPage>
+		);
+	}
+	const skill = settings.data?.skills.skills.find((entry) => entry.filePath === path);
+	if (skill === undefined) {
+		return (
+			<SkillStatusPage>
+				<StatusView
+					icon={FileQuestionIcon}
+					title="Skill not found"
+					line={`No skill is loaded from ${path} any more.`}
+				/>
+			</SkillStatusPage>
+		);
+	}
+	return <LoadedSkill key={path} skill={skill} />;
+}
+
+function LoadedSkill({ skill }: { skill: SkillView }) {
+	const query = useSkillDocument(skill.filePath);
+	const links = useSkillLinks();
+	const toggle = useSkillToggle();
+	const { tab, rawPath, setTab, setRawPath, openRawFile } = useSkillPage();
 	return (
-		<SkillReader query={query} title={query.data?.name}>
-			{(doc) => (
-				<DetailPage back={SKILLS_BACK} title={doc.name}>
-					<div className="grid gap-section">
-						<Notice tone="info">
-							pi loads this skill from a place Epsilon does not edit. Change it where it lives; the
-							four editable roots are the agent home, ~/.agents/skills and the project&apos;s
-							.pi/skills and .agents/skills.
-						</Notice>
-						{doc.parseError !== undefined && (
-							<Notice tone="danger" title="The frontmatter does not parse">
-								{doc.parseError}
-							</Notice>
+		<SkillReader query={query} title={skill.name}>
+			{(file) => {
+				const draft: SkillDraft = {
+					name: skill.name,
+					description: file.description,
+					modelInvocation: skill.modelInvocation,
+					body: file.body,
+				};
+				return (
+					<DetailPage
+						title={skill.name}
+						back={SKILLS_BACK}
+						bodyKey={tab}
+						actions={<LoadedSwitch skill={skill} toggle={toggle} />}
+						tabs={<ModeTabs items={SKILL_MODES} value={tab} onValueChange={setTab} />}
+						footerStatus={`Read-only: ${readOnlyReason(skill)}.`}
+						fill={tab === "raw"}
+					>
+						<SkillNotices skill={skill} body={file.body} errors={[toggle.error]} />
+						{tab === "raw" ? (
+							<SkillRaw
+								source={{ kind: "listed", filePath: skill.filePath }}
+								path={rawPath}
+								onPathChange={setRawPath}
+								onDirtyChange={noChange}
+								onSaved={noChange}
+							/>
+						) : file.parseError === undefined ? (
+							<>
+								<SkillCard readOnly creating={false} errors={{}} draft={draft} update={noChange} />
+								<SkillInstructions
+									value={file.body}
+									onChange={undefined}
+									references={{
+										skillExists: links.exists,
+										openSkill: links.open,
+										openFile: openRawFile,
+									}}
+								/>
+							</>
+						) : (
+							<SkillUnreadable error={file.parseError} raw={file.raw ?? ""} />
 						)}
-						<Section title="Skill">
-							<Row title="File">{doc.filePath}</Row>
-							<Row title="Description">{doc.description === "" ? "None" : doc.description}</Row>
-							<Row title="Model invocation">
-								{doc.modelInvocation ? "May load on its own" : "Only on request"}
-							</Row>
-						</Section>
-						{doc.bodyWarnings.map((warning) => (
-							<Notice key={warning} tone="warning" title="pi passes this through as text">
-								{warning}
-							</Notice>
-						))}
-						{doc.fields.length > 0 && (
-							<Section description="pi ignores these." title="Other frontmatter">
-								{doc.fields.map((field) => (
-									<Row key={field.key} title={field.key} description={field.value}>
-										<Badge variant="outline">{field.owner}</Badge>
-									</Row>
-								))}
-							</Section>
-						)}
-						{doc.body !== "" && (
-							<Section title="Instructions">
-								<div className="p-3">
-									<Markdown>{doc.body}</Markdown>
-								</div>
-							</Section>
-						)}
-					</div>
-				</DetailPage>
-			)}
+					</DetailPage>
+				);
+			}}
 		</SkillReader>
 	);
 }
