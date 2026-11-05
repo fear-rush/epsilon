@@ -234,7 +234,7 @@ function McpServerForm({
 				</>
 			)}
 
-			{failed !== null && <Notice tone="danger">{failed.message}</Notice>}
+			{failed !== null && <Notice error={failed} title="Couldn't save the MCP server" />}
 
 			<UnsavedChangesBlock blocked={() => form.blocked() || raw.blocked()} subject="MCP server" />
 

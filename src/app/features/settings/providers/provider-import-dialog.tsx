@@ -89,7 +89,7 @@ export function ProviderImportDialog({
 			{models.isPending ? (
 				<LoadingState label="Reading the model list…" />
 			) : models.isError ? (
-				<Notice tone="danger">{models.error.message}</Notice>
+				<Notice error={models.error} title="Couldn't import models" />
 			) : models.data.models.length === 0 ? (
 				<StatusView icon={InboxIcon} title="No models returned" />
 			) : (

@@ -46,6 +46,17 @@ keys); the index conformance test against `SessionManager.listAll`
       their own alternative, and add a test with that shape. Until then, hand-verify a file
       whose missing words look present.
 
+- [ ] **Features still render a thrown error's message.** The translator rule
+      (ARCHITECTURE, "One translator") wants `Notice error`/`StatusView error`, with an
+      explicit title when the action is more precise than the tag's. Sites found while
+      proving S1: `projects/trust-gate.tsx`, `settings/mcp/mcp-add-dialog.tsx`,
+      `settings/mcp/mcp-panel.tsx` (the codemode and default-tool reads),
+      `settings/mcp/mcp-raw.tsx`, `settings/mcp/mcp-registry-browser.tsx` (search and
+      detail) and `settings/mcp/mcp-signin.tsx`. pi's data messages (a test result, a
+      login question, a parse problem) are not thrown errors and stay. The phase 2 grep
+      misses variables named otherwise (`failed.message`, `models.error.message`), so
+      re-run it and read every hit.
+
 - [ ] **A session pi cannot total.** pi's `getSessionStats()` reads `message.usage.input`
       on every assistant message, so a file whose assistant entry has no `usage` throws it,
       and the readings frame calls it on attach: the engine exits, the supervisor records a

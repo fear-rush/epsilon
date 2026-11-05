@@ -40,4 +40,6 @@ is ticked as "replaced by `AppStatus`".
 - [ ] Screenshots, light and dark: a route that throws (sidebar still visible), an
       unknown session id, the server stopped (status line), a refused save (`Notice`), a
       field error. Not taken: AGENTS.md allows browser checks only when the owner asks.
-- [x] `git grep -n 'error.message' -- src/app/features src/app/routes` finds nothing.
+- [x] `git grep -n 'error.message' -- src/app/features src/app/routes` finds nothing. The
+      check passed when phase 2 landed; later slices (S4, S5) reintroduced raw-message
+      sites, and [04-safety.md](04-safety.md) carries the item that finishes them.
