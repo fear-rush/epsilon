@@ -232,13 +232,6 @@ describe("acceptance", () => {
 			stub.stop();
 		}
 	}, 20_000);
-
-	// The release-on-failure is implemented in `EngineSession.open`; a userland extension
-	// cannot make `bindExtensions` reject, so this row waits for the wiring-failure seam
-	// that the configuration tests add in Step 6.
-	test.todo("F8a: a runtime that fails to wire is closed before the error is reported", () => {
-		// Step 6. Opening a session is acquireRelease: a failed wire releases the runtime.
-	});
 });
 
 /**
@@ -371,7 +364,3 @@ test("F8h: a second process signal exits even when a child ignores shutdown", as
 		if (child.exitCode === null) process.kill(child.pid, "SIGKILL");
 	}
 }, 10_000);
-
-test.todo("F8m: notices are capped so a looping extension cannot grow the transcript", () => {
-	// Step 2. The reducer keeps the newest notices and counts what it dropped.
-});

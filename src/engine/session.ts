@@ -93,6 +93,16 @@ export type EngineLogLevel = "debug" | "info" | "warn" | "error";
 export type LogFields = Readonly<Record<string, string | number | boolean>>;
 export type EngineLog = (level: EngineLogLevel, message: string, fields?: LogFields) => void;
 
+/**
+ * F8a's seam: a step that fails after the runtime exists, so `open` has to release it.
+ * Production passes nothing. Nothing in a real `start()` can reject today — the lock and
+ * the watcher are `never` for errors — so without this the release cannot be reached, and
+ * a failure there would leave pi's MCP children running with no chat to serve.
+ */
+export type EngineOpenHooks = {
+	readonly afterStart?: Effect.Effect<void, EngineStartFailed>;
+};
+
 type To = "all" | { readonly tab: string };
 
 /** What pi's `preflightResult` answers: how the prompt was accepted. */
@@ -242,6 +252,7 @@ export class EngineSession {
 		emit: Emit,
 		log: EngineLog,
 		onShutdown: () => void,
+		hooks: EngineOpenHooks = {},
 	): Effect.Effect<EngineSession, EngineStartFailed, FileSystem.FileSystem | Scope.Scope> {
 		return Effect.gen(function* () {
 			const runtime = yield* RuntimeHandle.open({
@@ -253,7 +264,7 @@ export class EngineSession {
 			const session = new EngineSession(input, runtime, emit, log, onShutdown);
 			// F8a: a runtime that opened but could not be bound is closed here, before the
 			// failure leaves the engine. Otherwise its MCP children outlive the error.
-			yield* session.start().pipe(Effect.onError(() => Effect.ignoreCause(session.dispose())));
+			yield* session.start(hooks).pipe(Effect.onError(() => Effect.ignoreCause(session.dispose())));
 			return session;
 		});
 	}
@@ -278,7 +289,7 @@ export class EngineSession {
 		);
 	}
 
-	private start() {
+	private start(hooks: EngineOpenHooks) {
 		const self = this;
 		return Effect.gen(function* () {
 			self.events = yield* Queue.unbounded<SessionInput>();
@@ -325,6 +336,8 @@ export class EngineSession {
 			}
 			yield* self.ensureLock();
 			yield* self.watch();
+			// F8a: the seam a test uses to fail the open after the lock and watcher exist.
+			if (hooks.afterStart !== undefined) yield* hooks.afterStart;
 			self.sendStatus();
 		});
 	}

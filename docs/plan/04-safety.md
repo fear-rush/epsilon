@@ -18,20 +18,47 @@ keys); the index conformance test against `SessionManager.listAll`
 
 ## Items
 
-- [ ] **F1, moving a running chat.** On `main`, move forked and deleted a session while
-      its engine kept writing (`!engines.closeIfIdle(id)` negated a Promise). When move
-      is ported (ledger, server table), it refuses a running chat. Test: a running fake
-      session → move → refused with "running", file untouched.
-- [ ] **F8a** (`test/acceptance.test.ts:242`, todo): a runtime that fails to wire is
-      closed before the error is reported.
-- [ ] **F8m** (`test/acceptance.test.ts:378`, todo): notices are capped, so a looping
-      extension cannot grow the transcript without bound.
+- [x] **F1, moving a running chat.** On `main`, move forked and deleted a session while
+      its engine kept writing (`!engines.closeIfIdle(id)` negated a Promise). Move now
+      refuses a running chat: `operations.test.ts`, "moving a running chat is refused and
+      the file stays where it is (F1)" — a running id, `SessionRunning`, one file left.
+      The same file covers the all-or-nothing project delete.
+- [x] **F8a**: a runtime that fails to wire is closed before the error is reported.
+      Nothing in a real `start()` can reject (the lock and watcher are `never`), so the
+      item needed the seam it names: `EngineOpenHooks.afterStart` fails an open after the
+      runtime, lock and watcher exist. With it, `session.test.ts` proves the release: the
+      `<file>.epsilon-lock` is gone afterwards, and the test fails when the
+      `Effect.onError(dispose)` is removed.
+- [x] **F8m**: notices are capped, so a looping extension cannot grow the transcript
+      without bound. Two caps: the engine keeps the newest 200 (`noticeLimit` in
+      `engine/session.ts`) and the reducer does the same (`reduce.test.ts`, "caps notices
+      and keeps the newest").
 - [ ] **e2e**: `bun run test:e2e` passes all specs in `test/e2e/`. Record the duration.
-- [ ] **Benchmarks**: `bun run bench` passes its budgets. Record the numbers in the
-      commit body.
+      Ran 2026-11-05: **8 passed, 7 failed in 32.7 s** (with the build, 35 s wall). They are
+      stale selectors against the rebuilt UI, not crashes. Verified: `onboarding.e2e.ts`
+      waits for a link named "add provider" while `providers-panel.tsx` renders a button.
+      `controls.e2e.ts` times out clicking in the tree, compact and fork dialogs;
+      `projects.e2e.ts` finds no trust control; `skills-import.e2e.ts` waits on a file
+      input the dialog does not mount at that step; `long-chat.e2e.ts` fails its scroll
+      assertion. Each flow has to be walked against the running app and the spec updated
+      to the control the page now draws.
+- [ ] **Benchmarks**: `bun run bench` passes its budgets. Ran 2026-11-05 on a quiet
+      machine: `catalog-list` 0.74 ms (≤20), `catalog-cold` 578 ms (≤1500, 631 ms on a
+      second run), `catalog-append` 65 ms (≤100; 124 ms on a machine at load 5.5),
+      `open-window` 3 ms (≤50) with a 69 KiB window frame (≤2048), `engine-spawn` 379 ms
+      (≤600), `client-stream` 0.04 ms (≤50).
+      Two reasons it is not green:
+      `client-stream` was a placeholder that failed the whole run at step 8; it is built
+      now (`scripts/bench/client-stream.ts`, the reducer over 200 deltas in a 2,000-row
+      chat), which let the run reach `bundle-size` for the first time:
+      **369.5 KiB against 315** for both `/` and `/sessions/$id`. That is a first-paint
+      budget to meet by code-splitting the shell or the route entries — or to revise —
+      and it is the owner's call which.
 - [ ] **The index blocks the event loop.** The catalog syncs synchronously inside the
       `epsilon` process; the worker in the original design was never built. A cold build
-      measured 375–677 ms on 500 sessions, and during it the socket answers nothing. Measure
+      measured 375–677 ms on 500 sessions, and during it the socket answers nothing. The
+      benchmark now puts it at 578–631 ms, and an incremental reconcile after one append
+      at 65 ms (124 ms at load 5.5). Measure
       a cold build on a copy of the owner's home; if it exceeds 100 ms, move the sync into a
       Worker (one write connection, as designed) or chunk it, and add a benchmark budget.
       Ask the owner before choosing.
