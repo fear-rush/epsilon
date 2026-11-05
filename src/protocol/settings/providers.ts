@@ -280,8 +280,26 @@ export const ProviderStored = Schema.Struct({
 	api: Schema.optional(Schema.String),
 	/** How a key is stored: a literal, `$NAME`, `!command`, or absent. Never its value. */
 	apiKeyForm: Schema.optional(Schema.Literals(["literal", "environment", "command"])),
+	/** Provider-wide reasoning format; each model's compat overrides it. */
+	compat: Schema.optional(ReasoningCompat),
+	/** pi's `authHeader`: unset keeps pi's default, a boolean forces or drops the header. */
+	authHeader: Schema.optional(Schema.Boolean),
+	/** pi's radius OAuth flow, which needs a base URL of its own. */
+	oauth: Schema.optional(Schema.Literal("radius")),
 });
 export type ProviderStored = typeof ProviderStored.Type;
+
+/**
+ * One model of a provider's effective catalog. It carries every field an override can
+ * change, so the dialog seeds from pi's value instead of an empty one.
+ */
+export const ProviderCatalogModel = Schema.Struct({
+	provider: Schema.String,
+	id: Schema.NonEmptyString,
+	...modelFields,
+	cost: Schema.optional(ProviderModelCost),
+});
+export type ProviderCatalogModel = typeof ProviderCatalogModel.Type;
 
 /** One provider as the editor needs it: pi's row, the stored entry, and its models. */
 export const ProviderDetail = Schema.Struct({
@@ -289,22 +307,75 @@ export const ProviderDetail = Schema.Struct({
 	name: Schema.String,
 	builtin: Schema.Boolean,
 	custom: Schema.Boolean,
-	/** The `models.json` entry's editable fields, or null when pi ships it alone. */
-	stored: Schema.NullOr(ProviderStored),
+	/** The `models.json` entry's editable fields; empty when pi ships it alone. */
+	stored: ProviderStored,
+	/** Header names only; a stored header's value never travels to the page. */
+	headerKeys: Schema.Array(Schema.String),
+	/** The models the entry declares, which replace a built-in catalog. */
 	models: Schema.Array(ProviderModelInput),
+	/** The changes to pi's own models, field by field. */
+	modelOverrides: Schema.Record(Schema.String, ModelOverride),
+	/** Every model pi composed for this provider, with the stored override applied. */
+	catalog: Schema.Array(ProviderCatalogModel),
 	auth: ProviderAuth,
 });
 export type ProviderDetail = typeof ProviderDetail.Type;
 
+/** The model a test tries: an override may name a partial cost, and the probe fills the rest. */
+export const ProviderTestModel = Schema.Struct({
+	id: Schema.NonEmptyString,
+	...modelFields,
+	cost: Schema.optional(ModelOverrideCost),
+});
+export type ProviderTestModel = typeof ProviderTestModel.Type;
+
+/**
+ * A provider draft under test. Everything is the form's current value, not the saved
+ * entry, so a key, endpoint or model can be tried before Save writes it. A blank apiKey
+ * or header value means "use the stored one".
+ */
+export const ProviderTestInput = Schema.Struct({
+	providerId: Schema.optional(Schema.String),
+	name: Schema.optional(Schema.String),
+	baseUrl: Schema.optional(Schema.String),
+	api: Schema.optional(ProviderApi),
+	apiKey: Schema.optional(Schema.String),
+	headers: Schema.optional(Schema.Record(Schema.String, Schema.String)),
+	/** The provider's reasoning format, as the draft has it. */
+	compat: Schema.optional(ReasoningCompat),
+	/** pi's `authHeader` as the draft has it; unset keeps the stored entry's. */
+	authHeader: Schema.optional(Schema.Boolean),
+	/** A reasoning level for the test; omitted sends no reasoning fields. */
+	level: Schema.optional(ThinkingLevel),
+	/** The model to try. Without one, the provider's first model is used. */
+	model: Schema.optional(ProviderTestModel),
+});
+export type ProviderTestInput = typeof ProviderTestInput.Type;
+
+/**
+ * One provider as a save writes it. An empty name, base URL or family clears the
+ * stored value; a blank key keeps it.
+ */
 export const ProviderInput = Schema.Struct({
 	id: Schema.String,
 	name: Schema.String,
+	/** Empty clears the stored endpoint, which pi then inherits. */
 	baseUrl: Schema.String,
-	/** One of pi's API family names, such as `openai-completions`. */
+	/** One of pi's API family names; empty clears the stored family. */
 	api: Schema.String,
 	/** A literal, `$NAME`, or `!command`, the three forms pi's field accepts. */
 	apiKey: Schema.optional(Schema.String),
-	models: Schema.Array(ProviderModelInput),
+	/** An empty value for a stored name keeps it; a name left out is removed. */
+	headers: Schema.optional(Schema.Record(Schema.String, Schema.String)),
+	/** Provider-wide reasoning format; each model's compat overrides it per key. */
+	compat: Schema.optional(ReasoningCompat),
+	/** pi's `authHeader`: empty keeps the stored answer, a boolean writes one. */
+	authHeader: Schema.optional(Schema.Union([Schema.Literal(""), Schema.Boolean])),
+	/** pi's radius OAuth flow; empty keeps it unset, `radius` turns it on. */
+	oauth: Schema.optional(Schema.Union([Schema.Literal(""), Schema.Literal("radius")])),
+	/** Omitted keeps a built-in provider's catalog in place. */
+	models: Schema.optional(Schema.Array(ProviderModelInput)),
+	modelOverrides: Schema.optional(Schema.Record(Schema.String, ModelOverride)),
 });
 export type ProviderInput = typeof ProviderInput.Type;
 

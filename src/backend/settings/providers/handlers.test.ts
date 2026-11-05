@@ -89,6 +89,71 @@ describe("settings.providers", () => {
 	);
 
 	itEffect(
+		"reads the entry's models and overrides back, without a stored header's value",
+		() => {
+			const { agentDir, file, layer } = providerLayer("detail");
+			writeStubModels(agentDir, "http://127.0.0.1:1");
+			writeFileSync(
+				file,
+				`${JSON.stringify(
+					{
+						providers: {
+							stub: {
+								api: "openai-completions",
+								authHeader: false,
+								baseUrl: "http://127.0.0.1:1",
+								compat: { thinkingFormat: "deepseek" },
+								headers: { "X-Key": "header-secret" },
+								modelOverrides: { "stub-model": { maxTokens: 100 } },
+								models: [
+									{
+										cost: { cacheRead: 0.1, cacheWrite: 0.2, input: 1, output: 2 },
+										headers: { "X-Model": "model-secret" },
+										id: "stub-model",
+										reasoning: true,
+										thinkingLevelMap: { high: "high", off: null },
+									},
+								],
+								name: "Stub",
+								oauth: "radius",
+							},
+						},
+					},
+					null,
+					2,
+				)}\n`,
+			);
+			return Effect.gen(function* () {
+				const client = yield* testClient(ProviderRpcs, ProvidersHandlersLive);
+				const detail = yield* client["settings.providers.read"]({ id: "stub" });
+				expect(detail.stored).toMatchObject({
+					authHeader: false,
+					compat: { thinkingFormat: "deepseek" },
+					oauth: "radius",
+				});
+				expect(detail.headerKeys).toEqual(["X-Key"]);
+				// Every header value stays on the server, on the provider and on a model.
+				expect(detail.models).toMatchObject([
+					{
+						headers: { "X-Model": "" },
+						id: "stub-model",
+						reasoning: true,
+						thinkingLevelMap: { high: "high", off: null },
+					},
+				]);
+				expect(detail.modelOverrides).toMatchObject({ "stub-model": { maxTokens: 100 } });
+				// pi's composed model is what the override dialog seeds from.
+				const composed = detail.catalog.find((model) => model.id === "stub-model");
+				expect(composed?.provider).toBe("stub");
+				expect(composed?.contextWindow).toBeGreaterThan(0);
+				expect(JSON.stringify(detail)).not.toContain("header-secret");
+				expect(JSON.stringify(detail)).not.toContain("model-secret");
+			}).pipe(Effect.scoped, Effect.provide(layer));
+		},
+		15000,
+	);
+
+	itEffect(
 		"saves a provider without dropping the keys the dialog does not edit",
 		() => {
 			const { agentDir, file, layer } = providerLayer("save");
@@ -216,6 +281,87 @@ describe("settings.providers", () => {
 				expect(readFile(file).providers["stub"]?.["models"]).toEqual([
 					{ extra: "kept", id: "stub-model", input: [], reasoning: false },
 				]);
+			}).pipe(Effect.scoped, Effect.provide(layer));
+		},
+		15000,
+	);
+
+	itEffect(
+		"merges the provider's own blocks and keeps the compat keys it does not name",
+		() => {
+			const { agentDir, file, layer } = providerLayer("merge");
+			writeStubModels(agentDir, "http://127.0.0.1:1");
+			writeFileSync(
+				file,
+				`${JSON.stringify(
+					{
+						providers: {
+							stub: {
+								api: "openai-completions",
+								baseUrl: "http://127.0.0.1:1",
+								compat: { customKey: true, thinkingFormat: "openai" },
+								headers: { "X-Key": "stored" },
+								modelOverrides: { "stub-model": { cost: { input: 1, output: 2 }, maxTokens: 100 } },
+								models: [{ id: "stub-model" }],
+								name: "Stub",
+							},
+						},
+					},
+					null,
+					2,
+				)}\n`,
+			);
+			return Effect.gen(function* () {
+				const client = yield* testClient(ProviderRpcs, ProvidersHandlersLive);
+				yield* client["settings.providers.save"]({
+					// Empty clears the stored endpoint and family, which pi then inherits.
+					api: "",
+					authHeader: false,
+					baseUrl: "",
+					compat: { supportsReasoningEffort: true },
+					headers: { "X-Key": "" },
+					id: "stub",
+					modelOverrides: { "stub-model": { contextWindow: 2000, cost: { input: 3 } } },
+					name: "Stub",
+					oauth: "radius",
+				});
+				const stored = readFile(file).providers["stub"];
+				expect(stored).toMatchObject({
+					authHeader: false,
+					// A key this version does not name survives; the one it names and was not
+					// sent is cleared.
+					compat: { customKey: true, supportsReasoningEffort: true },
+					// A blank header value keeps the stored one.
+					headers: { "X-Key": "stored" },
+					oauth: "radius",
+				});
+				expect(stored?.["api"]).toBeUndefined();
+				expect(stored?.["baseUrl"]).toBeUndefined();
+				// The payload did not name the models, so a built-in's catalog stays in place.
+				expect(stored?.["models"]).toEqual([{ id: "stub-model" }]);
+				// An override is a patch: the touched fields merge over the stored ones.
+				expect(stored?.["modelOverrides"]).toEqual({
+					"stub-model": { contextWindow: 2000, cost: { input: 3, output: 2 }, maxTokens: 100 },
+				});
+
+				yield* client["settings.providers.save"]({
+					api: "",
+					authHeader: "",
+					baseUrl: "",
+					compat: {},
+					headers: {},
+					id: "stub",
+					modelOverrides: {},
+					name: "Stub",
+					oauth: "",
+				});
+				const cleared = readFile(file).providers["stub"];
+				expect(cleared?.["authHeader"]).toBeUndefined();
+				expect(cleared?.["headers"]).toBeUndefined();
+				expect(cleared?.["modelOverrides"]).toBeUndefined();
+				expect(cleared?.["oauth"]).toBeUndefined();
+				// The block keeps only what the page never showed.
+				expect(cleared?.["compat"]).toEqual({ customKey: true });
 			}).pipe(Effect.scoped, Effect.provide(layer));
 		},
 		15000,

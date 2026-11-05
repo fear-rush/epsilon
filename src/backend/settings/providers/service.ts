@@ -1,7 +1,10 @@
-import { Context, Effect, Layer, Option, Ref } from "effect";
+import { Context, Effect, Layer, Option, Ref, Schema } from "effect";
 
+import { isProviderApi } from "#domain/providers/rules";
 import { ProviderRefused } from "#protocol/errors";
+import { ProviderCatalogModel } from "#protocol/settings/providers";
 import type {
+	ProviderCatalogModel as CatalogModel,
 	ProviderDetail,
 	ProviderInput,
 	ProviderModelsView,
@@ -38,7 +41,21 @@ export class ProvidersService extends Context.Service<ProvidersService, Provider
 	"epsilon/ProvidersService",
 ) {}
 
-/** The auth row built a field at a time, so an absent label stays absent. */
+/** One model pi composed, without importing pi's own type into this feature. */
+type RuntimeModel = ReturnType<ModelRuntime["getModels"]>[number];
+
+/**
+ * One composed model as the page seeds an override from. pi composes more families than
+ * the four the dialog edits, so a family this version does not know travels as no family
+ * at all instead of hiding the model.
+ */
+const catalogModelOf = (provider: string, model: RuntimeModel): Option.Option<CatalogModel> =>
+	Schema.decodeUnknownOption(ProviderCatalogModel)({
+		...model,
+		api: isProviderApi(model.api) ? model.api : undefined,
+		provider,
+	});
+
 type MutableAuth = {
 	configured: boolean;
 	source?: string;
@@ -138,6 +155,23 @@ export const makeProvidersService = (deps: {
 			),
 		);
 
+		/** Every composed model the page can describe; one it cannot is a warning, not a hole. */
+		const catalogOf = (runtime: ModelRuntime, provider: string) =>
+			Effect.gen(function* () {
+				const entries: CatalogModel[] = [];
+				for (const model of runtime.getModels(provider)) {
+					const decoded = catalogModelOf(provider, model);
+					if (Option.isSome(decoded)) entries.push(decoded.value);
+					else {
+						yield* deps.log.write("warn", "a composed model could not be described", {
+							model: model.id,
+							provider,
+						});
+					}
+				}
+				return entries;
+			});
+
 		const read: ProvidersServiceApi["read"] = (id) =>
 			Effect.gen(function* () {
 				const runtime = yield* deps.runtime.pipe(
@@ -166,16 +200,15 @@ export const makeProvidersService = (deps: {
 							onSuccess: (ids) => ids,
 						}),
 					)).has(id),
+					// The composed model, so the override dialog seeds from pi's effective values.
+					catalog: yield* catalogOf(runtime, id),
 					custom: (yield* deps.store.customIds).has(id),
+					headerKeys: stored.headerKeys,
 					id,
-					models: runtime.getModels(id).map((model) => ({
-						contextWindow: model.contextWindow,
-						id: model.id,
-						maxTokens: model.maxTokens,
-						name: model.name,
-					})),
+					modelOverrides: stored.modelOverrides,
+					models: stored.models,
 					name: provider.name,
-					stored: Object.keys(stored).length === 0 ? null : stored,
+					stored: stored.stored,
 				} satisfies ProviderDetail;
 			});
 

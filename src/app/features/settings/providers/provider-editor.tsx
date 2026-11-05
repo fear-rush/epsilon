@@ -172,20 +172,20 @@ function ProviderBody({ detail }: { detail: ProviderDetail }) {
 	const [removing, setRemoving] = useState(false);
 	const [key, setKey] = useState("");
 	const [draft, setDraft] = useState<Draft>(() => ({
-		api: detail.stored?.api ?? "openai-completions",
+		api: detail.stored.api ?? "openai-completions",
 		apiKey: "",
-		baseUrl: detail.stored?.baseUrl ?? "",
+		baseUrl: detail.stored.baseUrl ?? "",
 		id: detail.id,
 		models:
-			detail.models.length === 0
+			detail.catalog.length === 0
 				? [{ id: "" }]
-				: detail.models.map((model) => ({
+				: detail.catalog.map((model) => ({
 						contextWindow: model.contextWindow,
 						id: model.id,
 						maxTokens: model.maxTokens,
 						name: model.name,
 					})),
-		name: detail.stored?.name ?? detail.name,
+		name: detail.stored.name ?? detail.name,
 	}));
 	const [error, setError] = useState<string | undefined>(undefined);
 
@@ -268,7 +268,7 @@ function ProviderBody({ detail }: { detail: ProviderDetail }) {
 				) : (
 					<Section title="Connection">
 						<Row title="Provider">{detail.id}</Row>
-						<Row title="Models">{String(detail.models.length)}</Row>
+						<Row title="Models">{String(detail.catalog.length)}</Row>
 						<Row
 							title="Credential"
 							description={detail.auth.label ?? detail.auth.source ?? "none stored on this machine"}
@@ -278,7 +278,7 @@ function ProviderBody({ detail }: { detail: ProviderDetail }) {
 
 				<Section
 					description={
-						detail.stored?.apiKeyForm === undefined
+						detail.stored.apiKeyForm === undefined
 							? "pi has no key for this provider in models.json."
 							: `A key is stored as ${detail.stored.apiKeyForm}; a blank field keeps it.`
 					}

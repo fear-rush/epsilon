@@ -1,18 +1,22 @@
-import { Context, Effect, Layer, Schema } from "effect";
+import { Context, Effect, Layer, Option, Schema } from "effect";
 
 import { isBaseUrl, isProviderApi, isProviderId } from "#domain/providers/rules";
 import { ThinkingLevel } from "#protocol/conversation/session";
 import { ProviderRefused } from "#protocol/errors";
-import type {
-	ModelInputLimits,
-	ModelPromptCache,
-	ProviderInput,
-	ProviderModelCost,
-	ProviderModelInput,
-	ProviderStored,
+import {
+	ModelOverride as ModelOverrideSchema,
+	ProviderModelInput as ProviderModelInputSchema,
 	ReasoningCompat,
-	SamplingParamsByThinkingLevel,
-	ThinkingLevelMap,
+	type ModelInputLimits,
+	type ModelOverride,
+	type ModelOverrideCost,
+	type ModelPromptCache,
+	type ProviderInput,
+	type ProviderModelCostTier,
+	type ProviderModelInput,
+	type ProviderStored,
+	type SamplingParamsByThinkingLevel,
+	type ThinkingLevelMap,
 } from "#protocol/settings/providers";
 
 import { AgentHome } from "../../platform/agent-home.ts";
@@ -36,11 +40,23 @@ import type { JsonValue } from "../../platform/patch.ts";
  * own loader would otherwise reject the whole file.
  */
 
+/** What `models.json` holds for one provider, as the editor needs it. */
+export type StoredProvider = {
+	/** The provider's own fields, with the key reduced to its form. */
+	readonly stored: ProviderStored;
+	/** Names only; a stored header's value never leaves the server. */
+	readonly headerKeys: ReadonlyArray<string>;
+	/** The models the entry declares. */
+	readonly models: ReadonlyArray<ProviderModelInput>;
+	/** The changes to pi's own models, field by field. */
+	readonly modelOverrides: Readonly<Record<string, ModelOverride>>;
+};
+
 export type ProvidersStoreApi = {
 	/** The provider ids `models.json` declares, which are the ones this page may edit. */
 	readonly customIds: Effect.Effect<ReadonlySet<string>>;
-	/** The stored entry's editable fields, with the key reduced to its form. */
-	readonly read: (id: string) => Effect.Effect<ProviderStored, ProviderRefused>;
+	/** The stored entry, reduced to what the page may see. */
+	readonly read: (id: string) => Effect.Effect<StoredProvider, ProviderRefused>;
 	readonly save: (input: ProviderInput) => Effect.Effect<void, ProviderRefused>;
 	readonly remove: (id: string) => Effect.Effect<void, ProviderRefused>;
 	readonly setApiKey: (id: string, apiKey: string) => Effect.Effect<void, ProviderRefused>;
@@ -127,23 +143,31 @@ const compatOf = (compat: ReasoningCompat): JsonObject => {
 	return next;
 };
 
-/** A model's four rates and its tiers as the file writes them. */
-const costOf = (cost: ProviderModelCost): JsonObject => {
-	const next: JsonObject = {
-		cacheRead: cost.cacheRead,
-		cacheWrite: cost.cacheWrite,
-		input: cost.input,
-		output: cost.output,
-	};
-	if (cost.tiers !== undefined) {
-		next["tiers"] = cost.tiers.map((tier) => ({
-			cacheRead: tier.cacheRead,
-			cacheWrite: tier.cacheWrite,
-			input: tier.input,
-			inputTokensAbove: tier.inputTokensAbove,
-			output: tier.output,
-		}));
-	}
+/** The cost rates and tiers the payload names; an override may name only some rates. */
+const costOf = (cost: ModelOverrideCost): JsonObject => {
+	const next: JsonObject = {};
+	put(next, "input", cost.input);
+	put(next, "output", cost.output);
+	put(next, "cacheRead", cost.cacheRead);
+	put(next, "cacheWrite", cost.cacheWrite);
+	if (cost.tiers !== undefined) next["tiers"] = cost.tiers.map(tierOf);
+	return next;
+};
+
+/** One price tier as the file writes it. */
+const tierOf = (tier: ProviderModelCostTier): JsonObject => ({
+	cacheRead: tier.cacheRead,
+	cacheWrite: tier.cacheWrite,
+	input: tier.input,
+	inputTokensAbove: tier.inputTokensAbove,
+	output: tier.output,
+});
+
+/** The compat block with the payload's keys over the stored ones; unknown keys survive. */
+const mergeCompat = (stored: JsonValue | undefined, compat: ReasoningCompat): JsonObject => {
+	const next: JsonObject = isJsonObject(stored) ? { ...stored } : {};
+	const written = compatOf(compat);
+	for (const key of Object.keys(ReasoningCompat.fields)) setOrDelete(next, key, written[key]);
 	return next;
 };
 
@@ -189,6 +213,12 @@ const samplingByLevelOf = (levels: SamplingParamsByThinkingLevel): JsonObject =>
 };
 
 /**
+ * What an omitted field means. A model entry is a complete record, so an omitted field is
+ * unset. An override is a patch, so an omitted field keeps what the file already had.
+ */
+type MergePolicy = "unset" | "keep";
+
+/**
  * Write one payload-owned field. `emptyIsValue` marks the fields where `[]`, `""` or `0`
  * is a real answer: an empty input list means text only, and a cleared family is empty.
  */
@@ -196,8 +226,10 @@ const writeField = (
 	next: JsonObject,
 	key: string,
 	value: JsonValue | undefined,
+	policy: MergePolicy,
 	emptyIsValue: boolean,
 ): void => {
+	if (value === undefined && policy === "keep") return;
 	if (emptyIsValue) setDefined(next, key, value);
 	else setOrDelete(next, key, value);
 };
@@ -224,60 +256,93 @@ const mergeHeaders = (
  * The payload's model as the file's entry. A model is a complete record, so a field the
  * payload leaves out is unset, while keys this version does not model survive the merge.
  */
-const mergeModel = (stored: JsonObject, input: ProviderModelInput): JsonObject => {
-	const next: JsonObject = { ...stored, id: input.id };
-	writeField(next, "name", input.name, false);
-	writeField(next, "api", input.api, true);
-	writeField(next, "baseUrl", input.baseUrl, false);
-	writeField(next, "reasoning", input.reasoning, true);
-	writeField(next, "thinkingLevelMap", whenDefined(input.thinkingLevelMap, levelMapOf), false);
-	writeField(next, "compat", whenDefined(input.compat, compatOf), false);
-	writeField(next, "input", input.input === undefined ? undefined : [...input.input], true);
-	writeField(next, "inputLimits", whenDefined(input.inputLimits, limitsOf), false);
-	writeField(next, "promptCache", whenDefined(input.promptCache, promptCacheOf), false);
-	writeField(next, "samplingParams", whenDefined(input.samplingParams, jsonValueOf), false);
+const mergeModel = (stored: JsonObject, input: ModelOverride, policy: MergePolicy): JsonObject => {
+	const next: JsonObject = { ...stored };
+	writeField(next, "name", input.name, policy, false);
+	writeField(next, "api", input.api, policy, true);
+	writeField(next, "baseUrl", input.baseUrl, policy, false);
+	writeField(next, "reasoning", input.reasoning, policy, true);
+	writeField(
+		next,
+		"thinkingLevelMap",
+		whenDefined(input.thinkingLevelMap, levelMapOf),
+		policy,
+		false,
+	);
+	// The known keys are the payload's to write; a key this version does not name survives.
+	writeField(
+		next,
+		"compat",
+		whenDefined(input.compat, (compat) => mergeCompat(stored["compat"], compat)),
+		policy,
+		false,
+	);
+	writeField(next, "input", input.input === undefined ? undefined : [...input.input], policy, true);
+	writeField(next, "inputLimits", whenDefined(input.inputLimits, limitsOf), policy, false);
+	writeField(next, "promptCache", whenDefined(input.promptCache, promptCacheOf), policy, false);
+	writeField(next, "samplingParams", whenDefined(input.samplingParams, jsonValueOf), policy, false);
 	writeField(
 		next,
 		"samplingParamsByThinkingLevel",
 		whenDefined(input.samplingParamsByThinkingLevel, samplingByLevelOf),
+		policy,
 		false,
 	);
-	writeField(next, "contextWindow", input.contextWindow, true);
-	writeField(next, "maxTokens", input.maxTokens, true);
-	writeField(next, "cost", whenDefined(input.cost, costOf), false);
-	const headers = mergeHeaders(input.headers, stringMapOf(stored["headers"]));
-	if (headers === undefined) delete next["headers"];
-	else next["headers"] = headers;
+	writeField(next, "contextWindow", input.contextWindow, policy, true);
+	writeField(next, "maxTokens", input.maxTokens, policy, true);
+	// pi merges an override's cost per field; a model entry's cost is a complete record.
+	const cost = input.cost === undefined ? undefined : costOf(input.cost);
+	const storedCost = next["cost"];
+	if (cost !== undefined && policy === "keep" && isJsonObject(storedCost)) {
+		next["cost"] = { ...storedCost, ...cost };
+	} else writeField(next, "cost", cost, policy, false);
+	// A blank header value keeps the stored one, and a name left out is removed.
+	if (input.headers === undefined) {
+		if (policy === "unset") delete next["headers"];
+	} else {
+		const headers = mergeHeaders(input.headers, stringMapOf(stored["headers"]));
+		if (headers === undefined) delete next["headers"];
+		else next["headers"] = headers;
+	}
 	return next;
 };
 
 /** Every platform failure becomes the refusal the page shows, naming this provider. */
+const platformHandlers = (id: string) => ({
+	FileUnreadable: (error: FileUnreadable) => Effect.fail(refusal(id, error.reason)),
+	FileUnwritable: (error: FileUnwritable) => Effect.fail(refusal(id, error.reason)),
+	Locked: () => Effect.fail(refusal(id, "models.json is locked; try again.")),
+	NotJson: (error: NotJson) =>
+		Effect.fail(refusal(id, `models.json could not be read: ${error.reason}`)),
+});
+
+/** The same handlers for a call that may also refuse on its own: its refusal passes through. */
+const saveHandlers = (id: string) => ({
+	...platformHandlers(id),
+	ProviderRefused: (error: ProviderRefused) => Effect.fail(error),
+});
+
 const guarded =
 	(id: string) =>
 	<A>(
 		effect: Effect.Effect<A, FileUnreadable | FileUnwritable | Locked | NotJson>,
 	): Effect.Effect<A, ProviderRefused> =>
-		effect.pipe(
-			Effect.catchTags({
-				FileUnreadable: (error) => Effect.fail(refusal(id, error.reason)),
-				FileUnwritable: (error) => Effect.fail(refusal(id, error.reason)),
-				Locked: () => Effect.fail(refusal(id, "models.json is locked; try again.")),
-				NotJson: (error) =>
-					Effect.fail(refusal(id, `models.json could not be read: ${error.reason}`)),
-			}),
-		);
+		effect.pipe(Effect.catchTags(platformHandlers(id)));
 
-/** The three checks a provider passes before any file is touched. */
+/**
+ * The three checks a provider passes before any file is touched. An empty family or
+ * endpoint is an answer, not a mistake: it clears the stored value and pi inherits.
+ */
 const checked = (input: ProviderInput): Effect.Effect<ProviderInput, ProviderRefused> => {
 	if (!isProviderId(input.id)) {
 		return Effect.fail(
 			refusal(input.id, "The provider id may hold letters, digits, dots, dashes and underscores."),
 		);
 	}
-	if (!isProviderApi(input.api)) {
+	if (input.api !== "" && !isProviderApi(input.api)) {
 		return Effect.fail(refusal(input.id, `${input.api} is not one of pi's API families.`));
 	}
-	if (!isBaseUrl(input.baseUrl)) {
+	if (input.baseUrl !== "" && !isBaseUrl(input.baseUrl)) {
 		return Effect.fail(refusal(input.id, "The base URL must start with http:// or https://."));
 	}
 	return Effect.succeed(input);
@@ -285,6 +350,21 @@ const checked = (input: ProviderInput): Effect.Effect<ProviderInput, ProviderRef
 
 const checkedId = (id: string): Effect.Effect<string, ProviderRefused> =>
 	isProviderId(id) ? Effect.succeed(id) : Effect.fail(refusal(id, "That is not a provider id."));
+
+/** A model as the page may see it: a header's value stays on the server. */
+const headerKeysOnly = <Value extends { readonly headers?: Record<string, string> | undefined }>(
+	model: Value,
+): Value =>
+	model.headers === undefined
+		? model
+		: {
+				...model,
+				headers: Object.fromEntries(Object.keys(model.headers).map((key) => [key, ""])),
+			};
+
+/** A JSON object with at least one entry. */
+const hasEntries = (value: JsonValue | undefined): boolean =>
+	isJsonObject(value) && Object.keys(value).length > 0;
 
 /** A stored key's form; the value itself never leaves the file. */
 const keyForm = (value: JsonValue | undefined): ProviderStored["apiKeyForm"] => {
@@ -294,12 +374,47 @@ const keyForm = (value: JsonValue | undefined): ProviderStored["apiKeyForm"] => 
 	return "literal";
 };
 
+/** Whether the entry configures anything, which is what pi refuses to load without. */
+const configures = (entry: JsonObject): boolean =>
+	hasEntries(entry["models"]) ||
+	entry["baseUrl"] !== undefined ||
+	entry["headers"] !== undefined ||
+	entry["compat"] !== undefined ||
+	hasEntries(entry["modelOverrides"]) ||
+	(Schema.is(Schema.String)(entry["apiKey"]) && entry["apiKey"] !== "") ||
+	entry["oauth"] !== undefined ||
+	entry["authHeader"] !== undefined;
+
 /** The stored fields, built one at a time so an absent one stays absent. */
 type StoredFields = {
 	name?: string;
 	baseUrl?: string;
 	api?: string;
 	apiKeyForm?: ProviderStored["apiKeyForm"];
+	compat?: ProviderStored["compat"];
+	authHeader?: boolean;
+	oauth?: ProviderStored["oauth"];
+};
+
+/** The entry's own fields, built one at a time so an absent one stays absent. */
+const storedFieldsOf = (entry: JsonObject): ProviderStored => {
+	const name = entry["name"];
+	const baseUrl = entry["baseUrl"];
+	const api = entry["api"];
+	const compat = entry["compat"];
+	const authHeader = entry["authHeader"];
+	const oauth = entry["oauth"];
+	const form = keyForm(entry["apiKey"]);
+	const stored: StoredFields = {};
+	if (Schema.is(Schema.String)(name)) stored.name = name;
+	if (Schema.is(Schema.String)(baseUrl)) stored.baseUrl = baseUrl;
+	if (Schema.is(Schema.String)(api)) stored.api = api;
+	if (form !== undefined) stored.apiKeyForm = form;
+	const parsedCompat = Schema.decodeUnknownOption(ReasoningCompat)(compat);
+	if (Option.isSome(parsedCompat)) stored.compat = parsedCompat.value;
+	if (Schema.is(Schema.Boolean)(authHeader)) stored.authHeader = authHeader;
+	if (oauth === "radius") stored.oauth = oauth;
+	return stored;
 };
 
 export const makeProvidersStore = (deps: {
@@ -315,49 +430,122 @@ export const makeProvidersStore = (deps: {
 		}),
 	);
 
-	const read = (id: string): Effect.Effect<ProviderStored, ProviderRefused> =>
+	const read = (id: string): Effect.Effect<StoredProvider, ProviderRefused> =>
 		Effect.flatMap(checkedId(id), (valid) =>
-			deps.document.read(deps.path).pipe(
-				guarded(valid),
-				Effect.map((document) => {
-					const entry = entryOf(providersOf(document), valid);
-					const name = entry["name"];
-					const baseUrl = entry["baseUrl"];
-					const api = entry["api"];
-					const form = keyForm(entry["apiKey"]);
-					const stored: StoredFields = {};
-					if (Schema.is(Schema.String)(name)) stored.name = name;
-					if (Schema.is(Schema.String)(baseUrl)) stored.baseUrl = baseUrl;
-					if (Schema.is(Schema.String)(api)) stored.api = api;
-					if (form !== undefined) stored.apiKeyForm = form;
-					return stored;
-				}),
-			),
+			Effect.gen(function* () {
+				const document = yield* deps.document.read(deps.path).pipe(guarded(valid));
+				const entry = entryOf(providersOf(document), valid);
+				const models: ProviderModelInput[] = [];
+				for (const raw of modelsOf(entry)) {
+					const decoded = Schema.decodeUnknownOption(ProviderModelInputSchema)(raw);
+					if (Option.isNone(decoded)) {
+						return yield* refusal(
+							valid,
+							"models.json declares a model that cannot be read; fix it there.",
+						);
+					}
+					models.push(headerKeysOnly(decoded.value));
+				}
+				const rawOverrides = entry["modelOverrides"];
+				const modelOverrides: Record<string, ModelOverride> = {};
+				for (const [modelId, raw] of Object.entries(
+					isJsonObject(rawOverrides) ? rawOverrides : {},
+				)) {
+					const decoded = Schema.decodeUnknownOption(ModelOverrideSchema)(raw);
+					if (Option.isNone(decoded)) {
+						return yield* refusal(
+							valid,
+							`models.json overrides ${modelId} with a value that cannot be read; fix it there.`,
+						);
+					}
+					modelOverrides[modelId] = headerKeysOnly(decoded.value);
+				}
+				return {
+					headerKeys: Object.keys(stringMapOf(entry["headers"])),
+					modelOverrides,
+					models,
+					stored: storedFieldsOf(entry),
+				} satisfies StoredProvider;
+			}),
 		);
 
 	const save = (input: ProviderInput): Effect.Effect<void, ProviderRefused> =>
 		Effect.flatMap(checked(input), (valid) =>
 			deps.document
-				.update(deps.path, (current) => {
-					const providers = providersOf(current);
-					const entry = entryOf(providers, valid.id);
-					const kept = new Map<string, JsonObject>();
-					for (const model of modelsOf(entry)) {
-						const modelId = model["id"];
-						if (Schema.is(Schema.String)(modelId)) kept.set(modelId, model);
-					}
-					const models = valid.models.map((model) => mergeModel(kept.get(model.id) ?? {}, model));
-					const next: JsonObject = {
-						...entry,
-						api: valid.api,
-						baseUrl: valid.baseUrl,
-						models,
-						name: valid.name,
-					};
-					if (valid.apiKey !== undefined) next["apiKey"] = valid.apiKey;
-					return { providers: { ...providers, [valid.id]: next } };
-				})
-				.pipe(guarded(valid.id)),
+				.edit(deps.path, (current) =>
+					Effect.gen(function* () {
+						const providers = providersOf(current);
+						const next = entryOf(providers, valid.id);
+						setOrDelete(next, "name", valid.name);
+						setOrDelete(next, "baseUrl", valid.baseUrl);
+						setOrDelete(next, "api", valid.api);
+						if (valid.apiKey !== undefined && valid.apiKey !== "") next["apiKey"] = valid.apiKey;
+						if (valid.compat !== undefined) {
+							setOrDelete(next, "compat", mergeCompat(next["compat"], valid.compat));
+						}
+						if (valid.authHeader !== undefined) {
+							if (valid.authHeader === "") delete next["authHeader"];
+							else next["authHeader"] = valid.authHeader;
+						}
+						if (valid.oauth !== undefined) {
+							if (valid.oauth === "") delete next["oauth"];
+							else next["oauth"] = valid.oauth;
+						}
+						if (valid.headers !== undefined) {
+							setOrDelete(
+								next,
+								"headers",
+								mergeHeaders(valid.headers, stringMapOf(next["headers"])),
+							);
+						}
+						if (valid.models !== undefined) {
+							const kept = new Map<string, JsonObject>();
+							for (const model of modelsOf(next)) {
+								const modelId = model["id"];
+								if (Schema.is(Schema.String)(modelId)) kept.set(modelId, model);
+							}
+							setOrDelete(
+								next,
+								"models",
+								valid.models.map((model) => ({
+									...mergeModel(kept.get(model.id) ?? {}, model, "unset"),
+									id: model.id,
+								})),
+							);
+						}
+						if (valid.modelOverrides !== undefined) {
+							// The form sends only the fields the operator touched, so an omitted
+							// field keeps the stored value. An id the form no longer shows is removed.
+							const stored = next["modelOverrides"];
+							const overrides: JsonObject = {};
+							for (const [id, override] of Object.entries(valid.modelOverrides)) {
+								const previous = isJsonObject(stored) ? stored[id] : undefined;
+								overrides[id] = mergeModel(
+									isJsonObject(previous) ? previous : {},
+									override,
+									"keep",
+								);
+							}
+							setOrDelete(next, "modelOverrides", overrides);
+						}
+						// Saving an untouched built-in must not create an empty entry.
+						if (Object.keys(next).length === 0) {
+							delete providers[valid.id];
+						} else {
+							// pi refuses an entry that configures nothing, and the refusal would make
+							// every auth check `invalid`: refuse the save instead of writing the file.
+							if (!configures(next)) {
+								return yield* refusal(
+									valid.id,
+									`must specify "baseUrl", "headers", "compat", "modelOverrides", or "models".`,
+								);
+							}
+							providers[valid.id] = next;
+						}
+						return { ...current, providers };
+					}),
+				)
+				.pipe(Effect.catchTags(saveHandlers(valid.id))),
 		);
 
 	const remove = (id: string): Effect.Effect<void, ProviderRefused> =>
