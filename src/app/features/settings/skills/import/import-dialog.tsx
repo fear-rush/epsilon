@@ -4,14 +4,13 @@ import { useRef, useState } from "react";
 import type { SkillImportCandidate, SkillImportReport } from "#protocol/settings/skill-import";
 import { DialogFrame } from "@/components/patterns/dialog-frame";
 import { Notice } from "@/components/patterns/status/notice";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 
 import { useSettingsProject } from "../../queries.ts";
+import { CandidateCard } from "./candidate-card.tsx";
 import { archiveFiles, checkSize, pickedFiles } from "./read-files.ts";
 import type { PickedFile } from "./read-files.ts";
 import { useSkillImport } from "./use-skill-import.ts";
@@ -190,6 +189,14 @@ function ImportBody({ onOpenChange }: { onOpenChange: (open: boolean) => void })
 	);
 }
 
+/** One name ticked or unticked in a set of names. */
+const toggle = (set: ReadonlySet<string>, name: string, on: boolean): ReadonlySet<string> => {
+	const next = new Set(set);
+	if (on) next.add(name);
+	else next.delete(name);
+	return next;
+};
+
 function Review({
 	im,
 	onBack,
@@ -203,30 +210,27 @@ function Review({
 	project: boolean;
 	report: SkillImportReport;
 }) {
-	const [chosen, setChosen] = useState<Set<string>>(
+	const [chosen, setChosen] = useState<ReadonlySet<string>>(
 		new Set(
 			report.candidates.filter((candidate) => candidate.errors.length === 0).map((c) => c.name),
 		),
 	);
 	const [target, setTarget] = useState<Target>(project ? "project" : "global");
 	const [mode, setMode] = useState<Mode>("copy");
-	const [replace, setReplace] = useState(false);
+	const [replace, setReplace] = useState<ReadonlySet<string>>(new Set());
 	const existing = (candidate: SkillImportCandidate): boolean =>
 		target === "global" ? candidate.existing.global : candidate.existing.project;
-	const toggle = (name: string): void => {
-		setChosen((current) => {
-			const next = new Set(current);
-			if (next.has(name)) next.delete(name);
-			else next.add(name);
-			return next;
-		});
-	};
 	const selected = report.candidates.filter((candidate) => chosen.has(candidate.name));
-	const overwriting = selected.filter(existing);
+	// A name already in the target needs the card's own Replace tick, or the import would
+	// silently overwrite it.
+	const unresolved = selected.filter(
+		(candidate) => existing(candidate) && !replace.has(candidate.name),
+	);
+	const targetLabel = target === "global" ? "the agent home" : "this project";
 	const canCommit =
 		selected.length > 0 &&
 		selected.every((candidate) => candidate.errors.length === 0) &&
-		(overwriting.length === 0 || replace) &&
+		unresolved.length === 0 &&
 		(mode === "copy" || report.packageOption.available);
 
 	return (
@@ -247,7 +251,9 @@ function Review({
 							im.commit.mutate(
 								{
 									mode,
-									replace: replace ? overwriting.map((candidate) => candidate.name) : [],
+									replace: selected
+										.filter((candidate) => replace.has(candidate.name))
+										.map((candidate) => candidate.name),
 									skills: selected.map((candidate) => candidate.name),
 									target,
 								},
@@ -261,38 +267,20 @@ function Review({
 			}
 		>
 			<div className="grid gap-field">
-				<div className="grid gap-1">
+				<ul className="grid gap-2" aria-label="Skills found">
 					{report.candidates.map((candidate) => (
-						<label
-							key={candidate.name}
-							className="flex items-start gap-2 rounded-lg border p-3 hover:bg-muted/50"
-						>
-							<Checkbox
-								checked={chosen.has(candidate.name)}
-								disabled={candidate.errors.length > 0}
-								onCheckedChange={() => toggle(candidate.name)}
-							/>
-							<span className="grid min-w-0 flex-1 gap-1">
-								<span className="flex flex-wrap items-center gap-2">
-									<span className="truncate text-body font-medium">{candidate.name}</span>
-									<Badge variant="outline">
-										{candidate.files.length} {candidate.files.length === 1 ? "file" : "files"}
-									</Badge>
-									{existing(candidate) && <Badge variant="warning">Exists</Badge>}
-									{candidate.scripts.length > 0 && <Badge variant="info">Scripts</Badge>}
-								</span>
-								<span className="text-meta text-muted-foreground">
-									{candidate.description === "" ? "No description" : candidate.description}
-								</span>
-								{candidate.errors.length > 0 && (
-									<FieldError
-										errors={candidate.errors.map((issue) => ({ message: issue.message }))}
-									/>
-								)}
-							</span>
-						</label>
+						<CandidateCard
+							key={`${candidate.dir}:${candidate.name}`}
+							candidate={candidate}
+							checked={chosen.has(candidate.name)}
+							onCheckedChange={(on) => setChosen((set) => toggle(set, candidate.name, on))}
+							existsHere={existing(candidate)}
+							replace={replace.has(candidate.name)}
+							onReplaceChange={(on) => setReplace((set) => toggle(set, candidate.name, on))}
+							targetLabel={targetLabel}
+						/>
 					))}
-				</div>
+				</ul>
 
 				<div className="grid gap-2">
 					<p className="text-meta font-medium text-muted-foreground">Install into</p>
@@ -330,11 +318,11 @@ function Review({
 					<FieldDescription>{report.packageOption.reason}</FieldDescription>
 				</div>
 
-				{overwriting.length > 0 && (
-					<label className="flex items-center gap-2 text-body">
-						<Checkbox checked={replace} onCheckedChange={(checked) => setReplace(checked)} />
-						Replace {overwriting.map((candidate) => candidate.name).join(", ")}
-					</label>
+				{unresolved.length > 0 && (
+					<Notice tone="warning">
+						{unresolved.map((candidate) => candidate.name).join(", ")} already exist in{" "}
+						{targetLabel}. Tick Replace existing, untick the skill, or pick the other place.
+					</Notice>
 				)}
 				{im.commit.error !== null && (
 					<Notice error={im.commit.error} title="The import was not installed" />
