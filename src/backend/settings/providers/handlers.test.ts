@@ -52,7 +52,13 @@ const providerLayer = (name: string) => {
 	};
 };
 
-const ModelsFile = Schema.Struct({ providers: Schema.Record(Schema.String, Schema.Json) });
+/** One file entry with the fields a check reads, and every other key kept as it is. */
+const Entry = Schema.StructWithRest(
+	Schema.Struct({ models: Schema.optional(Schema.Array(Schema.Json)) }),
+	[Schema.Record(Schema.String, Schema.Json)],
+);
+
+const ModelsFile = Schema.Struct({ providers: Schema.Record(Schema.String, Entry) });
 
 const readFile = (path: string) =>
 	Schema.decodeUnknownSync(ModelsFile)(JSON.parse(readFileSync(path, "utf8")));
@@ -96,7 +102,7 @@ describe("settings.providers", () => {
 								api: "openai-completions",
 								apiKey: "stub-key",
 								baseUrl: "http://127.0.0.1:1",
-								models: [{ cost: { input: 1, output: 2 }, id: "stub-model" }],
+								models: [{ extra: "kept", id: "stub-model" }],
 								name: "Stub",
 								note: "kept",
 							},
@@ -112,7 +118,38 @@ describe("settings.providers", () => {
 					api: "openai-completions",
 					baseUrl: "http://127.0.0.1:2",
 					id: "stub",
-					models: [{ contextWindow: 2000, id: "stub-model", maxTokens: 100, name: "Stub" }],
+					models: [
+						{
+							compat: { thinkingFormat: "openai" },
+							contextWindow: 2000,
+							cost: {
+								cacheRead: 0.1,
+								cacheWrite: 0.2,
+								input: 1,
+								output: 2,
+								tiers: [
+									{
+										cacheRead: 0,
+										cacheWrite: 0,
+										input: 1,
+										inputTokensAbove: 200000,
+										output: 2,
+									},
+								],
+							},
+							headers: { "X-Header": "value" },
+							id: "stub-model",
+							input: ["text", "image"],
+							inputLimits: { images: { resize: { maxWidth: 800 } }, maxRequestBytes: 1000 },
+							maxTokens: 100,
+							name: "Stub",
+							promptCache: { short: 5 },
+							reasoning: true,
+							samplingParams: { temperature: 0.2 },
+							samplingParamsByThinkingLevel: { high: { top_p: 0.9 } },
+							thinkingLevelMap: { high: "high", off: null },
+						},
+					],
 					name: "Stub Renamed",
 				});
 				const stored = readFile(file).providers["stub"];
@@ -121,17 +158,64 @@ describe("settings.providers", () => {
 					name: "Stub Renamed",
 					note: "kept",
 				});
-				expect(stored).toMatchObject({
-					models: [
-						{
-							contextWindow: 2000,
-							cost: { input: 1, output: 2 },
-							id: "stub-model",
-							maxTokens: 100,
-							name: "Stub",
+				expect(stored?.["models"]).toEqual([
+					{
+						compat: { thinkingFormat: "openai" },
+						contextWindow: 2000,
+						cost: {
+							cacheRead: 0.1,
+							cacheWrite: 0.2,
+							input: 1,
+							output: 2,
+							tiers: [
+								{
+									cacheRead: 0,
+									cacheWrite: 0,
+									input: 1,
+									inputTokensAbove: 200000,
+									output: 2,
+								},
+							],
 						},
-					],
+						extra: "kept",
+						headers: { "X-Header": "value" },
+						id: "stub-model",
+						input: ["text", "image"],
+						inputLimits: { images: { resize: { maxWidth: 800 } }, maxRequestBytes: 1000 },
+						maxTokens: 100,
+						name: "Stub",
+						promptCache: { short: 5 },
+						reasoning: true,
+						samplingParams: { temperature: 0.2 },
+						samplingParamsByThinkingLevel: { high: { top_p: 0.9 } },
+						thinkingLevelMap: { high: "high", off: null },
+					},
+				]);
+
+				// A model entry is a complete record: what the payload leaves out is unset, while
+				// a blank header value keeps the stored one and keys this version does not model stay.
+				yield* client["settings.providers.save"]({
+					api: "openai-completions",
+					baseUrl: "http://127.0.0.1:2",
+					id: "stub",
+					models: [{ headers: { "X-Header": "" }, id: "stub-model" }],
+					name: "Stub Renamed",
 				});
+				expect(readFile(file).providers["stub"]?.["models"]).toEqual([
+					{ extra: "kept", headers: { "X-Header": "value" }, id: "stub-model" },
+				]);
+
+				// A cleared list and `false` are answers, not empty controls.
+				yield* client["settings.providers.save"]({
+					api: "openai-completions",
+					baseUrl: "http://127.0.0.1:2",
+					id: "stub",
+					models: [{ id: "stub-model", input: [], reasoning: false }],
+					name: "Stub Renamed",
+				});
+				expect(readFile(file).providers["stub"]?.["models"]).toEqual([
+					{ extra: "kept", id: "stub-model", input: [], reasoning: false },
+				]);
 			}).pipe(Effect.scoped, Effect.provide(layer));
 		},
 		15000,

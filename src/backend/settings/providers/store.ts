@@ -1,14 +1,25 @@
 import { Context, Effect, Layer, Schema } from "effect";
 
 import { isBaseUrl, isProviderApi, isProviderId } from "#domain/providers/rules";
+import { ThinkingLevel } from "#protocol/conversation/session";
 import { ProviderRefused } from "#protocol/errors";
-import type { ProviderInput, ProviderStored } from "#protocol/settings/providers";
+import type {
+	ModelInputLimits,
+	ModelPromptCache,
+	ProviderInput,
+	ProviderModelCost,
+	ProviderModelInput,
+	ProviderStored,
+	ReasoningCompat,
+	SamplingParamsByThinkingLevel,
+	ThinkingLevelMap,
+} from "#protocol/settings/providers";
 
 import { AgentHome } from "../../platform/agent-home.ts";
 import type { FileUnreadable, FileUnwritable, Locked, NotJson } from "../../platform/errors.ts";
 import { JsonDocument } from "../../platform/json-document.ts";
 import type { JsonDocumentApi, JsonObject } from "../../platform/json-document.ts";
-import { isJsonObject } from "../../platform/patch.ts";
+import { isJsonObject, setDefined, setOrDelete } from "../../platform/patch.ts";
 import type { JsonValue } from "../../platform/patch.ts";
 
 /**
@@ -58,6 +69,186 @@ const modelsOf = (entry: JsonObject): ReadonlyArray<JsonObject> => {
 	const models = entry["models"];
 	if (!Array.isArray(models)) return [];
 	return models.filter(isJsonObject);
+};
+
+/** The stored string entries of one block, ignoring a value that is not a string. */
+const stringMapOf = (value: JsonValue | undefined): Record<string, string> => {
+	if (!isJsonObject(value)) return {};
+	const entries: Array<[string, string]> = [];
+	for (const [key, entry] of Object.entries(value)) {
+		if (Schema.is(Schema.String)(entry)) entries.push([key, entry]);
+	}
+	return Object.fromEntries(entries);
+};
+
+/** One field as the file holds it: the file has no `undefined`, so an absent one is left out. */
+const put = (target: JsonObject, key: string, value: JsonValue | undefined): void => {
+	if (value !== undefined) target[key] = value;
+};
+
+/** A block as the file holds it, or nothing when the payload did not name it. */
+const whenDefined = <Value>(
+	value: Value | undefined,
+	write: (present: Value) => JsonValue,
+): JsonValue | undefined => (value === undefined ? undefined : write(value));
+
+/** JSON as the schema decodes it: readonly arrays, which the file's tree is not. */
+type DecodedJson = (typeof Schema.Json)["Type"];
+
+/**
+ * A JSON block as the file holds it. A decoded block is readonly and the file's tree is
+ * not, so this is the schema's own mutable form of the same value.
+ */
+const jsonValueOf = (value: DecodedJson): JsonValue =>
+	Schema.decodeUnknownSync(Schema.MutableJson)(value);
+
+/** pi's thinking-level map as the file writes it; a level it was not given stays unset. */
+const levelMapOf = (map: ThinkingLevelMap): JsonObject => {
+	const next: JsonObject = {};
+	for (const level of ThinkingLevel.literals) {
+		const value = map[level];
+		if (value !== undefined) next[level] = value;
+	}
+	return next;
+};
+
+/** The reasoning compatibility as the file writes it, one key at a time. */
+const compatOf = (compat: ReasoningCompat): JsonObject => {
+	const next: JsonObject = {};
+	put(next, "thinkingFormat", compat.thinkingFormat);
+	put(next, "supportsReasoningEffort", compat.supportsReasoningEffort);
+	put(next, "thinkingTokenBudgetField", compat.thinkingTokenBudgetField);
+	put(
+		next,
+		"requiresReasoningContentOnAssistantMessages",
+		compat.requiresReasoningContentOnAssistantMessages,
+	);
+	put(next, "forceAdaptiveThinking", compat.forceAdaptiveThinking);
+	return next;
+};
+
+/** A model's four rates and its tiers as the file writes them. */
+const costOf = (cost: ProviderModelCost): JsonObject => {
+	const next: JsonObject = {
+		cacheRead: cost.cacheRead,
+		cacheWrite: cost.cacheWrite,
+		input: cost.input,
+		output: cost.output,
+	};
+	if (cost.tiers !== undefined) {
+		next["tiers"] = cost.tiers.map((tier) => ({
+			cacheRead: tier.cacheRead,
+			cacheWrite: tier.cacheWrite,
+			input: tier.input,
+			inputTokensAbove: tier.inputTokensAbove,
+			output: tier.output,
+		}));
+	}
+	return next;
+};
+
+/** The request limits as the file writes them, one nested block at a time. */
+const limitsOf = (limits: ModelInputLimits): JsonObject => {
+	const next: JsonObject = {};
+	put(next, "maxRequestBytes", limits.maxRequestBytes);
+	const images = limits.images;
+	if (images !== undefined) {
+		const block: JsonObject = {};
+		put(block, "maxPerMessage", images.maxPerMessage);
+		put(block, "maxPerRequest", images.maxPerRequest);
+		const resize = images.resize;
+		if (resize !== undefined) {
+			const sizes: JsonObject = {};
+			put(sizes, "maxWidth", resize.maxWidth);
+			put(sizes, "maxHeight", resize.maxHeight);
+			put(sizes, "maxBytes", resize.maxBytes);
+			put(sizes, "jpegQuality", resize.jpegQuality);
+			put(block, "resize", sizes);
+		}
+		put(next, "images", block);
+	}
+	return next;
+};
+
+/** The cache lifetimes as the file writes them. */
+const promptCacheOf = (cache: ModelPromptCache): JsonObject => {
+	const next: JsonObject = {};
+	put(next, "short", cache.short);
+	put(next, "long", cache.long);
+	return next;
+};
+
+/** The sampling blocks as the file writes them, one level at a time. */
+const samplingByLevelOf = (levels: SamplingParamsByThinkingLevel): JsonObject => {
+	const next: JsonObject = {};
+	for (const level of ThinkingLevel.literals) {
+		const params = levels[level];
+		if (params !== undefined) next[level] = jsonValueOf(params);
+	}
+	return next;
+};
+
+/**
+ * Write one payload-owned field. `emptyIsValue` marks the fields where `[]`, `""` or `0`
+ * is a real answer: an empty input list means text only, and a cleared family is empty.
+ */
+const writeField = (
+	next: JsonObject,
+	key: string,
+	value: JsonValue | undefined,
+	emptyIsValue: boolean,
+): void => {
+	if (emptyIsValue) setDefined(next, key, value);
+	else setOrDelete(next, key, value);
+};
+
+/**
+ * A blank value for a stored header keeps the stored one; a name left out is removed.
+ * The values never travel to the page, so a save that keeps a header has nothing to send.
+ */
+const mergeHeaders = (
+	incoming: Readonly<Record<string, string>> | undefined,
+	stored: Readonly<Record<string, string>>,
+): Record<string, string> | undefined => {
+	if (incoming === undefined) return undefined;
+	const merged: Record<string, string> = {};
+	for (const [key, value] of Object.entries(incoming)) {
+		const kept = stored[key];
+		if (value !== "") merged[key] = value;
+		else if (kept !== undefined) merged[key] = kept;
+	}
+	return Object.keys(merged).length === 0 ? undefined : merged;
+};
+
+/**
+ * The payload's model as the file's entry. A model is a complete record, so a field the
+ * payload leaves out is unset, while keys this version does not model survive the merge.
+ */
+const mergeModel = (stored: JsonObject, input: ProviderModelInput): JsonObject => {
+	const next: JsonObject = { ...stored, id: input.id };
+	writeField(next, "name", input.name, false);
+	writeField(next, "api", input.api, true);
+	writeField(next, "baseUrl", input.baseUrl, false);
+	writeField(next, "reasoning", input.reasoning, true);
+	writeField(next, "thinkingLevelMap", whenDefined(input.thinkingLevelMap, levelMapOf), false);
+	writeField(next, "compat", whenDefined(input.compat, compatOf), false);
+	writeField(next, "input", input.input === undefined ? undefined : [...input.input], true);
+	writeField(next, "inputLimits", whenDefined(input.inputLimits, limitsOf), false);
+	writeField(next, "promptCache", whenDefined(input.promptCache, promptCacheOf), false);
+	writeField(next, "samplingParams", whenDefined(input.samplingParams, jsonValueOf), false);
+	writeField(
+		next,
+		"samplingParamsByThinkingLevel",
+		whenDefined(input.samplingParamsByThinkingLevel, samplingByLevelOf),
+		false,
+	);
+	writeField(next, "contextWindow", input.contextWindow, true);
+	writeField(next, "maxTokens", input.maxTokens, true);
+	writeField(next, "cost", whenDefined(input.cost, costOf), false);
+	const headers = mergeHeaders(input.headers, stringMapOf(stored["headers"]));
+	if (headers === undefined) delete next["headers"];
+	else next["headers"] = headers;
+	return next;
 };
 
 /** Every platform failure becomes the refusal the page shows, naming this provider. */
@@ -155,14 +346,7 @@ export const makeProvidersStore = (deps: {
 						const modelId = model["id"];
 						if (Schema.is(Schema.String)(modelId)) kept.set(modelId, model);
 					}
-					const models = valid.models.map((model) => {
-						const previous = kept.get(model.id) ?? {};
-						const next: JsonObject = { ...previous, id: model.id };
-						if (model.name !== undefined) next["name"] = model.name;
-						if (model.contextWindow !== undefined) next["contextWindow"] = model.contextWindow;
-						if (model.maxTokens !== undefined) next["maxTokens"] = model.maxTokens;
-						return next;
-					});
+					const models = valid.models.map((model) => mergeModel(kept.get(model.id) ?? {}, model));
 					const next: JsonObject = {
 						...entry,
 						api: valid.api,

@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { Rpc, RpcGroup } from "effect/rpc";
 
+import { ThinkingLevel } from "../conversation/session.ts";
 import { ProviderRefused } from "../errors.ts";
 
 /** What pi can collect for a provider: an account, or a key it asks for itself. */
@@ -114,12 +115,139 @@ export const ProviderModelsView = Schema.Struct({
 });
 export type ProviderModelsView = typeof ProviderModelsView.Type;
 
-/** The model fields the provider dialog writes; every other field of a model survives. */
+/**
+ * `models.json`'s model shape: what the model dialog edits, and the reasoning block pi
+ * and the form both read. Every field but the id is optional, so an entry names only
+ * what it changes and an unset field keeps pi's default.
+ */
+
+/** pi's API family names, the four client families a settings entry may name. */
+export const ProviderApi = Schema.Literals([
+	"openai-completions",
+	"openai-responses",
+	"anthropic-messages",
+	"google-generative-ai",
+]);
+export type ProviderApi = typeof ProviderApi.Type;
+
+/** Which pi thinking levels a model offers, and the value each one sends. */
+export const ThinkingLevelMap = Schema.Record(
+	ThinkingLevel,
+	Schema.optional(Schema.NullOr(Schema.NonEmptyString)),
+);
+export type ThinkingLevelMap = typeof ThinkingLevelMap.Type;
+
+/** How a reasoning level travels. Empty means pi auto-detects from the API family. */
+export const ReasoningCompat = Schema.Struct({
+	thinkingFormat: Schema.optional(
+		Schema.Literals([
+			"openai",
+			"openrouter",
+			"deepseek",
+			"together",
+			"baseten",
+			"zai",
+			"qwen",
+			"chat-template",
+			"qwen-chat-template",
+			"string-thinking",
+			"ant-ling",
+		]),
+	),
+	supportsReasoningEffort: Schema.optional(Schema.Boolean),
+	thinkingTokenBudgetField: Schema.optional(
+		Schema.Literals(["thinking_token_budget", "thinking_budget", "thinking_budget_tokens"]),
+	),
+	requiresReasoningContentOnAssistantMessages: Schema.optional(Schema.Boolean),
+	forceAdaptiveThinking: Schema.optional(Schema.Boolean),
+});
+export type ReasoningCompat = typeof ReasoningCompat.Type;
+
+/** One request-wide price tier; the highest threshold a request passes applies. */
+export const ProviderModelCostTier = Schema.Struct({
+	inputTokensAbove: Schema.Finite,
+	input: Schema.Finite,
+	output: Schema.Finite,
+	cacheRead: Schema.Finite,
+	cacheWrite: Schema.Finite,
+});
+export type ProviderModelCostTier = typeof ProviderModelCostTier.Type;
+
+/** A model's four rates, and the tiers that price a large request instead. */
+export const ProviderModelCost = Schema.Struct({
+	input: Schema.Finite,
+	output: Schema.Finite,
+	cacheRead: Schema.Finite,
+	cacheWrite: Schema.Finite,
+	tiers: Schema.optional(Schema.Array(ProviderModelCostTier)),
+});
+export type ProviderModelCost = typeof ProviderModelCost.Type;
+
+/** A count of bytes or pixels a request may not pass. */
+const PositiveInt = Schema.Int.check(Schema.isGreaterThan(0));
+
+/** A positive number of seconds. */
+const PositiveSeconds = Schema.Finite.check(Schema.isGreaterThan(0));
+
+/** How a request may be shaped before it leaves the engine. */
+export const ModelInputLimits = Schema.Struct({
+	maxRequestBytes: Schema.optional(PositiveInt),
+	images: Schema.optional(
+		Schema.Struct({
+			resize: Schema.optional(
+				Schema.Struct({
+					maxWidth: Schema.optional(PositiveInt),
+					maxHeight: Schema.optional(PositiveInt),
+					maxBytes: Schema.optional(PositiveInt),
+					jpegQuality: Schema.optional(
+						Schema.Int.check(Schema.isBetween({ maximum: 100, minimum: 1 })),
+					),
+				}),
+			),
+			maxPerMessage: Schema.optional(PositiveInt),
+			maxPerRequest: Schema.optional(PositiveInt),
+		}),
+	),
+});
+export type ModelInputLimits = typeof ModelInputLimits.Type;
+
+/** The cache lifetime pi warms for each retention tier, in seconds. */
+export const ModelPromptCache = Schema.Struct({
+	short: Schema.optional(PositiveSeconds),
+	long: Schema.optional(PositiveSeconds),
+});
+export type ModelPromptCache = typeof ModelPromptCache.Type;
+
+/** Extra request-body fields, merged into every request pi sends for the model. */
+export const SamplingParams = Schema.Record(Schema.String, Schema.Json);
+export type SamplingParams = typeof SamplingParams.Type;
+
+export const SamplingParamsByThinkingLevel = Schema.Record(
+	ThinkingLevel,
+	Schema.optional(SamplingParams),
+);
+export type SamplingParamsByThinkingLevel = typeof SamplingParamsByThinkingLevel.Type;
+
+/** One model a provider declares in `models.json`; unset fields keep pi's defaults. */
 export const ProviderModelInput = Schema.Struct({
-	id: Schema.String,
+	id: Schema.NonEmptyString,
 	name: Schema.optional(Schema.String),
-	contextWindow: Schema.optional(Schema.Int),
-	maxTokens: Schema.optional(Schema.Int),
+	/** A model's own family and endpoint; unset keeps the provider's. */
+	api: Schema.optional(ProviderApi),
+	baseUrl: Schema.optional(Schema.String),
+	reasoning: Schema.optional(Schema.Boolean),
+	thinkingLevelMap: Schema.optional(ThinkingLevelMap),
+	compat: Schema.optional(ReasoningCompat),
+	input: Schema.optional(Schema.Array(Schema.Literals(["text", "image"]))),
+	inputLimits: Schema.optional(ModelInputLimits),
+	promptCache: Schema.optional(ModelPromptCache),
+	samplingParams: Schema.optional(SamplingParams),
+	samplingParamsByThinkingLevel: Schema.optional(SamplingParamsByThinkingLevel),
+	/** Header names only reach the page; values stay on the server. */
+	headers: Schema.optional(Schema.Record(Schema.String, Schema.String)),
+	contextWindow: Schema.optional(PositiveInt),
+	maxTokens: Schema.optional(PositiveInt),
+	cost: Schema.optional(ProviderModelCost),
 });
 export type ProviderModelInput = typeof ProviderModelInput.Type;
 
