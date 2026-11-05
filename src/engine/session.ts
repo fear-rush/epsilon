@@ -170,7 +170,9 @@ type SessionInput =
 	| { readonly kind: "swap"; readonly session: AgentSession }
 	| { readonly kind: "flush" }
 	/** Re-read pi's answer and, when a cache warm is scheduled, arm its wake-up. */
-	| { readonly kind: "arm" };
+	| { readonly kind: "arm" }
+	/** Send the composer's readings; a chat pi cannot total says so instead. */
+	| { readonly kind: "readings" };
 
 export class EngineSession {
 	private runtime: RuntimeHandle;
@@ -210,6 +212,8 @@ export class EngineSession {
 	private lock: SessionLock | undefined;
 	private unsubscribe: (() => void) | undefined;
 	private toolRunning = 0;
+	/** Whether the page has been told that pi cannot total this chat's readings. */
+	private readingsProblemReported = false;
 	/** The moment pi named for its next cache warm, and the fiber waiting for it. */
 	private warmAt: number | undefined;
 	private warmFiber: Fiber.Fiber<void> | undefined;
@@ -1221,7 +1225,9 @@ export class EngineSession {
 		const to: To = tab === undefined ? "all" : { tab };
 		this.frames.to(to, frame);
 		this.frames.to(to, this.metaOf(agent));
-		this.frames.to(to, readingsOf(agent));
+		// The readings are computed on the event loop, where a chat pi cannot total is
+		// caught and reported instead of taking the engine down with it.
+		Queue.offerUnsafe(this.events, { kind: "readings" });
 		this.frames.to(to, this.statusesFrame());
 		this.frames.to(to, this.widgetsFrame());
 		// The snapshot carries the warmer's reading, so its timer is armed here too: a chat
@@ -1333,7 +1339,25 @@ export class EngineSession {
 	private publishReadings(): Effect.Effect<void, never, Scope.Scope> {
 		const self = this;
 		return Effect.gen(function* () {
-			self.broadcast(readingsOf(self.runtime.session));
+			// pi's `getSessionStats()` throws on an assistant message without `usage`, which
+			// only a hand-written file has. The chat must still open: the readings are
+			// skipped and the page is told why, once, rather than the engine exiting.
+			const outcome = yield* Effect.try({
+				try: () => readingsOf(self.runtime.session),
+				catch: (cause) => describe(cause),
+			}).pipe(
+				Effect.match({
+					onFailure: (reason) => ({ failure: reason }),
+					onSuccess: (frame) => ({ frame }),
+				}),
+			);
+			if ("failure" in outcome) {
+				if (self.readingsProblemReported) return;
+				self.readingsProblemReported = true;
+				self.notice(`This chat's readings could not be read: ${outcome.failure}`, "warning");
+				return;
+			}
+			self.broadcast(outcome.frame);
 			yield* self.armWarming();
 		});
 	}
@@ -1530,6 +1554,10 @@ export class EngineSession {
 			}
 			if (item.kind === "arm") {
 				yield* self.armWarming();
+				return;
+			}
+			if (item.kind === "readings") {
+				yield* self.publishReadings();
 				return;
 			}
 			yield* self.receive(item.event);

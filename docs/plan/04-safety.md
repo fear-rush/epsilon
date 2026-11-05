@@ -84,15 +84,25 @@ keys); the index conformance test against `SessionManager.listAll`
       freeze for seconds, but it sits at the line the item above cares about, and every
       list read pays it. Either stat only the folders the watcher reported, or serve the
       index as it stands and reconcile in the background. Needs the owner's pick.
-- [ ] **"N models can run a turn" counts models that cannot.** The General page's Status row
+- [x] **"N models can run a turn" counts models that cannot.** The General page's Status row
       reads `settings.providers.models`, which is pi's whole composed catalog — 1693 rows on
       the dev sandbox, against main's 94 — so a provider with no credential inflates the
       number the row promises. Found while settling S8 against main's screenshot; the fix is
       main's enabled set (`readEnabledModels`), not a rewording, unless the owner prefers the
       catalog count. Test: the count equals what the Default model picker offers.
-- [ ] **Large files**: read `src/engine/session.ts` (1,347 lines) and
-      `src/backend/settings/mcp/service.ts` (784; `config/` before phase 1). Split only
-      what holds two concepts, per the File rules; otherwise leave them.
+      Fixed: General counts — and the Default model picker offers — only models of a
+      provider pi reports as configured, which is pi's own answer to "can run a turn".
+      The settings rows still describe every composed model, so an override is never
+      hidden. `onboarding.e2e.ts` asserts it on an empty home: after one custom provider
+      and one model, the row reads "1 models can run a turn." while the catalog holds
+      ~1693.
+- [x] **Large files**: read `src/engine/session.ts` (now 1,747 lines) and
+      `src/backend/settings/mcp/service.ts` (1,010). Both read as one concept each —
+      `EngineSession` is the engine's whole host for one chat (commands, frames, snapshot,
+      watcher, lock, UI bridge, tree, fork, export), and `McpService` is one API over one
+      document. What could move is `FrameOut` (frame buffering) out of `session.ts`, and
+      the OAuth command path out of `mcp/service.ts`; neither holds a second concept on its
+      own, so per the File rules they stay.
 - [x] **`bun run parity` misreads a quote inside a template literal.** It reported seven of
       main's `error-view` sentences as missing from a file that has them: one template
       literal contains a double quote (`no words for error tag "${String(error)}"`), which
@@ -142,14 +152,18 @@ keys); the index conformance test against `SessionManager.listAll`
       composed sentence in the MCP add dialog that names which servers were written before
       the failure — a human-written message, not a tagged error's empty one.
 
-- [ ] **A session pi cannot total.** pi's `getSessionStats()` reads `message.usage.input`
+- [x] **A session pi cannot total.** pi's `getSessionStats()` reads `message.usage.input`
       on every assistant message, so a file whose assistant entry has no `usage` throws it,
       and the readings frame calls it on attach: the engine exits, the supervisor records a
       crash, and the next message reattaches into the same crash. The fixture that found it
       was written by hand; pi's own writer always includes usage. `main` made the same call
-      inside its snapshot, in the server process. Decide with the owner whether the reading
-      is skipped with a notice or the file is refused with words. Test: a chat whose
-      assistant entry has no `usage` opens and says what is wrong.
+      inside its snapshot, in the server process. Fixed by skipping the reading with a
+      notice: the readings are computed on the engine's event loop (`Effect.try`), a chat
+      pi cannot total says "This chat's readings could not be read: …" once, and the engine
+      keeps serving. The snapshot no longer computes them inline. Test:
+      `test/acceptance.test.ts`, "a chat pi cannot total opens, says why, and still
+      answers" — it fails without the guard (the engine died during attach) and passes
+      with it.
 
 ## The review every slice gets
 

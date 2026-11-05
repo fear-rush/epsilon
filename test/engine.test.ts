@@ -255,7 +255,19 @@ test("a real engine opens a chat, streams a turn and answers its tree", async ()
 				];
 				const meta = opening.find((frame) => frame.t === "sessionMeta");
 				const queue = opening.find((frame) => frame.t === "queue");
-				const readings = opening.find((frame) => frame.t === "readings");
+				// The readings are computed on the engine's own event loop, where a chat pi
+				// cannot total is caught and reported instead of killing the engine, so they
+				// arrive right after the snapshot rather than inside it.
+				const nextReadings = engine.frames("tab2").pipe(
+					Stream.filter((frame) => frame.t === "readings"),
+					Stream.take(1),
+					Stream.runHead,
+				);
+				const readings = Option.getOrUndefined(
+					yield* nextReadings.pipe(
+						Effect.timeoutOrElse({ duration: "5 seconds", orElse: () => Effect.succeedNone }),
+					),
+				);
 				// A shell command runs outside a turn; its frames reach every open tab. The
 				// read stops at the frame that ends the run, after the frame that started it.
 				yield* engine.attachTab("tab3");

@@ -36,4 +36,8 @@ test("an empty home shows readiness, and a provider makes it ready", async ({ ap
 
 	await page.getByRole("link", { name: /back to app/i }).click();
 	await expect(page.getByRole("status")).toContainText(/ready/i);
+
+	// The Status row counts what can run a turn, not pi's whole catalog: one stub model.
+	await page.goto(`${app.url}/settings/general`);
+	await expect(page.getByText("1 models can run a turn.")).toBeVisible();
 });

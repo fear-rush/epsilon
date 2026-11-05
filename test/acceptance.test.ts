@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { BunServices } from "@effect/platform-bun";
-import { Clock, Effect, Exit, FileSystem, Scope, Schema } from "effect";
+import { Clock, Effect, Exit, FileSystem, Option, Schema, Scope, Stream } from "effect";
 
 import { TreeRow } from "#protocol/conversation/frames";
 
@@ -198,6 +198,64 @@ describe("acceptance", () => {
 			stub.stop();
 		}
 	}, 30_000);
+
+	test("a chat pi cannot total opens, says why, and still answers", async () => {
+		// pi's `getSessionStats()` reads `message.usage.input` unguarded, so a file whose
+		// assistant entry has no usage throws inside the readings frame. pi's own writer
+		// always records usage; this file is hand-written, the way the item found it.
+		const { env, home } = homeFor("no-usage");
+		const directory = join(testPaths.scratch, "no-usage-project");
+		const sessionDir = join(home, "sessions", "--no-usage--");
+		mkdirSync(directory, { recursive: true });
+		mkdirSync(sessionDir, { recursive: true });
+		const file = join(sessionDir, "2026-01-01T00-00-00-000Z_s-no-usage.jsonl");
+		const timestamp = "2026-01-01T00:00:00.000Z";
+		const lines = [
+			{ type: "session", version: 3, id: "s-no-usage", timestamp, cwd: directory },
+			{
+				type: "message",
+				id: "e1",
+				parentId: null,
+				timestamp,
+				message: { role: "user", content: [{ type: "text", text: "hand written" }], timestamp: 1 },
+			},
+			{
+				type: "message",
+				id: "e2",
+				parentId: "e1",
+				timestamp,
+				message: {
+					role: "assistant",
+					content: [{ type: "text", text: "no usage on this one" }],
+					stopReason: "stop",
+					timestamp: 2,
+				},
+			},
+		];
+		writeFileSync(file, `${lines.map((line) => JSON.stringify(line)).join("\n")}\n`);
+
+		const result = await run(
+			Effect.gen(function* () {
+				const engine = yield* startEngine(startOptions("s-no-usage", home, env, file, directory));
+				yield* engine.attachTab("tab");
+				const notice = yield* engine.frames("tab").pipe(
+					Stream.filter(
+						(frame) => frame.t === "notice" && /readings could not be read/i.test(frame.text),
+					),
+					Stream.take(1),
+					Stream.runHead,
+					Effect.timeoutOrElse({ duration: "5 seconds", orElse: () => Effect.succeedNone }),
+				);
+				// Skipped readings must not be fatal: the engine still answers a query.
+				const tree = yield* engine.request((id) => ({ id, kind: "tree", t: "query" }));
+				yield* engine.stop(2_000);
+				return { notice, tree };
+			}),
+		);
+
+		expect(Option.isSome(result.notice)).toBe(true);
+		expect(Schema.decodeUnknownSync(Schema.Array(TreeRow))(result.tree).length).toBeGreaterThan(0);
+	}, 20_000);
 
 	test("F6: a prompt accepted while agent_settled is slow answers", async () => {
 		const { env, home } = homeFor("f6", "slow-settled");

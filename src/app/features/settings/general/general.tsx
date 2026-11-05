@@ -45,6 +45,15 @@ export function SettingsGeneral() {
 	const sorted = [...(models.data?.models ?? [])].toSorted((left, right) =>
 		`${left.provider}/${left.name}`.localeCompare(`${right.provider}/${right.name}`),
 	);
+	// "Can run a turn" is pi's question: a model of a provider with no credential cannot,
+	// however many the catalog composes. The picker offers the ones that can, and the
+	// Status row counts the same list.
+	const configured = new Set(
+		snapshot.providers.providers
+			.filter((provider) => provider.auth.configured)
+			.map((provider) => provider.id),
+	);
+	const usable = sorted.filter((model) => configured.has(model.provider));
 
 	return (
 		<DetailPage title="General">
@@ -56,7 +65,7 @@ export function SettingsGeneral() {
 				<AppSection
 					home={home.data}
 					maxRunning={snapshot.epsilon.settings.maxRunning}
-					models={sorted}
+					models={usable}
 					ready={snapshot.readiness.ready}
 					sessions={snapshot.settings.sessions}
 					selected={
