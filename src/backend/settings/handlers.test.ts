@@ -88,6 +88,9 @@ const configLayer = (name: string) => {
 			const config = yield* PiConfig;
 			return makeMcpService({
 				builtinEnabled: config.builtinEnabled,
+				// SAFETY: this test has no engine, so the seam answers "no chat is open", which is
+				// the value the type allows.
+				runInFolder: () => Effect.succeed(undefined as { sessionId: string } | undefined),
 				document,
 				home: agentHome,
 				live: () => Effect.succeed(emptyLive),

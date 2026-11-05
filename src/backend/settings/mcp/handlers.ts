@@ -21,6 +21,7 @@ export const McpHandlersLive = McpRpcs.toLayer(
 				mcp.setEnabled(folder, scope, name, enabled),
 			"settings.mcp.setInProject": ({ folder, name, value }) =>
 				mcp.setInProject(folder, name, value),
+			"settings.mcp.command": ({ folder, action, name }) => mcp.command(folder, action, name),
 			"settings.mcp.setDefaultTool": ({ folder, tool, enabled }) =>
 				mcp.setDefaultTool(folder, tool, enabled),
 			"settings.mcp.setAutoEnableCodemode": ({ folder, scope, enabled }) =>

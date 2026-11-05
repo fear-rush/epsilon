@@ -67,7 +67,8 @@ retired.
 5. Credentials change only through `ModelRuntime.login()`/`logout()`; never hand-write
    `auth.json` or `trust.json`. Other files: use an exported writer, else `JsonDocument`
    (merge, keep unknown keys, refuse what you cannot parse, pi's lock for
-   `settings.json`). MCP sign-in stays in the terminal.
+   `settings.json`). MCP sign-in runs inside a live chat's engine through pi's own `/mcp`
+   line; Epsilon never writes `mcp-auth.json`.
 6. The agent home is chosen once in `src/backend/main.ts` and passed to every engine
    explicitly (`PI_CODING_AGENT_DIR`, `HOME`), never inherited. `bun run dev` uses
    `.sandbox/agent`; tests use a temp home from `test/setup.ts`.

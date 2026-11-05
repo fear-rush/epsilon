@@ -49,6 +49,9 @@ const mcpLayer = (name: string, answers: ReadonlyArray<McpEngineLive> = []) => {
 			const config = yield* PiConfig;
 			return makeMcpService({
 				builtinEnabled: config.builtinEnabled,
+				// SAFETY: this test has no engine, so the seam answers "no chat is open", which is
+				// the value the type allows.
+				runInFolder: () => Effect.succeed(undefined as { sessionId: string } | undefined),
 				document,
 				home,
 				live: mcpLiveReader({
@@ -712,5 +715,25 @@ describe("settings.mcp.list reach", () => {
 			}).pipe(Effect.scoped, Effect.provide(layer)),
 		);
 		expect(projectView.reach.defaultToolsProject).toBe(true);
+	});
+});
+
+describe("settings.mcp.command", () => {
+	test("says no chat is open instead of pretending /mcp ran", async () => {
+		const { layer, project } = mcpLayer("command");
+		const refused = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(McpRpcs, layer);
+				return yield* Effect.flip(
+					client["settings.mcp.command"]({
+						action: "login",
+						folder: project,
+						name: "searchy",
+					}),
+				);
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+		expect(refused).toBeInstanceOf(McpRefused);
+		expect(refused.reason).toContain("No live chat");
 	});
 });

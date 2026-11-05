@@ -401,6 +401,20 @@ export const McpRpcs = RpcGroup.make(
 	 * Name codemode or tool_search in settings.json's `defaultTools`, or take it out. A
 	 * project that sets the list itself owns it, so this refuses rather than override it.
 	 */
+	/**
+	 * pi's own `/mcp` line, in a chat already running in this folder: `login` starts the
+	 * OAuth flow inside the engine that holds the connection, `logout` and `reconnect`
+	 * need the same engine. It refuses when no chat is open there.
+	 */
+	Rpc.make("settings.mcp.command", {
+		payload: {
+			folder: Schema.NullOr(Schema.String),
+			action: Schema.Literals(["login", "logout", "reconnect"]),
+			name: Schema.String,
+		},
+		success: Schema.Struct({ sessionId: Schema.String }),
+		error: McpRefused,
+	}),
 	Rpc.make("settings.mcp.setDefaultTool", {
 		payload: {
 			folder: Schema.NullOr(Schema.String),

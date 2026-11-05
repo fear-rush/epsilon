@@ -98,6 +98,15 @@ export type McpServiceApi = {
 		value: McpInProjectValue,
 	) => Io<void, McpRefused>;
 	/**
+	 * pi's `/mcp <action> <name>`, sent to the chat already running in `folder`, because the
+	 * connection and the OAuth flow live in that engine. Undefined when no chat is open.
+	 */
+	readonly command: (
+		folder: string | null,
+		action: "login" | "logout" | "reconnect",
+		name: string,
+	) => Io<{ readonly sessionId: string }, McpRefused>;
+	/**
 	 * Name codemode or tool_search in settings.json's `defaultTools`, or take it out. pi has
 	 * a getter and no setter for that key, so the file is merged; a project that sets the
 	 * list in its own settings owns it, and this refuses rather than override it.
@@ -504,6 +513,11 @@ export const makeMcpService = (deps: {
 	readonly live: (names: ReadonlyArray<string>) => Effect.Effect<McpLive>;
 	readonly settings: (folder: string) => Effect.Effect<SettingsManager>;
 	readonly builtinEnabled: (folder: string, name: string) => Effect.Effect<boolean>;
+	/** Sends one line to a chat running in the folder; undefined when none is. */
+	readonly runInFolder: (
+		folder: string,
+		text: string,
+	) => Effect.Effect<{ readonly sessionId: string } | undefined, McpRefused>;
 }): McpServiceApi => {
 	const editFile = Effect.fn("Mcp.editFile")(function* (
 		scope: McpScope,
@@ -870,6 +884,20 @@ export const makeMcpService = (deps: {
 		},
 	);
 
+	const command: McpServiceApi["command"] = Effect.fn("Mcp.command")(
+		function* (folder, action, name) {
+			const target = folder ?? deps.home.agentDir;
+			const ran = yield* deps.runInFolder(target, `/mcp ${action} ${name}`);
+			if (ran === undefined) {
+				return yield* refusal(
+					name,
+					"No live chat is running in this folder, and /mcp has to run inside the engine that holds the connection. Open a chat first.",
+				);
+			}
+			return ran;
+		},
+	);
+
 	const setDefaultTool: McpServiceApi["setDefaultTool"] = Effect.fn("Mcp.setDefaultTool")(
 		function* (folder, tool, enabled) {
 			if (folder !== null) {
@@ -923,6 +951,7 @@ export const makeMcpService = (deps: {
 	);
 
 	return {
+		command,
 		list,
 		live,
 		read,
@@ -952,6 +981,25 @@ export const McpServiceLive: Layer.Layer<
 		const pi = yield* PiConfig;
 		return makeMcpService({
 			builtinEnabled: pi.builtinEnabled,
+			runInFolder: (folder, text) =>
+				Effect.gen(function* () {
+					const running = yield* engines.running;
+					const target = running.find((entry) => entry.cwd === folder);
+					if (target === undefined) return undefined;
+					yield* engines
+						.command(target.sessionId, "settings", { t: "prompt", text })
+						.pipe(
+							Effect.mapError((cause) =>
+								refusal(
+									undefined,
+									cause._tag === "EngineStopped"
+										? "The chat's engine stopped before /mcp ran. Open a chat and try again."
+										: cause.reason,
+								),
+							),
+						);
+					return { sessionId: target.sessionId };
+				}),
 			document,
 			home,
 			live: mcpLiveReader({ log, queryAll: engines.queryAll("mcpLive") }),

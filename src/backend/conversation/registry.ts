@@ -53,6 +53,8 @@ export type EngineQuery = Omit<Extract<SupervisorToEngine, { t: "query" }>, "id"
 
 export type RunningEngine = {
 	readonly sessionId: string;
+	/** The folder the chat runs in, so a folder's own setting can find its engine. */
+	readonly cwd: string;
 	readonly pid: number;
 	readonly rss: number;
 	readonly busy: boolean;
@@ -364,6 +366,7 @@ export const makeEngines = (options: {
 	const running = Effect.sync(() =>
 		entries().map((entry) => ({
 			busy: Ref.getUnsafe(entry.engine.status).busy,
+			cwd: entry.cwd,
 			pid: entry.engine.pid,
 			rss: entry.rss,
 			sessionId: entry.engine.currentSessionId,

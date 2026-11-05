@@ -54,7 +54,7 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | [x]  | `POST /api/sessions/{id}/move`                                                | S3        | `feat(conversation): the move` (`sessions.move`, pi's `forkFrom`)                   |
 | [ ]  | `DELETE /api/projects/sessions` (delete a project's chats)                    | S3        | **missing**                                                                         |
 | [x]  | `PUT /api/settings/mcp/default-tool`                                          | S4        | `feat(settings): the MCP default tool` (`settings.mcp.setDefaultTool`)              |
-| [ ]  | `POST /api/settings/mcp/command`                                              | S4        | **missing**                                                                         |
+| [x]  | `POST /api/settings/mcp/command`                                              | S4        | `feat(settings): the MCP sign-in line` (`settings.mcp.command`)                     |
 | [ ]  | `POST /api/settings/providers/test`                                           | S5        | **missing**                                                                         |
 | [ ]  | `POST /api/settings/providers/{id}/logout` (through `ModelRuntime.logout()`)  | S5        | **missing**                                                                         |
 | [ ]  | `POST /api/settings/skills/folders/link`, `…/unlink`                          | S6        | verify                                                                              |
@@ -149,9 +149,9 @@ servers nothing can call, and `mcpDisabled` says pi's own MCP extension is off.
 the detail editor (its 13 files), then the list pane with the layout, then the add flow
 (dialog, source, values, import, registry, draft and validation, about 1,800 lines).
 
-Owner question before `mcp-signin.tsx`, `mcp-oauth.tsx` and `POST /api/settings/mcp/command`:
-main signs in from the page, while AGENTS.md invariant 5 keeps MCP sign-in in the terminal.
-Porting those needs a yes, or the rows need one to differ.
+Sign-in: the owner's yes (this session) moved invariant 5 from "MCP sign-in stays in the
+terminal" to "sign-in runs inside a live chat's engine through pi's own `/mcp` line".
+`settings.mcp.command` carries it; `mcp-signin`/`mcp-oauth` port with the editor.
 
 | Done | main file (`client/src/…`)                       | Lines | Branch today | Missing exports                                                                                                                           |
 | ---- | ------------------------------------------------ | ----- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
