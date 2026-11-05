@@ -257,10 +257,10 @@ that replacement, not missing markup.
 | [x]  | `features/settings/skills/skill-files-list.tsx`          | 47    | `feat(skills): the files card` (photographed)                                    | `SkillFilesList`                                                                |
 | [x]  | `features/settings/skills/skill-files.tsx`               | 138   | `feat(skills): the files card` (photographed)                                    | `SkillFiles`                                                                    |
 | [x]  | `features/settings/skills/skill-form.tsx`                | 289   | `feat(skills): the editor and its page state` (photographed: form, raw, guard)   | `SkillPageState`                                                                |
-| [ ]  | `features/settings/skills/skill-groups.ts`               | 87    | exists, changed (22 lines)                                                       |                                                                                 |
+| [x]  | `features/settings/skills/skill-groups.ts`               | 87    | `docs(plan): tick the skill groups and modes` (parity)                           |                                                                                 |
 | [x]  | `features/settings/skills/skill-instructions.tsx`        | 30    | `feat(skills): the instructions editor and its marks`                            | `SkillInstructions`                                                             |
 | [x]  | `features/settings/skills/skill-loaded-switch.tsx`       | 27    | `feat(skills): the loaded switch and the page's notices` (photographed)          | `LoadedSwitch`                                                                  |
-| [ ]  | `features/settings/skills/skill-modes.ts`                | 14    | exists, changed (6 lines)                                                        |                                                                                 |
+| [x]  | `features/settings/skills/skill-modes.ts`                | 14    | `docs(plan): tick the skill groups and modes` (parity)                           |                                                                                 |
 | [x]  | `features/settings/skills/skill-new-entry-dialog.tsx`    | 164   | `feat(skills): the raw tab's file tree` (photographed)                           | `NewEntryKind`, `SkillNewEntryDialog`                                           |
 | [x]  | `features/settings/skills/skill-notices.tsx`             | 49    | `feat(skills): the loaded switch and the page's notices` (photographed)          | `SkillNotices`                                                                  |
 | [x]  | `features/settings/skills/skill-page-state.ts`           | 36    | `feat(skills): a listed skill's files` (photographed)                            | `useSkillPage`                                                                  |
@@ -276,7 +276,7 @@ that replacement, not missing markup.
 | [x]  | `features/settings/skills/skill-status.ts`               | 41    | `feat(skills): the loaded switch and the page's notices`                         | `isOn`, `readOnlyReason`, `useSkillToggle`                                      |
 | [x]  | `features/settings/skills/skill-unreadable.tsx`          | 18    | `feat(skills): a SKILL.md pi cannot parse` (photographed)                        | `SkillUnreadable`                                                               |
 | [x]  | `features/settings/skills/skill-viewer.tsx`              | 110   | `feat(skills): a listed skill's files` (photographed)                            |                                                                                 |
-| [ ]  | `features/settings/skills/skills-panel.tsx`              | 154   | has `SkillPaths`; missing the file-only notice                                   |                                                                                 |
+| [ ]  | `features/settings/skills/skills-panel.tsx`              | 154   | has `SkillPaths`; missing the note; live engines looked up in `.epsilon`         |                                                                                 |
 
 ## S7 Settings: Context
 
