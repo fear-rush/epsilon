@@ -1,4 +1,5 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { ChevronsDownIcon, ChevronsUpIcon } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { assistantText, assistantThinking, entryLabel } from "#domain/conversation/content";
@@ -7,6 +8,7 @@ import type { ConversationState, StreamingTurn } from "#domain/conversation/stat
 import type { AssistantEntry, TranscriptEntry } from "#protocol/conversation/frames";
 import { Markdown } from "@/components/editor/markdown";
 import { toneText } from "@/components/patterns/status/status-tone";
+import { Tip } from "@/components/patterns/tip";
 import { cn } from "@/lib/cn";
 
 import { ToolTrace } from "./tool-trace";
@@ -39,6 +41,11 @@ const ESTIMATE: Record<TranscriptEntry["role"] | "streaming", number> = {
 /** pi's own word for the label that stands in for thinking it hides. */
 const DEFAULT_HIDDEN_THINKING_LABEL = "Thinking...";
 
+/** The rail's five-slot viewport: as many dots as one screenful should hold. */
+const RAIL_SLOTS = 5;
+/** One line and a readable length, for a dot's label and tooltip. */
+const PREVIEW_LENGTH = 80;
+
 const GAP = 24;
 const PADDING = 32;
 const END_THRESHOLD = 48;
@@ -60,6 +67,133 @@ export const matchingRowIds = (
 	if (needle === "") return [];
 	return rows.filter((row) => rowText(row).toLowerCase().includes(needle)).map((row) => row.id);
 };
+
+const previewOf = (text: string): string => {
+	const line = text.trimStart().split("\n")[0]?.trim() ?? "";
+	return line.length > PREVIEW_LENGTH ? `${line.slice(0, PREVIEW_LENGTH)}…` : line;
+};
+
+/**
+ * The quick jump rail: a five-slot viewport that scrolls through one dot per user message
+ * at the transcript's right edge. The viewport follows the current turn, the chevrons jump
+ * to the ends, and it stays faint until used. A chat with fewer than five messages has
+ * none: there is too little to navigate.
+ */
+function TranscriptRail({
+	rows,
+	activeId,
+	onJump,
+	onJumpEnd,
+}: {
+	rows: ReadonlyArray<{ id: string; text: string }>;
+	activeId: string | undefined;
+	onJump: (id: string) => void;
+	onJumpEnd: () => void;
+}) {
+	const [hovered, setHovered] = useState<number | null>(null);
+	const railRef = useRef<HTMLDivElement>(null);
+	const anchored = rows.findIndex((row) => row.id === activeId);
+	const activeIndex = anchored === -1 ? rows.length - 1 : anchored;
+
+	useEffect(() => {
+		const viewport = railRef.current;
+		if (viewport === null) return;
+		const slot = viewport.clientHeight / RAIL_SLOTS;
+		const firstVisible = Math.round(viewport.scrollTop / slot);
+		const target =
+			activeIndex < firstVisible + 1
+				? activeIndex - 1
+				: activeIndex > firstVisible + RAIL_SLOTS - 2
+					? activeIndex - (RAIL_SLOTS - 2)
+					: firstVisible;
+		const lastStart = Math.max(0, rows.length - RAIL_SLOTS);
+		viewport.scrollTo({
+			top: Math.max(0, Math.min(target, lastStart)) * slot,
+			behavior: "smooth",
+		});
+	}, [activeIndex, rows.length]);
+
+	if (rows.length < RAIL_SLOTS) return null;
+	const first = rows[0];
+
+	return (
+		<div className="pointer-events-none absolute inset-y-0 left-1/2 w-full max-w-content -translate-x-1/2">
+			<nav
+				aria-label="Jump to a message"
+				className="pointer-events-auto absolute top-1/2 right-3 hidden -translate-y-1/2 flex-col items-center opacity-40 transition-all duration-base focus-within:opacity-100 hover:opacity-100 sm:flex xl:right-0 starting:scale-95 starting:opacity-0"
+			>
+				<Tip label="First message">
+					<button
+						type="button"
+						aria-label="Go to the first message"
+						className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
+						onClick={() => {
+							if (first !== undefined) onJump(first.id);
+						}}
+					>
+						<ChevronsUpIcon className="size-3.5" />
+					</button>
+				</Tip>
+				<div
+					ref={railRef}
+					className="relative scrollbar-none h-80 w-6 overflow-y-auto overscroll-contain"
+				>
+					<div className="relative flex flex-col items-center">
+						<span
+							aria-hidden
+							className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border"
+						/>
+						{rows.map((row, index) => {
+							const preview = previewOf(row.text) || `Message ${index + 1}`;
+							const active = index === activeIndex;
+							return (
+								<Tip key={row.id} label={`${index + 1}. ${preview}`}>
+									<button
+										type="button"
+										aria-label={`Go to message ${index + 1}: ${preview}`}
+										aria-current={active ? "step" : undefined}
+										className="relative flex h-16 w-6 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+										onPointerEnter={() => setHovered(index)}
+										onPointerLeave={() => setHovered(null)}
+										onFocus={() => setHovered(index)}
+										onBlur={() => setHovered(null)}
+										onClick={() => onJump(row.id)}
+									>
+										<span
+											className={cn(
+												"size-1.5 rounded-full transition duration-fast",
+												active ? "opacity-0" : "bg-muted-foreground/35",
+												hovered === index && "scale-150 bg-foreground/70",
+											)}
+										/>
+									</button>
+								</Tip>
+							);
+						})}
+						<span
+							aria-hidden
+							className={cn(
+								"pointer-events-none absolute left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/70 transition-all duration-slow ease-in-out",
+								hovered === activeIndex && "scale-150",
+							)}
+							style={{ top: `${((activeIndex + 0.5) / rows.length) * 100}%` }}
+						/>
+					</div>
+				</div>
+				<Tip label="Last message">
+					<button
+						type="button"
+						aria-label="Go to the last message"
+						className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
+						onClick={onJumpEnd}
+					>
+						<ChevronsDownIcon className="size-3.5" />
+					</button>
+				</Tip>
+			</nav>
+		</div>
+	);
+}
 
 export type Jump = { readonly id: string; readonly nonce: number };
 
@@ -91,6 +225,53 @@ export function Transcript({
 	/** The reader reached the top: keep pulling pages until the start or until they move. */
 	const [pulling, setPulling] = useState(false);
 	const [announcement, setAnnouncement] = useState("");
+	/** The user message the rail marks as current, from where the reader is. */
+	const [activeUserId, setActiveUserId] = useState<string>();
+	const userRows = rows.flatMap((row) =>
+		row.kind === "entry" && row.entry.role === "user" ? [{ id: row.id, text: rowText(row) }] : [],
+	);
+
+	/** The user row at or above the first row the viewport shows. */
+	const syncActive = (): void => {
+		const element = scroll.current;
+		if (element === null) return;
+		const top = element.getBoundingClientRect().top;
+		let shown: string | undefined;
+		for (const node of element.querySelectorAll<HTMLElement>("[data-row-id]")) {
+			if (node.getBoundingClientRect().top - top > END_THRESHOLD) break;
+			shown = node.dataset["rowId"];
+		}
+		const index = shown === undefined ? -1 : rows.findIndex((row) => row.id === shown);
+		let user: string | undefined;
+		for (let at = index; at >= 0; at -= 1) {
+			const row = rows[at];
+			if (row?.kind === "entry" && row.entry.role === "user") {
+				user = row.id;
+				break;
+			}
+		}
+		setActiveUserId(user);
+	};
+
+	/** Bring one row to the top of the view, the rail's jump. */
+	const jumpToRow = (id: string): void => {
+		const index = rows.findIndex((row) => row.id === id);
+		if (index < 0) return;
+		if (virtual) virtualizer.scrollToIndex(index, { align: "start", behavior: "smooth" });
+		else {
+			scroll.current
+				?.querySelector(rowSelector(id))
+				?.scrollIntoView({ behavior: "smooth", block: "start" });
+		}
+	};
+
+	const jumpToEnd = (): void => {
+		if (virtual) virtualizer.scrollToEnd({ behavior: "smooth" });
+		else {
+			const element = scroll.current;
+			element?.scrollTo({ behavior: "smooth", top: element.scrollHeight });
+		}
+	};
 
 	// The virtualizer is an external store with imperative measurement; memoizing it is
 	// neither possible nor wanted, which is exactly what this component should not do.
@@ -123,6 +304,7 @@ export function Transcript({
 		if (virtual) virtualizer.scrollToEnd();
 		else element.scrollTop = element.scrollHeight;
 		initialized.current = true;
+		syncActive();
 		// The first mount only: later appends are the virtualizer's or onScroll's business.
 		// oxlint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
@@ -180,58 +362,68 @@ export function Transcript({
 		atEnd.current = distance < END_THRESHOLD;
 		if (atEnd.current) anchored.current = false;
 		if (element.scrollTop < 160) setPulling(true);
+		syncActive();
 	};
 
 	return (
 		<>
-			<div
-				ref={scroll}
-				role="feed"
-				aria-busy={state.busy}
-				aria-label="Conversation"
-				onScroll={onScroll}
-				onWheel={() => setPulling(false)}
-				onTouchMove={() => setPulling(false)}
-				className="min-h-0 flex-1 overflow-y-auto px-page"
-			>
-				{virtual ? (
-					<div
-						className="relative mx-auto w-full max-w-content"
-						style={{ height: virtualizer.getTotalSize() }}
-					>
-						{virtualizer.getVirtualItems().map((item) => {
-							const row = rows[item.index];
-							if (row === undefined) return null;
-							return (
+			<div className="relative min-h-0 flex-1">
+				<div
+					ref={scroll}
+					role="feed"
+					aria-busy={state.busy}
+					aria-label="Conversation"
+					onScroll={onScroll}
+					onWheel={() => setPulling(false)}
+					onTouchMove={() => setPulling(false)}
+					className="h-full overflow-y-auto px-page"
+				>
+					{virtual ? (
+						<div
+							className="relative mx-auto w-full max-w-content"
+							style={{ height: virtualizer.getTotalSize() }}
+						>
+							{virtualizer.getVirtualItems().map((item) => {
+								const row = rows[item.index];
+								if (row === undefined) return null;
+								return (
+									<article
+										key={item.key}
+										ref={virtualizer.measureElement}
+										data-index={item.index}
+										data-row-id={row.id}
+										aria-posinset={item.index + 1}
+										aria-setsize={rows.length}
+										className="absolute inset-x-0 top-0 pb-6"
+										style={{ transform: `translateY(${item.start}px)` }}
+									>
+										<Row row={row} state={state} toolOpen={toolOpen} onToggleTool={onToggleTool} />
+									</article>
+								);
+							})}
+						</div>
+					) : (
+						<div className="mx-auto flex w-full max-w-content flex-col gap-6 py-8">
+							{rows.map((row, index) => (
 								<article
-									key={item.key}
-									ref={virtualizer.measureElement}
-									data-index={item.index}
+									key={row.id}
 									data-row-id={row.id}
-									aria-posinset={item.index + 1}
+									aria-posinset={index + 1}
 									aria-setsize={rows.length}
-									className="absolute inset-x-0 top-0 pb-6"
-									style={{ transform: `translateY(${item.start}px)` }}
+									className="animate-enter-rise"
 								>
 									<Row row={row} state={state} toolOpen={toolOpen} onToggleTool={onToggleTool} />
 								</article>
-							);
-						})}
-					</div>
-				) : (
-					<div className="mx-auto flex w-full max-w-content flex-col gap-6 py-8">
-						{rows.map((row, index) => (
-							<article
-								key={row.id}
-								data-row-id={row.id}
-								aria-posinset={index + 1}
-								aria-setsize={rows.length}
-							>
-								<Row row={row} state={state} toolOpen={toolOpen} onToggleTool={onToggleTool} />
-							</article>
-						))}
-					</div>
-				)}
+							))}
+						</div>
+					)}
+				</div>
+				<TranscriptRail
+					rows={userRows}
+					activeId={activeUserId}
+					onJump={jumpToRow}
+					onJumpEnd={jumpToEnd}
+				/>
 			</div>
 			{/* The feed is not a live region itself; a finished reply is announced once. */}
 			<div aria-live="polite" className="sr-only">
@@ -355,6 +547,7 @@ function StreamingRow({ turn }: { turn: StreamingTurn }) {
 					</p>
 				),
 			)}
+			<span className="animate-pulse text-muted-foreground motion-reduce:animate-none">▍</span>
 		</div>
 	);
 }
