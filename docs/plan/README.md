@@ -20,7 +20,7 @@ Work on the first phase that is not done. Inside a phase, take the first unticke
 | --- | ----------------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------- |
 | 1   | Structure: one name per concept, rename and move only | [01-structure.md](01-structure.md)               | done: `refactor(structure): one name per concept in every root` |
 | 2   | Feedback system                                       | [02-feedback.md](02-feedback.md)                 | done; screenshots not taken (owner's call)                      |
-| 3   | Port `main` 1:1, slice by slice                       | [03-port.md](03-port.md), [ledger.md](ledger.md) | in progress: S5; the ported provider rows still owe screenshots |
+| 3   | Port `main` 1:1, slice by slice                       | [03-port.md](03-port.md), [ledger.md](ledger.md) | in progress: S5; the uncomposable models.json entry is next     |
 | 4   | Safety checks still open                              | [04-safety.md](04-safety.md)                     | partly done                                                     |
 | 5   | Merge                                                 | below                                            | not started                                                     |
 
