@@ -109,7 +109,7 @@ export function CodeEditor({
 }: {
 	value: string;
 	/** Called with the whole text after each edit the person makes. Omit it when read-only. */
-	onChange?: (value: string) => void;
+	onChange?: ((value: string) => void) | undefined;
 	language: CodeEditorLanguage;
 	readOnly?: boolean;
 	id?: string;

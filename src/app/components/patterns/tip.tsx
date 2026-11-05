@@ -13,7 +13,7 @@ export function Tip({
 	children,
 }: {
 	label: string;
-	keys?: string;
+	keys?: string | undefined;
 	children: ReactElement;
 }) {
 	return (

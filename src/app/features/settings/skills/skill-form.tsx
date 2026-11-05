@@ -3,7 +3,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import type { SkillFile, SkillInput, SkillRoot, SkillView } from "#protocol/settings/skills";
-import { CodeEditor } from "@/components/editor/code-editor/code-editor";
 import { DeleteDialog } from "@/components/patterns/confirm-dialogs";
 import { EnabledSwitch } from "@/components/patterns/enabled-switch";
 import { ModeTabs } from "@/components/patterns/mode-tabs";
@@ -22,6 +21,7 @@ import { useSettings, useSettingsProject, useSettingsRefresh } from "../queries.
 import { removeSkill, saveSkill, setSkillEnabled } from "./api.ts";
 import { SKILL_FIELDS, toDraft, toInput, validate } from "./skill-draft.ts";
 import type { SkillDraft, SkillField } from "./skill-draft.ts";
+import { SkillInstructions } from "./skill-instructions.tsx";
 import { SKILL_MODES, SKILLS_BACK } from "./skill-modes.ts";
 import type { SkillTab } from "./skill-modes.ts";
 import { SkillRaw } from "./skill-raw.tsx";
@@ -221,17 +221,7 @@ export function SkillForm({
 							</Row>
 						</Section>
 
-						<Section title="Instructions">
-							<div className="p-3">
-								<CodeEditor
-									className="h-96"
-									label="Skill instructions"
-									language="markdown"
-									value={draft.body}
-									onChange={(body) => update({ body })}
-								/>
-							</div>
-						</Section>
+						<SkillInstructions value={draft.body} onChange={(body) => update({ body })} />
 
 						{(file?.fields ?? []).length > 0 && (
 							<Section
