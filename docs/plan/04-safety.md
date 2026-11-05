@@ -38,6 +38,14 @@ keys); the index conformance test against `SessionManager.listAll`
 - [ ] **Large files**: read `src/engine/session.ts` (1,347 lines) and
       `src/backend/settings/mcp/service.ts` (784; `config/` before phase 1). Split only
       what holds two concepts, per the File rules; otherwise leave them.
+- [ ] **`bun run parity` misreads a quote inside a template literal.** While proving S1 it
+      reported seven of main's `error-view` sentences as missing from a file that has them:
+      one template literal contains a double quote (`no words for error tag "${String(error)}"`),
+      which shifts the scanner's lexical pairing, so later strings are swallowed into one
+      non-copy fragment. Skip backtick literals before the double-quote scan, or scan them as
+      their own alternative, and add a test with that shape. Until then, hand-verify a file
+      whose missing words look present.
+
 - [ ] **A session pi cannot total.** pi's `getSessionStats()` reads `message.usage.input`
       on every assistant message, so a file whose assistant entry has no `usage` throws it,
       and the readings frame calls it on attach: the engine exits, the supervisor records a
