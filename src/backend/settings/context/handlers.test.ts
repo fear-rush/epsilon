@@ -30,6 +30,9 @@ const contextLayer = (name: string, live: ContextEngineLive | undefined) => {
 	const userHome = join(root, "home");
 	mkdirSync(join(agentDir, ".epsilon"), { recursive: true });
 	mkdirSync(userHome, { recursive: true });
+	// Which folder the live lookup asked for: a home chat runs in `<agent>/chats`, never in
+	// `.epsilon`, so this is what tells the two scopes apart.
+	const asked: string[] = [];
 	const home = AgentHomeLive(agentDir, userHome);
 	const platform = Layer.mergeAll(home, BunServices.layer);
 	const pi = PiConfigLive.pipe(Layer.provideMerge(home));
@@ -62,7 +65,10 @@ const contextLayer = (name: string, live: ContextEngineLive | undefined) => {
 			return makeContextService({
 				fs,
 				home: agentHome,
-				live: () => Effect.succeed(live === undefined ? [] : [live]),
+				live: (cwd) => {
+					asked.push(cwd);
+					return Effect.succeed(live === undefined ? [] : [live]);
+				},
 				pi: config,
 				skills: skillService,
 				trust: (path) => projectService.trusted(path),
@@ -76,6 +82,7 @@ const contextLayer = (name: string, live: ContextEngineLive | undefined) => {
 	);
 	return {
 		agentDir,
+		asked,
 		layer: ContextHandlersLive.pipe(Layer.provideMerge(context)),
 		root,
 	};
@@ -173,6 +180,38 @@ describe("settings.context.read", () => {
 			all: [{ description: "Read a file", name: "read" }],
 		});
 		expect(view.contextUsage).toEqual({ contextWindow: 1000, percent: 10, tokens: 100 });
+	});
+
+	test("the home scope is a home chat's own folder, live answer included", async () => {
+		const live: ContextEngineLive = {
+			sessionId: "s-home",
+			systemPrompt: "Home prompt",
+			tools: { active: ["read"], all: [{ description: "Read a file", name: "read" }] },
+		};
+		const built = contextLayer("home", live);
+		const chatsDir = join(built.agentDir, "chats");
+		mkdirSync(chatsDir, { recursive: true });
+		write(join(chatsDir, "AGENTS.md"), "Home context\n");
+		write(join(built.agentDir, "AGENTS.md"), "Agent context\n");
+
+		const view = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(ContextRpcs, ContextHandlersLive);
+				return yield* client["settings.context.read"]({ folder: null });
+			}).pipe(Effect.scoped, Effect.provide(built.layer)),
+		);
+
+		// A home chat runs in `<agent>/chats`, so that is the folder whose files and whose
+		// open chat this answer is about; `.epsilon` holds no chat and no context file.
+		expect(realpathSync(view.folder)).toBe(realpathSync(chatsDir));
+		expect(realpathSync(built.asked[0] ?? "")).toBe(realpathSync(chatsDir));
+		expect(view.project).toBeNull();
+		expect(view.live).toBe(true);
+		expect(view.liveSessionId).toBe("s-home");
+		expect(view.systemPrompt.text).toBe("Home prompt");
+		expect(view.contextFiles.map((file) => file.path)).toEqual(
+			expect.arrayContaining([join(built.agentDir, "AGENTS.md"), join(chatsDir, "AGENTS.md")]),
+		);
 	});
 
 	test("a gated project must be trusted before its context is read", async () => {

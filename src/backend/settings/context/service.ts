@@ -69,7 +69,10 @@ export const makeContextService = (deps: {
 	readonly live: (cwd: string) => Effect.Effect<ReadonlyArray<ContextEngineLive>>;
 }): ContextServiceApi => {
 	const read: ContextServiceApi["read"] = Effect.fn("Context.read")(function* (folder) {
-		const cwd = folder === null ? deps.home.epsilonDir : yield* deps.trust(folder);
+		// The home scope is read where a home chat runs, which is `<agent>/chats`: `.epsilon` is
+		// Epsilon's own folder, and no engine runs there, so a live lookup against it never fits
+		// and a home chat's own AGENTS.md would not be in the answer.
+		const cwd = folder === null ? deps.home.chatsDir : yield* deps.trust(folder);
 		const project = folder === null ? null : cwd;
 		const files = yield* readContextFiles({
 			context: deps.pi.context(cwd),
