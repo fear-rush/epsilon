@@ -593,6 +593,7 @@ export const makeMcpService = (deps: {
 	const list: McpServiceApi["list"] = Effect.fn("Mcp.list")(function* (folder) {
 		const { autoEnableCodemode, entries, problems } = yield* readFiles(folder);
 		const reach = yield* reachOf(folder, entries, autoEnableCodemode);
+		const mcpDisabled = !(yield* deps.builtinEnabled(folder ?? deps.home.agentDir, "mcp"));
 		const servers = entries
 			.map(toRow)
 			.toSorted((left, right) =>
@@ -602,7 +603,7 @@ export const makeMcpService = (deps: {
 						? -1
 						: 1,
 			);
-		return { problems, reach, servers };
+		return { mcpDisabled, problems, reach, servers };
 	});
 
 	const live: McpServiceApi["live"] = Effect.fn("Mcp.live")(function* (folder) {

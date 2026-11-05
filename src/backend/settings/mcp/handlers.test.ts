@@ -681,6 +681,7 @@ describe("settings.mcp.list reach", () => {
 			}).pipe(Effect.scoped, Effect.provide(layer)),
 		);
 		expect(before.reach.codemodeDefault).toBe(false);
+		expect(before.mcpDisabled).toBe(false);
 		expect(before.reach.autoEnableCodemode.global).toBe(false);
 		expect(before.reach.unreachable).toEqual([{ exposures: ["codemode"], name: "searchy" }]);
 

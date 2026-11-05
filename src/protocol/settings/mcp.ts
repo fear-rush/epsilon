@@ -303,6 +303,8 @@ export const McpListView = Schema.Struct({
 	/** A file pi or Epsilon could not read, so nothing of it is listed. */
 	problems: Schema.Array(Schema.String),
 	reach: McpReach,
+	/** pi's own MCP extension is turned off, so no server runs whatever the files say. */
+	mcpDisabled: Schema.Boolean,
 });
 export type McpListView = typeof McpListView.Type;
 

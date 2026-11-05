@@ -144,7 +144,10 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 
 The list's data is on the wire: `McpListView.reach` carries pi's two reaching rules
 (defaultTools, autoEnableCodemode, a disabled built-in, a project's own list) and the
-servers nothing can call. `settings.mcp.setDefaultTool` writes the home's list.
+servers nothing can call, and `mcpDisabled` says pi's own MCP extension is off.
+`settings.mcp.setDefaultTool` writes the home's list. The UI comes in three commits:
+the detail editor (its 13 files), then the list pane with the layout, then the add flow
+(dialog, source, values, import, registry, draft and validation, about 1,800 lines).
 
 Owner question before `mcp-signin.tsx`, `mcp-oauth.tsx` and `POST /api/settings/mcp/command`:
 main signs in from the page, while AGENTS.md invariant 5 keeps MCP sign-in in the terminal.
