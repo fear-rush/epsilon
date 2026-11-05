@@ -9,6 +9,7 @@ import type { AssistantEntry, TranscriptEntry } from "#protocol/conversation/fra
 import { Markdown } from "@/components/editor/markdown";
 import { toneText } from "@/components/patterns/status/status-tone";
 import { Tip } from "@/components/patterns/tip";
+import { Marker } from "@/components/ui/marker";
 import { cn } from "@/lib/cn";
 
 import { ToolTrace } from "./tool-trace";
@@ -34,6 +35,7 @@ const VIRTUALIZE_ABOVE = 150;
 const ESTIMATE: Record<TranscriptEntry["role"] | "streaming", number> = {
 	assistant: 240,
 	streaming: 120,
+	summary: 160,
 	toolResult: 44,
 	user: 72,
 };
@@ -474,6 +476,17 @@ function Row({
 			if (toolRunOf(state, entry.toolCallId) !== undefined) return null;
 			return <ToolOutput output={entry.output} isError={entry.isError} />;
 		}
+		case "summary":
+			// pi's own block where it replaced the history: the label says how much, the
+			// text is the summary, and it stays where it happened.
+			return (
+				<>
+					<Marker variant="separator">{entry.label}</Marker>
+					<p className="max-h-64 overflow-auto px-1 text-meta whitespace-pre-wrap text-muted-foreground">
+						{entry.text}
+					</p>
+				</>
+			);
 		default: {
 			const unreachable: never = entry;
 			return unreachable;

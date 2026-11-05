@@ -42,7 +42,6 @@ import { runBuiltin } from "./slash.ts";
 import type { BuiltinHost } from "./slash.ts";
 import {
 	historyWindow,
-	noticesOf,
 	readingsOf,
 	sessionMeta,
 	shadowedCommandsOf,
@@ -1140,8 +1139,8 @@ export class EngineSession {
 	private sendSnapshot(tab?: string): void {
 		const agent = this.runtime.session;
 		const window = snapshotWindow(agent);
-		const compaction = noticesOf(agent.sessionManager);
-		const notices = [...compaction, ...this.notices].slice(-noticeLimit);
+		// A compaction and a branch summary travel as transcript rows, at their point.
+		const notices = [...this.notices].slice(-noticeLimit);
 		const frame: ServerFrame = {
 			entries: window.entries,
 			hasOlder: window.hasOlder,

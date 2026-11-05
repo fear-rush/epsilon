@@ -6,7 +6,6 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 
 import type {
-	Notice,
 	ServerFrame,
 	TranscriptEntry,
 	TreeFilterMode,
@@ -88,30 +87,6 @@ export const historyWindow = (agent: AgentSession, before: string): Window | und
 	const index = rows.findIndex((row) => row.entry.id === before);
 	if (index < 0) return undefined;
 	return pageAt(rows, index);
-};
-
-/** Compaction and branch summaries are rows the wire shows as notices. */
-export const noticesOf = (sessionManager: SessionManager): Notice[] => {
-	const notices: Notice[] = [];
-	for (const entry of sessionManager.buildContextEntries()) {
-		if (entry.type === "compaction") {
-			notices.push({
-				afterEntryId: entry.parentId,
-				id: entry.id,
-				kind: "compaction",
-				text: entry.summary,
-			});
-		}
-		if (entry.type === "branch_summary") {
-			notices.push({
-				afterEntryId: entry.parentId,
-				id: entry.id,
-				kind: "notice",
-				text: entry.summary,
-			});
-		}
-	}
-	return notices;
 };
 
 /** The branch tree, flat, with the branch the page shows marked and its position found. */

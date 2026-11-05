@@ -81,7 +81,24 @@ export const ToolResultEntry = Schema.Struct({
 });
 export type ToolResultEntry = typeof ToolResultEntry.Type;
 
-export const TranscriptEntry = Schema.Union([UserEntry, AssistantEntry, ToolResultEntry]);
+/**
+ * A compaction or a branch summary: pi's own block where it replaced the history. It keeps
+ * pi's label (how much it replaced) and the summary text, which is content, not a notice.
+ */
+export const SummaryEntry = Schema.Struct({
+	...entryBase,
+	role: Schema.Literals(["summary"]),
+	label: Schema.String,
+	text: Schema.String,
+});
+export type SummaryEntry = typeof SummaryEntry.Type;
+
+export const TranscriptEntry = Schema.Union([
+	UserEntry,
+	AssistantEntry,
+	ToolResultEntry,
+	SummaryEntry,
+]);
 export type TranscriptEntry = typeof TranscriptEntry.Type;
 
 /** The five kinds pi's picker names a row by. */

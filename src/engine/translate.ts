@@ -11,6 +11,7 @@ import type {
 	TreeRow,
 } from "#protocol/conversation/frames";
 
+import { tokenLabel } from "../domain/conversation/format.ts";
 import { withDefined } from "../domain/object.ts";
 
 /**
@@ -129,6 +130,26 @@ const toolResultEntry = (entry: MessageEntry & { message: ToolResultMessage }): 
 
 /** One row for the transcript, or `undefined` when the wire has no shape for it. */
 export const transcriptOf = (entry: SessionEntry): TranscriptEntry | undefined => {
+	if (entry.type === "compaction") {
+		return {
+			id: entry.id,
+			label: `Compacted from ${tokenLabel(entry.tokensBefore)} tokens`,
+			parentId: entry.parentId,
+			role: "summary",
+			text: cut(entry.summary),
+			ts: tsOf(entry.timestamp),
+		};
+	}
+	if (entry.type === "branch_summary") {
+		return {
+			id: entry.id,
+			label: "branch summary",
+			parentId: entry.parentId,
+			role: "summary",
+			text: cut(entry.summary),
+			ts: tsOf(entry.timestamp),
+		};
+	}
 	if (entry.type !== "message") return undefined;
 	const message = entry.message;
 	switch (message.role) {

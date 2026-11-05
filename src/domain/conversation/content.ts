@@ -40,6 +40,8 @@ export function entryLabel(entry: TranscriptEntry): string {
 			return assistantText(entry) || assistantThinking(entry) || "[assistant]";
 		case "toolResult":
 			return entry.output;
+		case "summary":
+			return entry.text;
 		default: {
 			const unreachable: never = entry;
 			return unreachable;
