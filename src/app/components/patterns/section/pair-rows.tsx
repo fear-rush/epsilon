@@ -35,7 +35,7 @@ export function PairRows({
 	title: string;
 	addLabel: string;
 	rows: PairRow[];
-	error?: string;
+	error?: string | undefined;
 	keyLabel: string;
 	valueLabel: string;
 	keyPlaceholder?: string;
@@ -69,7 +69,7 @@ export function PairRowList({
 	onChange,
 }: {
 	rows: PairRow[];
-	error?: string;
+	error?: string | undefined;
 	addLabel: string;
 	keyLabel: string;
 	valueLabel: string;

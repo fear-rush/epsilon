@@ -2,6 +2,7 @@ import { queryOptions, skipToken, useQuery, useQueryClient } from "@tanstack/rea
 import { useSearch } from "@tanstack/react-router";
 import { useCallback } from "react";
 
+import type { McpScope } from "#protocol/settings/mcp";
 import type { PackageScope } from "#protocol/settings/packages";
 import type { SkillRoot } from "#protocol/settings/skills";
 import { call } from "@/core/runtime";
@@ -118,4 +119,33 @@ export const usePackageUpdatesRefresh = (): (() => void) => {
 	return useCallback(() => {
 		void queryClient.invalidateQueries({ queryKey: [...settingsKeys.all, "package-updates"] });
 	}, [queryClient]);
+};
+
+/** One MCP server's detail, read from the file its scope names. */
+export const useMcpServer = (scope: McpScope, name: string) => {
+	const project = useSettingsProject();
+	return useQuery({
+		queryKey: [...settingsKeys.all, "mcp", project ?? null, scope, name],
+		queryFn: ({ signal }) =>
+			call((client) => client["settings.mcp.read"]({ folder: project ?? null, name, scope }), {
+				signal,
+			}),
+		staleTime: SETTINGS_STALE_MS,
+	});
+};
+
+/** One MCP server's entry as text, for the Raw tab; stored values arrive masked. */
+export const useMcpRaw = (scope: McpScope, name: string) => {
+	const project = useSettingsProject();
+	return useQuery({
+		queryKey: [...settingsKeys.all, "mcp-raw", project ?? null, scope, name],
+		queryFn: async ({ signal }) => {
+			const answer = await call(
+				(client) => client["settings.mcp.readRaw"]({ folder: project ?? null, name, scope }),
+				{ signal },
+			);
+			return answer.text;
+		},
+		staleTime: SETTINGS_STALE_MS,
+	});
 };

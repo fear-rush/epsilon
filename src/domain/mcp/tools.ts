@@ -1,4 +1,6 @@
-import { mcpNamespaceOf } from "./rules.ts";
+import type { McpExposure } from "#protocol/settings/mcp";
+
+import { MCP_DEFAULT_EXPOSURE, mcpNamespaceOf } from "./rules.ts";
 
 /**
  * How pi names an MCP tool, and the `toolExposure` key that reaches it.
@@ -49,4 +51,52 @@ export function mcpToolAddress(server: string, registered: string): McpToolAddre
 	const head = shortened ? name.slice(0, -MCP_TOOL_HASH_LENGTH) : name;
 	const key = `${head.replaceAll("_", "*")}${shortened ? "*" : ""}`;
 	return { exact: false, key, name };
+}
+
+/** One `toolExposure` entry, in file order. */
+export type ToolRule = { readonly pattern: string; readonly exposure: McpExposure };
+
+const escapeRegExp = (text: string): string => text.replaceAll(/[.+?^${}()|[\]\\]/g, "\\$&");
+
+/** pi's pattern: every character literal except `*`, anchored at both ends. */
+export const toolPatternMatches = (pattern: string, tool: string): boolean =>
+	new RegExp(`^${pattern.split("*").map(escapeRegExp).join(".*")}$`).test(tool);
+
+/** The exposure pi gives `tool`: its exact rule, else the first matching pattern, else the server's. */
+export function effectiveToolExposure(
+	server: McpExposure | undefined,
+	rules: ReadonlyArray<ToolRule>,
+	tool: string,
+): McpExposure {
+	const exact = rules.find((rule) => rule.pattern === tool);
+	if (exact !== undefined) return exact.exposure;
+	const pattern = rules.find(
+		(rule) => rule.pattern.includes("*") && toolPatternMatches(rule.pattern, tool),
+	);
+	return pattern?.exposure ?? server ?? MCP_DEFAULT_EXPOSURE;
+}
+
+/** Whether the model can reach the tool at all: anything but `hidden`. */
+export const isToolReachable = (
+	server: McpExposure | undefined,
+	rules: ReadonlyArray<ToolRule>,
+	tool: string,
+): boolean => effectiveToolExposure(server, rules, tool) !== "hidden";
+
+/**
+ * The rules after switching one tool. Off writes `hidden`. On drops it, and when the
+ * server or a pattern would still hide the tool it writes `direct`, so the tool is the
+ * one thing the operator exposed. Every other rule keeps its place.
+ */
+export function withToolReachable(
+	server: McpExposure | undefined,
+	rules: ReadonlyArray<ToolRule>,
+	tool: string,
+	reachable: boolean,
+): ToolRule[] {
+	const others = rules.filter((rule) => rule.pattern !== tool);
+	if (!reachable) return [...others, { exposure: "hidden", pattern: tool }];
+	return isToolReachable(server, others, tool)
+		? others
+		: [...others, { exposure: "direct", pattern: tool }];
 }

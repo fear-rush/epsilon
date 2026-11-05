@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 
 import type { McpServerRow } from "#protocol/settings/mcp";
 import { Pane } from "@/components/patterns/pane/pane";
@@ -102,6 +103,13 @@ export function SettingsMcp() {
 								description={describe(server)}
 							>
 								<Badge variant="outline">{server.scope}</Badge>
+								<Link
+									to="/settings/mcp/$scope/$name"
+									params={{ name: server.name, scope: server.scope }}
+									className="text-meta underline underline-offset-4"
+								>
+									Open
+								</Link>
 								{server.kind === "invalid" ? (
 									<Badge variant="destructive">{server.problem}</Badge>
 								) : server.kind === "override" ? (
