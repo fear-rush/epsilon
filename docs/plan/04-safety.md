@@ -46,6 +46,14 @@ keys); the index conformance test against `SessionManager.listAll`
       strings and templates itself, skipping a template's substitutions; its test covers
       both shapes (`scripts/parity-surface.test.ts`).
 
+- [ ] **An extension's question at session start never reached the page.** While proving the
+      dialogs row, a sandbox extension on `session_start` did `await ctx.ui.confirm(...)`; its
+      `setStatus` reached the page, the question did not appear within 20 s, and the dialog
+      row stayed unphotographed. `subscribeTab` replays pending questions after the snapshot,
+      so the pending set should have covered a late tab; find out why it did not. A question
+      nobody sees is pi blocked until its timeout, which is the hang invariant 10 forbids.
+      Reproduce with `ctx.ui.confirm` in `session_start`, watch the engine's frames.
+
 - [ ] **Features still render a thrown error's message.** The translator rule
       (ARCHITECTURE, "One translator") wants `Notice error`/`StatusView error`, with an
       explicit title when the action is more precise than the tag's. Sites found while
