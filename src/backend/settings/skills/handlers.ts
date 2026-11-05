@@ -27,6 +27,17 @@ export const SkillHandlersLive = SkillRpcs.toLayer(
 				skills.readDocument(folder, filePath),
 			"settings.skills.setFolderLinked": ({ folder, path, linked }) =>
 				skills.setFolderLinked(folder, path, linked),
+			"settings.skills.listFiles": ({ folder, root, name }) => skills.listFiles(folder, root, name),
+			"settings.skills.readFile": ({ folder, root, name, path }) =>
+				skills.readFile(folder, root, name, path).pipe(Effect.map((text) => ({ text }))),
+			"settings.skills.writeFile": ({ folder, root, name, path, text }) =>
+				skills.writeFile(folder, root, name, path, text),
+			"settings.skills.createFolder": ({ folder, root, name, path }) =>
+				skills.createFolder(folder, root, name, path),
+			"settings.skills.deleteFile": ({ folder, root, name, path }) =>
+				skills.deleteFile(folder, root, name, path),
+			"settings.skills.deleteFolder": ({ folder, root, name, path }) =>
+				skills.deleteFolder(folder, root, name, path),
 		};
 	}),
 );

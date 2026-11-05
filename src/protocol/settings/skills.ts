@@ -175,6 +175,25 @@ export type SkillEngineLive = typeof SkillEngineLive.Type;
 export const ExtensionSkillsAnswer = Schema.Struct({ skills: Schema.Array(SkillEngineLive) });
 export type ExtensionSkillsAnswer = typeof ExtensionSkillsAnswer.Type;
 
+/** One file of a skill folder, with what the tree needs to draw it. */
+export const SkillBundleFile = Schema.Struct({
+	/** The path inside the skill folder, with `/` between folders. */
+	path: Schema.String,
+	size: Schema.Finite,
+	/** False for a file the editor must not open: binary, or not UTF-8. */
+	text: Schema.Boolean,
+});
+export type SkillBundleFile = typeof SkillBundleFile.Type;
+
+/** Every file in one skill folder, plus what was left out of the listing. */
+export const SkillBundleList = Schema.Struct({
+	files: Schema.Array(SkillBundleFile),
+	folders: Schema.Array(Schema.String),
+	/** Links, and files past the folder's own limit, counted rather than listed. */
+	skipped: Schema.Finite,
+});
+export type SkillBundleList = typeof SkillBundleList.Type;
+
 /** The folder a read or write names; null is the home alone. */
 const folder = { folder: Schema.NullOr(Schema.String) } as const;
 
@@ -184,6 +203,9 @@ const skillTarget = {
 	root: SkillRoot,
 	name: Schema.NonEmptyString,
 } as const;
+
+/** The skill a bundle call names, and the file inside it. */
+const bundleFile = { ...skillTarget, path: Schema.NonEmptyString } as const;
 
 export const SkillRpcs = RpcGroup.make(
 	Rpc.make("settings.skills.list", {
@@ -224,6 +246,42 @@ export const SkillRpcs = RpcGroup.make(
 	Rpc.make("settings.skills.readDocument", {
 		payload: { ...folder, filePath: Schema.NonEmptyString },
 		success: SkillDocument,
+		error: SkillRefused,
+	}),
+	/** Every file and folder in one editable skill, `SKILL.md` included. */
+	Rpc.make("settings.skills.listFiles", {
+		payload: skillTarget,
+		success: SkillBundleList,
+		error: SkillRefused,
+	}),
+	/** One bundled file's text; binary files, `SKILL.md` and files over 1 MB are refused. */
+	Rpc.make("settings.skills.readFile", {
+		payload: bundleFile,
+		success: Schema.Struct({ text: Schema.String }),
+		error: SkillRefused,
+	}),
+	/** Create or replace one bundled file, creating its folders. */
+	Rpc.make("settings.skills.writeFile", {
+		payload: { ...bundleFile, text: Schema.String },
+		success: Schema.Void,
+		error: SkillRefused,
+	}),
+	/** Create one folder inside a skill. */
+	Rpc.make("settings.skills.createFolder", {
+		payload: bundleFile,
+		success: Schema.Void,
+		error: SkillRefused,
+	}),
+	/** Delete one bundled file, and the folders it leaves empty. */
+	Rpc.make("settings.skills.deleteFile", {
+		payload: bundleFile,
+		success: Schema.Void,
+		error: SkillRefused,
+	}),
+	/** Delete one folder that holds nothing. */
+	Rpc.make("settings.skills.deleteFolder", {
+		payload: bundleFile,
+		success: Schema.Void,
 		error: SkillRefused,
 	}),
 	/**

@@ -9,6 +9,7 @@ import type {
 	SkillEngineLive,
 	SkillField,
 	SkillFile,
+	SkillBundleList,
 	SkillInput,
 	SkillListView,
 	SkillRoot,
@@ -30,6 +31,14 @@ import type { AgentHomeApi } from "../../platform/agent-home.ts";
 import { PiConfig } from "../../platform/pi.ts";
 import type { PiSkillsApi } from "../../platform/pi.ts";
 import { ProjectService } from "../projects/service.ts";
+import {
+	createSkillBundleFolder,
+	deleteSkillBundleFile,
+	deleteSkillBundleFolder,
+	listSkillFiles,
+	readSkillBundleFile,
+	writeSkillBundleFile,
+} from "./files.ts";
 import { listForeignSkills, setForeignFolderLinked } from "./foreign.ts";
 import type { ForeignDeps } from "./foreign.ts";
 import {
@@ -282,6 +291,44 @@ export type SkillsServiceApi = {
 		folder: string | null,
 		filePath: string,
 	) => Effect.Effect<SkillDocument, SkillRefused>;
+	/** Every file and folder in one editable skill, `SKILL.md` included. */
+	readonly listFiles: (
+		folder: string | null,
+		root: SkillRoot,
+		name: string,
+	) => Effect.Effect<SkillBundleList, SkillRefused>;
+	/** One bundled file's text; binary, oversized and `SKILL.md` files are refused. */
+	readonly readFile: (
+		folder: string | null,
+		root: SkillRoot,
+		name: string,
+		path: string,
+	) => Effect.Effect<string, SkillRefused>;
+	readonly writeFile: (
+		folder: string | null,
+		root: SkillRoot,
+		name: string,
+		path: string,
+		text: string,
+	) => Effect.Effect<void, SkillRefused>;
+	readonly createFolder: (
+		folder: string | null,
+		root: SkillRoot,
+		name: string,
+		path: string,
+	) => Effect.Effect<void, SkillRefused>;
+	readonly deleteFile: (
+		folder: string | null,
+		root: SkillRoot,
+		name: string,
+		path: string,
+	) => Effect.Effect<void, SkillRefused>;
+	readonly deleteFolder: (
+		folder: string | null,
+		root: SkillRoot,
+		name: string,
+		path: string,
+	) => Effect.Effect<void, SkillRefused>;
 	/** Add another agent's skill folder to the `skills` setting, or take it out. */
 	readonly setFolderLinked: (
 		folder: string | null,
@@ -511,15 +558,75 @@ export const makeSkillsService = (deps: {
 		},
 	);
 
+	/** The skill folder a bundle call edits, refused unless it is an existing skill. */
+	const bundleDir = (
+		folder: string | null,
+		root: SkillRoot,
+		name: string,
+	): Effect.Effect<string, SkillRefused> =>
+		Effect.gen(function* () {
+			const scope = yield* scopeOf(folder);
+			const rootPath = yield* rootDir(deps.home, scope, root);
+			return yield* skillDirectory({ fs: deps.fs, home: deps.home }, rootPath, name, true);
+		});
+
+	const listFiles: SkillsServiceApi["listFiles"] = Effect.fn("Skills.listFiles")(
+		function* (folder, root, name) {
+			const dir = yield* bundleDir(folder, root, name);
+			return yield* listSkillFiles(deps.fs, dir);
+		},
+	);
+
+	const readFile: SkillsServiceApi["readFile"] = Effect.fn("Skills.readFile")(
+		function* (folder, root, name, path) {
+			const dir = yield* bundleDir(folder, root, name);
+			return yield* readSkillBundleFile(deps.fs, dir, path);
+		},
+	);
+
+	const writeFile: SkillsServiceApi["writeFile"] = Effect.fn("Skills.writeFile")(
+		function* (folder, root, name, path, text) {
+			const dir = yield* bundleDir(folder, root, name);
+			yield* writeSkillBundleFile(deps.fs, dir, path, text);
+		},
+	);
+
+	const createFolder: SkillsServiceApi["createFolder"] = Effect.fn("Skills.createFolder")(
+		function* (folder, root, name, path) {
+			const dir = yield* bundleDir(folder, root, name);
+			yield* createSkillBundleFolder(deps.fs, dir, path);
+		},
+	);
+
+	const deleteFile: SkillsServiceApi["deleteFile"] = Effect.fn("Skills.deleteFile")(
+		function* (folder, root, name, path) {
+			const dir = yield* bundleDir(folder, root, name);
+			yield* deleteSkillBundleFile(deps.fs, dir, path);
+		},
+	);
+
+	const deleteFolder: SkillsServiceApi["deleteFolder"] = Effect.fn("Skills.deleteFolder")(
+		function* (folder, root, name, path) {
+			const dir = yield* bundleDir(folder, root, name);
+			yield* deleteSkillBundleFolder(deps.fs, dir, path);
+		},
+	);
+
 	return {
+		createFolder,
+		deleteFile,
+		deleteFolder,
 		list,
+		listFiles,
 		read,
 		readDocument,
+		readFile,
 		readRaw,
 		remove,
 		save,
 		setEnabled,
 		setFolderLinked,
+		writeFile,
 		writeRaw,
 	};
 };

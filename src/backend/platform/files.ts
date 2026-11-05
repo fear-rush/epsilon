@@ -1,4 +1,12 @@
-import { closeSync, openSync, readdirSync, readFileSync, readSync, statSync } from "node:fs";
+import {
+	closeSync,
+	openSync,
+	readdirSync,
+	readFileSync,
+	readSync,
+	rmdirSync,
+	statSync,
+} from "node:fs";
 import { open, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
@@ -88,6 +96,13 @@ export const removePath = (
 		const fs = yield* FileSystem.FileSystem;
 		yield* fs.remove(path).pipe(Effect.mapError(unwritable(path)));
 	});
+
+/**
+ * Removes one directory that holds nothing. `rmdir` and not `rm`: a folder with a file in
+ * it is refused by the platform, where `rm` would need `recursive` and could empty it.
+ */
+export const removeEmptyDir = (path: string): Effect.Effect<void, FileUnwritable> =>
+	Effect.try({ try: () => rmdirSync(path), catch: unwritable(path) });
 
 export type FileStats = {
 	readonly size: number;

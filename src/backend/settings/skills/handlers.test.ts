@@ -1,5 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	realpathSync,
+	statSync,
+	symlinkSync,
+	writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 
 import { BunServices } from "@effect/platform-bun";
@@ -478,5 +487,280 @@ describe("skills of other agents", () => {
 		expect(outcome.unlinked.foreignSkills[0]?.linked).toBe(false);
 		expect(outcome.refused).toBeInstanceOf(SkillRefused);
 		expect(outcome.refused.reason).toContain("not a skill folder");
+	});
+});
+
+/** A skill with a `SKILL.md`, as the bundle routes need one to exist. */
+const probeSkill = (skillsDir: string, name = "probe"): string => {
+	const dir = writeSkill(skillsDir, name, "name: probe\ndescription: A probe");
+	return dir;
+};
+
+describe("the files bundled in a skill", () => {
+	test("lists text and binary files, skipping stripped paths and symlinks", async () => {
+		const { layer, skillsDir } = skillsLayer("bundle-list");
+		const dir = probeSkill(skillsDir);
+		mkdirSync(join(dir, "scripts"));
+		mkdirSync(join(dir, "node_modules"));
+		mkdirSync(join(dir, ".git"));
+		writeFileSync(join(dir, "scripts", "run.sh"), "echo hi\n");
+		writeFileSync(join(dir, "logo.png"), Buffer.from([0x89, 0x50, 0, 1, 2]));
+		writeFileSync(join(dir, "latin.txt"), Buffer.from([0xe9, 0x63, 0x63]));
+		writeFileSync(join(dir, ".DS_Store"), "x");
+		writeFileSync(join(dir, "node_modules", "a.js"), "x");
+		writeFileSync(join(dir, ".git", "HEAD"), "x");
+		symlinkSync(join(dir, "SKILL.md"), join(dir, "link.md"));
+
+		const list = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				return yield* client["settings.skills.listFiles"]({
+					folder: null,
+					name: "probe",
+					root: "home",
+				});
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(list.skipped).toBe(1);
+		expect(list.folders).toEqual(["scripts"]);
+		expect(list.files.map((file) => [file.path, file.text])).toEqual([
+			["SKILL.md", true],
+			["latin.txt", false],
+			["logo.png", false],
+			["scripts/run.sh", true],
+		]);
+	});
+
+	test("writes, reads and deletes, cleaning the folders it empties", async () => {
+		const { layer, skillsDir } = skillsLayer("bundle-write");
+		const dir = probeSkill(skillsDir);
+
+		const outcome = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				const call = (path: string) => ({
+					folder: null,
+					name: "probe",
+					path,
+					root: "home" as const,
+				});
+				yield* client["settings.skills.writeFile"]({
+					...call("references/deep/a.md"),
+					text: "# A\n",
+				});
+				const read = yield* client["settings.skills.readFile"](call("references/deep/a.md"));
+				yield* client["settings.skills.writeFile"]({ ...call("references/b.md"), text: "b" });
+				yield* client["settings.skills.deleteFile"](call("references/deep/a.md"));
+				const deepGone = !existsSync(join(dir, "references", "deep"));
+				const referencesLeft = existsSync(join(dir, "references"));
+				yield* client["settings.skills.deleteFile"](call("references/b.md"));
+				return {
+					deepGone,
+					read,
+					referencesGone: !existsSync(join(dir, "references")),
+					referencesLeft,
+				};
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(outcome.read.text).toBe("# A\n");
+		expect(outcome.deepGone).toBe(true);
+		expect(outcome.referencesLeft).toBe(true);
+		expect(outcome.referencesGone).toBe(true);
+		// Deleting a file never takes the skill's own folder.
+		expect(existsSync(join(dir, "SKILL.md"))).toBe(true);
+	});
+
+	test("keeps the exec bit when a script is edited", async () => {
+		const { layer, skillsDir } = skillsLayer("bundle-mode");
+		const dir = probeSkill(skillsDir);
+		const script = join(dir, "run.sh");
+		writeFileSync(script, "echo 1\n");
+		chmodSync(script, 0o755);
+
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				yield* client["settings.skills.writeFile"]({
+					folder: null,
+					name: "probe",
+					path: "run.sh",
+					root: "home",
+					text: "echo 2\n",
+				});
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(statSync(script).mode & 0o777).toBe(0o755);
+		expect(readFileSync(script, "utf8")).toBe("echo 2\n");
+	});
+
+	test("refuses SKILL.md as a bundled file, and unsafe or stripped paths", async () => {
+		const { layer, skillsDir } = skillsLayer("bundle-refuse");
+		probeSkill(skillsDir);
+		const unsafe = [
+			"SKILL.md",
+			"../x",
+			"a/../../x",
+			"/etc/x",
+			"a\\b",
+			"a//b",
+			".git/config",
+			"n/node_modules/x",
+		];
+
+		const refused = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				const problems: string[] = [];
+				for (const path of unsafe) {
+					const base = { folder: null, name: "probe", path, root: "home" as const };
+					const write = yield* Effect.flip(
+						client["settings.skills.writeFile"]({ ...base, text: "x" }),
+					);
+					const read = yield* Effect.flip(client["settings.skills.readFile"](base));
+					const removed = yield* Effect.flip(client["settings.skills.deleteFile"](base));
+					problems.push(write.reason, read.reason, removed.reason);
+				}
+				return problems;
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(refused).toHaveLength(unsafe.length * 3);
+		expect(refused.every((reason) => reason !== "")).toBe(true);
+	});
+
+	test("refuses a symlink on the way, and writes nothing through it", async () => {
+		const { layer, root, skillsDir } = skillsLayer("bundle-link");
+		const dir = probeSkill(skillsDir);
+		const outside = join(root, "outside");
+		mkdirSync(outside, { recursive: true });
+		writeFileSync(join(outside, "secret.txt"), "secret");
+		symlinkSync(outside, join(dir, "linked"));
+		symlinkSync(join(outside, "secret.txt"), join(dir, "file.txt"));
+
+		const refused = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				const base = { folder: null, name: "probe", root: "home" as const };
+				const read = yield* Effect.flip(
+					client["settings.skills.readFile"]({ ...base, path: "linked/secret.txt" }),
+				);
+				const write = yield* Effect.flip(
+					client["settings.skills.writeFile"]({ ...base, path: "linked/new.txt", text: "x" }),
+				);
+				const replace = yield* Effect.flip(
+					client["settings.skills.writeFile"]({ ...base, path: "file.txt", text: "x" }),
+				);
+				const removed = yield* Effect.flip(
+					client["settings.skills.deleteFile"]({ ...base, path: "file.txt" }),
+				);
+				return [read, write, replace, removed].map((error) => error.reason);
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(refused.every((reason) => reason.includes("symlink"))).toBe(true);
+		expect(readFileSync(join(outside, "secret.txt"), "utf8")).toBe("secret");
+		expect(existsSync(join(outside, "new.txt"))).toBe(false);
+	});
+
+	test("refuses a binary or oversized read, a missing file and a missing skill", async () => {
+		const { layer, skillsDir } = skillsLayer("bundle-read");
+		const dir = probeSkill(skillsDir);
+		writeFileSync(join(dir, "bin"), Buffer.from([1, 0, 2]));
+		writeFileSync(join(dir, "big.txt"), "a".repeat(1024 * 1024 + 1));
+
+		const reasons = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				const base = { folder: null, name: "probe", root: "home" as const };
+				const binary = yield* Effect.flip(
+					client["settings.skills.readFile"]({ ...base, path: "bin" }),
+				);
+				const oversized = yield* Effect.flip(
+					client["settings.skills.readFile"]({ ...base, path: "big.txt" }),
+				);
+				const missing = yield* Effect.flip(
+					client["settings.skills.readFile"]({ ...base, path: "missing.txt" }),
+				);
+				const noSkill = yield* Effect.flip(
+					client["settings.skills.listFiles"]({ ...base, name: "nope" }),
+				);
+				const escape = yield* Effect.flip(
+					client["settings.skills.listFiles"]({ ...base, name: "../probe" }),
+				);
+				return [binary.reason, oversized.reason, missing.reason, noSkill.reason, escape.reason];
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(reasons[0]).toContain("binary");
+		expect(reasons[1]).toContain("1 MB");
+		expect(reasons[2]).toContain("does not exist");
+		expect(reasons[3]).toContain("No skill");
+		expect(reasons[4]).toContain("not a skill directory name");
+	});
+
+	test("refuses a write that takes the folder past its limit, and counts a replacement", async () => {
+		const { layer, skillsDir } = skillsLayer("bundle-size");
+		const dir = probeSkill(skillsDir);
+		const chunk = "a".repeat(4 * 1024 * 1024);
+		for (let index = 0; index < 6; index += 1) {
+			writeFileSync(join(dir, `f${index}.txt`), chunk);
+		}
+
+		const refusal = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				return yield* Effect.flip(
+					client["settings.skills.writeFile"]({
+						folder: null,
+						name: "probe",
+						path: "more.txt",
+						root: "home",
+						text: chunk,
+					}),
+				);
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(refusal.reason).toContain("25 MB");
+		expect(existsSync(join(dir, "more.txt"))).toBe(false);
+	});
+
+	test("follows a linked skill folder only into another editable skills folder", async () => {
+		const { layer, skillsDir, userHome } = skillsLayer("bundle-follow");
+		mkdirSync(skillsDir, { recursive: true });
+		const shared = join(userHome, ".agents", "skills");
+		mkdirSync(join(shared, "probe"), { recursive: true });
+		writeFileSync(join(shared, "probe", "SKILL.md"), "---\nname: probe\ndescription: x\n---\n");
+		symlinkSync(join(shared, "probe"), join(skillsDir, "probe"));
+		const elsewhere = join(userHome, "elsewhere");
+		mkdirSync(join(elsewhere, "stray"), { recursive: true });
+		writeFileSync(join(elsewhere, "stray", "SKILL.md"), "---\nname: stray\ndescription: x\n---\n");
+		symlinkSync(join(elsewhere, "stray"), join(skillsDir, "stray"));
+
+		const outcome = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				const base = { folder: null, root: "home" as const };
+				const linked = yield* client["settings.skills.listFiles"]({ ...base, name: "probe" });
+				yield* client["settings.skills.writeFile"]({
+					...base,
+					name: "probe",
+					path: "more.md",
+					text: "x",
+				});
+				const stray = yield* Effect.flip(
+					client["settings.skills.listFiles"]({ ...base, name: "stray" }),
+				);
+				return { linked, stray };
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(outcome.linked.files.map((file) => file.path)).toEqual(["SKILL.md"]);
+		// The write landed in the folder the link names, not in a copy.
+		expect(readFileSync(join(shared, "probe", "more.md"), "utf8")).toBe("x");
+		expect(outcome.stray.reason).toContain("links outside");
 	});
 });
