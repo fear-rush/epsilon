@@ -20,8 +20,8 @@ import { withDefined } from "../domain/object.ts";
  * This is the only place the two vocabularies meet. Ids, parents and timestamps are pi's
  * own, because a row must keep its identity when a window starts mid-history; nothing here
  * invents an index. Content pi can hold but the wire has no row for (bash execution,
- * custom messages, context edits) is dropped here and named by the caller, never silently
- * turned into a message it is not.
+ * context edits) is dropped here and named by the caller, never silently turned into a
+ * message it is not.
  */
 
 /** A tool result larger than this is cut for the window; the full text is a catalog read. */
@@ -128,8 +128,33 @@ const toolResultEntry = (entry: MessageEntry & { message: ToolResultMessage }): 
 	};
 };
 
+/**
+ * A custom message's text: an extension writes a string or pi's content blocks. This is the
+ * row an extension's own note appears as, so its text is content, not a notice.
+ */
+const customText = (content: unknown): string => {
+	if (typeof content === "string") return content;
+	if (!Array.isArray(content)) return "";
+	// SAFETY: pi's custom message content is a string or the same block array every other
+	// message carries; `textOf` reads only `text` from blocks of that shape.
+	return textOf(content as ReadonlyArray<ContentBlock>);
+};
+
 /** One row for the transcript, or `undefined` when the wire has no shape for it. */
 export const transcriptOf = (entry: SessionEntry): TranscriptEntry | undefined => {
+	if (entry.type === "custom_message") {
+		// pi hides a custom message an extension marked `display: false`; a plain `custom`
+		// entry is bookkeeping pi draws only through that extension's own component.
+		if (!entry.display) return undefined;
+		return {
+			id: entry.id,
+			label: entry.customType,
+			parentId: entry.parentId,
+			role: "summary",
+			text: cut(customText(entry.content)),
+			ts: tsOf(entry.timestamp),
+		};
+	}
 	if (entry.type === "compaction") {
 		return {
 			id: entry.id,

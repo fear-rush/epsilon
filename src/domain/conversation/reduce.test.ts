@@ -272,6 +272,40 @@ describe("reduce", () => {
 		expect(state.tools[0]?.status).toBe("ok");
 	});
 
+	test("a settle closes a tool that never reported an end, and says why", () => {
+		const running = reduce(emptyConversation, {
+			t: "toolDelta",
+			toolCallId: "c1",
+			entryId: "a1",
+			toolName: "bash",
+			status: "running",
+			output: "one\n",
+		});
+		const settled = reduce(running, { t: "busy", busy: false });
+		expect(settled.tools[0]?.status).toBe("error");
+		expect(settled.tools[0]?.note).toBe("Not executed: the run ended before this tool finished.");
+	});
+
+	test("a settle leaves a finished tool alone, and a running chat closes nothing", () => {
+		const done = reduce(emptyConversation, {
+			t: "toolDelta",
+			toolCallId: "c1",
+			entryId: "a1",
+			toolName: "bash",
+			status: "ok",
+			output: "one\n",
+		});
+		expect(reduce(done, { t: "busy", busy: false }).tools[0]).toEqual(done.tools[0]);
+		const running = reduce(done, {
+			t: "toolDelta",
+			toolCallId: "c2",
+			entryId: "a2",
+			toolName: "read",
+			status: "running",
+		});
+		expect(reduce(running, { t: "busy", busy: true }).tools[1]?.status).toBe("running");
+	});
+
 	test("tool deltas replace the output instead of appending it", () => {
 		const first = reduce(emptyConversation, {
 			t: "toolDelta",

@@ -58,7 +58,8 @@ const statusWord = (status: ToolRun["status"] | undefined): string => {
 
 const detail = (run: ToolRun | undefined): string => {
 	const seconds = run?.durationMs === undefined ? "" : ` (${(run.durationMs / 1000).toFixed(1)}s)`;
-	return `${statusWord(run?.status)}${seconds}`;
+	const words = `${statusWord(run?.status)}${seconds}`;
+	return run?.note === undefined ? words : `${words}: ${run.note}`;
 };
 
 const toolTitle = (name: string, args: ToolArgs | undefined): string => {

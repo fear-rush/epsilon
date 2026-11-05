@@ -46,3 +46,49 @@ test("a branch summary names itself", () => {
 		text: "the branch left behind",
 	});
 });
+
+test("an extension's custom message becomes a summary row named by its type", () => {
+	const row = transcriptOf({
+		type: "custom_message",
+		customType: "note",
+		content: "hello from the extension",
+		display: true,
+		id: "x1",
+		parentId: "e1",
+		timestamp: "2026-01-01T00:00:00.000Z",
+	});
+
+	expect(row).toEqual({
+		id: "x1",
+		label: "note",
+		parentId: "e1",
+		role: "summary",
+		text: "hello from the extension",
+		ts,
+	});
+});
+
+test("a custom message pi hides stays out of the transcript", () => {
+	const hidden = transcriptOf({
+		type: "custom_message",
+		customType: "note",
+		content: "quiet",
+		display: false,
+		id: "x2",
+		parentId: null,
+		timestamp: "2026-01-01T00:00:00.000Z",
+	});
+	expect(hidden).toBeUndefined();
+});
+
+test("a bookkeeping custom entry never becomes a row", () => {
+	const row = transcriptOf({
+		type: "custom",
+		customType: "permission-state",
+		data: { mode: "ask" },
+		id: "x3",
+		parentId: null,
+		timestamp: "2026-01-01T00:00:00.000Z",
+	});
+	expect(row).toBeUndefined();
+});

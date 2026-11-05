@@ -55,6 +55,8 @@ export type ToolRun = {
 	readonly images: ReadonlyArray<ImageBlock>;
 	readonly status: "running" | "ok" | "error";
 	readonly durationMs: number | undefined;
+	/** Why the run is not what its status alone says, such as a settle that cut a tool short. */
+	readonly note?: string;
 };
 
 /**

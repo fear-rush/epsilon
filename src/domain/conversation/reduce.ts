@@ -25,6 +25,19 @@ import { buildTree } from "./tree.ts";
 const decodeDialog = Schema.decodeUnknownSync(DialogQuestion);
 
 /** A tool run starts when its delta first names it and keeps the order it was first seen in. */
+/** The words a settle leaves on a tool that never reported an end, as main had them. */
+export const SETTLED_TOOL_NOTE = "Not executed: the run ended before this tool finished.";
+
+/**
+ * pi settles a run even when a tool never reported an end, such as a stop between the call
+ * and its result. A row left at `running` would claim work is still happening, so the
+ * settle closes it and says why.
+ */
+const settleTools = (tools: ReadonlyArray<ToolRun>): ReadonlyArray<ToolRun> =>
+	tools.map((tool) =>
+		tool.status === "running" ? { ...tool, status: "error", note: SETTLED_TOOL_NOTE } : tool,
+	);
+
 const toolFromDelta = (
 	frame: Extract<ServerFrame, { t: "toolDelta" }>,
 	existing: ToolRun | undefined,
@@ -138,6 +151,7 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 				busy: frame.busy,
 				compacting: frame.compacting ?? false,
 				retrying: frame.retrying ?? false,
+				tools: frame.busy ? state.tools : settleTools(state.tools),
 			};
 		case "queue":
 			return {

@@ -87,10 +87,17 @@ One slice is one or more commits; each leaves the app running.
 ## Done when
 
 - [x] Every ledger row is ticked or carries the owner's dated yes to differ.
-- [ ] `src/domain/` and `src/app/` carry `main`'s tests for what they port. Five of
-      `main`'s nine shared test files have no direct counterpart yet:
-      `conversation/display.test.ts`, `conversation/events.test.ts`,
-      `conversation/replay.test.ts`, `mcp/tools.test.ts`, `providers/endpoints.test.ts`.
-      Some of their cases are covered elsewhere (`domain/conversation/reduce.test.ts`,
-      `backend/settings/providers/handlers.test.ts`); each file needs the decision
-      "port it" or "this test covers it", not a blanket skip.
+- [ ] `src/domain/` and `src/app/` carry `main`'s tests for what they port.
+      `mcp/tools.test.ts` and `providers/endpoints.test.ts` are ported
+      (`domain/mcp/tools.test.ts`, `domain/providers/rules.test.ts`).
+      `conversation/replay.test.ts` is partly covered: `domain/conversation/reduce.test.ts`
+      replays recorded frame fixtures, and `test/translate.test.ts` covers entry
+      translation, but nothing replays a whole pi session file through both.
+      `conversation/events.test.ts` and `conversation/display.test.ts` point at three
+      behaviours the branch has no counterpart for, and the owner asked for all of them
+      on 2026-11-05: an extension's draft writes into the composer (`setEditorText`,
+      `pasteToEditor`), `setWorkingMessage`/`setWorkingVisible`, and nested tool calls
+      drawn inside the parent codemode card. Two of their siblings are ported: a
+      `custom_message` entry is a row again (hidden when `display` is false), and a
+      settle closes a tool that never reported an end with "Not executed" — both with
+      tests.
