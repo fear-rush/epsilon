@@ -9,7 +9,13 @@ import { call } from "@/core/runtime";
 
 import { settingsKeys } from "./keys.ts";
 import { readProvider, readProviderLogin } from "./providers/api.ts";
-import { readSkill, readSkillDocument, readSkillRaw } from "./skills/api.ts";
+import {
+	readSkill,
+	readSkillDocument,
+	readSkillFile,
+	readSkillFiles,
+	readSkillRaw,
+} from "./skills/api.ts";
 
 /**
  * The one settings read: the snapshot the server assembles for a folder, or for the
@@ -92,6 +98,30 @@ export const useSkillDocument = (filePath: string | undefined) => {
 		queryKey: [...settingsKeys.all, "skill-document", project ?? null, filePath ?? ""],
 		queryFn: filePath === undefined ? skipToken : () => readSkillDocument(project, filePath),
 		staleTime: SETTINGS_STALE_MS,
+	});
+};
+
+/** Every file in one skill folder, `SKILL.md` included, for the Files card and its paths. */
+export const useSkillFiles = (root: SkillRoot, name: string) => {
+	const project = useSettingsProject();
+	return useQuery({
+		queryKey: settingsKeys.skillFiles(project, root, name),
+		queryFn: ({ signal }) => readSkillFiles(project, root, name, signal),
+		staleTime: SETTINGS_STALE_MS,
+	});
+};
+
+/** One bundled file's text, for the dialog that edits it. A closed dialog reads nothing. */
+export const useSkillBundleFile = (root: SkillRoot, name: string, path: string | undefined) => {
+	const project = useSettingsProject();
+	return useQuery({
+		queryKey: settingsKeys.skillFile(project, root, name, path ?? ""),
+		queryFn:
+			path === undefined
+				? skipToken
+				: ({ signal }) => readSkillFile(project, root, name, path, signal),
+		gcTime: 0,
+		refetchOnWindowFocus: false,
 	});
 };
 

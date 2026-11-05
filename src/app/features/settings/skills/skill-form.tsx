@@ -19,6 +19,7 @@ import { removeSkill, saveSkill, setSkillEnabled } from "./api.ts";
 import { SkillCard } from "./skill-card.tsx";
 import { skillFields, toDraft, toInput, validate } from "./skill-draft.ts";
 import type { SkillDraft, SkillField } from "./skill-draft.ts";
+import { SkillFiles } from "./skill-files.tsx";
 import { SkillInstructions } from "./skill-instructions.tsx";
 import { SKILL_MODES, SKILLS_BACK } from "./skill-modes.ts";
 import type { SkillTab } from "./skill-modes.ts";
@@ -165,6 +166,23 @@ export function SkillForm({
 						<SkillCard draft={draft} errors={errors} creating={creating} update={update} />
 
 						<SkillInstructions value={draft.body} onChange={(body) => update({ body })} />
+
+						{!creating && (
+							<Section
+								title="Files"
+								description="Bundled next to SKILL.md. Each one is written on its own."
+							>
+								<div className="p-3">
+									<SkillFiles
+										root={root}
+										name={file.name}
+										// The page-level leave guard is main's form row, still open; until then
+										// the card guards its own dialogs.
+										onDirtyChange={() => undefined}
+									/>
+								</div>
+							</Section>
+						)}
 
 						{(file?.fields ?? []).length > 0 && (
 							<Section

@@ -1,0 +1,135 @@
+import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
+
+import type { SkillRoot } from "#protocol/settings/skills";
+import { CodeEditor } from "@/components/editor/code-editor/code-editor";
+import { DialogFrame } from "@/components/patterns/dialog-frame";
+import { errorView } from "@/components/patterns/status/error-view";
+import { LoadingState } from "@/components/patterns/status/loading-state";
+import { Notice } from "@/components/patterns/status/notice";
+import { StatusView } from "@/components/patterns/status/status-view";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+
+import { useSettingsProject, useSkillBundleFile } from "../queries.ts";
+import { writeSkillFile } from "./api.ts";
+import { languageOf } from "./skill-file-tree.ts";
+
+/**
+ * One bundled text file, opened from the Files card. It has its own Save and
+ * Discard; the form's draft is never touched. The page asks before closing it
+ * with unsaved text. It stays mounted while closed, so both transitions play.
+ */
+export function SkillFileDialog({
+	open,
+	root,
+	name,
+	path,
+	onDirtyChange,
+	onSaved,
+	onClose,
+}: {
+	open: boolean;
+	root: SkillRoot;
+	name: string;
+	/** Cleared as it closes; the last path stays on screen for the exit. */
+	path: string | undefined;
+	onDirtyChange: (dirty: boolean) => void;
+	onSaved: () => void;
+	onClose: () => void;
+}) {
+	const project = useSettingsProject();
+	const query = useSkillBundleFile(root, name, path);
+	// What the file held when it was read or last saved, and the text being edited.
+	const [savedText, setSavedText] = useState<string | undefined>();
+	const [edited, setEdited] = useState<string | undefined>();
+	/** A new opening starts from the file on disk, not from the last draft. */
+	const [wasOpen, setWasOpen] = useState(false);
+	if (open !== wasOpen) {
+		setWasOpen(open);
+		if (open) {
+			setSavedText(undefined);
+			setEdited(undefined);
+		}
+	}
+	const base = savedText ?? query.data;
+	const text = edited ?? base ?? "";
+	const dirty = base !== undefined && text !== base;
+	const edit = (next: string) => {
+		setEdited(next);
+		onDirtyChange(next !== base);
+	};
+	const save = useMutation({
+		mutationFn: (value: string) => writeSkillFile(project, root, name, path ?? "", value),
+		onSuccess: (_, value) => {
+			setSavedText(value);
+			onDirtyChange(value !== text);
+			onSaved();
+		},
+	});
+
+	/** Closing drops the last refusal, so the next opening starts clean. */
+	const close = () => {
+		save.reset();
+		onClose();
+	};
+
+	return (
+		<DialogFrame
+			open={open}
+			onOpenChange={(next) => {
+				if (next) return;
+				close();
+			}}
+			size="lg"
+			title={<span className="font-mono">{path ?? ""}</span>}
+			footer={
+				<>
+					<Button type="button" variant="outline" onClick={close}>
+						Close
+					</Button>
+					<Button
+						type="button"
+						variant="destructive"
+						disabled={!dirty || save.isPending}
+						onClick={() => {
+							setEdited(undefined);
+							onDirtyChange(false);
+						}}
+					>
+						Discard
+					</Button>
+					<Button
+						type="button"
+						disabled={!dirty || save.isPending}
+						onClick={() => save.mutate(text)}
+					>
+						{save.isPending && <Spinner data-icon="inline-start" />}
+						Save file
+					</Button>
+				</>
+			}
+		>
+			{query.error === null ? (
+				query.isPending ? (
+					<div className="flex h-full items-center justify-center">
+						<LoadingState label={`Reading ${path ?? "the file"}…`} />
+					</div>
+				) : (
+					<div className="flex h-full min-h-0 flex-col gap-2">
+						<CodeEditor
+							label={path ?? ""}
+							language={languageOf(path ?? "")}
+							value={text}
+							onChange={edit}
+							className="min-h-0 flex-1"
+						/>
+						{save.error !== null && <Notice error={save.error} />}
+					</div>
+				)
+			) : (
+				<StatusView {...errorView(query.error)} />
+			)}
+		</DialogFrame>
+	);
+}
