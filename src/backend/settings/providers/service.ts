@@ -26,7 +26,7 @@ import type { ModelRuntime } from "../../platform/pi.ts";
 import { importModelsFor } from "./import.ts";
 import { testProvider } from "./probe.ts";
 import { ProvidersStore } from "./store.ts";
-import type { ProvidersStoreApi } from "./store.ts";
+import type { ProvidersStoreApi, StoredProvider } from "./store.ts";
 
 /**
  * What pi composed for this home, and the `models.json` edits behind it.
@@ -189,6 +189,53 @@ const rowOf = (
 	};
 };
 
+/** One entry pi skipped: the file's name, no composed models, nothing configured. */
+const orphanRowOf = (
+	id: string,
+	entry: StoredProvider,
+	builtin: ReadonlySet<string>,
+): ProviderRow => ({
+	auth: { configured: false },
+	builtin: builtin.has(id),
+	custom: true,
+	id,
+	models: 0,
+	name: entry.stored.name ?? id,
+});
+
+/**
+ * The rows a `models.json` entry keeps even when pi refuses to compose it. pi's runtime
+ * drops such an entry, and the page must still reach it: the file is the only place to fix
+ * it without a terminal.
+ */
+const orphanRowsOf = (
+	custom: ReadonlySet<string>,
+	known: ReadonlySet<string>,
+	builtin: ReadonlySet<string>,
+	store: ProvidersStoreApi,
+	log: LogApi,
+): Effect.Effect<ReadonlyArray<ProviderRow>> =>
+	Effect.forEach(
+		[...custom].filter((id) => !known.has(id)),
+		(id) =>
+			Effect.gen(function* () {
+				const entry = yield* store.read(id).pipe(
+					Effect.matchEffect({
+						onFailure: (error) =>
+							log
+								.write("warn", "a models.json entry could not be read", {
+									providerId: id,
+									reason: error.reason,
+								})
+								.pipe(Effect.as(Option.none<StoredProvider>())),
+						onSuccess: (stored) => Effect.succeedSome(stored),
+					}),
+				);
+				return Option.isNone(entry) ? [] : [orphanRowOf(id, entry.value, builtin)];
+			}),
+		{ concurrency: 1 },
+	).pipe(Effect.map((rows) => rows.flat()));
+
 export const makeProvidersService = (deps: {
 	readonly runtime: Effect.Effect<ModelRuntime, RuntimeUnavailable>;
 	readonly builtin: Effect.Effect<ReadonlySet<string>, RuntimeUnavailable>;
@@ -234,9 +281,20 @@ export const makeProvidersService = (deps: {
 					onSuccess: (ids) => Effect.succeed(ids),
 				}),
 			);
+			const listed = rowsOf(runtime, builtin, custom);
+			const orphans = yield* orphanRowsOf(
+				custom,
+				new Set(listed.map((row) => row.id)),
+				builtin,
+				deps.store,
+				deps.log,
+			);
 			const view: ProvidersView = {
 				builtins: builtinsOf(runtime, custom, yield* credentialsOf(runtime, deps.log)),
-				providers: rowsOf(runtime, builtin, custom),
+				// main's order: the page reads as a list, and an entry pi skipped falls in line.
+				providers: [...listed, ...orphans].toSorted((left, right) =>
+					left.name.localeCompare(right.name),
+				),
 			};
 			const error = runtime.getError();
 			return error === undefined ? view : { ...view, error };
@@ -286,22 +344,24 @@ export const makeProvidersService = (deps: {
 					),
 				);
 				const provider = runtime.getProviders().find((entry) => entry.id === id);
-				if (provider === undefined) {
+				const stored = yield* deps.store.read(id);
+				const custom = yield* deps.store.customIds;
+				// pi drops an entry it cannot compose; its page still opens, to fix the file.
+				if (provider === undefined && !custom.has(id)) {
 					return yield* new ProviderRefused({ providerId: id, reason: `pi does not know ${id}` });
 				}
-				const stored = yield* deps.store.read(id);
 				const auth = runtime.getProviderAuthStatus(id);
 				const providerApi = stored.stored.api;
 				const api =
 					providerApi !== undefined && isProviderApi(providerApi) ? providerApi : undefined;
 				return {
 					auth: {
-						apiKey: apiKeyOf(provider),
+						apiKey: provider === undefined ? undefined : apiKeyOf(provider),
 						credential: yield* credentialOf(runtime, id),
-						oauth: oauthOf(provider),
+						oauth: provider === undefined ? undefined : oauthOf(provider),
 					},
 					// The effective endpoint: the entry's, then pi's own for a built-in.
-					baseUrl: stored.stored.baseUrl ?? provider.baseUrl,
+					baseUrl: stored.stored.baseUrl ?? provider?.baseUrl,
 					configured: auth.configured,
 					builtin: (yield* builtinIds.pipe(
 						Effect.match({
@@ -311,17 +371,18 @@ export const makeProvidersService = (deps: {
 					)).has(id),
 					// The composed model, so the override dialog seeds from pi's effective values.
 					catalog: yield* catalogOf(runtime, id),
-					custom: (yield* deps.store.customIds).has(id),
+					custom: custom.has(id),
 					hasKey: stored.hasKey,
 					headerKeys: stored.headerKeys,
 					id,
 					api,
 					modelOverrides: stored.modelOverrides,
 					models: stored.models,
-					name: provider.name,
+					name: stored.stored.name ?? provider?.name ?? id,
 					source: auth.source,
 					sourceLabel: auth.label,
-					stored: stored.stored,
+					// A family this version does not know stays in the file and leaves the picker unset.
+					stored: { ...stored.stored, api },
 				} satisfies ProviderDetail;
 			});
 

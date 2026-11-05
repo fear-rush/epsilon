@@ -61,7 +61,7 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | [ ]  | `POST /api/settings/skills/folders/link`, `…/unlink`                          | S6        | verify                                                                              |
 | [ ]  | `GET /api/settings/skills/listed-files`, `POST …/listed-file`, `PUT …/listed` | S6        | verify                                                                              |
 | [ ]  | `PUT /api/settings/skills/paths`, `DELETE …/paths`                            | S6        | verify                                                                              |
-| [ ]  | `listProviders` also lists a `models.json` entry pi cannot compose            | S5        | **missing**                                                                         |
+| [x]  | `listProviders` also lists a `models.json` entry pi cannot compose            | S5        | `feat(settings): the entry pi cannot compose`                                       |
 
 ## Client files
 
@@ -195,8 +195,8 @@ entry or a credential configures, as main did, and `ProvidersView.builtins` hold
 provider pi knows with the sign-in methods it declares, so the add flow offers what
 exists. A credential read that fails is a warning in the log and a badge that falls back
 to `configured`, not a page that fails. Every row of S5 is ported and photographed
-against main. What is left: the server gap below, an entry pi cannot compose still being
-listed.
+against main, and a `models.json` entry pi cannot compose is listed and opens on the
+file's own fields, so it can be fixed without a terminal.
 
 The connection's base-URL warning is main's inline warning paragraph on phase 2's
 `Notice` warning tone; the tokens it drops (`mt-0.5 size-4 shrink-0 text-warning`) are

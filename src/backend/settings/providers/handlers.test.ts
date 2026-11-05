@@ -150,6 +150,54 @@ describe("settings.providers", () => {
 	);
 
 	itEffect(
+		"lists a models.json entry pi could not compose, and opens its page",
+		() => {
+			const { agentDir, file, layer } = providerLayer("uncomposable");
+			mkdirSync(agentDir, { recursive: true });
+			writeFileSync(
+				file,
+				`${JSON.stringify({
+					providers: {
+						broken: { api: "not-an-api", models: [{ id: "x" }], name: "Broken Endpoint" },
+					},
+				})}\n`,
+			);
+			return Effect.gen(function* () {
+				const client = yield* testClient(ProviderRpcs, ProvidersHandlersLive);
+				const view = yield* client["settings.providers.list"]();
+				// pi refuses the entry without a base URL, so the runtime drops it; the page must not.
+				const broken = view.providers.find((provider) => provider.id === "broken");
+				expect(broken).toEqual({
+					auth: { configured: false },
+					builtin: false,
+					custom: true,
+					id: "broken",
+					models: 0,
+					name: "Broken Endpoint",
+				});
+				// The page opens on the file's own fields, which is where the entry gets fixed.
+				const detail = yield* client["settings.providers.read"]({ id: "broken" });
+				expect(detail).toMatchObject({
+					custom: true,
+					hasKey: false,
+					name: "Broken Endpoint",
+				});
+				// A family this version does not know leaves the picker unset, as main's did.
+				expect(detail.api).toBeUndefined();
+				expect(detail.stored.api).toBeUndefined();
+				expect(detail.catalog).toEqual([]);
+				expect(detail.models).toEqual([{ id: "x" }]);
+				expect(detail.auth.oauth).toBeUndefined();
+				expect(detail.auth.apiKey).toBeUndefined();
+				// Nothing pi never composed is claimed as a provider it knows.
+				const refused = yield* Effect.flip(client["settings.providers.read"]({ id: "nobody" }));
+				expect(refused).toBeInstanceOf(ProviderRefused);
+			}).pipe(Effect.scoped, Effect.provide(layer));
+		},
+		15000,
+	);
+
+	itEffect(
 		"reads the entry's models and overrides back, without a stored header's value",
 		() => {
 			const { agentDir, file, layer } = providerLayer("detail");
