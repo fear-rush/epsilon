@@ -500,11 +500,21 @@ export const ProviderRpcs = RpcGroup.make(
 );
 
 export const ProviderLoginRpcs = RpcGroup.make(
+	/**
+	 * Follow one provider's sign-in. A `type` starts a flow; `null` attaches to the one
+	 * already running, so a reloaded page picks it back up instead of replacing it.
+	 */
 	Rpc.make("settings.providers.login", {
-		payload: { providerId: Schema.String, type: ProviderLoginType },
+		payload: { providerId: Schema.String, type: Schema.NullOr(ProviderLoginType) },
 		success: ProviderLoginSnapshot,
 		error: ProviderRefused,
 		stream: true,
+	}),
+	/** What this provider's sign-in last reported, or null when nothing was signed in. */
+	Rpc.make("settings.providers.loginState", {
+		payload: { providerId: Schema.String },
+		success: Schema.NullOr(ProviderLoginSnapshot),
+		error: ProviderRefused,
 	}),
 	Rpc.make("settings.providers.answerLogin", {
 		payload: { providerId: Schema.String, promptId: Schema.String, value: Schema.String },

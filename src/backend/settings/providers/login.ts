@@ -169,10 +169,15 @@ const finish = (
 	});
 
 export type ProviderLoginServiceApi = {
+	/** Start a flow for `type`, or attach to the running one when `type` is null. */
 	readonly start: (
 		providerId: string,
-		type: ProviderLoginType,
+		type: ProviderLoginType | null,
 	) => Stream.Stream<ProviderLoginSnapshot, ProviderRefused>;
+	/** The record's latest snapshot, or null when nothing was signed in. */
+	readonly read: (
+		providerId: string,
+	) => Effect.Effect<ProviderLoginSnapshot | null, ProviderRefused>;
 	readonly answer: (
 		providerId: string,
 		promptId: string,
@@ -229,6 +234,17 @@ export const makeProviderLoginService = (deps: {
 	const start: ProviderLoginServiceApi["start"] = (providerId, type) =>
 		Stream.unwrap(
 			Effect.gen(function* () {
+				const now = yield* Clock.currentTimeMillis;
+				prune(now);
+				if (type === null) {
+					// Attach to the running flow: a reloaded page follows it instead of
+					// replacing it, which would abort the browser's own callback.
+					const running = records.get(providerId);
+					if (running === undefined) {
+						return yield* refusal(providerId, "No sign-in is running for this provider.");
+					}
+					return Stream.fromPubSub(running.pubsub);
+				}
 				const info = yield* deps.provider(providerId);
 				if (type === "oauth" && !info.oauth) {
 					return yield* refusal(providerId, `${info.name} offers no account sign-in`);
@@ -236,8 +252,6 @@ export const makeProviderLoginService = (deps: {
 				if (type === "api_key" && !info.apiKey) {
 					return yield* refusal(providerId, `${info.name} offers no API-key sign-in`);
 				}
-				const now = yield* Clock.currentTimeMillis;
-				prune(now);
 				const previous = records.get(providerId);
 				if (previous?.status === "running") {
 					previous.abort.abort(new Error("Replaced by a new sign-in."));
@@ -272,6 +286,14 @@ export const makeProviderLoginService = (deps: {
 			}),
 		);
 
+	const read: ProviderLoginServiceApi["read"] = (providerId) =>
+		Effect.gen(function* () {
+			const now = yield* Clock.currentTimeMillis;
+			prune(now);
+			const record = records.get(providerId);
+			return record === undefined ? null : snapshotOf(record);
+		});
+
 	const answer: ProviderLoginServiceApi["answer"] = (providerId, promptId, value) =>
 		Effect.gen(function* () {
 			const record = records.get(providerId);
@@ -299,7 +321,7 @@ export const makeProviderLoginService = (deps: {
 			return undefined;
 		});
 
-	return { answer, cancel, start };
+	return { answer, cancel, read, start };
 };
 
 export const ProviderLoginServiceLive: Layer.Layer<ProviderLoginService, never, PiConfig> =

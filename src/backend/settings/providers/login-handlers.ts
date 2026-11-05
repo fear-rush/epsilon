@@ -13,6 +13,7 @@ export const ProviderLoginHandlersLive = ProviderLoginRpcs.toLayer(
 				login.answer(providerId, promptId, value),
 			"settings.providers.cancelLogin": ({ providerId }) => login.cancel(providerId),
 			"settings.providers.login": ({ providerId, type }) => login.start(providerId, type),
+			"settings.providers.loginState": ({ providerId }) => login.read(providerId),
 		};
 	}),
 );

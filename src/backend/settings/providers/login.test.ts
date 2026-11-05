@@ -127,6 +127,57 @@ describe("settings.providers.login", () => {
 		expect(list.at(-1)).toMatchObject({ status: "cancelled" });
 	});
 
+	test("a reloaded page reads the running flow and attaches to it", async () => {
+		let started = 0;
+		const ports: LoginPorts = {
+			provider,
+			login: (_providerId, _type, interaction) =>
+				Effect.gen(function* () {
+					started += 1;
+					yield* interaction
+						.prompt(prompt)
+						.pipe(
+							Effect.mapError(
+								(cause) => new ProviderRefused({ providerId: "fake", reason: cause.message }),
+							),
+						);
+				}),
+		};
+		const result = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(ProviderLoginRpcs, ProviderLoginHandlersLive);
+				const before = yield* client["settings.providers.loginState"]({ providerId: "fake" });
+				// Start the flow and read only its first snapshot, as a page that navigates away.
+				yield* client["settings.providers.login"]({ providerId: "fake", type: "oauth" }).pipe(
+					Stream.runHead,
+				);
+				const during = yield* client["settings.providers.loginState"]({ providerId: "fake" });
+				const attached = yield* client["settings.providers.login"]({
+					providerId: "fake",
+					type: null,
+				}).pipe(
+					Stream.tap((snapshot) =>
+						snapshot.question === undefined
+							? Effect.void
+							: client["settings.providers.answerLogin"]({
+									providerId: "fake",
+									promptId: snapshot.question.id,
+									value: "123456",
+								}),
+					),
+					Stream.runCollect,
+				);
+				return { attached: [...attached], before, during, started };
+			}).pipe(Effect.scoped, Effect.provide(loginLayer(ports))),
+		);
+
+		expect(result.before).toBeNull();
+		expect(result.during).toMatchObject({ providerId: "fake", status: "running" });
+		expect(result.attached.at(-1)?.status).toBe("succeeded");
+		// Attaching follows the running record; it does not start a second sign-in.
+		expect(result.started).toBe(1);
+	});
+
 	test("an unknown provider, and a type it does not offer, are refusals", async () => {
 		const ports: LoginPorts = {
 			login: () => Effect.void,

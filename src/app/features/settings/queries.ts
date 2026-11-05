@@ -8,6 +8,7 @@ import type { SkillRoot } from "#protocol/settings/skills";
 import { call } from "@/core/runtime";
 
 import { settingsKeys } from "./keys.ts";
+import { readProviderLogin } from "./providers/api.ts";
 import { readSkill, readSkillDocument, readSkillRaw } from "./skills/api.ts";
 
 /**
@@ -44,6 +45,17 @@ export const useSettingsRefresh = (): (() => void) => {
 		void queryClient.invalidateQueries({ queryKey: ["config", "readiness"] });
 	}, [queryClient]);
 };
+
+/**
+ * What one provider's sign-in last reported. A running flow streams its progress; this
+ * read is the state a reloaded page comes back to, and the one a finished flow leaves.
+ */
+export const useProviderLogin = (providerId: string) =>
+	useQuery({
+		queryKey: settingsKeys.providerLogin(providerId),
+		queryFn: () => readProviderLogin(providerId),
+		staleTime: 0,
+	});
 
 /** The editable file of one skill. A new skill has no name yet, so it reads nothing. */
 export const useSkill = (root: SkillRoot, name: string | undefined) => {

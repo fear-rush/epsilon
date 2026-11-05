@@ -168,7 +168,6 @@ function ExistingProvider({ providerId }: { providerId: string }) {
 function ProviderBody({ detail }: { detail: ProviderDetail }) {
 	const navigate = useNavigate();
 	const refresh = useSettingsRefresh();
-	const [signingIn, setSigningIn] = useState(false);
 	const [removing, setRemoving] = useState(false);
 	const [key, setKey] = useState("");
 	const [draft, setDraft] = useState<Draft>(() => ({
@@ -236,9 +235,6 @@ function ProviderBody({ detail }: { detail: ProviderDetail }) {
 			title={detail.name}
 			actions={
 				<>
-					<Button variant="outline" size="sm" onClick={() => setSigningIn(true)}>
-						Sign in
-					</Button>
 					{custom && (
 						<Button
 							variant="destructive"
@@ -319,7 +315,7 @@ function ProviderBody({ detail }: { detail: ProviderDetail }) {
 				{saveKey.error !== null && <Notice error={saveKey.error} title="The key was not saved" />}
 			</div>
 
-			{signingIn && <ProviderSignIn providerId={detail.id} onClose={() => setSigningIn(false)} />}
+			<ProviderSignIn detail={detail} />
 			<DeleteDialog
 				open={removing}
 				title={`Remove ${detail.name}?`}

@@ -27,6 +27,13 @@ export const testProvider = (input: ProviderTestInput) =>
 		Effect.map(client["settings.providers.test"](input), (result) => result.message),
 	);
 
+/** What this provider's sign-in last reported, or null when nothing was signed in. */
+export const readProviderLogin = (providerId: string) =>
+	call((client) => client["settings.providers.loginState"]({ providerId }));
+
+export const logoutProvider = (providerId: string) =>
+	call((client) => client["settings.providers.logout"]({ id: providerId }));
+
 export const answerProviderLogin = (providerId: string, promptId: string, value: string) =>
 	call((client) => client["settings.providers.answerLogin"]({ promptId, providerId, value }));
 

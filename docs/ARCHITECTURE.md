@@ -71,7 +71,9 @@ view, built from the shared patterns.
    words for every tagged error the protocol declares: a new tag does not type-check until
    it does. The surfaces and their rules are [below](#feedback-surfaces).
 5. A write invalidates through a pushed stream (`settings.changes`, `sessions.changes`),
-   never a timer; a provider sign-in streams its progress on `settings.providers.login`.
+   never a timer; a provider sign-in streams its progress on `settings.providers.login`, and
+   a reloaded page reads `loginState` and attaches to the running flow rather than starting
+   a second one.
    React Query is the cache, not the source of truth.
 
 ## Live chat flow
