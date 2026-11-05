@@ -287,6 +287,9 @@ that replacement, not missing markup.
 | [ ]  | `features/settings/context/context-panel.tsx`   | 87    | **missing**  | `ContextLayout`                                                                                                                  |
 | [ ]  | `features/settings/context/context-sections.ts` | 123   | **missing**  | `CONTEXT_SECTIONS`, `contextSection`, `ContextSection`, `ContextSectionId`, `counted`                                            |
 
+The context read has the fault `3929b8a` fixed for skills: on Global it asks for a live
+engine in `.epsilon`, where no chat runs. Check it with the backend when this slice starts.
+
 ## S8 Settings: General, Packages, shell
 
 | Done | main file (`client/src/…`)                              | Lines | Branch today                | Missing exports                                                                                                                                                                                                                       |
