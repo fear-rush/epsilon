@@ -52,7 +52,7 @@ Do not decide these yourself, and do not route around them.
 
 ## Phase 5: merge
 
-- [ ] Every ledger row is ticked or carries the owner's dated yes to differ.
+- [x] Every ledger row is ticked or carries the owner's dated yes to differ.
 - [ ] `bun run check`, `bun run test:e2e` and `bun run bench` pass.
 - [x] Run against a read-only copy of the owner's real home: the index builds, every chat
       opens, settings round-trip. **Done on a `cp -c` clone, 2026-11-05:** 955 chats index
