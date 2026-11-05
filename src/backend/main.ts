@@ -175,7 +175,7 @@ const watchSessions = Layer.effectDiscard(
 	Effect.gen(function* () {
 		const catalogService = yield* Catalog;
 		const home = yield* AgentHome;
-		const root = join(home.agentDir, "sessions");
+		const root = home.sessionsDir;
 		yield* ensureDir(root);
 		yield* ensureDir(home.chatsDir);
 		yield* catalogService.watch([root]);
@@ -196,7 +196,7 @@ const program = Effect.gen(function* () {
 		agentDir: home.agentDir,
 		maxRunning: current.settings.maxRunning,
 	});
-	yield* catalogService.sync([join(home.agentDir, "sessions")]);
+	yield* catalogService.sync([home.sessionsDir]);
 	const running = yield* engineService.running;
 	yield* log.write("info", "engines ready", { running: running.length });
 	yield* log.write("info", "epsilon listening", { url: `http://${HOSTNAME}:${port}` });

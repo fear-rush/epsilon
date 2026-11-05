@@ -10,15 +10,15 @@ import { SessionRunning } from "#protocol/errors";
 
 import { linearSession, writeSession } from "../../../test/sessions.ts";
 import { testPaths } from "../../../test/setup.ts";
-import { AgentHomeLive } from "../platform/agent-home.ts";
-import type { AgentHome } from "../platform/agent-home.ts";
+import { AgentHome, makeAgentHome } from "../platform/agent-home.ts";
 import { JsonDocumentLive } from "../platform/json-document.ts";
 import { Catalog, CatalogLive } from "./catalog.ts";
 import { SessionLocks, makeSessionLocks } from "./locks.ts";
 import { Sessions, SessionsLive } from "./operations.ts";
 import { Pins, PinsLive } from "./pins.ts";
 
-const root = join(testPaths.agentHome, "sessions");
+const homeApi = makeAgentHome(testPaths.agentHome, testPaths.sandboxHome);
+const root = homeApi.sessionsDir;
 const projectDir = join(root, "--ops-project--");
 const otherDir = join(root, "--elsewhere--");
 const indexPath = join(testPaths.scratch, "ops", "index.sqlite");
@@ -26,7 +26,7 @@ const meta = { formatVersion: 3, piVersion: "1.4.0", schemaVersion: "1" };
 
 const running = new Set(["s-running", "s-project-running"]);
 const locks = Layer.succeed(SessionLocks, makeSessionLocks(running));
-const home = AgentHomeLive(testPaths.agentHome, testPaths.sandboxHome);
+const home = Layer.succeed(AgentHome, homeApi);
 const catalog = Layer.provide(CatalogLive(indexPath, meta), BunServices.layer);
 const json = Layer.provide(JsonDocumentLive, BunServices.layer);
 const pins = Layer.provide(PinsLive, Layer.mergeAll(home, json, BunServices.layer));

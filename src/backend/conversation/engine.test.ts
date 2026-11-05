@@ -11,15 +11,11 @@ import { itEffect } from "../../../test/effect.ts";
 import { fakeSpec } from "../../../test/fake-engine.ts";
 import { testPaths } from "../../../test/setup.ts";
 import { until } from "../../../test/until.ts";
+import { makeAgentHome } from "../platform/agent-home.ts";
 import { startEngine, type RemoteEngine } from "./engine.ts";
 import { makeSupervisor } from "./supervisor.ts";
 
-const home = {
-	agentDir: testPaths.agentHome,
-	chatsDir: `${testPaths.agentHome}/chats`,
-	epsilonDir: `${testPaths.agentHome}/.epsilon`,
-	userHome: testPaths.sandboxHome,
-};
+const home = makeAgentHome(testPaths.agentHome, testPaths.sandboxHome);
 
 const log = {
 	engine: () => ({ write: () => Effect.void }),

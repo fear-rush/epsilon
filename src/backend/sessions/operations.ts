@@ -1,4 +1,4 @@
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 
 import { Context, Effect, FileSystem, Layer } from "effect";
 
@@ -92,7 +92,7 @@ export const SessionsLive = Layer.effect(
 				});
 				// A second copy would only confuse: the history lives on in the fork.
 				yield* withFs(removePath(row.path));
-				yield* catalog.sync([dirname(row.path), join(home.agentDir, "sessions")]);
+				yield* catalog.sync([dirname(row.path), home.sessionsDir]);
 				return { sessionId: forked };
 			});
 
@@ -126,7 +126,7 @@ export const SessionsLive = Layer.effect(
 			Effect.gen(function* () {
 				// A chat a terminal pi wrote since the last reconcile is still the operator's chat,
 				// so the index is brought up to date before anything is chosen or deleted.
-				yield* catalog.sync([join(home.agentDir, "sessions")]);
+				yield* catalog.sync([home.sessionsDir]);
 				// The agent's own chat folder is not a project, so its chats are never candidates:
 				// the folder a chat ran in is what makes it a project's chat.
 				const rows =
@@ -157,7 +157,7 @@ export const SessionsLive = Layer.effect(
 				// folder outside that root is a `sessionDir` pi resolved for the project, and stays
 				// where it is. `rmdir` refuses a folder that still holds something, which is why the
 				// failure is swallowed: only an empty one was ours to drop.
-				const root = join(home.agentDir, "sessions");
+				const root = home.sessionsDir;
 				for (const folder of folders) {
 					if (!isInside(folder, root)) continue;
 					yield* removeEmptyDir(folder).pipe(Effect.orElseSucceed(() => undefined));

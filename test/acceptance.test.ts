@@ -11,6 +11,7 @@ import { startEngine, type RemoteEngine } from "../src/backend/conversation/engi
 import { makeEngines } from "../src/backend/conversation/registry.ts";
 import type { StartInput } from "../src/backend/conversation/supervisor.ts";
 import { makeSupervisor } from "../src/backend/conversation/supervisor.ts";
+import { makeAgentHome } from "../src/backend/platform/agent-home.ts";
 import { skillsCli } from "../src/backend/settings/skill-import/cli.ts";
 import { download } from "../src/backend/settings/skill-import/fetch.ts";
 import { startStubModel, writeStubModels } from "./e2e/stub-model.ts";
@@ -123,12 +124,7 @@ describe("acceptance", () => {
 	}, 20_000);
 
 	test("F3: closing a replaced engine closes the one that replaced it", async () => {
-		const home = {
-			agentDir: testPaths.agentHome,
-			chatsDir: `${testPaths.agentHome}/chats`,
-			epsilonDir: `${testPaths.agentHome}/.epsilon`,
-			userHome: testPaths.sandboxHome,
-		};
+		const home = makeAgentHome(testPaths.agentHome, testPaths.sandboxHome);
 		const start = (input: StartInput) =>
 			startEngine({
 				cwd: input.cwd,

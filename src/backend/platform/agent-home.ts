@@ -17,6 +17,8 @@ export type AgentHomeApi = {
 	readonly userHome: string;
 	/** The folder a plain chat runs in; a project chat runs in the project. */
 	readonly chatsDir: string;
+	/** pi's session files, one folder per project; the index's walk root. */
+	readonly sessionsDir: string;
 	/** Epsilon's own directory inside the home: settings, logs, crashes, the index. */
 	readonly epsilonDir: string;
 	/**
@@ -38,6 +40,7 @@ export const makeAgentHome = (
 		agentDir,
 		chatsDir: join(agentDir, "chats"),
 		epsilonDir: join(agentDir, ".epsilon"),
+		sessionsDir: join(agentDir, "sessions"),
 		userHome,
 	};
 	return projectsRoot === undefined ? home : { ...home, projectsRoot };

@@ -1,5 +1,3 @@
-import { join } from "node:path";
-
 import { Effect, FileSystem } from "effect";
 
 import { SessionNotFound } from "#protocol/errors";
@@ -28,7 +26,7 @@ export const SessionsHandlersLive = SessionsRpcs.toLayer(
 		const home = yield* AgentHome;
 		const projects = yield* ProjectService;
 		const fs = yield* FileSystem.FileSystem;
-		const roots = [join(home.agentDir, "sessions")];
+		const roots = [home.sessionsDir];
 
 		const list = Effect.gen(function* () {
 			const rows = yield* catalog.sync(roots).pipe(Effect.andThen(catalog.list));
