@@ -77,7 +77,7 @@ export type Conversation = {
 	/** pi's own exporter, through the engine that owns the session. */
 	readonly exportSession: (format: ExportFormat) => Promise<ExportedSession>;
 	/** Show a failure this tab caused itself where a refused command appears. */
-	readonly report: (text: string) => void;
+	readonly report: (cause: unknown) => void;
 };
 
 /** What a tree move may do to the branch it leaves. */
@@ -446,7 +446,23 @@ export function useConversation(input: {
 		},
 		[command],
 	);
-	const report = useCallback((text: string) => dispatch(notice(text)), [dispatch]);
+	/**
+	 * A failure's own words, or the translator's when it has none: a tagged refusal's
+	 * `message` is empty, so its sentence has to come from `errorView`.
+	 */
+	const report = useCallback(
+		(cause: unknown) => {
+			// A report is either an error or the words a caller already has.
+			const error = cause instanceof Error ? cause : new Error(String(cause));
+			if (error.message.trim() !== "") {
+				dispatch(notice(error.message));
+				return;
+			}
+			const view = errorView(error);
+			dispatch(notice(view.line === "" ? view.title : view.line));
+		},
+		[dispatch],
+	);
 	const toggleTool = useCallback((toolCallId: string) => {
 		setToolOpen((previous) => {
 			const next = new Map(previous);

@@ -65,7 +65,7 @@ export function SessionControls({
 		try {
 			downloadExport(await conversation.exportSession(format));
 		} catch (cause) {
-			report(cause instanceof Error ? cause.message : String(cause));
+			report(cause);
 		} finally {
 			setExporting(false);
 		}
@@ -76,7 +76,7 @@ export function SessionControls({
 			try {
 				await action;
 			} catch (cause) {
-				report(cause instanceof Error ? cause.message : String(cause));
+				report(cause);
 			}
 		})();
 	};
