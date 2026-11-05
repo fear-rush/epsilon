@@ -273,18 +273,28 @@ const promptCacheOf = (form: ModelForm): ModelPromptCache | undefined => {
 	return Object.keys(cache).length > 0 ? cache : undefined;
 };
 
+/** The three JSON controls' readers, shared with the form's own validation. */
+export const parseSamplingParams = (text: string): SamplingParams | undefined =>
+	readJson(decodeSamplingParams, text);
+
+export const parseSamplingByLevel = (text: string): SamplingParamsByThinkingLevel | undefined =>
+	readJson(decodeSamplingByLevel, text);
+
+export const parseCostTiers = (text: string): CostTiers | undefined =>
+	readJson(decodeCostTiers, text);
+
 const samplingParamsOf = (text: string): SamplingParams | undefined => {
-	const params = readJson(decodeSamplingParams, text);
+	const params = parseSamplingParams(text);
 	return params !== undefined && Object.keys(params).length > 0 ? params : undefined;
 };
 
 const samplingByLevelOf = (text: string): SamplingParamsByThinkingLevel | undefined => {
-	const params = readJson(decodeSamplingByLevel, text);
+	const params = parseSamplingByLevel(text);
 	return params !== undefined && Object.keys(params).length > 0 ? params : undefined;
 };
 
 const costTiersOf = (text: string): CostTiers | undefined => {
-	const tiers = readJson(decodeCostTiers, text);
+	const tiers = parseCostTiers(text);
 	return tiers !== undefined && tiers.length > 0 ? tiers : undefined;
 };
 

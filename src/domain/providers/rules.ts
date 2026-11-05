@@ -14,8 +14,15 @@ export type { ProviderApi };
 export const isProviderApi = (value: string): value is ProviderApi =>
 	providerApis.some((api) => api === value);
 
-/** A provider id is a `models.json` key: letters, digits, dot, dash and underscore. */
-export const isProviderId = (value: string): boolean => /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value);
+/**
+ * A provider id is a `models.json` key and a URL segment: letters, digits, dash and
+ * underscore, and `new` names the add page, so it cannot also name a provider.
+ */
+export const isProviderId = (value: string): boolean =>
+	/^(?!new$)[A-Za-z0-9][A-Za-z0-9_-]*$/.test(value);
+
+/** What the form and the server say about an id that breaks the rule. */
+export const PROVIDER_ID_PROBLEM = 'Use letters, digits, dashes and underscores; "new" is reserved';
 
 /** The base URL a provider's client appends its family's path to: web, not a file or flag. */
 export const isBaseUrl = (value: string): boolean => /^https?:\/\/[^\s]+$/.test(value);

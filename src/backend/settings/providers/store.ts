@@ -1,6 +1,11 @@
 import { Context, Effect, Layer, Option, Schema } from "effect";
 
-import { isBaseUrl, isProviderApi, isProviderId } from "#domain/providers/rules";
+import {
+	isBaseUrl,
+	isProviderApi,
+	isProviderId,
+	PROVIDER_ID_PROBLEM,
+} from "#domain/providers/rules";
 import { ThinkingLevel } from "#protocol/conversation/session";
 import { ProviderRefused } from "#protocol/errors";
 import {
@@ -334,11 +339,7 @@ const guarded =
  * endpoint is an answer, not a mistake: it clears the stored value and pi inherits.
  */
 const checked = (input: ProviderInput): Effect.Effect<ProviderInput, ProviderRefused> => {
-	if (!isProviderId(input.id)) {
-		return Effect.fail(
-			refusal(input.id, "The provider id may hold letters, digits, dots, dashes and underscores."),
-		);
-	}
+	if (!isProviderId(input.id)) return Effect.fail(refusal(input.id, PROVIDER_ID_PROBLEM));
 	if (input.api !== "" && !isProviderApi(input.api)) {
 		return Effect.fail(refusal(input.id, `${input.api} is not one of pi's API families.`));
 	}
