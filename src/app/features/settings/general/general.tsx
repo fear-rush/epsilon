@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import type { SettingsProblem } from "#protocol/settings/general";
+import type { SessionDir, SettingsProblem } from "#protocol/settings/general";
 import { DetailPage } from "@/components/patterns/pane/detail-page";
 import { Row } from "@/components/patterns/section/row";
 import { Section } from "@/components/patterns/section/section";
@@ -58,6 +58,7 @@ export function SettingsGeneral() {
 					maxRunning={snapshot.epsilon.settings.maxRunning}
 					models={sorted}
 					ready={snapshot.readiness.ready}
+					sessions={snapshot.settings.sessions}
 					selected={
 						snapshot.settings.defaultModel === null
 							? ""
@@ -93,12 +94,15 @@ function AppSection({
 	models,
 	ready,
 	selected,
+	sessions,
 }: {
 	home: string | undefined;
 	maxRunning: number;
 	models: ReadonlyArray<{ provider: string; id: string; name: string }>;
 	ready: boolean;
 	selected: string;
+	/** pi's own answer for where this folder's sessions live, and what set it. */
+	sessions: SessionDir;
 }) {
 	const refresh = useSettingsRefresh();
 	const defaults = useMutation({
@@ -133,6 +137,19 @@ function AppSection({
 			<Row stacked title="Agent home">
 				<code className="w-full rounded-md bg-muted pad-item text-code break-all">
 					{home ?? "…"}
+				</code>
+			</Row>
+			<Row
+				stacked
+				title="Sessions"
+				description={
+					sessions.source === null
+						? "pi's default layout: one folder per project under this root."
+						: `Set in ${sessions.source}.`
+				}
+			>
+				<code className="w-full rounded-md bg-muted pad-item text-code break-all">
+					{sessions.dir}
 				</code>
 			</Row>
 			<Row

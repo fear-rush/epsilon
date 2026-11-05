@@ -89,10 +89,20 @@ export const DefaultModel = Schema.Struct({
 });
 export type DefaultModel = typeof DefaultModel.Type;
 
+/** Where pi reads and writes one folder's sessions, as pi itself resolves it. */
+export const SessionDir = Schema.Struct({
+	/** pi's default root, or the folder a settings file named. */
+	dir: Schema.String,
+	/** The settings file that set the folder, or null for pi's own layout. */
+	source: Schema.NullOr(Schema.String),
+});
+export type SessionDir = typeof SessionDir.Type;
+
 export const GeneralView = Schema.Struct({
 	defaultModel: Schema.NullOr(DefaultModel),
 	problems: Schema.Array(SettingsProblem),
 	rows: Schema.Array(SettingView),
+	sessions: SessionDir,
 });
 export type GeneralView = typeof GeneralView.Type;
 

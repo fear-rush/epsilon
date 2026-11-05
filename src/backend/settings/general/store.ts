@@ -10,7 +10,7 @@ import type { AgentHomeApi } from "../../platform/agent-home.ts";
 import { JsonDocument } from "../../platform/json-document.ts";
 import type { JsonDocumentApi, JsonObject } from "../../platform/json-document.ts";
 import { isJsonObject } from "../../platform/patch.ts";
-import { PiConfig } from "../../platform/pi.ts";
+import { PiConfig, sessionDirOf } from "../../platform/pi.ts";
 import type { PiConfigApi, SettingsManager } from "../../platform/pi.ts";
 import { readSettingViews, readSettingsProblems } from "./catalog.ts";
 
@@ -142,6 +142,9 @@ export const makeGeneralStore = (deps: {
 					provider === undefined || modelId === undefined ? null : { modelId, provider },
 				problems: [...readSettingsProblems(settings)],
 				rows: [...(yield* readSettingViews(settings, folder))],
+				// A home chat runs in the chats folder, so that is the folder whose `sessionDir`
+				// decides where its sessions go; pi resolves a relative one against it.
+				sessions: sessionDirOf(folder ?? deps.home.chatsDir, deps.home),
 			};
 		});
 

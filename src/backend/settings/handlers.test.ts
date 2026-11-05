@@ -171,6 +171,30 @@ describe("settings.snapshot", () => {
 		expect(snapshot.packages.packages.map((entry) => entry.source)).toContain(pkg);
 		expect(snapshot.skills.skills.map((skill) => skill.name)).toContain("greet");
 		expect(snapshot.readiness.ready).toBe(false);
+		// Nothing moved the sessions, so the row names pi's own layout and no file.
+		expect(snapshot.settings.sessions).toEqual({
+			dir: join(agentDir, "sessions"),
+			source: null,
+		});
+	});
+
+	test("a sessionDir in settings.json is the folder the row names, and its source", async () => {
+		const { agentDir, layer, root } = configLayer("session-dir");
+		const moved = join(root, "moved-sessions");
+		mkdirSync(moved, { recursive: true });
+		writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ sessionDir: moved }, null, 2));
+
+		const snapshot = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(ConfigRpcs, ConfigHandlersLive);
+				return yield* client["settings.snapshot"]({ folder: null });
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(snapshot.settings.sessions).toEqual({
+			dir: moved,
+			source: join(agentDir, "settings.json"),
+		});
 	});
 
 	test("a project must be trusted, and then its status travels with the snapshot", async () => {
