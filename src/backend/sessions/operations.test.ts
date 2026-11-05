@@ -16,7 +16,7 @@ import { JsonDocumentLive } from "../platform/json-document.ts";
 import { Catalog, CatalogLive } from "./catalog.ts";
 import { SessionLocks, makeSessionLocks } from "./locks.ts";
 import { Sessions, SessionsLive } from "./operations.ts";
-import { PinsLive } from "./pins.ts";
+import { Pins, PinsLive } from "./pins.ts";
 
 const root = join(testPaths.agentHome, "sessions");
 const projectDir = join(root, "--ops-project--");
@@ -38,7 +38,7 @@ const sessions = Layer.provide(
 const environment = Layer.mergeAll(sessions, catalog, home, pins, BunServices.layer);
 
 const run = <A, E>(
-	effect: Effect.Effect<A, E, AgentHome | Catalog | Sessions | FileSystem.FileSystem>,
+	effect: Effect.Effect<A, E, AgentHome | Catalog | Sessions | Pins | FileSystem.FileSystem>,
 ) => Effect.runPromise(effect.pipe(Effect.provide(environment)));
 
 describe("session operations", () => {
@@ -117,5 +117,49 @@ describe("session operations", () => {
 			}),
 		);
 		expect(renamed?.name).toBe("Renamed chat");
+	});
+
+	test("deleting a chat forgets its pin", async () => {
+		const folder = join(root, "--delete-pinned--");
+		writeSession(folder, "s-pinned", linearSession("s-pinned", "/tmp/ops", 2));
+
+		const pinnedAfter = await run(
+			Effect.gen(function* () {
+				const service = yield* Sessions;
+				const catalogService = yield* Catalog;
+				const pinService = yield* Pins;
+				yield* catalogService.sync([root]);
+				yield* pinService.set("s-pinned", true);
+				yield* service.remove("s-pinned");
+				return (yield* pinService.read).ids.has("s-pinned");
+			}),
+		);
+
+		expect(pinnedAfter).toBe(false);
+		expect(readdirSync(folder)).toEqual([]);
+	});
+
+	test("a project's removal drops the folder it emptied, and keeps one outside pi's sessions", async () => {
+		const project = join(testPaths.scratch, "remove-project-folders");
+		const emptied = join(root, "--folder-emptied--");
+		// pi resolves a project's `sessionDir` itself, so these files can live off the root.
+		const custom = join(testPaths.scratch, "custom-session-dir");
+		writeSession(emptied, "s-emptied", linearSession("s-emptied", project, 2));
+		writeSession(custom, "s-custom", linearSession("s-custom", project, 2));
+
+		const removed = await run(
+			Effect.gen(function* () {
+				const service = yield* Sessions;
+				const catalogService = yield* Catalog;
+				yield* catalogService.sync([root, custom]);
+				return yield* service.removeProject(project);
+			}),
+		);
+
+		expect(removed.removed).toBe(2);
+		expect(existsSync(emptied)).toBe(false);
+		// A folder the operator configured is theirs: its chats go, the folder stays.
+		expect(existsSync(custom)).toBe(true);
+		expect(readdirSync(custom)).toEqual([]);
 	});
 });

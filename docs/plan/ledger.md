@@ -37,33 +37,33 @@ What main's UI calls that the branch has no call or command for. Add each one in
 slice that needs it, through `src/protocol/` and a handler (AGENTS.md, "Add to a root").
 Rows marked _verify_ may exist under another name: find it before adding one.
 
-| Done | main                                                                              | For slice | Branch today                                                                           |
-| ---- | --------------------------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------- |
-| [x]  | chat `bash`, `abort_bash`                                                         | S2        | `feat(conversation): the run status`                                                   |
-| [x]  | chat `autocomplete`                                                               | S2        | `feat(conversation): the palette's data`                                               |
-| [x]  | chat `cancel_retry`, `set_auto_retry`                                             | S2        | `feat(conversation): the run controls`                                                 |
-| [x]  | chat `set_auto_compaction`, `abort_compaction`                                    | S2        | `feat(conversation): the run controls`                                                 |
-| [x]  | chat `clear_queue`                                                                | S2        | `feat(conversation): the run controls`                                                 |
-| [x]  | chat `set_label`                                                                  | S2        | `feat(conversation): the run controls`                                                 |
-| [x]  | chat `set_hide_thinking`                                                          | S2        | `feat(conversation): the run controls`                                                 |
-| [x]  | chat `set_tree_filter_mode`                                                       | S2        | `feat(conversation): the branch rows` (`setTreeFilterMode`)                            |
-| [x]  | chat `reload`, `reload_session`                                                   | S2        | verified: `/reload` is pi's, `reloadFromDisk` is `reload_session`                      |
-| [x]  | chat `set_coding_tools`                                                           | S2        | `feat(conversation): the composer menus`                                               |
-| [x]  | `POST /api/sessions/{id}/export`                                                  | S2        | `feat(conversation): the transcript as a file` (`conversation.query` kind `export`)    |
-| [x]  | `POST /api/sessions/{id}/clone`                                                   | S2        | `feat(conversation): the branch rows` (`clone`, pi's fork at the leaf)                 |
-| [x]  | `POST /api/sessions/{id}/move`                                                    | S3        | `feat(conversation): the move` (`sessions.move`, pi's `forkFrom`)                      |
-| [x]  | `DELETE /api/projects/sessions` (delete a project's chats)                        | S3        | `feat(sessions): a project's chats are deleted together` (`sessions.removeProject`)    |
-| [ ]  | a deleted chat's pin, and an emptied session folder, are left behind              | S3        | `sessions.remove` forgets no pin; no route drops the folder main's `removeProject` did |
-| [x]  | `PUT /api/settings/mcp/default-tool`                                              | S4        | `feat(settings): the MCP default tool` (`settings.mcp.setDefaultTool`)                 |
-| [x]  | `POST /api/settings/mcp/command`                                                  | S4        | `feat(settings): the MCP sign-in line` (`settings.mcp.command`)                        |
-| [x]  | `POST /api/settings/providers/models` (read a provider's model list)              | S5        | `feat(settings): the model import` (`settings.providers.import`)                       |
-| [x]  | `POST /api/settings/providers/test`                                               | S5        | `feat(settings): the provider test` (`settings.providers.test`)                        |
-| [x]  | `POST /api/settings/providers/{id}/logout` (through `ModelRuntime.logout()`)      | S5        | `feat(settings): the provider account` (`settings.providers.logout`)                   |
-| [x]  | `POST /api/settings/skills/folders/link`, `…/unlink`                              | S6        | `feat(skills): the folders other agents keep` (`settings.skills.setFolderLinked`)      |
-| [x]  | a skill's bundled files: list, read, write, delete file, create and delete folder | S6        | `feat(skills): a skill's bundled files on the server` (`settings.skills.*File(s)`)     |
-| [x]  | `GET /api/settings/skills/listed-files`, `GET …/listed-file` (read-only skills)   | S6        | `feat(skills): a listed skill's files` (`listDocumentFiles`, `readDocumentFile`)       |
-| [x]  | `PUT /api/settings/skills/paths`, `DELETE …/paths` (any folder or `.md` file)     | S6        | `feat(skills): the skill paths` (`settings.skills.addPath`, `removePath`)              |
-| [x]  | `listProviders` also lists a `models.json` entry pi cannot compose                | S5        | `feat(settings): the entry pi cannot compose`                                          |
+| Done | main                                                                              | For slice | Branch today                                                                        |
+| ---- | --------------------------------------------------------------------------------- | --------- | ----------------------------------------------------------------------------------- |
+| [x]  | chat `bash`, `abort_bash`                                                         | S2        | `feat(conversation): the run status`                                                |
+| [x]  | chat `autocomplete`                                                               | S2        | `feat(conversation): the palette's data`                                            |
+| [x]  | chat `cancel_retry`, `set_auto_retry`                                             | S2        | `feat(conversation): the run controls`                                              |
+| [x]  | chat `set_auto_compaction`, `abort_compaction`                                    | S2        | `feat(conversation): the run controls`                                              |
+| [x]  | chat `clear_queue`                                                                | S2        | `feat(conversation): the run controls`                                              |
+| [x]  | chat `set_label`                                                                  | S2        | `feat(conversation): the run controls`                                              |
+| [x]  | chat `set_hide_thinking`                                                          | S2        | `feat(conversation): the run controls`                                              |
+| [x]  | chat `set_tree_filter_mode`                                                       | S2        | `feat(conversation): the branch rows` (`setTreeFilterMode`)                         |
+| [x]  | chat `reload`, `reload_session`                                                   | S2        | verified: `/reload` is pi's, `reloadFromDisk` is `reload_session`                   |
+| [x]  | chat `set_coding_tools`                                                           | S2        | `feat(conversation): the composer menus`                                            |
+| [x]  | `POST /api/sessions/{id}/export`                                                  | S2        | `feat(conversation): the transcript as a file` (`conversation.query` kind `export`) |
+| [x]  | `POST /api/sessions/{id}/clone`                                                   | S2        | `feat(conversation): the branch rows` (`clone`, pi's fork at the leaf)              |
+| [x]  | `POST /api/sessions/{id}/move`                                                    | S3        | `feat(conversation): the move` (`sessions.move`, pi's `forkFrom`)                   |
+| [x]  | `DELETE /api/projects/sessions` (delete a project's chats)                        | S3        | `feat(sessions): a project's chats are deleted together` (`sessions.removeProject`) |
+| [x]  | a deleted chat's pin, and an emptied session folder, are left behind              | S3        | `fix(sessions): a deleted chat's pin and an emptied project folder`                 |
+| [x]  | `PUT /api/settings/mcp/default-tool`                                              | S4        | `feat(settings): the MCP default tool` (`settings.mcp.setDefaultTool`)              |
+| [x]  | `POST /api/settings/mcp/command`                                                  | S4        | `feat(settings): the MCP sign-in line` (`settings.mcp.command`)                     |
+| [x]  | `POST /api/settings/providers/models` (read a provider's model list)              | S5        | `feat(settings): the model import` (`settings.providers.import`)                    |
+| [x]  | `POST /api/settings/providers/test`                                               | S5        | `feat(settings): the provider test` (`settings.providers.test`)                     |
+| [x]  | `POST /api/settings/providers/{id}/logout` (through `ModelRuntime.logout()`)      | S5        | `feat(settings): the provider account` (`settings.providers.logout`)                |
+| [x]  | `POST /api/settings/skills/folders/link`, `…/unlink`                              | S6        | `feat(skills): the folders other agents keep` (`settings.skills.setFolderLinked`)   |
+| [x]  | a skill's bundled files: list, read, write, delete file, create and delete folder | S6        | `feat(skills): a skill's bundled files on the server` (`settings.skills.*File(s)`)  |
+| [x]  | `GET /api/settings/skills/listed-files`, `GET …/listed-file` (read-only skills)   | S6        | `feat(skills): a listed skill's files` (`listDocumentFiles`, `readDocumentFile`)    |
+| [x]  | `PUT /api/settings/skills/paths`, `DELETE …/paths` (any folder or `.md` file)     | S6        | `feat(skills): the skill paths` (`settings.skills.addPath`, `removePath`)           |
+| [x]  | `listProviders` also lists a `models.json` entry pi cannot compose                | S5        | `feat(settings): the entry pi cannot compose`                                       |
 
 ## Client files
 

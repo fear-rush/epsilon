@@ -5,7 +5,8 @@ import { Context, Effect, FileSystem, Layer } from "effect";
 import { FileUnwritable, SessionNotFound, SessionRunning } from "#protocol/errors";
 
 import { AgentHome } from "../platform/agent-home.ts";
-import { appendText, removePath } from "../platform/files.ts";
+import { appendText, removeEmptyDir, removePath } from "../platform/files.ts";
+import { isInside } from "../platform/paths.ts";
 import { forkSession } from "../platform/pi.ts";
 import { Catalog } from "./catalog.ts";
 import type { StoredSummary } from "./ingest.ts";
@@ -114,6 +115,9 @@ export const SessionsLive = Layer.effect(
 		const remove: SessionsApi["remove"] = (sessionId) =>
 			Effect.gen(function* () {
 				const row = yield* locatable(sessionId);
+				// Pin first, as a project's removal does: a pin write that fails refuses while the
+				// chat is still whole, rather than leaving a pin for a file that is gone.
+				yield* pins.set(sessionId, false);
 				yield* withFs(removePath(row.path));
 				yield* catalog.sync([dirname(row.path)]);
 			});
@@ -144,8 +148,21 @@ export const SessionsLive = Layer.effect(
 				if (first !== undefined) return yield* new SessionRunning({ sessionId: first });
 				// Pins first: a pin write that fails refuses before a single file is gone.
 				for (const row of rows) yield* pins.set(row.id, false);
-				for (const row of rows) yield* withFs(removePath(row.path));
-				yield* catalog.sync([...new Set(rows.map((row) => dirname(row.path)))]);
+				const folders = new Set<string>();
+				for (const row of rows) {
+					folders.add(dirname(row.path));
+					yield* withFs(removePath(row.path));
+				}
+				// pi keeps one folder per project under `sessions/`; empty, it goes with its chats. A
+				// folder outside that root is a `sessionDir` pi resolved for the project, and stays
+				// where it is. `rmdir` refuses a folder that still holds something, which is why the
+				// failure is swallowed: only an empty one was ours to drop.
+				const root = join(home.agentDir, "sessions");
+				for (const folder of folders) {
+					if (!isInside(folder, root)) continue;
+					yield* removeEmptyDir(folder).pipe(Effect.orElseSucceed(() => undefined));
+				}
+				yield* catalog.sync([...folders]);
 				return { removed: rows.length };
 			});
 

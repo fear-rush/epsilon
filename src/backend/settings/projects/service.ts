@@ -13,9 +13,10 @@ import type {
 
 import { AgentHome } from "../../platform/agent-home.ts";
 import type { AgentHomeApi } from "../../platform/agent-home.ts";
+import { isInside } from "../../platform/paths.ts";
 import { PiConfig } from "../../platform/pi.ts";
 import type { PiProjectTrustApi } from "../../platform/pi.ts";
-import { isInside, projectName } from "./rules.ts";
+import { projectName } from "./rules.ts";
 import { decideProjectTrust } from "./trust.ts";
 
 /**
