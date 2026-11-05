@@ -57,7 +57,7 @@ export function useBranching({
 				try {
 					await action;
 				} catch (cause) {
-					report(cause instanceof Error ? cause.message : String(cause));
+					report(cause);
 				}
 			})();
 		},
@@ -75,7 +75,7 @@ export function useBranching({
 			try {
 				await conversation.clone();
 			} catch (cause) {
-				report(cause instanceof Error ? cause.message : String(cause));
+				report(cause);
 			} finally {
 				setCloning(false);
 			}

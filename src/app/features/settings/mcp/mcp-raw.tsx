@@ -1,4 +1,5 @@
 import { CodeEditor } from "@/components/editor/code-editor/code-editor";
+import { Notice } from "@/components/patterns/status/notice";
 import { FieldError } from "@/components/ui/field";
 
 import type { McpRawDraft } from "./mcp-raw-draft";
@@ -16,7 +17,7 @@ export function McpRawPane({ raw }: { raw: McpRawDraft }) {
 				onChange={raw.edit}
 			/>
 			{raw.problem !== undefined && <FieldError>{raw.problem}</FieldError>}
-			{raw.query.error !== null && <FieldError>{raw.query.error.message}</FieldError>}
+			{raw.query.error !== null && <Notice error={raw.query.error} />}
 		</>
 	);
 }

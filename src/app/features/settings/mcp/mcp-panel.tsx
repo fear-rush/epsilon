@@ -217,15 +217,9 @@ function McpPanel({ selected }: { selected: { scope: McpScope; name: string } | 
 				<code>codemode</code> or <code>tool_search</code>.
 			</Notice>
 		),
-		codemode.error === null ? undefined : (
-			<Notice key="codemode" tone="danger">
-				{codemode.error.message}
-			</Notice>
-		),
+		codemode.error === null ? undefined : <Notice key="codemode" error={codemode.error} />,
 		defaultTool.error === null ? undefined : (
-			<Notice key="default-tool" tone="danger">
-				{defaultTool.error.message}
-			</Notice>
+			<Notice key="default-tool" error={defaultTool.error} />
 		),
 	].filter((notice) => notice !== undefined);
 

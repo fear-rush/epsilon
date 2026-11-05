@@ -70,10 +70,15 @@ keys); the index conformance test against `SessionManager.listAll`
       model menu, `session-view` (42.4) split out of the old `chat` chunk (21.6), and
       Base UI's label/focus guards (`useAriaLabelledBy` 8.1 KiB).
 - [ ] **The index blocks the event loop.** The catalog syncs synchronously inside the
-      `epsilon` process; the worker in the original design was never built. A cold build
-      measured 375–677 ms on 500 sessions, and during it the socket answers nothing. The
-      benchmark now puts it at 578–631 ms, and an incremental reconcile after one append
-      at 65 ms (124 ms at load 5.5). Measure
+      `epsilon` process; the worker in the original design was never built.
+      **Measured on a copy of the owner's real home, 2026-11-05: cold build 14,712 ms for
+      955 sessions (1.8 GB of session files), warm re-sync 89 ms, 955 rows.** During the
+      cold build the socket answers nothing, so a fresh index or a reset index freezes
+      every open tab. The synthetic benchmark (500 sessions) reads 578–631 ms, and an
+      incremental reconcile after one append 65 ms (124 ms at load 5.5) — the real home is
+      ~25x that because its files are large. This is past the 100 ms line, so the choice is
+      a Worker (one write connection, as designed) or a chunked async sync; the owner
+      picks. Measure
       a cold build on a copy of the owner's home; if it exceeds 100 ms, move the sync into a
       Worker (one write connection, as designed) or chunk it, and add a benchmark budget.
       Ask the owner before choosing.
@@ -119,7 +124,7 @@ keys); the index conformance test against `SessionManager.listAll`
       without the fix, passing in 370 ms with it). Still open: a dialog whose tab never
       attaches sits until the chat is reopened, which replays it.
 
-- [ ] **Features still render a thrown error's message.** The translator rule
+- [x] **Features still render a thrown error's message.** The translator rule
       (ARCHITECTURE, "One translator") wants `Notice error`/`StatusView error`, with an
       explicit title when the action is more precise than the tag's. Sites found while
       proving S1: `projects/trust-gate.tsx`, `settings/mcp/mcp-add-dialog.tsx`,
@@ -132,6 +137,14 @@ keys); the index conformance test against `SessionManager.listAll`
       The shared `DeleteDialog` now renders `Notice error` instead of `error.message`,
       because a tagged error's `message` is empty and the alert drew as an empty box: every
       delete refusal in the app has the translator's words from S3 on.
+      Settled 2026-11-05: every site from the list above now passes the error whole
+      (`Notice error={…}`), plus four the first grep missed because the variable was named
+      otherwise — the MCP default-tool and codemode reads, the registry detail, the
+      skills import's refused install (which drew an empty notice), and the chat's own
+      branch refusals, which now translate like every other refused command. What stays is
+      pi's data (`testResult`, the login flow's messages, a parse problem) and one
+      composed sentence in the MCP add dialog that names which servers were written before
+      the failure — a human-written message, not a tagged error's empty one.
 
 - [ ] **A session pi cannot total.** pi's `getSessionStats()` reads `message.usage.input`
       on every assistant message, so a file whose assistant entry has no `usage` throws it,

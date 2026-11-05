@@ -84,7 +84,7 @@ function ResultList({
 		);
 	}
 	if (search.isError) {
-		return <Notice tone="danger" title={search.error.message} />;
+		return <Notice error={search.error} />;
 	}
 	const items = search.data.pages.flatMap((page) => page.items);
 	if (items.length === 0) return <Centered>No servers found</Centered>;
@@ -249,7 +249,7 @@ function ServerView({
 						<Spinner />
 					</Centered>
 				)}
-				{detail.isError && <Notice tone="danger" title={detail.error.message} />}
+				{detail.isError && <Notice error={detail.error} />}
 				{detail.data !== undefined && (
 					<>
 						<p className="line-clamp-2 text-body text-muted-foreground">

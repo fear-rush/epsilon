@@ -55,7 +55,7 @@ export function TrustGate({
 							</div>
 						</div>
 						<TrustNotice status={status.data} />
-						{trust.isError && <Notice tone="danger">{trust.error.message}</Notice>}
+						{trust.isError && <Notice error={trust.error} />}
 						<div className="flex justify-end gap-2">
 							<Button variant="destructive" onClick={() => void navigate({ to: "/", search: {} })}>
 								Cancel

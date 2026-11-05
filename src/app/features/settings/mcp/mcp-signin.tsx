@@ -10,10 +10,9 @@ import { useMutation } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
 import { Section } from "@/components/patterns/section/section";
-import { toneText } from "@/components/patterns/status/status-tone";
+import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
 import { useSettingsProject } from "@/features/settings/queries";
-import { cn } from "@/lib/cn";
 
 import { runMcpCommand } from "./commands.ts";
 type McpCommandInput = { readonly action: "login" | "logout" | "reconnect"; readonly name: string };
@@ -108,9 +107,7 @@ export function McpSignIn({
 					</Link>
 				</p>
 			)}
-			{command.error === null ? undefined : (
-				<p className={cn("text-meta", toneText("danger"))}>{command.error.message}</p>
-			)}
+			{command.error === null ? undefined : <Notice error={command.error} />}
 		</Section>
 	);
 }

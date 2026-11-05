@@ -101,7 +101,7 @@ export function McpOverrideForm({ detail }: { detail: McpOverrideSubject }) {
 				</Row>
 			</Section>
 
-			{failure !== null && <Notice tone="danger">{failure.message}</Notice>}
+			{failure !== null && <Notice error={failure} />}
 
 			<DeleteDialog
 				open={deleteOpen}

@@ -75,7 +75,8 @@ export function ReviewStep({
 	/** The project the Settings tab shows, or undefined on the Global tab. */
 	project: string | undefined;
 	installing: boolean;
-	error: string | undefined;
+	/** The refused install itself, so the surface can translate it. */
+	error: Error | undefined;
 	expired: boolean;
 	onInstall: (commit: Commit) => void;
 	onBack: () => void;
@@ -164,10 +165,12 @@ export function ReviewStep({
 					existing, untick the skill, or pick the other place.
 				</Notice>
 			) : null}
-			{error === undefined ? null : (
+			{error === undefined ? null : expired ? (
 				<Notice tone="danger">
-					{expired ? "This import expired after an hour. Start over to fetch it again." : error}
+					This import expired after an hour. Start over to fetch it again.
 				</Notice>
+			) : (
+				<Notice error={error} />
 			)}
 
 			{footer !== null &&
