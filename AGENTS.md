@@ -7,25 +7,26 @@ and a terminal using that home are one agent, and Settings configures it there.
 
 ## Start here
 
-**This branch is finishing a rebuild.** Before any work, read
-[docs/plan/README.md](docs/plan/README.md): the current phase, the next item, and how to
-work and report it. `main` (`48226bb`) is the specification of every feature, screen,
-word and animation; nothing of it is dropped without the owner's yes.
+**The rebuild is ported.** Every feature, screen, word and animation of `main`
+(`48226bb`) is on this branch with its tests; the plan and its 282-row parity ledger are
+history in [archive/docs/plan/](archive/docs/plan/README.md). `main` stays the
+specification: a visible change beyond the feedback system needs the owner's yes. What is
+left before the merge is [docs/NEXT.md](docs/NEXT.md).
 
 Then read what your task needs ([docs/README.md](docs/README.md) has the full table):
 
 | You are about to                               | Read first                                                         |
 | ---------------------------------------------- | ------------------------------------------------------------------ |
+| know what is left before the merge             | [docs/NEXT.md](docs/NEXT.md)                                       |
 | touch anything pi                              | [docs/pi-sdk.md](docs/pi-sdk.md)                                   |
 | write server, engine or runtime code           | [docs/effect.md](docs/effect.md)                                   |
-| port a screen from `main`                      | [docs/plan/03-port.md](docs/plan/03-port.md)                       |
 | show an error, warning, empty or loading state | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#feedback-surfaces)     |
 | add or move a file                             | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#file-rules)            |
 | propose an option that sounds obvious          | [docs/DECISIONS.md](docs/DECISIONS.md) (it may have been rejected) |
 
 Code wins over prose: fix a doc that disagrees in the same commit. Never copy code or
-file lists into a doc. `.sandbox/` is scratch, not instructions; the plans in it are
-retired.
+file lists into a doc. `.sandbox/` is scratch, not instructions; `archive/` is history,
+not instructions.
 
 ## Layout
 
@@ -103,16 +104,15 @@ There is no line limit; split files by meaning, as
 
 ## Working on this repository as an agent
 
-- **One item at a time.** Take the next unticked item of the current phase. Something
-  else you notice becomes a new unticked item in the right plan file, not part of this
-  commit.
+- **One item at a time.** Take the next unticked item of [docs/NEXT.md](docs/NEXT.md).
+  Something else you notice becomes a new unticked item there, not part of this commit.
 - **Done needs evidence.** A tick needs what the item's _Done when_ asks for. For UI that
   includes `bun run parity` and screenshots of the running app read by you; type-check
   and lint passing say nothing about pixels.
 - **Never drop, never improvise.** Removing or restyling something of `main`'s, or a
   visible change beyond the feedback system, needs the owner's yes first.
-- **Same commit**: the code, its tests, the plan tick, and the ARCHITECTURE or DECISIONS
-  change it causes. Messages are `type(scope): what changed`.
+- **Same commit**: the code, its tests, the `docs/NEXT.md` tick, and the ARCHITECTURE or
+  DECISIONS change it causes. Messages are `type(scope): what changed`.
 - **Report**: what changed, the commands run and their results, the test duration,
   screenshot paths, and what you could not do. Say plainly when something failed or was
   skipped.
@@ -141,7 +141,7 @@ There is no line limit; split files by meaning, as
 
 ## Ask before acting when
 
-- Something of `main`'s seems wrong, unused or not worth porting.
+- Something of `main`'s seems wrong, unused or not worth keeping.
 - The request needs a capability [pi-sdk.md](docs/pi-sdk.md) does not list.
 - The engine would stop being an SDK call inside a process Epsilon supervises.
 - A check fails for a reason you do not understand.

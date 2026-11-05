@@ -6,7 +6,7 @@ screen is ported, so each screen is ported once, straight onto it.
 
 ## Surfaces and rules
 
-They live in [ARCHITECTURE.md, Feedback surfaces](../ARCHITECTURE.md#feedback-surfaces):
+They live in [ARCHITECTURE.md, Feedback surfaces](../../../docs/ARCHITECTURE.md#feedback-surfaces):
 the scope → surface table, the one tone vocabulary, the translator, and the no-toast,
 spinner and colour rules.
 

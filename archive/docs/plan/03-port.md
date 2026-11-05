@@ -18,7 +18,7 @@ The checklist is [ledger.md](ledger.md); its slices S2–S9 are this phase, in o
    - where data comes from (`fetch`/OpenAPI → `call()`, queries, the socket runtime);
    - schemas (zod → Effect Schema; forms through `Schema.toStandardSchemaV1`);
    - import paths and file boundaries, per
-     [ARCHITECTURE.md, File rules](../ARCHITECTURE.md#file-rules);
+     [ARCHITECTURE.md, File rules](../../../docs/ARCHITECTURE.md#file-rules);
    - the feedback surfaces of [phase 2](02-feedback.md);
    - render performance (memo, virtualization, lazy code; DECISIONS.md "Virtualize the
      transcript and the session list"), as long as pixels and motion do not change.

@@ -190,7 +190,7 @@ you checked in the commit body.
 | ------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | Race    | Can two writers (the panel, an engine, terminal pi) touch this file at once? | pi's lock for `settings.json` via `JsonDocument`; DECISIONS "Concurrent writers are detected, not prevented" |
 | Leak    | Is every process, watcher, socket, fiber and timer owned by a Scope?         | AGENTS.md invariant 9                                                                                        |
-| Hang    | Does every wait have a deadline, and every test a timeout?                   | [effect.md](../effect.md); `test/until.ts`                                                                   |
+| Hang    | Does every wait have a deadline, and every test a timeout?                   | [effect.md](../../../docs/effect.md); `test/until.ts`                                                        |
 | Silence | Does every failure reach a tagged error, an error frame or a notice?         | invariant 10, [02-feedback.md](02-feedback.md)                                                               |
 | Growth  | Can a list, a buffer, a cache or a transcript grow without a cap?            | F8m; the engine cap                                                                                          |
 | Render  | Does a stream update re-render more than the rows that changed?              | React Compiler is on; virtualized lists                                                                      |

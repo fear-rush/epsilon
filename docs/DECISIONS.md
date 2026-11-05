@@ -95,7 +95,7 @@ new session format. Keeping the index only in memory.
 
 Open: the design put the writes in a Worker; it was not built, and the sync runs in the
 server process, so a cold build stalls the socket. Whether to build the Worker is an item
-in [plan/04-safety.md](plan/04-safety.md).
+in [the rebuild plan](../archive/docs/plan/04-safety.md).
 
 ## An engine cap
 
@@ -298,7 +298,7 @@ notice, and much of the UI was lost (the MCP settings kept 4% of their code). Se
 ## `main` is the feature specification
 
 Every feature, screen, word, animation and test of `main` at `48226bb` is ported 1:1.
-What may differ is a closed list in [plan/03-port.md](plan/03-port.md): the data source,
+What may differ is a closed list in [the rebuild plan](../archive/docs/plan/03-port.md): the data source,
 the schema language, file boundaries, render performance and the feedback system.
 Dropping or changing anything else needs the owner's dated yes in the ledger. The app
 runs after every commit.
@@ -315,7 +315,7 @@ URL: `settings/mcp` everywhere, not `config` on the server and `settings` on the
 
 Why: two names for one thing (`config`/`settings`, `engine`/`engines`,
 `catalog`/`sessions`) sent agents to the wrong folder. The moves are in
-[plan/01-structure.md](plan/01-structure.md).
+[the rebuild plan](../archive/docs/plan/01-structure.md).
 
 ## Feedback has one surface per scope
 
@@ -494,3 +494,92 @@ Why: the connection and its OAuth state belong to the engine that holds the MCP 
 second client in the backend would open a second connection per server. The owner approved
 this in place of the earlier invariant ("MCP sign-in stays in the terminal"); invariant 5
 now says Epsilon never writes `mcp-auth.json`.
+
+## The index yields between slices, it is not a worker
+
+The catalog reconciles session files in the process that holds the socket, and Effect does
+not preempt synchronous work: a cold build on the owner's real home (1.8 GB, 955 sessions)
+took **14.7 s** during which the server answered nothing. `sync` now hands control back
+with `Effect.yieldNow` when a slice has run 40 ms, so one slice is the longest the server
+is deaf.
+
+Why: measured on that copy, the freeze was every open tab. The fix is one loop condition,
+one writer, and no second process to own; `catalog-stall` (100 ms) reads 49 ms with it and
+653 ms without, and a catalog test proves another fiber gets turns — it sees zero without
+the yield. Cost accepted:
+the cold build is ~7% slower (15.7 s), paid once when the index is built.
+
+Not: a Worker with the index's write connection. The design named one, but a second
+context plus a message protocol buys nothing the clock-gated yield does not, and it would
+have to share the sqlite connection that must stay single-writer.
+
+## pi's `sessionDir` decides where the list reads
+
+pi writes a folder's sessions under `<agent>/sessions` unless a settings file names a
+`sessionDir`, which pi resolves against the folder. The catalog reads pi's own answer for
+the home's chat folder and for every folder its rows name, and reconciles those roots.
+
+Why: before this, a home or project that moved its sessions had no chats in the dashboard
+at all — not listed, not openable, not deletable — because the index walked one root. The
+window line has to follow the same setting.
+
+Cost accepted: a folder that moved its sessions is only discoverable from a chat's
+recorded cwd, so a brand-new session in a custom folder is found on the next list read,
+which is also when main listed it.
+
+Not: a second root list the operator maintains by hand. Not refusing a custom
+`sessionDir`.
+
+## "Can run a turn" counts configured providers
+
+The General page's Status row counts, and the Default model picker offers, only models
+whose provider pi reports as configured. The settings rows still describe every composed
+model.
+
+Why: pi's catalog is a catalogue, not a bill of health — on the dev sandbox it composes
+1693 models against one credential, so the row promised runs that would fail. pi's own
+answer to "configured" is the one the engine obeys.
+
+Not: counting the whole catalog and rewording the sentence.
+
+## A chat pi cannot total opens, and says why
+
+pi's `getSessionStats()` reads `message.usage.input` on every assistant message and
+throws when one has none, which only a hand-written file does. The readings are computed
+on the engine's event loop behind `Effect.try`; a chat pi cannot total sends one notice
+("This chat's readings could not be read: …") and keeps serving.
+
+Why: the snapshot computed the readings inline, so such a file killed the engine during
+attach, the supervisor recorded a crash, and the next message reattached into the same
+crash. A missing usage block is a bad reading, not a bad chat.
+
+Not: refusing the file with words. Not trusting the numbers and rendering zero totals,
+which would be a lie about cost.
+
+## A refusal's words come from the translator
+
+A refused command reaches the page as a tagged error whose `message` is empty by design;
+the composer reports the error itself and lets `errorView` supply the sentence. Every
+`Notice`/`StatusView` takes `error={…}`, and no feature prints `error.message`.
+
+Why: compacting a chat with nothing to compact drew a status line with an icon and no
+words. The same defect had already been fixed once for the delete dialogs, because a
+tagged error's message is empty. pi's data messages — a test result, a login question, a
+parse problem — are not thrown errors and stay text.
+
+Not: filling `message` on the protocol's errors, which would duplicate the translator's
+words in two places.
+
+## The e2e specs assert the app as built
+
+The Playwright specs are updated to the controls the pages draw, and a spec that expects a
+control no version of the app has is a spec bug. They were written before the UI existed
+("write the specs first"), which is why most of the seven failures expected controls no
+version of the app has: a "Session settings" dialog, a "Branch tree" button, a link
+labelled "add provider".
+
+Why: the suite's value is that it opens the real app and reads it. A spec pinned to a
+prototype turns every UI decision into a red test that says nothing about the code.
+
+Not: keeping both UIs alive to satisfy the specs. Not deleting a spec that found a real
+bug: `onboarding` found that a custom model without cost rates could not be saved at all.

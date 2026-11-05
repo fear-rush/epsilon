@@ -14,14 +14,20 @@ Browser tab ──one WebSocket (Effect RPC)──▶ epsilon   (Bun, one port, 
                                                                          (pi's AgentSessionRuntime + extensions)
 ```
 
-| Process   | Owns                                                                                  | Never does                              |
-| --------- | ------------------------------------------------------------------------------------- | --------------------------------------- |
-| `epsilon` | Socket, configuration, catalog reads, supervisor, the page                            | Import pi's runtime; run extension code |
-| Catalog   | Runs inside `epsilon`: the index's one write connection, the fs watch, the stat sweep | Write session files                     |
-| Engine    | One `AgentSessionRuntime`, its extensions, dialogs, frames                            | Talk to the browser; outlive `epsilon`  |
+| Process   | Owns                                                                                                                                    | Never does                              |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `epsilon` | Socket, configuration, catalog reads, supervisor, the page                                                                              | Import pi's runtime; run extension code |
+| Catalog   | Runs inside `epsilon`: the index's one write connection, the fs watch, the stat sweep, and a build sliced so the socket keeps answering | Write session files                     |
+| Engine    | One `AgentSessionRuntime`, its extensions, dialogs, frames                                                                              | Talk to the browser; outlive `epsilon`  |
 
 One crash, freeze or leak costs one chat. The chat restarts from its JSONL, which stays
 the truth. The index is derived: delete it and nothing is lost.
+
+A folder can move its session files with pi's `sessionDir` setting, so the catalog does
+not assume one root: it reads pi's own answer for the home's chat folder and for every
+folder its rows name, and reconciles those. A cold build on a real home is seconds of
+parsing, so the loop hands control back in slices — the socket answers during it, and the
+longest stall is tens of milliseconds.
 
 In dev, Vite serves the UI with HMR and proxies the one socket to the server; the
 server's own port redirects to Vite, so it is never mistaken for the page. In production
@@ -80,13 +86,17 @@ view, built from the shared patterns.
 
 1. The page attaches to a session: `conversation.attach` returns a stream of frames.
 2. The registry either reuses the engine for that session or asks the supervisor to
-   spawn one inside a scope. The engine builds its runtime from the session file.
+   spawn one inside a scope. The engine builds its runtime from the session file. A chat
+   whose folder is gone is gated by the page before this: the list carries `cwdMissing`,
+   and an engine started on such a folder anyway stops at start.
 3. The engine reports ready once the session exists, before pi's extensions finish
    `session_start`: pi awaits those handlers, and one that asks a question needs an
    attached page to answer it. Commands wait for the binding, and a bind that fails
    refuses them with the reason and a notice.
 4. The engine sends a windowed snapshot (entry ids, recent entries, notices); older
-   pages arrive when the transcript asks. The flat tree arrives when the picker opens,
+   pages arrive when the transcript asks. The readings are computed on the engine's event
+   loop, so a chat pi cannot total skips them with a notice instead of taking the engine
+   down with it. The flat tree arrives when the picker opens,
    and the reducer nests it so the picker draws main's shape. The composer's readings
    (pi's context usage, the session's totals, the cache warmer) follow the snapshot and
    again whenever pi's numbers change, and the keyed statuses extensions set travel as a
@@ -106,6 +116,7 @@ view, built from the shared patterns.
 | State                                           | Truth                                                 |
 | ----------------------------------------------- | ----------------------------------------------------- |
 | Sessions, transcript, tree                      | pi's JSONL on disk                                    |
+| Where those files live                          | pi's `sessionDir`; the catalog follows it (see below) |
 | Session list, pins, renames                     | The SQLite index (derived) and `pinned-sessions.json` |
 | Providers, models, MCP, skills, packages, trust | pi's documented files                                 |
 | Epsilon settings (`maxRunning`, …)              | `<home>/.epsilon/settings.json`                       |

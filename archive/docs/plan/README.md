@@ -1,5 +1,9 @@
 # Plan: finish the rebuild
 
+> **Archived.** This plan is done: every phase below is finished and the ledger is fully
+> ticked. It is kept as the record of what `main` had and why a ported screen differs —
+> never as instructions. Live status: [docs/NEXT.md](../../../docs/NEXT.md).
+
 Status board for `refactor/rebuild`. Started 2026-11-04; `main` is at `48226bb`.
 
 ## The goal
@@ -9,7 +13,7 @@ foundation: Effect, typed errors, one engine process per chat, the SQLite sessio
 one socket with typed calls, one package, bounded and time-aware tests. The one
 deliberate visible change is a consistent feedback system.
 
-What the foundation is and why it was chosen: [DECISIONS.md](../DECISIONS.md). The
+What the foundation is and why it was chosen: [DECISIONS.md](../../../docs/DECISIONS.md). The
 foundation is built and stays; what remains is structure, parity and safety.
 
 ## Phases, in order
@@ -45,7 +49,7 @@ Update the Status column in the commit that changes a phase's state.
 
 - something of `main`'s seems wrong, unused or not worth porting;
 - a visible change beyond the feedback system seems better;
-- the work needs a pi capability [pi-sdk.md](../pi-sdk.md) does not list;
+- the work needs a pi capability [pi-sdk.md](../../../docs/pi-sdk.md) does not list;
 - a check fails for a reason you do not understand, or a run passes its time budget.
 
 Do not decide these yourself, and do not route around them.
