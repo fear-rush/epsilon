@@ -424,3 +424,59 @@ describe("settings.skills", () => {
 		expect(result.refused.reason).toContain("cannot be turned off");
 	});
 });
+
+describe("skills of other agents", () => {
+	test("lists another agent's folder and links it through pi's setting", async () => {
+		const { layer, userHome } = skillsLayer("foreign");
+		const claude = join(userHome, ".claude", "skills");
+		writeSkill(claude, "from-claude", "name: from-claude\ndescription: Claude's skill");
+		// An empty folder is not a skill folder, so Codex contributes nothing here.
+		mkdirSync(join(userHome, ".codex", "skills"), { recursive: true });
+
+		const outcome = await Effect.runPromise(
+			Effect.gen(function* () {
+				const client = yield* testClient(SkillRpcs, layer);
+				const before = yield* client["settings.skills.list"]({ folder: null });
+				yield* client["settings.skills.setFolderLinked"]({
+					folder: null,
+					linked: true,
+					path: claude,
+				});
+				const linked = yield* client["settings.skills.list"]({ folder: null });
+				yield* client["settings.skills.setFolderLinked"]({
+					folder: null,
+					linked: false,
+					path: claude,
+				});
+				const unlinked = yield* client["settings.skills.list"]({ folder: null });
+				// A path Epsilon did not detect is refused, so no page can add an arbitrary folder.
+				const refused = yield* Effect.flip(
+					client["settings.skills.setFolderLinked"]({
+						folder: null,
+						linked: true,
+						path: "/etc",
+					}),
+				);
+				return { before, linked, refused, unlinked };
+			}).pipe(Effect.scoped, Effect.provide(layer)),
+		);
+
+		expect(outcome.before.foreignSkills).toHaveLength(1);
+		expect(outcome.before.foreignSkills[0]).toMatchObject({
+			agent: "claude-code",
+			folder: claude,
+			linked: false,
+			scope: "user",
+		});
+		expect(outcome.linked.foreignSkills[0]?.linked).toBe(true);
+		// Linked means pi loads it where it is: the skill arrives as a path, not a copy.
+		expect(outcome.linked.skills.find((view) => view.name === "from-claude")).toMatchObject({
+			editable: false,
+			origin: "settings-path",
+			status: "active",
+		});
+		expect(outcome.unlinked.foreignSkills[0]?.linked).toBe(false);
+		expect(outcome.refused).toBeInstanceOf(SkillRefused);
+		expect(outcome.refused.reason).toContain("not a skill folder");
+	});
+});

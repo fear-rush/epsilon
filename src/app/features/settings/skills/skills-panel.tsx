@@ -9,6 +9,7 @@ import { MasterDetail } from "@/components/patterns/pane/master-detail";
 import { Button, buttonVariants } from "@/components/ui/button";
 
 import { useSettings, useSettingsProject } from "../queries.ts";
+import { ForeignSkills } from "./foreign-skills.tsx";
 import { ImportSkillsDialog } from "./import/import-dialog.tsx";
 import { groupSkills } from "./skill-groups.ts";
 import { skillKey, skillSearch } from "./skill-search.ts";
@@ -29,6 +30,12 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 	const visible = skills.filter((skill) =>
 		`${skill.name} ${skill.description}`.toLowerCase().includes(needle),
 	);
+	// A project tab lists only the project's own skills, other agents' folders included.
+	const foreign = (settings.data?.skills.foreignSkills ?? []).filter(
+		(skill) =>
+			(!inProject || skill.scope === "project") &&
+			`${skill.name} ${skill.description}`.toLowerCase().includes(needle),
+	);
 	const fallback = settings.data?.project;
 	const groups = groupSkills(
 		visible,
@@ -37,6 +44,7 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 			: undefined,
 	);
 	const shown = groups.reduce((total, group) => total + group.skills.length, 0);
+	const nothing = shown === 0 && foreign.length === 0;
 
 	return (
 		<ListPane
@@ -44,7 +52,7 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 			count={shown}
 			scope="/settings/skills"
 			empty={
-				shown === 0
+				nothing
 					? needle !== "" && skills.length > 0
 						? "Nothing matches."
 						: inProject
@@ -91,6 +99,7 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 						))}
 					</ListGroup>
 				))}
+				<ForeignSkills skills={foreign} />
 			</div>
 		</ListPane>
 	);

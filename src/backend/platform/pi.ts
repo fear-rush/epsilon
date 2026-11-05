@@ -9,6 +9,7 @@ import {
 	hasTrustRequiringProjectResources,
 	loadProjectContextFiles,
 	loadSkills,
+	loadSkillsFromDir,
 	parseFrontmatter,
 } from "@earendil-works/pi-coding-agent";
 import type {
@@ -132,6 +133,11 @@ export type PiProjectTrustApi = {
 export type PiSkillsApi = {
 	readonly resolve: Effect.Effect<ResolvedPaths, SkillRefused>;
 	readonly load: (paths: ReadonlyArray<string>) => Effect.Effect<LoadSkillsResult>;
+	/**
+	 * pi's read of one skills folder pi does not scan itself, such as `~/.claude/skills`:
+	 * the same parser and diagnostics as a configured path, without touching settings.
+	 */
+	readonly loadFolder: (dir: string) => LoadSkillsResult;
 	readonly entries: (scope: PackageScope) => Effect.Effect<ReadonlyArray<string>>;
 	readonly writeEntries: (
 		scope: PackageScope,
@@ -299,6 +305,7 @@ const makeSkills = (home: AgentHomeApi, cwd: string): PiSkillsApi => {
 					skillPaths: paths.filter((path) => typeof path === "string"),
 				}),
 			),
+		loadFolder: (dir) => loadSkillsFromDir({ dir, source: "path" }),
 		resolve: Effect.tryPromise({
 			try: () => manager.resolve(() => Promise.resolve("skip")),
 			catch: skillFailure,

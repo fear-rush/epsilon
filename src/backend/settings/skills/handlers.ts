@@ -25,6 +25,8 @@ export const SkillHandlersLive = SkillRpcs.toLayer(
 				skills.writeRaw(folder, root, name, text),
 			"settings.skills.readDocument": ({ folder, filePath }) =>
 				skills.readDocument(folder, filePath),
+			"settings.skills.setFolderLinked": ({ folder, path, linked }) =>
+				skills.setFolderLinked(folder, path, linked),
 		};
 	}),
 );

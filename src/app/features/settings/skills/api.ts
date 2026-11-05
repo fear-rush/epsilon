@@ -31,3 +31,7 @@ export const writeSkillRaw = (
 
 export const readSkillDocument = (project: string | undefined, filePath: string) =>
 	call((client) => client["settings.skills.readDocument"]({ ...folder(project), filePath }));
+
+/** Add another agent's skill folder to the scope's `skills` setting, or take it out. */
+export const setSkillFolderLinked = (project: string | undefined, path: string, linked: boolean) =>
+	call((client) => client["settings.skills.setFolderLinked"]({ ...folder(project), linked, path }));

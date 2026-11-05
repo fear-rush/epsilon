@@ -71,7 +71,32 @@ export const SkillView = Schema.Struct({
 });
 export type SkillView = typeof SkillView.Type;
 
-export const SkillListView = Schema.Struct({ skills: Schema.Array(SkillView) });
+/** The other agents whose skill folders Epsilon finds on disk. */
+export const SkillAgent = Schema.Literals(["claude-code", "codex"]);
+export type SkillAgent = typeof SkillAgent.Type;
+
+/**
+ * One skill in another agent's folder. `linked` means the folder is in the `skills`
+ * setting, so pi reads the skill where it is; nothing is copied.
+ */
+export const ForeignSkillView = Schema.Struct({
+	agent: SkillAgent,
+	scope: Schema.Literals(["user", "project"]),
+	/** The folder that holds the skill, which is the unit that links and unlinks. */
+	folder: Schema.String,
+	linked: Schema.Boolean,
+	name: Schema.String,
+	description: Schema.String,
+	filePath: Schema.String,
+	warnings: Schema.Array(Schema.String),
+});
+export type ForeignSkillView = typeof ForeignSkillView.Type;
+
+export const SkillListView = Schema.Struct({
+	skills: Schema.Array(SkillView),
+	/** What other agents keep in their own folders, whether or not pi reads it. */
+	foreignSkills: Schema.Array(ForeignSkillView),
+});
 export type SkillListView = typeof SkillListView.Type;
 
 /** A frontmatter key the panel does not manage, shown read-only and kept on every save. */
@@ -199,6 +224,15 @@ export const SkillRpcs = RpcGroup.make(
 	Rpc.make("settings.skills.readDocument", {
 		payload: { ...folder, filePath: Schema.NonEmptyString },
 		success: SkillDocument,
+		error: SkillRefused,
+	}),
+	/**
+	 * Add another agent's skill folder to the `skills` setting of the scope it belongs to,
+	 * or take every entry that names it out. Only a folder Epsilon detected is accepted.
+	 */
+	Rpc.make("settings.skills.setFolderLinked", {
+		payload: { ...folder, path: Schema.NonEmptyString, linked: Schema.Boolean },
+		success: Schema.Void,
 		error: SkillRefused,
 	}),
 );

@@ -59,7 +59,7 @@ Rows marked _verify_ may exist under another name: find it before adding one.
 | [x]  | `POST /api/settings/providers/models` (read a provider's model list)          | S5        | `feat(settings): the model import` (`settings.providers.import`)                       |
 | [x]  | `POST /api/settings/providers/test`                                           | S5        | `feat(settings): the provider test` (`settings.providers.test`)                        |
 | [x]  | `POST /api/settings/providers/{id}/logout` (through `ModelRuntime.logout()`)  | S5        | `feat(settings): the provider account` (`settings.providers.logout`)                   |
-| [ ]  | `POST /api/settings/skills/folders/link`, `…/unlink`                          | S6        | verify                                                                                 |
+| [x]  | `POST /api/settings/skills/folders/link`, `…/unlink`                          | S6        | `feat(skills): the folders other agents keep` (`settings.skills.setFolderLinked`)      |
 | [ ]  | `GET /api/settings/skills/listed-files`, `POST …/listed-file`, `PUT …/listed` | S6        | verify                                                                                 |
 | [ ]  | `PUT /api/settings/skills/paths`, `DELETE …/paths`                            | S6        | verify                                                                                 |
 | [x]  | `listProviders` also lists a `models.json` entry pi cannot compose            | S5        | `feat(settings): the entry pi cannot compose`                                          |
@@ -236,46 +236,46 @@ that replacement, not missing markup.
 
 ## S6 Settings: Skills
 
-| Done | main file (`client/src/…`)                               | Lines | Branch today                | Missing exports                                                                 |
-| ---- | -------------------------------------------------------- | ----- | --------------------------- | ------------------------------------------------------------------------------- |
-| [ ]  | `features/settings/skills/foreign-skills.tsx`            | 103   | **missing**                 | `ForeignSkills`                                                                 |
-| [ ]  | `features/settings/skills/import/candidate-card.tsx`     | 129   | **missing**                 | `CandidateCard`                                                                 |
-| [ ]  | `features/settings/skills/import/import-dialog.tsx`      | 88    | exists, changed (387 lines) |                                                                                 |
-| [ ]  | `features/settings/skills/import/read-folder.ts`         | 125   | partial                     | `archiveProblem`, `checkFolder`, `filesOfDrop`, `filesOfInput`, `PickedFolder`  |
-| [ ]  | `features/settings/skills/import/review-step.tsx`        | 197   | **missing**                 | `ReviewStep`                                                                    |
-| [ ]  | `features/settings/skills/import/source-step.tsx`        | 222   | **missing**                 | `SourceStep`                                                                    |
-| [ ]  | `features/settings/skills/import/use-skill-import.ts`    | 101   | partial                     | `Staged`                                                                        |
-| [ ]  | `features/settings/skills/skill-body-checks.ts`          | 48    | **missing**                 | `bodyDiagnostics`                                                               |
-| [ ]  | `features/settings/skills/skill-body-field.tsx`          | 261   | **missing**                 | `BodyReferences`, `SkillBodyField`                                              |
-| [ ]  | `features/settings/skills/skill-card.tsx`                | 74    | **missing**                 | `SkillCard`                                                                     |
-| [ ]  | `features/settings/skills/skill-delete-entry-dialog.tsx` | 68    | **missing**                 | `SkillDeleteEntryDialog`                                                        |
-| [ ]  | `features/settings/skills/skill-draft.ts`                | 61    | partial                     | `SkillErrors`, `skillFields`                                                    |
-| [ ]  | `features/settings/skills/skill-editor.tsx`              | 52    | exists, changed (54 lines)  |                                                                                 |
-| [ ]  | `features/settings/skills/skill-file-dialog.tsx`         | 131   | **missing**                 | `SkillFileDialog`                                                               |
-| [ ]  | `features/settings/skills/skill-file-tree.ts`            | 47    | **missing**                 | `BundleEntry`, `formatSize`, `languageOf`, `newFileProblem`, `newFolderProblem` |
-| [ ]  | `features/settings/skills/skill-files-list.tsx`          | 47    | **missing**                 | `SkillFilesList`                                                                |
-| [ ]  | `features/settings/skills/skill-files.tsx`               | 138   | **missing**                 | `SkillFiles`                                                                    |
-| [ ]  | `features/settings/skills/skill-form.tsx`                | 289   | partial                     | `SkillPageState`                                                                |
-| [ ]  | `features/settings/skills/skill-groups.ts`               | 87    | exists, changed (22 lines)  |                                                                                 |
-| [ ]  | `features/settings/skills/skill-instructions.tsx`        | 30    | **missing**                 | `SkillInstructions`                                                             |
-| [ ]  | `features/settings/skills/skill-loaded-switch.tsx`       | 27    | **missing**                 | `LoadedSwitch`                                                                  |
-| [ ]  | `features/settings/skills/skill-modes.ts`                | 14    | exists, changed (6 lines)   |                                                                                 |
-| [ ]  | `features/settings/skills/skill-new-entry-dialog.tsx`    | 164   | **missing**                 | `NewEntryKind`, `SkillNewEntryDialog`                                           |
-| [ ]  | `features/settings/skills/skill-notices.tsx`             | 49    | **missing**                 | `SkillNotices`                                                                  |
-| [ ]  | `features/settings/skills/skill-page-state.ts`           | 36    | **missing**                 | `useSkillPage`                                                                  |
-| [ ]  | `features/settings/skills/skill-page.tsx`                | 51    | exists, changed (19 lines)  |                                                                                 |
-| [ ]  | `features/settings/skills/skill-path-dialog.tsx`         | 85    | **missing**                 | `SkillPathDialog`                                                               |
-| [ ]  | `features/settings/skills/skill-paths.tsx`               | 66    | **missing**                 | `SkillPaths`                                                                    |
-| [ ]  | `features/settings/skills/skill-raw-pane.tsx`            | 84    | **missing**                 | `RawPane`                                                                       |
-| [ ]  | `features/settings/skills/skill-raw-source.ts`           | 80    | **missing**                 | `RawSource`, `useRawFile`, `useRawFiles`, `useRawSave`                          |
-| [ ]  | `features/settings/skills/skill-raw.tsx`                 | 282   | exists, changed (310 lines) |                                                                                 |
-| [ ]  | `features/settings/skills/skill-references.ts`           | 43    | **missing**                 | `useSkillLinks`                                                                 |
-| [ ]  | `features/settings/skills/skill-search.ts`               | 25    | partial                     | `skillSearchSchema`                                                             |
-| [x]  | `features/settings/skills/skill-starter.ts`              | 14    | identical                   |                                                                                 |
-| [ ]  | `features/settings/skills/skill-status.ts`               | 41    | **missing**                 | `isOn`, `readOnlyReason`, `useSkillToggle`                                      |
-| [ ]  | `features/settings/skills/skill-unreadable.tsx`          | 18    | **missing**                 | `SkillUnreadable`                                                               |
-| [ ]  | `features/settings/skills/skill-viewer.tsx`              | 110   | exists, changed (158 lines) |                                                                                 |
-| [ ]  | `features/settings/skills/skills-panel.tsx`              | 154   | exists, changed (97 lines)  |                                                                                 |
+| Done | main file (`client/src/…`)                               | Lines | Branch today                                                            | Missing exports                                                                 |
+| ---- | -------------------------------------------------------- | ----- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [x]  | `features/settings/skills/foreign-skills.tsx`            | 103   | `feat(skills): the folders other agents keep` (parity minus `toneText`) | `ForeignSkills`                                                                 |
+| [ ]  | `features/settings/skills/import/candidate-card.tsx`     | 129   | **missing**                                                             | `CandidateCard`                                                                 |
+| [ ]  | `features/settings/skills/import/import-dialog.tsx`      | 88    | exists, changed (387 lines)                                             |                                                                                 |
+| [ ]  | `features/settings/skills/import/read-folder.ts`         | 125   | partial                                                                 | `archiveProblem`, `checkFolder`, `filesOfDrop`, `filesOfInput`, `PickedFolder`  |
+| [ ]  | `features/settings/skills/import/review-step.tsx`        | 197   | **missing**                                                             | `ReviewStep`                                                                    |
+| [ ]  | `features/settings/skills/import/source-step.tsx`        | 222   | **missing**                                                             | `SourceStep`                                                                    |
+| [ ]  | `features/settings/skills/import/use-skill-import.ts`    | 101   | partial                                                                 | `Staged`                                                                        |
+| [ ]  | `features/settings/skills/skill-body-checks.ts`          | 48    | **missing**                                                             | `bodyDiagnostics`                                                               |
+| [ ]  | `features/settings/skills/skill-body-field.tsx`          | 261   | **missing**                                                             | `BodyReferences`, `SkillBodyField`                                              |
+| [ ]  | `features/settings/skills/skill-card.tsx`                | 74    | **missing**                                                             | `SkillCard`                                                                     |
+| [ ]  | `features/settings/skills/skill-delete-entry-dialog.tsx` | 68    | **missing**                                                             | `SkillDeleteEntryDialog`                                                        |
+| [ ]  | `features/settings/skills/skill-draft.ts`                | 61    | partial                                                                 | `SkillErrors`, `skillFields`                                                    |
+| [ ]  | `features/settings/skills/skill-editor.tsx`              | 52    | exists, changed (54 lines)                                              |                                                                                 |
+| [ ]  | `features/settings/skills/skill-file-dialog.tsx`         | 131   | **missing**                                                             | `SkillFileDialog`                                                               |
+| [ ]  | `features/settings/skills/skill-file-tree.ts`            | 47    | **missing**                                                             | `BundleEntry`, `formatSize`, `languageOf`, `newFileProblem`, `newFolderProblem` |
+| [ ]  | `features/settings/skills/skill-files-list.tsx`          | 47    | **missing**                                                             | `SkillFilesList`                                                                |
+| [ ]  | `features/settings/skills/skill-files.tsx`               | 138   | **missing**                                                             | `SkillFiles`                                                                    |
+| [ ]  | `features/settings/skills/skill-form.tsx`                | 289   | partial                                                                 | `SkillPageState`                                                                |
+| [ ]  | `features/settings/skills/skill-groups.ts`               | 87    | exists, changed (22 lines)                                              |                                                                                 |
+| [ ]  | `features/settings/skills/skill-instructions.tsx`        | 30    | **missing**                                                             | `SkillInstructions`                                                             |
+| [ ]  | `features/settings/skills/skill-loaded-switch.tsx`       | 27    | **missing**                                                             | `LoadedSwitch`                                                                  |
+| [ ]  | `features/settings/skills/skill-modes.ts`                | 14    | exists, changed (6 lines)                                               |                                                                                 |
+| [ ]  | `features/settings/skills/skill-new-entry-dialog.tsx`    | 164   | **missing**                                                             | `NewEntryKind`, `SkillNewEntryDialog`                                           |
+| [ ]  | `features/settings/skills/skill-notices.tsx`             | 49    | **missing**                                                             | `SkillNotices`                                                                  |
+| [ ]  | `features/settings/skills/skill-page-state.ts`           | 36    | **missing**                                                             | `useSkillPage`                                                                  |
+| [ ]  | `features/settings/skills/skill-page.tsx`                | 51    | exists, changed (19 lines)                                              |                                                                                 |
+| [ ]  | `features/settings/skills/skill-path-dialog.tsx`         | 85    | **missing**                                                             | `SkillPathDialog`                                                               |
+| [ ]  | `features/settings/skills/skill-paths.tsx`               | 66    | **missing**                                                             | `SkillPaths`                                                                    |
+| [ ]  | `features/settings/skills/skill-raw-pane.tsx`            | 84    | **missing**                                                             | `RawPane`                                                                       |
+| [ ]  | `features/settings/skills/skill-raw-source.ts`           | 80    | **missing**                                                             | `RawSource`, `useRawFile`, `useRawFiles`, `useRawSave`                          |
+| [ ]  | `features/settings/skills/skill-raw.tsx`                 | 282   | exists, changed (310 lines)                                             |                                                                                 |
+| [ ]  | `features/settings/skills/skill-references.ts`           | 43    | **missing**                                                             | `useSkillLinks`                                                                 |
+| [ ]  | `features/settings/skills/skill-search.ts`               | 25    | partial                                                                 | `skillSearchSchema`                                                             |
+| [x]  | `features/settings/skills/skill-starter.ts`              | 14    | identical                                                               |                                                                                 |
+| [ ]  | `features/settings/skills/skill-status.ts`               | 41    | **missing**                                                             | `isOn`, `readOnlyReason`, `useSkillToggle`                                      |
+| [ ]  | `features/settings/skills/skill-unreadable.tsx`          | 18    | **missing**                                                             | `SkillUnreadable`                                                               |
+| [ ]  | `features/settings/skills/skill-viewer.tsx`              | 110   | exists, changed (158 lines)                                             |                                                                                 |
+| [ ]  | `features/settings/skills/skills-panel.tsx`              | 154   | exists, changed (97 lines)                                              |                                                                                 |
 
 ## S7 Settings: Context
 

@@ -30,6 +30,8 @@ import type { AgentHomeApi } from "../../platform/agent-home.ts";
 import { PiConfig } from "../../platform/pi.ts";
 import type { PiSkillsApi } from "../../platform/pi.ts";
 import { ProjectService } from "../projects/service.ts";
+import { listForeignSkills, setForeignFolderLinked } from "./foreign.ts";
+import type { ForeignDeps } from "./foreign.ts";
 import {
 	emptySkillDocument,
 	parseSkillFile,
@@ -280,6 +282,12 @@ export type SkillsServiceApi = {
 		folder: string | null,
 		filePath: string,
 	) => Effect.Effect<SkillDocument, SkillRefused>;
+	/** Add another agent's skill folder to the `skills` setting, or take it out. */
+	readonly setFolderLinked: (
+		folder: string | null,
+		path: string,
+		linked: boolean,
+	) => Effect.Effect<void, SkillRefused>;
 };
 
 export class SkillsService extends Context.Service<SkillsService, SkillsServiceApi>()(
@@ -323,10 +331,36 @@ export const makeSkillsService = (deps: {
 			});
 		});
 
+	/** What another agent's folders are compared against: pi's setting and the home. */
+	const foreignOf = (scope: SkillScopeInfo): Effect.Effect<ForeignDeps> =>
+		Effect.gen(function* () {
+			const pi = deps.skills(scope.cwd);
+			const user = yield* pi.entries("user");
+			const project = scope.project === null ? [] : yield* pi.entries("project");
+			return {
+				// The folder pi resolves a relative `skills` entry against: the agent home for its
+				// own setting, the project's `.pi` for the project's.
+				base: settingsBaseDir(deps.home, scope.project),
+				entries: (which) => (which === "user" ? user : project),
+				loadFolder: pi.loadFolder,
+				project: scope.project,
+				userHome: deps.home.userHome,
+				writeEntries: (which, entries) => pi.writeEntries(which, entries),
+			};
+		});
+
 	const list: SkillsServiceApi["list"] = Effect.fn("Skills.list")(function* (folder) {
 		const scope = yield* scopeOf(folder);
-		return { skills: [...(yield* listFor(scope))] };
+		const foreignSkills = listForeignSkills(yield* foreignOf(scope));
+		return { foreignSkills, skills: [...(yield* listFor(scope))] };
 	});
+
+	const setFolderLinked: SkillsServiceApi["setFolderLinked"] = Effect.fn("Skills.setFolderLinked")(
+		function* (folder, path, linked) {
+			const scope = yield* scopeOf(folder);
+			yield* setForeignFolderLinked(yield* foreignOf(scope), path, linked);
+		},
+	);
 
 	const folderAt = (scope: SkillScopeInfo, root: SkillRoot, name: string, mustExist: boolean) =>
 		Effect.gen(function* () {
@@ -485,6 +519,7 @@ export const makeSkillsService = (deps: {
 		remove,
 		save,
 		setEnabled,
+		setFolderLinked,
 		writeRaw,
 	};
 };
