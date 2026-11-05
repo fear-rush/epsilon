@@ -1,16 +1,24 @@
-import type { SkillRoot, SkillView } from "#protocol/settings/skills";
+import { Schema } from "effect";
 
-import type { SkillTab } from "./skill-modes.ts";
+import { SkillRoot } from "#protocol/settings/skills";
+import type { SkillView } from "#protocol/settings/skills";
 
-/** What the skills routes carry in their search string. */
-export type SkillSearch = {
-	readonly project?: string | undefined;
-	readonly root?: SkillRoot | undefined;
-	readonly path?: string | undefined;
-	/** The open view and raw file belong to the page, so a reload keeps them. */
-	readonly tab?: SkillTab | undefined;
-	readonly file?: string | undefined;
-};
+/**
+ * Which skill a route names. An editable skill is its `root` and `name`; any other is
+ * its `path`, because two skills can share a name and only the file tells them apart.
+ * A new skill takes only the `root` it will be written to. The open view and raw file
+ * belong to the page, so a reload keeps them.
+ */
+export const skillSearchSchema = Schema.Struct({
+	/** The project tab the list shows beside the agent home, when there is one. */
+	project: Schema.optional(Schema.NonEmptyString),
+	root: Schema.optional(SkillRoot),
+	path: Schema.optional(Schema.NonEmptyString),
+	tab: Schema.optional(Schema.Literals(["form", "raw"])),
+	file: Schema.optional(Schema.NonEmptyString),
+});
+
+export type SkillSearch = typeof skillSearchSchema.Type;
 
 /** A row's identity: an editable skill's root and folder, or a listed file's path. */
 export const skillKey = (skill: SkillView): string =>
