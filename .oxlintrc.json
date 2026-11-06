@@ -243,7 +243,7 @@
 			// attached twice, and a streaming block is its index in the turn.
 			"files": [
 				"src/app/features/conversation/composer/attachments.tsx",
-				"src/app/features/conversation/transcript.tsx",
+				"src/app/features/conversation/transcript-rows.tsx",
 				"src/app/features/conversation/tool-trace.tsx"
 			],
 			"rules": {

@@ -1,18 +1,11 @@
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowUpIcon, PaperclipIcon, SquareIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 
 import { parseBuiltinCommand } from "#domain/conversation/commands";
 import type { ConversationState } from "#domain/conversation/state";
 import { PERMISSION_STATUS_KEY } from "#domain/permission/rules";
 import type { PermissionMode } from "#domain/permission/rules";
-import {
-	PROMPT_IMAGE_BASE64_TOTAL_MAX,
-	PROMPT_IMAGE_BYTES_MAX,
-	PROMPT_IMAGE_MAX,
-	promptImagesBase64Length,
-} from "#protocol/conversation/commands";
 import type { ExportedSession, ExportFormat } from "#protocol/conversation/export";
 import type { UiWidget } from "#protocol/conversation/extui";
 import type { ImageBlock } from "#protocol/conversation/frames";
@@ -22,82 +15,22 @@ import type { ContextView } from "#protocol/settings/context";
 import { errorView } from "@/components/patterns/status/error-view";
 import { Notice } from "@/components/patterns/status/notice";
 import type { Tone } from "@/components/patterns/status/status-tone";
-import { Tip } from "@/components/patterns/tip";
-import {
-	InputGroup,
-	InputGroupAddon,
-	InputGroupButton,
-	InputGroupTextarea,
-} from "@/components/ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupTextarea } from "@/components/ui/input-group";
 
+import { ComposerToolbar } from "./composer-toolbar";
 import { AttachmentStrip } from "./composer/attachments";
-import type { Attachment } from "./composer/attachments";
 import { runComposerCommand } from "./composer/builtin-commands";
 import type { ComposerCommandContext, RouteTarget } from "./composer/builtin-commands";
 import { CacheWarmingState } from "./composer/cache-warming";
 import { ContextMeter } from "./composer/context-meter";
-import { ModelMenu } from "./composer/model-menu";
 import { Palette } from "./composer/palette";
 import type { PaletteEntry } from "./composer/palette";
-import { PermissionMenu } from "./composer/permission-menu";
-import { ThinkingMenu } from "./composer/thinking-menu";
-import { ToolsMenu } from "./composer/tools-menu";
 import { takeHandedOffDraft } from "./draft.ts";
+import { useCommandSuggestions } from "./use-command-suggestions";
+import { useComposerAttachments } from "./use-composer-attachments";
 
 /** How a message joins a run that is already going; an idle composer ignores it. */
 type Behavior = "steer" | "followUp";
-
-/**
- * What follows `/` while the draft is still a bare command. A space ends it: from then on
- * the text is an argument to the command that was picked.
- */
-const commandQuery = (draft: string): string | undefined => {
-	const trimmed = draft.trimStart();
-	if (!trimmed.startsWith("/")) return undefined;
-	const query = trimmed.slice(1);
-	return query.includes(" ") ? undefined : query;
-};
-
-/**
- * How long the composer waits after a keystroke before asking an extension's autocomplete
- * providers, so typing does not send a query per key.
- */
-const SUGGESTION_DELAY_MS = 150;
-
-/** A megabyte as a file size reads it, for the caps the protocol states in bytes. */
-const MEGABYTE = 1024 * 1024;
-
-/** What one image may hold, in the words of the message that refuses it. */
-const IMAGE_MEGABYTES = PROMPT_IMAGE_BYTES_MAX / MEGABYTE;
-
-/** The whole prompt's images, as the message that refuses them writes it. */
-const IMAGE_TOTAL_CHARACTERS = PROMPT_IMAGE_BASE64_TOTAL_MAX.toLocaleString();
-
-/**
- * Base64 for a file's bytes. One `String.fromCharCode` call over 2 MB of arguments
- * overflows the stack, so the binary string is built a chunk at a time.
- */
-const base64Of = (bytes: Uint8Array): string => {
-	const CHUNK = 0x8000;
-	let binary = "";
-	for (let offset = 0; offset < bytes.length; offset += CHUNK) {
-		binary += String.fromCharCode(...bytes.subarray(offset, offset + CHUNK));
-	}
-	return btoa(binary);
-};
-
-/** A file the user picked, read the way the prompt command carries it. */
-const readAttachment = async (file: File): Promise<Attachment | undefined> => {
-	try {
-		return {
-			data: base64Of(new Uint8Array(await file.arrayBuffer())),
-			mimeType: file.type,
-			name: file.name,
-		};
-	} catch {
-		return undefined;
-	}
-};
 
 /** The lines an extension set for one placement, above or below the box. */
 const widgetLines = (list: ReadonlyArray<UiWidget>) => (
@@ -211,14 +144,15 @@ export function Composer({
 	const [sending, setSending] = useState(false);
 	const [modelMenuOpen, setModelMenuOpen] = useState(false);
 	const [thinkingMenuOpen, setThinkingMenuOpen] = useState(false);
-	const [attachments, setAttachments] = useState<Attachment[]>([]);
+	const { attach, attachments, pickFiles, removeAttachment, setAttachments } =
+		useComposerAttachments(setNotice);
 	const [selected, setSelected] = useState<string>();
 	const [dismissed, setDismissed] = useState<string>();
-	const [suggestions, setSuggestions] = useState<AutocompleteReply | undefined>(undefined);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const surfaceRef = useRef<HTMLDivElement>(null);
 	const applied = useRef<string | undefined>(undefined);
+	const entries = useCommandSuggestions({ commands, onSuggest, text, textareaRef });
 	const navigate = useNavigate();
 
 	// pi's own editor puts a restored message in front of what is already typed.
@@ -228,42 +162,6 @@ export function Composer({
 		setText((current) => (current === "" ? draft.text : `${draft.text}\n\n${current}`));
 	}, [draft]);
 
-	// An extension's providers see the draft after a pause, with the caret, the way its
-	// `getEditorText` sees it. An empty draft asks nothing.
-	useEffect(() => {
-		const timer =
-			text.trim() === ""
-				? undefined
-				: setTimeout(() => {
-						const cursor = textareaRef.current?.selectionStart ?? text.length;
-						void onSuggest(text, cursor).then(setSuggestions, () => setSuggestions(undefined));
-					}, SUGGESTION_DELAY_MS);
-		return () => {
-			if (timer !== undefined) clearTimeout(timer);
-		};
-	}, [text, onSuggest]);
-
-	const query = commandQuery(text);
-	const commandMatches =
-		query === undefined
-			? []
-			: commands.filter((command) => command.name.toLowerCase().includes(query.toLowerCase()));
-	// A reply names the draft it answered, so one that arrived after the operator typed
-	// on is not drawn.
-	const answered = suggestions?.text === text ? suggestions : undefined;
-	const entries: PaletteEntry[] = [
-		...commandMatches.map<PaletteEntry>((command) => ({
-			kind: "command",
-			key: `command:${command.name}`,
-			command,
-		})),
-		...(answered?.items ?? []).map<PaletteEntry>((item) => ({
-			kind: "suggestion",
-			key: `suggestion:${item.value}`,
-			item,
-			prefix: answered?.prefix ?? "",
-		})),
-	];
 	const paletteOpen = entries.length > 0 && dismissed !== text;
 	const highlighted = Math.max(
 		0,
@@ -437,59 +335,6 @@ export function Composer({
 		}
 	};
 
-	/**
-	 * Add picked, pasted or dropped files. The caps are the protocol's own, checked here
-	 * so a file the user chose gets a reason instead of a refused command; pi resizes and
-	 * rejects images itself, so nothing here reads their pixels.
-	 */
-	const attach = async (files: File[]) => {
-		const images = files.filter((file) => file.type.startsWith("image/"));
-		const problems: string[] = [];
-		if (images.length < files.length) problems.push("Only images can be attached.");
-		const room = Math.max(0, PROMPT_IMAGE_MAX - attachments.length);
-		const withinCount = images.slice(0, room);
-		if (withinCount.length < images.length) {
-			problems.push(`A message carries at most ${PROMPT_IMAGE_MAX} images.`);
-		}
-		const sized = withinCount.filter((file) => file.size <= PROMPT_IMAGE_BYTES_MAX);
-		const oversized = withinCount.length - sized.length;
-		if (oversized > 0) {
-			const subject = oversized === 1 ? "One image is" : `${oversized} images are`;
-			problems.push(`${subject} over the ${IMAGE_MEGABYTES} MB limit for one image.`);
-		}
-		const read = await Promise.all(sized.map(readAttachment));
-		const loaded = read.filter((attachment): attachment is Attachment => attachment !== undefined);
-		if (loaded.length < read.length) problems.push("An image could not be read.");
-		let total = promptImagesBase64Length(attachments);
-		const admitted: Attachment[] = [];
-		for (const attachment of loaded) {
-			if (total + attachment.data.length > PROMPT_IMAGE_BASE64_TOTAL_MAX) {
-				problems.push(`Images together are over the ${IMAGE_TOTAL_CHARACTERS} character limit.`);
-				break;
-			}
-			total += attachment.data.length;
-			admitted.push(attachment);
-		}
-		if (admitted.length > 0) {
-			// The caps were read from this render's list; a second attach that landed
-			// before it re-rendered must not get past the count.
-			setAttachments((previous) => [...previous, ...admitted].slice(0, PROMPT_IMAGE_MAX));
-		}
-		setNotice(problems.length === 0 ? undefined : { text: problems.join(" "), tone: "warning" });
-	};
-
-	const pickFiles = (event: ChangeEvent<HTMLInputElement>) => {
-		const files = [...(event.target.files ?? [])];
-		// An emptied value lets the same file be picked again after it was removed.
-		event.target.value = "";
-		void attach(files);
-	};
-
-	const removeAttachment = (index: number) => {
-		setAttachments((previous) => previous.filter((_attachment, at) => at !== index));
-		setNotice(undefined);
-	};
-
 	// Every keyed status an extension set, except the permission mode: the footer's menu
 	// already draws that one, in the browser's words rather than the extension's.
 	const rail = state.statuses.filter((status) => status.key !== PERMISSION_STATUS_KEY);
@@ -608,64 +453,26 @@ export function Composer({
 								void attach(files);
 							}}
 						/>
-						<InputGroupAddon align="block-end">
-							<Tip label="Attach images">
-								<InputGroupButton
-									size="icon-sm"
-									aria-label="Attach images"
-									onClick={() => fileInputRef.current?.click()}
-								>
-									<PaperclipIcon />
-								</InputGroupButton>
-							</Tip>
-							<fieldset data-slot="model-selector" className="ml-auto flex min-w-0 items-center">
-								<legend className="sr-only">Model and thinking</legend>
-								<ModelMenu
-									models={[...models]}
-									model={model}
-									open={modelMenuOpen}
-									onOpenChange={setModelMenuOpen}
-									onSelect={(next) => onSetModel(next.provider, next.id)}
-								/>
-								<ThinkingMenu
-									level={thinking ?? "off"}
-									levels={[...thinkingLevels]}
-									open={thinkingMenuOpen}
-									onOpenChange={setThinkingMenuOpen}
-									onSelect={onSetThinking}
-								/>
-							</fieldset>
-							<ToolsMenu codingTools={codingTools} onSelect={onSetCodingTools} />
-							<PermissionMenu
-								statuses={[...state.statuses]}
-								onSelect={(mode) => onSetPermission(mode)}
-							/>
-							{busy && (
-								<Tip label="Stop the run">
-									<InputGroupButton
-										size="icon-sm"
-										variant="destructive"
-										className="rounded-pill"
-										aria-label="Stop the run"
-										onClick={() => void onAbort()}
-									>
-										<SquareIcon />
-									</InputGroupButton>
-								</Tip>
-							)}
-							<Tip label={busy ? "Steer the run" : "Send"}>
-								<InputGroupButton
-									type="submit"
-									size="icon-sm"
-									variant="default"
-									className="rounded-pill"
-									disabled={text.trim() === "" || !writable || sending}
-									aria-label={busy ? "Steer the run" : "Send"}
-								>
-									<ArrowUpIcon />
-								</InputGroupButton>
-							</Tip>
-						</InputGroupAddon>
+						<ComposerToolbar
+							busy={busy}
+							codingTools={codingTools}
+							fileInputRef={fileInputRef}
+							model={model}
+							modelMenuOpen={modelMenuOpen}
+							models={models}
+							onAbort={onAbort}
+							onModelMenuOpenChange={setModelMenuOpen}
+							onSetCodingTools={onSetCodingTools}
+							onSetModel={onSetModel}
+							onSetPermission={onSetPermission}
+							onSetThinking={onSetThinking}
+							onThinkingMenuOpenChange={setThinkingMenuOpen}
+							sendDisabled={text.trim() === "" || !writable || sending}
+							statuses={state.statuses}
+							thinking={thinking}
+							thinkingLevels={thinkingLevels}
+							thinkingMenuOpen={thinkingMenuOpen}
+						/>
 					</InputGroup>
 				</form>
 				{state.readings !== undefined &&

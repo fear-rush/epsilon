@@ -50,7 +50,7 @@ One step per commit, in this order. A step does not start until the one before i
 | [x]    | 07 Roles, patterns and lint                 | [07-roles-and-patterns.md](07-roles-and-patterns.md)     | **yes**               |
 | [x]    | 08 Settings panes                           | [08-settings.md](08-settings.md)                         | **yes**               |
 | [x]    | 09 Copy pass                                | [09-copy.md](09-copy.md)                                 | **yes**               |
-| [ ]    | 10 Split the large files                    | [10-splits.md](10-splits.md)                             | no                    |
+| [x]    | 10 Split the large files                    | [10-splits.md](10-splits.md)                             | no                    |
 
 The evidence behind every step (file:line, counts, screenshots) is in
 [findings.md](findings.md). Read the part your step names; do not re-audit the codebase.
@@ -87,3 +87,5 @@ The evidence behind every step (file:line, counts, screenshots) is in
 - `highlight.tsx` casts shiki's `htmlStyle` with `no-unsafe-type-assertion`; a decoded style object would remove the cast → step 04
 - Index keys in `provider-models.tsx`, `provider-sign-in.tsx`, `changed-files-view.tsx`, `markdown.tsx`, `markdown-code-block.tsx`, `pair-rows.tsx` and `highlight.tsx` could take stable ids where the data can carry one → step 04
 - `scripts/shoot.ts` cannot see a pane that loads outside TanStack Query; `data-ready` covers the socket, the router and every query → step 04
+- Step 10: `lib/utils.ts` only re-exported `cn` and `components.json` already pointed at `lib/cn`, so it was deleted. `bundle-size` was already over its 315 KiB budget before the step (396.8 KiB) and is 400.4 KiB after the split; `bun run bench` fails on that line alone.
+- Step 10: transcript rows are rebuilt by `transcript()` on every call, so default `memo` could not skip them; `transcript-row-equal.ts` is the comparator `Row` and `AssistantRow` use.

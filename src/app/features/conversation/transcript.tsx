@@ -1,41 +1,17 @@
-import { useVirtualizer } from "@tanstack/react-virtual";
-import {
-	CheckIcon,
-	ChevronsDownIcon,
-	ChevronsUpIcon,
-	CircleAlertIcon,
-	CopyIcon,
-	LoaderCircleIcon,
-} from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { LoaderCircleIcon, CircleAlertIcon } from "lucide-react";
+import { useEffect, useMemo, useRef } from "react";
 
-import { assistantText, assistantThinking, entryLabel } from "#domain/conversation/content";
-import { toolRunOf, transcript } from "#domain/conversation/selectors";
-import type { ConversationState, StreamingTurn } from "#domain/conversation/state";
-import { argsOf } from "#domain/conversation/tools";
+import { entryLabel } from "#domain/conversation/content";
+import { transcript } from "#domain/conversation/selectors";
+import type { ConversationState } from "#domain/conversation/state";
 import type { SnapshotTreeNode } from "#domain/conversation/tree";
-import type {
-	AssistantBlock,
-	AssistantEntry,
-	TranscriptEntry,
-} from "#protocol/conversation/frames";
-import { Checkpoint } from "@/components/ai-elements/checkpoint";
-import { Plan, type PlanStep } from "@/components/ai-elements/plan";
-import { Reasoning } from "@/components/ai-elements/reasoning";
-import { Sources } from "@/components/ai-elements/sources";
-import { Markdown } from "@/components/editor/markdown";
 import { InlineStatus } from "@/components/patterns/status/inline-status";
-import { Tip } from "@/components/patterns/tip";
-import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
-import { Message, MessageContent, MessageFooter } from "@/components/ui/message";
-import { cn } from "@/lib/cn";
 
-import { changedFilesOf } from "./changed-files";
-import { ChangedFiles } from "./changed-files-view";
-import { sourcesOf } from "./links";
-import { RunCard } from "./run-card";
-import { OrphanToolResult, ToolTrace, stepStatusOf, toolTitle } from "./tool-trace";
+import { RAIL_SLOTS, TranscriptRail } from "./transcript-rail";
+import { Row } from "./transcript-rows";
+import type { TranscriptRow } from "./transcript-rows";
+import { useTranscriptScroll } from "./use-transcript-scroll";
 
 /**
  * The conversation.
@@ -51,38 +27,6 @@ import { OrphanToolResult, ToolTrace, stepStatusOf, toolTitle } from "./tool-tra
  * the view and the reply grows below it (R9).
  */
 
-/** Below this many rows every row is mounted; above it, virtualization starts. */
-const VIRTUALIZE_ABOVE = 150;
-
-/** A row's starting height, by what it holds. The virtualizer measures after mounting. */
-const ESTIMATE: Record<TranscriptEntry["role"] | "run" | "streaming", number> = {
-	assistant: 240,
-	run: 48,
-	streaming: 120,
-	summary: 160,
-	toolResult: 44,
-	user: 72,
-};
-
-/** pi's own word for the label that stands in for thinking it hides. */
-const DEFAULT_HIDDEN_THINKING_LABEL = "Thinking...";
-
-/** The rail's five-slot viewport: as many dots as one screenful should hold. */
-const RAIL_SLOTS = 5;
-
-/** Smooth scrolling, unless the reader asked for reduced motion. */
-function scrollBehavior(): "auto" | "smooth" {
-	return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-}
-/** One line and a readable length, for a dot's label and tooltip. */
-const PREVIEW_LENGTH = 80;
-
-const GAP = 24;
-const PADDING = 32;
-const END_THRESHOLD = 48;
-
-export type TranscriptRow = ReturnType<typeof transcript>[number];
-
 /** The text a search can find in one row. */
 export const rowText = (row: TranscriptRow): string => {
 	if (row.kind === "entry") return entryLabel(row.entry);
@@ -91,11 +35,6 @@ export const rowText = (row: TranscriptRow): string => {
 			.map((step) => `${step.thinking} ${step.call.toolName} ${step.run?.output ?? ""}`)
 			.join(" ");
 	return row.turn.blocks.map((block) => block?.text ?? "").join(" ");
-};
-
-const previewOf = (text: string): string => {
-	const line = text.trimStart().split("\n")[0]?.trim() ?? "";
-	return line.length > PREVIEW_LENGTH ? `${line.slice(0, PREVIEW_LENGTH)}…` : line;
 };
 
 /** The active branch's user messages in tree order, for a rail wider than the window. */
@@ -115,125 +54,6 @@ const treeUserRows = (
 	}
 	return users;
 };
-
-/**
- * The quick jump rail: a five-slot viewport that scrolls through one dot per user message
- * at the transcript's left edge. It owns a gutter beside the scroller rather than sitting
- * over it, so a wide tool result never runs under the dots. The viewport follows the
- * current turn, the chevrons jump to the ends, and it stays faint until used. A chat with
- * fewer than five user turns has none: there is too little to navigate.
- */
-function TranscriptRail({
-	rows,
-	activeId,
-	onJump,
-	onJumpEnd,
-}: {
-	rows: ReadonlyArray<{ id: string; text: string }>;
-	activeId: string | undefined;
-	onJump: (id: string) => void;
-	onJumpEnd: () => void;
-}) {
-	const railRef = useRef<HTMLDivElement>(null);
-	const anchored = rows.findIndex((row) => row.id === activeId);
-	const activeIndex = anchored === -1 ? rows.length - 1 : anchored;
-
-	useEffect(() => {
-		const viewport = railRef.current;
-		if (viewport === null) return;
-		const slot = viewport.clientHeight / RAIL_SLOTS;
-		const firstVisible = Math.round(viewport.scrollTop / slot);
-		const target =
-			activeIndex < firstVisible + 1
-				? activeIndex - 1
-				: activeIndex > firstVisible + RAIL_SLOTS - 2
-					? activeIndex - (RAIL_SLOTS - 2)
-					: firstVisible;
-		const lastStart = Math.max(0, rows.length - RAIL_SLOTS);
-		// The same smooth follow main's rail had: the line moves with the active dot.
-		viewport.scrollTo({
-			top: Math.max(0, Math.min(target, lastStart)) * slot,
-			behavior: scrollBehavior(),
-		});
-	}, [activeIndex, rows.length]);
-
-	if (rows.length < RAIL_SLOTS) return null;
-	const first = rows[0];
-
-	return (
-		<div className="hidden w-8 shrink-0 items-center justify-center pl-1 sm:flex">
-			<nav
-				aria-label="Jump to a message"
-				className="flex flex-col items-center opacity-40 transition-[opacity,scale] duration-base focus-within:opacity-100 hover:opacity-100 starting:scale-95 starting:opacity-0"
-			>
-				<Tip label="First message">
-					<button
-						type="button"
-						aria-label="Go to the first message"
-						className="flex size-6 shrink-0 items-center justify-center rounded-chip text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-						onClick={() => {
-							if (first !== undefined) onJump(first.id);
-						}}
-					>
-						<ChevronsUpIcon className="size-icon-sm" />
-					</button>
-				</Tip>
-				<div
-					ref={railRef}
-					data-rail-viewport="true"
-					className="relative scrollbar-none h-80 w-6 overflow-y-auto overscroll-contain"
-				>
-					<div className="relative flex flex-col items-center">
-						<span
-							aria-hidden
-							className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border"
-						/>
-						{rows.map((row, index) => {
-							const preview = previewOf(row.text) || `Message ${index + 1}`;
-							const active = index === activeIndex;
-							return (
-								<Tip key={row.id} label={`${index + 1}. ${preview}`}>
-									<button
-										type="button"
-										aria-label={`Go to message ${index + 1}: ${preview}`}
-										aria-current={active ? "step" : undefined}
-										className="group relative flex h-16 w-6 shrink-0 items-center justify-center rounded-chip outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-										onClick={() => onJump(row.id)}
-									>
-										<span
-											className={cn(
-												"size-1.5 rounded-pill transition duration-fast group-hover:scale-150 group-focus-visible:scale-150 motion-reduce:transition-none",
-												active
-													? "opacity-0"
-													: "bg-muted-foreground/35 group-hover:bg-muted-foreground/70",
-											)}
-										/>
-									</button>
-								</Tip>
-							);
-						})}
-						<span
-							aria-hidden
-							data-rail-active="true"
-							className="pointer-events-none absolute left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-pill bg-foreground/70 transition-[top] duration-slow ease-in-out"
-							style={{ top: `${((activeIndex + 0.5) / rows.length) * 100}%` }}
-						/>
-					</div>
-				</div>
-				<Tip label="Last message">
-					<button
-						type="button"
-						aria-label="Go to the last message"
-						className="flex size-6 shrink-0 items-center justify-center rounded-chip text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-						onClick={onJumpEnd}
-					>
-						<ChevronsDownIcon className="size-icon-sm" />
-					</button>
-				</Tip>
-			</nav>
-		</div>
-	);
-}
 
 export function Transcript({
 	state,
@@ -261,21 +81,7 @@ export function Transcript({
 	onToggleTool: (toolCallId: string) => void;
 }) {
 	const rows = transcript(state);
-	const virtual = rows.length > VIRTUALIZE_ABOVE;
-	const scroll = useRef<HTMLDivElement>(null);
-	const atEnd = useRef(true);
-	const anchored = useRef(false);
-	const initialized = useRef(false);
-	/** The reader reached the top: keep pulling pages until the start or until they move. */
-	const [pulling, setPulling] = useState(false);
-	const [announcement, setAnnouncement] = useState("");
-	/** The user message the rail marks as current, from where the reader is. */
-	const [activeUserId, setActiveUserId] = useState<string>();
-	/** A tree dot older than the window: load history until the row is here, then scroll. */
-	const [pendingJump, setPendingJump] = useState<string>();
 	const treeAsked = useRef(false);
-	/** The scroll height before an older page was asked for, so its arrival adds no jump. */
-	const prependHeight = useRef<number | undefined>(undefined);
 	const userRows = rows.flatMap((row) =>
 		row.kind === "entry" && row.entry.role === "user" ? [{ id: row.id, text: rowText(row) }] : [],
 	);
@@ -294,188 +100,26 @@ export function Transcript({
 	const railRows =
 		userRows.length >= RAIL_SLOTS ? userRows : treeUsers.length > 0 ? treeUsers : userRows;
 
-	/** The user row the reader is on, or the newest turn when they are at the end. */
-	const syncActive = (): void => {
-		const element = scroll.current;
-		if (element === null) return;
-		// At the end the newest turn is the one being read, even when the row above the fold
-		// still belongs to the turn before it.
-		if (atEnd.current) {
-			setActiveUserId(railRows.at(-1)?.id);
-			return;
-		}
-		const top = element.getBoundingClientRect().top;
-		let shown: string | undefined;
-		for (const node of element.querySelectorAll<HTMLElement>("[data-row-id]")) {
-			if (node.getBoundingClientRect().top - top > END_THRESHOLD) break;
-			shown = node.dataset["rowId"];
-		}
-		const index = shown === undefined ? -1 : rows.findIndex((row) => row.id === shown);
-		let user: string | undefined;
-		for (let at = index; at >= 0; at -= 1) {
-			const row = rows[at];
-			if (row?.kind === "entry" && row.entry.role === "user") {
-				user = row.id;
-				break;
-			}
-		}
-		setActiveUserId(user);
-	};
-
-	const jumpToEnd = (): void => {
-		if (virtual) virtualizer.scrollToEnd({ behavior: scrollBehavior() });
-		else {
-			const element = scroll.current;
-			element?.scrollTo({ behavior: scrollBehavior(), top: element.scrollHeight });
-		}
-	};
-
-	// The virtualizer is an external store with imperative measurement; memoizing it is
-	// neither possible nor wanted, which is exactly what this component should not do.
-	// While pages are being pulled the view belongs to the reader, not the end.
-	const anchor = pulling ? {} : { anchorTo: "end" as const };
-	const virtualizer = useVirtualizer({
-		...anchor,
-		count: rows.length,
-		enabled: virtual,
-		estimateSize: (index) => {
-			const row = rows[index];
-			if (row === undefined) return 88;
-			if (row.kind === "run") return ESTIMATE.run;
-			return ESTIMATE[row.kind === "streaming" ? "streaming" : row.entry.role];
-		},
-		followOnAppend: anchored.current ? false : "auto",
-		gap: GAP,
-		getItemKey: (index) => rows[index]?.id ?? index,
-		getScrollElement: () => scroll.current,
-		overscan: 6,
-		paddingEnd: PADDING,
-		paddingStart: PADDING,
-		scrollEndThreshold: END_THRESHOLD,
+	const {
+		activeUserId,
+		announcement,
+		jumpToEnd,
+		jumpToRow,
+		onScroll,
+		requestOlder,
+		scroll,
+		setPulling,
+		virtual,
+		virtualizer,
+	} = useTranscriptScroll({
+		anchorFrom,
+		olderFailure,
+		onAnchored,
+		onLoadOlder,
+		railRows,
+		rows,
+		state,
 	});
-
-	// A chat opens on its newest row, and a short chat keeps following new rows while the
-	// reader is at the end.
-	useLayoutEffect(() => {
-		const element = scroll.current;
-		if (element === null) return;
-		if (virtual) virtualizer.scrollToEnd();
-		else element.scrollTop = element.scrollHeight;
-		initialized.current = true;
-		syncActive();
-		// The first mount only: later appends are the virtualizer's or onScroll's business.
-		// oxlint-disable-next-line react-hooks/exhaustive-deps -- runs on first mount only; later appends belong to the virtualizer and onScroll
-	}, []);
-
-	useEffect(() => {
-		const element = scroll.current;
-		if (element === null || virtual || anchored.current || !atEnd.current) return;
-		element.scrollTop = element.scrollHeight;
-	}, [rows.length, virtual]);
-
-	/**
-	 * Ask for the page above this one, remembering the height it will add. The page lands
-	 * above the reader, so the layout effect below moves the scroll by that height: the
-	 * message they were reading stays where it was instead of being pushed down by fifty
-	 * rows arriving over it.
-	 */
-	const requestOlder = useCallback((): void => {
-		const element = scroll.current;
-		if (element !== null) prependHeight.current = element.scrollHeight;
-		onLoadOlder();
-	}, [onLoadOlder]);
-
-	useLayoutEffect(() => {
-		const element = scroll.current;
-		const before = prependHeight.current;
-		if (element === null || before === undefined) return;
-		prependHeight.current = undefined;
-		const added = element.scrollHeight - before;
-		if (added > 0) element.scrollTop += added;
-	}, [rows.length]);
-
-	// Holding at the top keeps pulling: one page arrives, the reader has not moved away, so
-	// the next page is asked for. A 5,000-entry chat reaches its first message this way. A
-	// page that failed stops the loop: the line above offers the retry, and the next scroll
-	// to the top tries again.
-	useEffect(() => {
-		if (!pulling) return;
-		if (!state.hasOlder || olderFailure !== undefined) {
-			setPulling(false);
-			return;
-		}
-		requestOlder();
-	}, [pulling, rows.length, state.hasOlder, olderFailure, requestOlder]);
-
-	// A finished reply is announced once; the region never repeats the visible text.
-	const wasBusy = useRef(false);
-	useEffect(() => {
-		if (wasBusy.current && !state.busy) setAnnouncement("Reply finished.");
-		wasBusy.current = state.busy;
-	}, [state.busy]);
-
-	useEffect(() => {
-		if (anchorFrom === undefined) return;
-		const index = rows.findIndex(
-			(row, at) => at >= anchorFrom && row.kind === "entry" && row.entry.role === "user",
-		);
-		const row = rows[index];
-		if (row === undefined) return;
-		anchored.current = true;
-		atEnd.current = false;
-		if (virtual) virtualizer.scrollToIndex(index, { align: "start" });
-		else scroll.current?.querySelector(rowSelector(row.id))?.scrollIntoView({ block: "start" });
-		onAnchored();
-	}, [anchorFrom, rows, virtual, virtualizer, onAnchored]);
-
-	/** Bring a loaded row to the top; false means the row is older than this window. */
-	const scrollToRow = useCallback(
-		(id: string): boolean => {
-			const index = rows.findIndex((row) => row.id === id);
-			if (index < 0) return false;
-			if (virtual) virtualizer.scrollToIndex(index, { align: "start", behavior: scrollBehavior() });
-			else {
-				scroll.current
-					?.querySelector(rowSelector(id))
-					?.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
-			}
-			return true;
-		},
-		[rows, virtual, virtualizer],
-	);
-
-	const jumpToRow = (id: string): void => {
-		if (scrollToRow(id)) {
-			setPendingJump(undefined);
-			return;
-		}
-		setPendingJump(id);
-	};
-
-	// A rail dot for a turn older than the window walks the history a page at a time, then
-	// scrolls once the row arrives. The page loads are the transcript's, not a second read.
-	useEffect(() => {
-		if (pendingJump === undefined) return;
-		if (scrollToRow(pendingJump)) {
-			setPendingJump(undefined);
-			return;
-		}
-		if (!state.hasOlder) {
-			setPendingJump(undefined);
-			return;
-		}
-		requestOlder();
-	}, [requestOlder, pendingJump, scrollToRow, state.hasOlder]);
-
-	const onScroll = (): void => {
-		const element = scroll.current;
-		if (element === null) return;
-		const distance = element.scrollHeight - element.scrollTop - element.clientHeight;
-		atEnd.current = distance < END_THRESHOLD;
-		if (atEnd.current) anchored.current = false;
-		if (element.scrollTop < 160) setPulling(true);
-		syncActive();
-	};
 
 	return (
 		<>
@@ -566,217 +210,5 @@ export function Transcript({
 				{announcement}
 			</div>
 		</>
-	);
-}
-
-const rowSelector = (id: string): string => `[data-row-id="${CSS.escape(id)}"]`;
-
-type ToolCallBlock = Extract<AssistantBlock, { type: "toolCall" }>;
-
-function Row({
-	row,
-	state,
-	toolOpen,
-	onToggleTool,
-}: {
-	row: TranscriptRow;
-	state: ConversationState;
-	toolOpen: ReadonlyMap<string, boolean>;
-	onToggleTool: (toolCallId: string) => void;
-}) {
-	if (row.kind === "streaming") return <StreamingRow turn={row.turn} />;
-	if (row.kind === "run") {
-		return <RunCard row={row} toolOpen={toolOpen} onToggleTool={onToggleTool} />;
-	}
-	const { entry } = row;
-	switch (entry.role) {
-		case "user":
-			return (
-				<Message align="end">
-					<MessageContent>
-						<Bubble align="end" variant="muted">
-							<BubbleContent>
-								{entry.images.map((image, index) => (
-									// An image in one message has no id of its own; its position in the message is it.
-									<img
-										key={index}
-										alt="attached"
-										className="mb-2 max-h-48 rounded-control"
-										src={`data:${image.mimeType};base64,${image.data}`}
-									/>
-								))}
-								<p className="text-body whitespace-pre-wrap">{entry.text}</p>
-							</BubbleContent>
-						</Bubble>
-					</MessageContent>
-				</Message>
-			);
-		case "assistant":
-			return (
-				<AssistantRow entry={entry} state={state} toolOpen={toolOpen} onToggleTool={onToggleTool} />
-			);
-		case "toolResult": {
-			// The tool card beside the call already shows this output; only a result whose
-			// call is outside the window stands on its own.
-			if (toolRunOf(state, entry.toolCallId) !== undefined) return null;
-			return (
-				<OrphanToolResult name={entry.toolName} output={entry.output} isError={entry.isError} />
-			);
-		}
-		case "summary":
-			// pi's own block where it replaced the history: the label says how much, the
-			// text is the summary, and it stays where it happened.
-			return (
-				<>
-					<Checkpoint label={entry.label} />
-					<p className="max-h-64 overflow-auto px-1 text-meta whitespace-pre-wrap text-muted-foreground">
-						{entry.text}
-					</p>
-				</>
-			);
-		default: {
-			const unreachable: never = entry;
-			return unreachable;
-		}
-	}
-}
-
-function CopyReply({ text }: { text: string }) {
-	const [copied, setCopied] = useState(false);
-
-	useEffect(() => {
-		if (copied) {
-			const timer = setTimeout(() => setCopied(false), 2000);
-			return () => clearTimeout(timer);
-		}
-		return undefined;
-	}, [copied]);
-
-	const label = copied ? "Copied" : "Copy reply";
-	return (
-		<>
-			<Tip label={label}>
-				<Button
-					variant="ghost"
-					size="icon-xs"
-					aria-label={label}
-					onClick={() => {
-						void navigator.clipboard.writeText(text).then(
-							() => setCopied(true),
-							() => {},
-						);
-					}}
-				>
-					{copied ? <CheckIcon /> : <CopyIcon />}
-				</Button>
-			</Tip>
-			<span aria-live="polite" className="sr-only">
-				{copied ? "Copied" : ""}
-			</span>
-		</>
-	);
-}
-
-function AssistantRow({
-	entry,
-	state,
-	toolOpen,
-	onToggleTool,
-}: {
-	entry: AssistantEntry;
-	state: ConversationState;
-	toolOpen: ReadonlyMap<string, boolean>;
-	onToggleTool: (toolCallId: string) => void;
-}) {
-	const text = assistantText(entry);
-	const thinking = assistantThinking(entry);
-	const calls = entry.blocks.filter((block): block is ToolCallBlock => block.type === "toolCall");
-	// A message that only called tools still has a row: its calls are what it said.
-	const silent = text === "" && thinking === "" && calls.length === 0;
-	if (silent) return null;
-
-	const runs = calls.map((call) => toolRunOf(state, call.toolCallId));
-	const failed = runs.filter((run) => run?.status === "error").length;
-	const count = calls.length;
-	const steps: PlanStep[] = calls.map((call, index) => ({
-		key: call.toolCallId,
-		status: stepStatusOf(runs[index]),
-		title: toolTitle(call.toolName, argsOf(call.toolName, call.args)),
-	}));
-	const sources = sourcesOf(text);
-	const changed = changedFilesOf(entry);
-	const reasoning =
-		thinking === "" ? undefined : (
-			<Reasoning
-				text={state.hideThinking ? "" : thinking}
-				hidden={state.hideThinking}
-				label={
-					state.hideThinking
-						? (state.hiddenThinkingLabel ?? DEFAULT_HIDDEN_THINKING_LABEL)
-						: undefined
-				}
-				running={false}
-			/>
-		);
-	const tools = calls.map((call) => (
-		<ToolTrace
-			key={call.toolCallId}
-			args={call.args}
-			name={call.toolName}
-			open={toolOpen.get(call.toolCallId)}
-			run={toolRunOf(state, call.toolCallId)}
-			onToggle={() => onToggleTool(call.toolCallId)}
-		/>
-	));
-	// This row wrote text, so it is not part of a run: the prose is the reader's boundary.
-	// Its calls stay here, as lines, rather than folding behind a heading that would sit
-	// above the answer.
-	const stepsContent = (
-		<>
-			{reasoning}
-			{count > 1 ? <Plan title="Plan" steps={steps} defaultOpen={failed > 0} /> : undefined}
-			{tools}
-		</>
-	);
-
-	return (
-		<Message>
-			<MessageContent className="gap-3">
-				{stepsContent}
-				{text !== "" && (
-					<div className="text-body">
-						<Markdown links="citation">{text}</Markdown>
-					</div>
-				)}
-				{sources.length > 0 ? <Sources sources={sources} /> : undefined}
-				<ChangedFiles files={changed} />
-				{text === "" || count > 0 ? undefined : (
-					<MessageFooter className="px-0">
-						<CopyReply text={text} />
-					</MessageFooter>
-				)}
-			</MessageContent>
-		</Message>
-	);
-}
-
-function StreamingRow({ turn }: { turn: StreamingTurn }) {
-	return (
-		<Message>
-			<MessageContent className="gap-3 text-body">
-				{turn.blocks.map((block, index) =>
-					block === undefined ? null : block.kind === "thinking" ? (
-						// A streaming block is its index in the turn; it has no id of its own.
-						<Reasoning key={index} text={block.text} running />
-					) : (
-						// A text block is its index in the turn too.
-						<p key={index} className="whitespace-pre-wrap">
-							{block.text}
-						</p>
-					),
-				)}
-				<span className="animate-pulse text-muted-foreground motion-reduce:animate-none">▍</span>
-			</MessageContent>
-		</Message>
 	);
 }
