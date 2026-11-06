@@ -35,18 +35,9 @@ export type ProjectSessions = {
 	readonly lastActivity: string;
 };
 
-/** A folder pi still records chats in, though the folder itself is gone. */
-export type MissingFolder = {
-	readonly path: string;
-	readonly name: string;
-	readonly sessions: ReadonlyArray<SessionSummary>;
-	readonly lastActivity: string;
-};
-
 export type SessionList = {
 	readonly chats: ReadonlyArray<SessionSummary>;
 	readonly projects: ReadonlyArray<ProjectSessions>;
-	readonly missing: ReadonlyArray<MissingFolder>;
 	readonly pinsProblem?: string;
 };
 
@@ -74,9 +65,6 @@ const byWhen = (left: SessionSummary, right: SessionSummary): number => {
 const newestActivity = (sessions: ReadonlyArray<SessionSummary>): string =>
 	sessions.reduce((latest, session) => (session.modified > latest ? session.modified : latest), "");
 
-/** The name a path ends in, for a folder pi no longer has a status for. */
-const folderName = (path: string): string => path.split(/[/\\]/).findLast(Boolean) ?? path;
-
 /** Newest chat first; a tie falls back to the name, so the order never depends on the walk. */
 const byFolderActivity = (
 	left: { readonly lastActivity: string; readonly name: string },
@@ -91,17 +79,14 @@ const build = (
 ): SessionList => {
 	const chats: SessionSummary[] = [];
 	const projects: ProjectSessions[] = [];
-	const missing = new Map<string, SessionSummary[]>();
 	const byFolder = new Map<string, SessionSummary[]>();
 
 	for (const session of sessions) {
 		const row = rowOf(session);
-		// A folder that is gone is not a project: its trust read would fail, and the answer is
-		// already on the row. It stays reachable in its own group instead of looking like a chat.
+		// A folder that is gone has no project status to read. Its chat is still a chat: the
+		// page's own missing-folder gate is what lets the operator continue it elsewhere.
 		if (session.cwdMissing) {
-			const rows = missing.get(session.cwd);
-			if (rows === undefined) missing.set(session.cwd, [row]);
-			else rows.push(row);
+			chats.push(row);
 			continue;
 		}
 		const project = statuses.get(session.cwd);
@@ -121,19 +106,8 @@ const build = (
 		projects.push({ lastActivity: newestActivity(ordered), project: status, sessions: ordered });
 	}
 
-	const missingFolders = [...missing.entries()].map(([path, rows]) => {
-		const ordered = rows.toSorted(byWhen);
-		return {
-			lastActivity: newestActivity(ordered),
-			name: folderName(path),
-			path,
-			sessions: ordered,
-		};
-	});
-
 	const list: SessionList = {
 		chats: chats.toSorted(byWhen),
-		missing: missingFolders.toSorted(byFolderActivity),
 		projects: projects.toSorted((left, right) =>
 			byFolderActivity(
 				{ lastActivity: left.lastActivity, name: left.project.name },
@@ -165,18 +139,14 @@ export function findSessionRow(
 		const found = project.sessions.find((session) => session.id === sessionId);
 		if (found !== undefined) return found;
 	}
-	for (const folder of list.missing) {
-		const found = folder.sessions.find((session) => session.id === sessionId);
-		if (found !== undefined) return found;
-	}
 	return undefined;
 }
 
 export function useSessionList() {
 	// The list also carries the socket's change stream, so a write anywhere refreshes it.
 	const sessions = useSessions();
-	// A deleted folder has no status to ask for: `cwdMissing` already answers it, and skipping
-	// the read keeps the 66 stale paths in a real home from failing one query each.
+	// A deleted folder has no status to ask for: `cwdMissing` already answers it, and a
+	// failing project read would only classify the same chat a second time.
 	const folders = [
 		...new Set(
 			(sessions.data?.sessions ?? [])

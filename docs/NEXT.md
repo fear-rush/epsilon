@@ -15,8 +15,8 @@ remains is one decision, two runs, and the merge. Status lives here and nowhere 
       the 392 and are the foundation's own cost. Two ways out, and the owner picks: - defer the palette and the model menu out of first paint (worth ~21–30 KiB, still
       short of 78), or - set the budget to the branch's own figure with that reasoning recorded.
 - [ ] **The owner uses `bun run dev:host` for a day with no regression.** Nothing can
-      stand in for this: the sandbox is fresh, the real home has 955 chats and 333 of them
-      name a folder that no longer exists.
+      stand in for this: the sandbox is fresh, the real home has 625 chats and none of them
+      names a folder that no longer exists (the 333 stale ones were removed on 2026-11-06).
 - [ ] **The deferred feedback screenshots.** Phase 2 landed without them, by the owner's
       call: a route that throws, an unknown session id, the server stopped, a refused save
       and a field error, light and dark. Their surfaces are covered by `test/e2e/`, so this

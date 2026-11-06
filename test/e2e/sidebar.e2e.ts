@@ -5,10 +5,9 @@ import { sessionHeader, userEntry, writeSession } from "../sessions.ts";
 import { expect, test } from "./fixture.ts";
 
 /**
- * The sidebar shows one page of each list, ordered by the newest chat in the folder.
- * A deleted folder is not a project and not a chat: it is its own last group, still
- * expandable and removable. Search reads the whole list, so an old chat is one query
- * away rather than one page away.
+ * The sidebar shows one page of each list, ordered by the newest chat in the folder, and
+ * one page of chats inside an expanded project. Search reads the whole list, so an old
+ * chat is one query away rather than one page away.
  */
 
 /** The folder pi itself would use for a cwd's session files. */
@@ -48,28 +47,11 @@ const seed = (agentHome: string, root: string): void => {
 			chat(id, chatsDir, `global ${String(number).padStart(2, "0")}`, 200 + number),
 		);
 	}
-
-	for (let number = 1; number <= 12; number++) {
-		const name = `gone-${String(number).padStart(2, "0")}`;
-		const folder = join(root, name);
-		// No folder is created: this is the path the session recorded and nothing is there.
-		const id = `m${number}`;
-		writeSession(
-			sessionDirFor(agentHome, folder),
-			id,
-			chat(id, folder, `gone ${String(number).padStart(2, "0")} message`, 300 + number),
-		);
-	}
 };
 
-test("the sidebar pages projects, chats and missing folders", async ({
-	app,
-	agentHome,
-	page,
-	projectsRoot,
-}) => {
-	// The server resolves a project to its real path; seed the real one so the removal
-	// below can find the chats by the same cwd the row carries.
+test("the sidebar pages projects and chats", async ({ app, agentHome, page, projectsRoot }) => {
+	// The server resolves a project to its real path; seed the real one so the rows and
+	// the status answer agree.
 	seed(agentHome, realpathSync(projectsRoot));
 	await page.goto(app.url);
 
@@ -113,22 +95,6 @@ test("the sidebar pages projects, chats and missing folders", async ({
 	await expect(sidebar.getByText("p01 message", { exact: true })).toBeVisible();
 	await search.fill("");
 
-	// A deleted folder is its own last group, not a chat; it pages and expands.
-	await expect(sidebar.getByText("Missing folders", { exact: true })).toBeVisible();
-	await expect(sidebar.getByRole("button", { name: "gone-12", exact: true })).toBeVisible();
-	await expect(sidebar.getByRole("button", { name: "gone-02", exact: true })).toHaveCount(0);
-	await sidebar.getByRole("button", { name: "Load more missing folders", exact: true }).click();
-	await expect(sidebar.getByRole("button", { name: "gone-02", exact: true })).toBeVisible();
-	const gone = sidebar.getByRole("button", { name: "gone-12", exact: true });
-	await gone.click();
-	await expect(gone).toHaveAttribute("aria-expanded", "true");
-	await expect(sidebar.getByText("gone 12 message", { exact: true })).toBeVisible();
-
-	// The group removes its chats through the same all-or-nothing folder operation.
-	await sidebar.getByRole("button", { name: "gone-12 actions", exact: true }).click();
-	await page.getByRole("menuitem", { name: "Remove from Epsilon", exact: true }).click();
-	const dialog = page.getByRole("alertdialog");
-	await expect(dialog).toBeVisible();
-	await dialog.getByRole("button", { name: "Remove", exact: true }).click();
-	await expect(sidebar.getByRole("button", { name: "gone-12", exact: true })).toHaveCount(0);
+	// The removed group is gone from the column.
+	await expect(sidebar.getByText("Missing folders", { exact: true })).toHaveCount(0);
 });

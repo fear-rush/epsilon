@@ -1,8 +1,8 @@
 /**
- * The sidebar: projects, then chats, then folders whose path is gone. pi owns the files;
- * the socket's change stream refreshes the list, and a delete is confirmed first. A
- * folder appears here once it has a chat on disk, and the search filters all three lists
- * by name and first message. Connection problems are the app banner's, not this column's.
+ * The sidebar: projects, then chats. pi owns the files; the socket's change stream
+ * refreshes the list, and a delete is confirmed first. A folder appears here once it has a
+ * chat on disk, and the search filters both lists by name and first message. Connection
+ * problems are the app banner's, not this column's.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
@@ -12,7 +12,6 @@ import {
 	FolderMinusIcon,
 	FolderPlusIcon,
 	FolderUpIcon,
-	FolderXIcon,
 	MessageSquareIcon,
 	MoreHorizontalIcon,
 	PlusIcon,
@@ -64,7 +63,7 @@ import { SidebarAccount } from "@/features/sessions/sidebar-account";
 import { useLastDefined } from "@/hooks/use-last-defined";
 
 import { sessionLabel } from "./format.ts";
-import type { MissingFolder, ProjectSessions, SessionSummary } from "./list.ts";
+import type { ProjectSessions, SessionSummary } from "./list.ts";
 import { useSessionList } from "./list.ts";
 import { RenameDialog } from "./rename-dialog";
 import { SessionItem } from "./session-item";
@@ -99,12 +98,11 @@ function LoadMore({ label, onClick }: { label: string; onClick: () => void }) {
 	);
 }
 
-/** A folder and its chats, for the one confirmation that removes either kind. */
+/** A project and its chats, for the one confirmation that removes its history. */
 type FolderRemoval = {
 	readonly path: string;
 	readonly name: string;
 	readonly sessions: ReadonlyArray<SessionSummary>;
-	readonly missing: boolean;
 };
 
 /** The search reads what the list already carries: a chat's name and first message. */
@@ -132,21 +130,6 @@ const filteredProjects = (
 				)
 				.filter((entry) => entry.sessions.length > 0);
 
-/** A missing folder matches its name; one that does keeps every chat it holds. */
-const filteredMissing = (
-	folders: ReadonlyArray<MissingFolder>,
-	needle: string,
-): ReadonlyArray<MissingFolder> =>
-	needle === ""
-		? folders
-		: folders
-				.map((folder) =>
-					folder.name.toLowerCase().includes(needle)
-						? folder
-						: { ...folder, sessions: filteredChats(folder.sessions, needle) },
-				)
-				.filter((folder) => folder.sessions.length > 0);
-
 export function SessionSidebar() {
 	const navigate = useNavigate();
 	const matchRoute = useMatchRoute();
@@ -162,7 +145,6 @@ export function SessionSidebar() {
 	const [opening, setOpening] = useState(false);
 	const [projectLimit, moreProjects] = useLoadMore();
 	const [chatLimit, moreChats] = useLoadMore();
-	const [missingLimit, moreMissing] = useLoadMore();
 	const sessions = useSessionList();
 	const remove = useMutation({
 		mutationFn: (id: string) => call((client) => client["sessions.remove"]({ sessionId: id })),
@@ -174,9 +156,9 @@ export function SessionSidebar() {
 		},
 	});
 	const forgetProject = useMutation({
-		// Epsilon has no project record: removing a folder removes its chats. An existing
-		// folder stays where it is; a missing one is already gone. The server checks every
-		// chat before deleting one, so a refusal leaves the folder exactly as it was.
+		// Epsilon has no project record: removing a project removes its chats, and the
+		// folder stays where it is. The server checks every chat before deleting one, so a
+		// refusal leaves the project exactly as it was.
 		mutationFn: (folder: FolderRemoval) =>
 			call((client) => client["sessions.removeProject"]({ directory: folder.path })),
 		onSuccess: async (_removed, folder) => {
@@ -235,25 +217,17 @@ export function SessionSidebar() {
 	};
 	const projects = sessions.data?.projects ?? [];
 	const chats = sessions.data?.chats ?? [];
-	const missing = sessions.data?.missing ?? [];
 	const needle = query.trim().toLowerCase();
 	const searching = needle !== "";
 	const matchedProjects = filteredProjects(projects, needle);
 	const matchedChats = filteredChats(chats, needle);
-	const matchedMissing = filteredMissing(missing, needle);
 	// A search is the escape hatch to the whole list, so it shows every match instead of
 	// paging them; browsing shows one page and asks before showing the next.
 	const shownProjects = searching ? matchedProjects : matchedProjects.slice(0, projectLimit);
 	const shownChats = searching ? matchedChats : matchedChats.slice(0, chatLimit);
-	const shownMissing = searching ? matchedMissing : matchedMissing.slice(0, missingLimit);
-	const noMatches =
-		searching &&
-		matchedProjects.length === 0 &&
-		matchedChats.length === 0 &&
-		matchedMissing.length === 0;
+	const noMatches = searching && matchedProjects.length === 0 && matchedChats.length === 0;
 	const showProjects = !searching || matchedProjects.length > 0;
 	const showChats = !searching || matchedChats.length > 0;
-	const showMissing = matchedMissing.length > 0;
 	const freshAfter = sessions.dataUpdatedAt - FRESH_SESSION_MS;
 	const isFresh = (session: SessionSummary): boolean => Date.parse(session.modified) >= freshAfter;
 
@@ -313,7 +287,6 @@ export function SessionSidebar() {
 												onRemove={() => {
 													forgetProject.reset();
 													setPendingFolder({
-														missing: false,
 														name: entry.project.name,
 														path: entry.project.path,
 														sessions: entry.sessions,
@@ -361,40 +334,6 @@ export function SessionSidebar() {
 											)}
 										</SidebarMenu>
 									)}
-								</SidebarGroupContent>
-							</SidebarGroup>
-						)}
-
-						{showMissing && (
-							<SidebarGroup>
-								<SidebarGroupLabel>Missing folders</SidebarGroupLabel>
-								<SidebarGroupContent>
-									<SidebarMenu>
-										{shownMissing.map((folder) => (
-											<MissingGroup
-												key={folder.path}
-												folder={folder}
-												activeId={activeId}
-												expanded={searching}
-												isFresh={isFresh}
-												onRemove={() => {
-													forgetProject.reset();
-													setPendingFolder({
-														missing: true,
-														name: folder.name,
-														path: folder.path,
-														sessions: folder.sessions,
-													});
-												}}
-												onRename={onRename}
-												onPin={onPin}
-												onDelete={onDelete}
-											/>
-										))}
-										{!searching && matchedMissing.length > shownMissing.length && (
-											<LoadMore label="Load more missing folders" onClick={moreMissing} />
-										)}
-									</SidebarMenu>
 								</SidebarGroupContent>
 							</SidebarGroup>
 						)}
@@ -471,7 +410,7 @@ export function SessionSidebar() {
 				description={
 					shownFolder === undefined
 						? ""
-						: `Its ${shownFolder.sessions.length === 1 ? "chat is" : `${shownFolder.sessions.length} chats are`} deleted from pi's history. ${shownFolder.missing ? "The folder is already gone; nothing else changes." : `The folder ${shownFolder.path} and its files stay where they are, and opening it again starts fresh.`}`
+						: `Its ${shownFolder.sessions.length === 1 ? "chat is" : `${shownFolder.sessions.length} chats are`} deleted from pi's history. The folder ${shownFolder.path} and its files stay where they are, and opening it again starts fresh.`
 				}
 				error={forgetProject.error}
 				pending={forgetProject.isPending}
@@ -651,95 +590,6 @@ function ProjectGroup({
 					))}
 					{!expanded && sessions.length > shownSessions.length && (
 						<LoadMore label={`Load more chats in ${project.name}`} onClick={moreChats} />
-					)}
-				</SidebarMenu>
-			</CollapsibleContent>
-		</Collapsible>
-	);
-}
-
-/**
- * One folder whose path is gone but whose chats pi still lists. It sits after the live
- * lists, keeps its chats reachable, and offers the one action that matters: removing
- * them. A chat link here carries no project, so the page's own missing-folder gate runs.
- */
-function MissingGroup({
-	folder,
-	activeId,
-	expanded,
-	isFresh,
-	onRemove,
-	onRename,
-	onPin,
-	onDelete,
-}: {
-	folder: MissingFolder;
-	activeId: string | undefined;
-	/** A search is narrowing the list, so every surviving folder shows its chats. */
-	expanded: boolean;
-	isFresh: (session: SessionSummary) => boolean;
-	/** Takes the folder's chats off the list; the folder itself is already gone. */
-	onRemove: () => void;
-	onRename: (session: SessionSummary) => void;
-	onPin: (session: SessionSummary) => void;
-	onDelete: (session: SessionSummary) => void;
-}) {
-	const holdsActive = folder.sessions.some((session) => session.id === activeId);
-	const [open, setOpen] = useState(holdsActive);
-	const [chatLimit, moreChats] = useLoadMore();
-	const shownSessions = expanded ? folder.sessions : folder.sessions.slice(0, chatLimit);
-	return (
-		<Collapsible
-			open={expanded ? true : open}
-			onOpenChange={(next) => {
-				if (!expanded) setOpen(next);
-			}}
-			render={<SidebarMenuItem className="animate-enter-rise" />}
-		>
-			<div className="group/project flex items-center gap-1">
-				<CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-body hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&[data-panel-open]>svg:first-child]:rotate-90">
-					<ChevronRightIcon className="size-4 shrink-0 text-muted-foreground transition-transform" />
-					<FolderXIcon className="size-4 shrink-0 text-muted-foreground" />
-					<span className="truncate">{folder.name}</span>
-				</CollapsibleTrigger>
-				<DropdownMenu>
-					<Tip label={`${folder.name} actions`}>
-						<DropdownMenuTrigger
-							render={
-								<Button
-									variant="ghost"
-									size="icon-sm"
-									aria-label={`${folder.name} actions`}
-									className="text-muted-foreground"
-								/>
-							}
-						>
-							<MoreHorizontalIcon />
-						</DropdownMenuTrigger>
-					</Tip>
-					<DropdownMenuContent align="end">
-						<DropdownMenuItem variant="destructive" onClick={onRemove}>
-							<FolderMinusIcon />
-							Remove from Epsilon
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</div>
-			<CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-all duration-base data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
-				<SidebarMenu className="ml-3 w-auto border-l pl-2">
-					{shownSessions.map((session) => (
-						<SessionItem
-							key={session.id}
-							session={session}
-							active={session.id === activeId}
-							animate={isFresh(session)}
-							onRename={onRename}
-							onPin={onPin}
-							onDelete={onDelete}
-						/>
-					))}
-					{!expanded && folder.sessions.length > shownSessions.length && (
-						<LoadMore label={`Load more chats in ${folder.name}`} onClick={moreChats} />
 					)}
 				</SidebarMenu>
 			</CollapsibleContent>
