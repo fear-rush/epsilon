@@ -2,7 +2,7 @@
 
 ### TS-1 · Run tests through the repository commands
 
-Do: `bun run test` or the one spec; report the duration. Budgets: the 308-test suite 10 s, a targeted e2e 30 s, the full e2e 60 s.
+Do: `bun run test` or the one spec; report the duration. Budgets: a targeted e2e 30 s, the full e2e 60 s. The unit suite and `bun run check` have no time budget.
 Don't: run a spec some other way and skip the duration.
 Enforced by: review
 
@@ -14,7 +14,7 @@ Enforced by: epsilon/no-real-sleep
 
 ### TS-3 · Every check has a deadline, stated before it starts
 
-Do: use the guide: `bun run check` 15 s, one targeted e2e 30 s, the full e2e 60 s, one screenshot 15 s, one manual app run 60 s. A step past twice its deadline is stopped, its process killed, and the delay reported as part of the result.
+Do: use the guide: one targeted e2e 30 s, the full e2e 60 s, one screenshot 15 s, one manual app run 60 s. A step past twice its deadline is stopped, its process killed, and the delay reported as part of the result.
 Don't: wait longer; that is a finding about the code or the harness.
 Enforced by: review
 

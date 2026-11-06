@@ -1,4 +1,4 @@
-import { ArrowUpIcon, PaperclipIcon, SquareIcon } from "lucide-react";
+import { ArrowUpIcon, CircleHelpIcon, PaperclipIcon, SquareIcon } from "lucide-react";
 import type { RefObject } from "react";
 
 import type { ConversationState } from "#domain/conversation/state";
@@ -12,7 +12,10 @@ import { PermissionMenu } from "./composer/permission-menu";
 import { ThinkingMenu } from "./composer/thinking-menu";
 import { ToolsMenu } from "./composer/tools-menu";
 
-/** The row under the box: attach, model and thinking, tools, permission, stop and send. */
+/** What the box understands beyond plain text; the placeholder stays short (VO-2). */
+const COMPOSER_HINT = "/ for commands · ! for a shell command";
+
+/** The row under the box: attach, hints, model and thinking, tools, permission, stop and send. */
 export function ComposerToolbar({
 	busy,
 	codingTools,
@@ -61,6 +64,11 @@ export function ComposerToolbar({
 					onClick={() => fileInputRef.current?.click()}
 				>
 					<PaperclipIcon />
+				</InputGroupButton>
+			</Tip>
+			<Tip label={COMPOSER_HINT}>
+				<InputGroupButton type="button" size="icon-sm" aria-label={COMPOSER_HINT}>
+					<CircleHelpIcon />
 				</InputGroupButton>
 			</Tip>
 			<fieldset data-slot="model-selector" className="ml-auto flex min-w-0 items-center">

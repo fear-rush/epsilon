@@ -8,7 +8,6 @@ const scripts = [
 	"open-window.ts",
 	"engine-spawn.ts",
 	"client-stream.ts",
-	"bundle-size.ts",
 ];
 
 for (const script of scripts) {

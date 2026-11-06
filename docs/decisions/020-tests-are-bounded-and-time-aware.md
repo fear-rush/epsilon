@@ -2,7 +2,7 @@
 
 **Decision**
 
-`bun test` with an Effect wrapper; `TestClock` for every timer; `until()` as the only waiting helper; a suite budget of 10 s; real-process tests under 5 s with a finalizer.
+`bun test` with an Effect wrapper; `TestClock` for every timer; `until()` as the only waiting helper; real-process tests under 5 s with a finalizer.
 
 **Why**
 

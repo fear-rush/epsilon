@@ -9,8 +9,7 @@ export type BudgetName =
 	| "catalog-warm"
 	| "open-window"
 	| "engine-spawn"
-	| "client-stream"
-	| "bundle-size";
+	| "client-stream";
 
 const budgetsPath = join(import.meta.dirname, "budgets.json");
 

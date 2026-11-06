@@ -6,7 +6,7 @@ A web dashboard for the `pi` coding agent on your machine.
 > branch, with its tests. The page runs on one socket: a session sidebar, a
 > virtualized transcript, the composer, extension dialogs, the `discuss` tool, and the
 > settings sections for General, Providers, MCP, Context, Skills, Packages, Projects and
-> Diagnostics. What is left before the merge — one budget decision and a day on the real
+> Diagnostics. What is left before the merge — a day on the real
 > home — is [docs/tasks/](docs/tasks/README.md).
 
 ## Run it
