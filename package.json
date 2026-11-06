@@ -13,8 +13,9 @@
 	"scripts": {
 		"bench": "bun run scripts/bench/run.ts",
 		"build": "bun run routes:generate && vite build && bun build src/backend/main.ts src/engine/main.ts --target bun --outdir dist",
-		"check": "bun run format:check && bun run doc-check && bun run lint && bun run type-check && bun run dead-code && bun run test",
+		"check": "bun run format:check && bun run design --check && bun run doc-check && bun run lint && bun run type-check && bun run dead-code && bun run test",
 		"dead-code": "knip --cycles",
+		"design": "bun run scripts/design.ts",
 		"dev": "bun run scripts/dev.ts",
 		"dev:host": "bun run scripts/dev.ts --host",
 		"doc-check": "bun run scripts/doc-check.ts",

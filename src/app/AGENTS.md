@@ -1,6 +1,6 @@
 # src/app
 
-Read `DESIGN.md` (from step 05), `docs/rules/client.md` and `docs/rules/feedback.md` first.
+Read `DESIGN.md`, `docs/rules/client.md` and `docs/rules/feedback.md` first.
 
 Component layers:
 

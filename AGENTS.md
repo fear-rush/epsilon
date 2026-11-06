@@ -36,7 +36,7 @@ the child process that hosts pi for one chat; `src/app/` React, Vite, Tailwind, 
    fire-and-forget.
 10. Every failure is visible: a tagged error, an error frame or a notice. Silence is a bug.
 11. Time comes from `Clock`. Tests use `TestClock` and stay within budget.
-12. Never edit generated files: `src/app/routeTree.gen.ts`.
+12. Never edit generated files: `src/app/routeTree.gen.ts`, `src/app/styles/tokens.gen.css` (from `DESIGN.md`).
 13. The repository wins over memory, chat and archive; if they disagree, fix the other.
 
 ## Commands
@@ -49,15 +49,15 @@ From the repository root: `bun run dev` (sandboxed agent home) / `dev:host` (rea
 
 ## Before you edit
 
-| You are about to                      | Read first                                         |
-| ------------------------------------- | -------------------------------------------------- |
-| touch anything pi                     | `docs/pi/README.md`                                |
-| write server or engine code           | `docs/rules/server.md`                             |
-| write client code                     | `DESIGN.md` (from step 05), `docs/rules/client.md` |
-| show an error, empty or loading state | `docs/rules/feedback.md`                           |
-| propose a choice that sounds obvious  | `docs/decisions/README.md` (may be rejected)       |
-| choose what to work on                | `docs/tasks/README.md`                             |
-| run a check, or need a budget         | `docs/rules/testing.md`                            |
+| You are about to                      | Read first                                   |
+| ------------------------------------- | -------------------------------------------- |
+| touch anything pi                     | `docs/pi/README.md`                          |
+| write server or engine code           | `docs/rules/server.md`                       |
+| write client code                     | `DESIGN.md`, `docs/rules/client.md`          |
+| show an error, empty or loading state | `docs/rules/feedback.md`                     |
+| propose a choice that sounds obvious  | `docs/decisions/README.md` (may be rejected) |
+| choose what to work on                | `docs/tasks/README.md`                       |
+| run a check, or need a budget         | `docs/rules/testing.md`                      |
 
 ## How to work
 

@@ -91,6 +91,12 @@ Do: open the PNG, and say in one line what it shows.
 Don't: report a screenshot you did not look at.
 Enforced by: review
 
+### TS-15 · DESIGN.md is linted with Google's CLI, pinned
+
+Do: `bunx @google/design.md@0.4.0 lint DESIGN.md` after a change to DESIGN.md; errors must be zero. The `containers` and `motion` groups are unknown keys, and the warning is expected. `bun run design --check` (in `bun run check`) keeps `tokens.gen.css` in step.
+Don't: add the lint to `bun run check`; it fetches the package over the network.
+Enforced by: review
+
 ## Not covered here
 
 A check that fails for a reason you do not understand: stop and ask.

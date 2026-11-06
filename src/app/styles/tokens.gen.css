@@ -1,0 +1,100 @@
+/* Generated from DESIGN.md by bun run design. Do not edit. */
+
+:root {
+	--background: oklch(1 0 0);
+	--foreground: oklch(0.145 0 0);
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.145 0 0);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.145 0 0);
+	--primary: oklch(0.205 0 0);
+	--primary-foreground: oklch(0.985 0 0);
+	--secondary: oklch(0.97 0 0);
+	--secondary-foreground: oklch(0.205 0 0);
+	--muted: oklch(0.97 0 0);
+	--muted-foreground: oklch(0.556 0 0);
+	--accent: oklch(0.97 0 0);
+	--accent-foreground: oklch(0.205 0 0);
+	--destructive: oklch(0.577 0.245 27.325);
+	--warning: oklch(0.795 0.184 86.047);
+	--warning-foreground: oklch(0.216 0.006 56.043);
+	--success: oklch(0.627 0.194 149.214);
+	--success-foreground: oklch(0.985 0 0);
+	--info: oklch(0.546 0.245 262.881);
+	--info-foreground: oklch(0.985 0 0);
+	--border: oklch(0.922 0 0);
+	--input: oklch(0.885 0 0);
+	--ring: oklch(0.708 0 0);
+	--sidebar: oklch(1 0 0);
+	--sidebar-foreground: oklch(0.145 0 0);
+	--sidebar-primary: oklch(0.205 0 0);
+	--sidebar-primary-foreground: oklch(0.985 0 0);
+	--sidebar-accent: oklch(0.97 0 0);
+	--sidebar-accent-foreground: oklch(0.205 0 0);
+	--sidebar-border: oklch(0.922 0 0);
+	--sidebar-ring: oklch(0.708 0 0);
+	--radius: 0.625rem;
+}
+
+/* Radius follows `--radius`, which a sidebar overrides for its subtree. */
+@theme inline {
+	--radius-sm: calc(var(--radius) * 0.6);
+	--radius-md: calc(var(--radius) * 0.8);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) * 1.4);
+	--radius-2xl: calc(var(--radius) * 1.8);
+	--radius-3xl: calc(var(--radius) * 2.2);
+	--radius-4xl: calc(var(--radius) * 2.6);
+	--radius-chip: calc(var(--radius) * 0.8);
+	--radius-control: var(--radius);
+	--radius-card: calc(var(--radius) * 1.4);
+	--radius-bubble: calc(var(--radius) * 1.8);
+	--radius-pill: 9999px;
+}
+
+@theme {
+	--spacing-bar: 3rem;
+	--spacing-band: 3.5rem;
+	--spacing-nav: 16rem;
+	--spacing-list: 20rem;
+	--spacing-pane: 0.75rem;
+	--spacing-page: 2rem;
+	--spacing-row: 0.25rem;
+	--spacing-field: 0.75rem;
+	--spacing-card: 1.5rem;
+	--spacing-section: 2rem;
+	--spacing-dialog-body-sm: 16rem;
+	--spacing-dialog-body-md: 24rem;
+	--spacing-dialog-body-lg: 36rem;
+	--container-content: 56rem;
+	--container-dialog-sm: 28rem;
+	--container-dialog-md: 42rem;
+	--container-dialog-lg: 56rem;
+	--text-display: 1.5rem;
+	--text-display--line-height: 1.25;
+	--text-display--font-weight: 600;
+	--text-display--letter-spacing: -0.015em;
+	--text-title: 0.9375rem;
+	--text-title--line-height: 1.4;
+	--text-title--font-weight: 600;
+	--text-section: 0.875rem;
+	--text-section--line-height: 1.4;
+	--text-section--font-weight: 500;
+	--text-body: 0.875rem;
+	--text-body--line-height: 1.5;
+	--text-meta: 0.75rem;
+	--text-meta--line-height: 1.4;
+	--text-code: 0.75rem;
+	--text-code--line-height: 1.5;
+	--ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@utility duration-fast {
+	transition-duration: 150ms;
+}
+@utility duration-base {
+	transition-duration: 220ms;
+}
+@utility duration-slow {
+	transition-duration: 360ms;
+}

@@ -1,7 +1,7 @@
 # Feedback rules
 
 What the user sees when something is wrong, missing or waiting. Words are not here; they
-are `DESIGN.md` → `## Voice` (from step 05).
+are `DESIGN.md` → `## Voice`.
 
 ### FB-1 · Choose the surface by scope
 

@@ -1,7 +1,7 @@
 # Client rules
 
 Where UI files go and how they compose. Tokens, colors, sizes and motion are in
-`DESIGN.md` (from step 05); this file has no style rules.
+`DESIGN.md`; this file has no style rules.
 
 ## Layers
 
@@ -43,7 +43,7 @@ Enforced by: review
 
 ### CL-7 · Styling goes through tokens
 
-Do: read `DESIGN.md` (from step 05) for any color, size, radius or motion.
+Do: read `DESIGN.md` for any color, size, radius or motion.
 Don't: write raw sizes or colors in feature code.
 Enforced by: epsilon/design-tokens
 
@@ -119,6 +119,18 @@ Enforced by: review
 
 Do: `variant="destructive"` and an `AlertDialog`.
 Don't: delete without a confirm.
+Enforced by: review
+
+### CL-19 · Every chat list pages by ten
+
+Do: show ten rows, let `Load more` add ten (named for what it loads), and show all matches when searching; sort projects by their newest chat.
+Don't: render the whole list, or open a chat as a list change.
+Enforced by: review
+
+### CL-20 · A tool result is drawn in its call's card
+
+Do: draw a result whose call is in the loaded window inside that call's card; only a result whose call is outside the window is its own row.
+Don't: render a hidden row; it leaves its gap behind.
 Enforced by: review
 
 ## Not covered here
