@@ -6,7 +6,6 @@
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { transcript } from "#domain/conversation/selectors";
@@ -17,7 +16,6 @@ import type { ModelOption } from "#protocol/conversation/session";
 import type { ContextView } from "#protocol/settings/context";
 import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { call } from "@/core/runtime";
 import { useReportStatus } from "@/core/status";
 import { ContinueSession, TrustGate } from "@/features/projects";
@@ -29,8 +27,7 @@ import { ConfirmDialog, QuestionDialog } from "./dialogs";
 import { liveSteps } from "./live-steps";
 import { RunStatus } from "./run-status";
 import { ComposerPlace, SessionHeader, SessionLoader } from "./session-header";
-import { Transcript, matchingRowIds } from "./transcript";
-import type { Jump } from "./transcript";
+import { Transcript } from "./transcript";
 import { useBranching } from "./use-branching";
 import { useConversation } from "./use-conversation";
 import { ConversationWelcome } from "./welcome";
@@ -107,10 +104,6 @@ export function Conversation({
 		});
 	}, [state.sessionId, sessionId, navigate, place, queryClient]);
 
-	const [searching, setSearching] = useState(false);
-	const [query, setQuery] = useState("");
-	const [cursor, setCursor] = useState(0);
-	const [jumpNonce, setJumpNonce] = useState(0);
 	const [anchorFrom, setAnchorFrom] = useState<number | undefined>(undefined);
 	const loadModels = conversation.models;
 	const [models, setModels] = useState<ReadonlyArray<ModelOption>>([]);
@@ -144,11 +137,6 @@ export function Conversation({
 		tree: state.tree,
 	});
 
-	const matches = searching ? matchingRowIds(rows, query) : [];
-	const jumpId = matches[cursor];
-	const jump: Jump | undefined =
-		jumpId === undefined ? undefined : { id: jumpId, nonce: jumpNonce };
-
 	const send = async (
 		text: string,
 		behavior?: "steer" | "followUp",
@@ -159,12 +147,6 @@ export function Conversation({
 		else await conversation.send(text, images);
 		// The sent message scrolls to the top of the view; the reply grows below it (R9).
 		setAnchorFrom(transcript(state).length);
-	};
-
-	const step = (by: 1 | -1): void => {
-		if (matches.length === 0) return;
-		setCursor((current) => (current + by + matches.length) % matches.length);
-		setJumpNonce((current) => current + 1);
 	};
 
 	useReportStatus("chat", chatReport(state), () => void conversation.reload());
@@ -226,23 +208,11 @@ export function Conversation({
 	);
 
 	/** The branch's own controls, kept in the header until they have a home of their own. */
-	const extras = (
-		<>
-			<Button
-				size="icon-sm"
-				variant="ghost"
-				aria-label="Search conversation"
-				onClick={() => setSearching((open) => !open)}
-			>
-				<SearchIcon />
-			</Button>
-			{state.busy && (
-				<Button variant="outline" size="sm" onClick={() => void conversation.abort()}>
-					Stop
-				</Button>
-			)}
-		</>
-	);
+	const extras = state.busy ? (
+		<Button variant="outline" size="sm" onClick={() => void conversation.abort()}>
+			Stop
+		</Button>
+	) : undefined;
 	const header = (
 		<SessionHeader
 			actions={extras}
@@ -278,60 +248,6 @@ export function Conversation({
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
 			{header}
-			{searching && (
-				<div className="flex items-center gap-2 border-b px-page py-2">
-					<Input
-						aria-label="Find in conversation"
-						placeholder="Find in conversation"
-						className="max-w-sm"
-						value={query}
-						onChange={(event) => {
-							setQuery(event.target.value);
-							setCursor(0);
-							setJumpNonce((current) => current + 1);
-						}}
-						onKeyDown={(event) => {
-							if (event.key === "Enter") step(event.shiftKey ? -1 : 1);
-						}}
-					/>
-					<span className="text-meta text-muted-foreground">
-						{query.trim() === ""
-							? "Type to search"
-							: matches.length === 0
-								? "No match"
-								: `${cursor + 1} of ${matches.length}`}
-					</span>
-					<Button
-						size="icon-sm"
-						variant="ghost"
-						aria-label="Previous match"
-						disabled={matches.length < 2}
-						onClick={() => step(-1)}
-					>
-						<ChevronUpIcon />
-					</Button>
-					<Button
-						size="icon-sm"
-						variant="ghost"
-						aria-label="Next match"
-						disabled={matches.length < 2}
-						onClick={() => step(1)}
-					>
-						<ChevronDownIcon />
-					</Button>
-					<Button
-						size="icon-sm"
-						variant="ghost"
-						aria-label="Close search"
-						onClick={() => {
-							setSearching(false);
-							setQuery("");
-						}}
-					>
-						<XIcon />
-					</Button>
-				</div>
-			)}
 			{questions.map((question) => (
 				<QuestionDialog
 					key={question.id}
@@ -363,7 +279,6 @@ export function Conversation({
 						onLoadTree={conversation.loadTree}
 						anchorFrom={anchorFrom}
 						onAnchored={() => setAnchorFrom(undefined)}
-						jump={jump}
 						toolOpen={conversation.toolOpen}
 						onToggleTool={conversation.toggleTool}
 					/>

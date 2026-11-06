@@ -11,7 +11,6 @@ import type { ReactNode } from "react";
 
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Tip } from "@/components/patterns/tip";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -63,16 +62,6 @@ export function ComposerPlace({
 			{content}
 			<span className="ml-auto shrink-0 pl-2">Change</span>
 		</button>
-	);
-}
-
-/** The same folder in the chat's bar, short enough for a phone. */
-export function PlaceBadge({ path }: { path: string }) {
-	return (
-		<Badge variant="secondary">
-			<FolderIcon data-icon="inline-start" />
-			{folderName(path)}
-		</Badge>
 	);
 }
 
@@ -137,7 +126,6 @@ function SessionHeaderImpl({
 				actions={
 					<>
 						<div className="flex items-center gap-2">
-							{place !== null && <PlaceBadge path={place} />}
 							<SessionControls
 								autoCompaction={autoCompaction}
 								autoRetry={autoRetry}

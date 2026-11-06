@@ -7,9 +7,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import {
-	ChevronRightIcon,
 	FolderIcon,
 	FolderMinusIcon,
+	FolderOpenIcon,
 	FolderPlusIcon,
 	FolderUpIcon,
 	MessageSquareIcon,
@@ -53,6 +53,7 @@ import {
 	SidebarGroupContent,
 	SidebarGroupLabel,
 	SidebarMenu,
+	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarTrigger,
 	useSidebar,
@@ -81,7 +82,16 @@ function useLoadMore(): [number, () => void] {
 }
 
 /** The one way a list asks for its next page; the label is also its accessible name. */
-function LoadMore({ label, onClick }: { label: string; onClick: () => void }) {
+function LoadMore({
+	label,
+	text,
+	onClick,
+}: {
+	label: string;
+	/** What the button says; the label is what a screen reader hears. */
+	text: string;
+	onClick: () => void;
+}) {
 	return (
 		<SidebarMenuItem>
 			<Button
@@ -92,7 +102,7 @@ function LoadMore({ label, onClick }: { label: string; onClick: () => void }) {
 				aria-label={label}
 				onClick={onClick}
 			>
-				Load more
+				{text}
 			</Button>
 		</SidebarMenuItem>
 	);
@@ -282,7 +292,6 @@ export function SessionSidebar() {
 												entry={entry}
 												activeId={activeId}
 												expanded={searching}
-												isFresh={isFresh}
 												onNewChat={() => startProjectChat(entry.project.path)}
 												onRemove={() => {
 													forgetProject.reset();
@@ -301,7 +310,11 @@ export function SessionSidebar() {
 											/>
 										))}
 										{!searching && matchedProjects.length > shownProjects.length && (
-											<LoadMore label="Load more projects" onClick={moreProjects} />
+											<LoadMore
+												label="Load more projects"
+												text="Load more projects"
+												onClick={moreProjects}
+											/>
 										)}
 									</SidebarMenu>
 								</SidebarGroupContent>
@@ -330,7 +343,11 @@ export function SessionSidebar() {
 												/>
 											))}
 											{!searching && matchedChats.length > shownChats.length && (
-												<LoadMore label="Load more chats" onClick={moreChats} />
+												<LoadMore
+													label="Load more chats"
+													text="Load more chats"
+													onClick={moreChats}
+												/>
 											)}
 										</SidebarMenu>
 									)}
@@ -438,7 +455,6 @@ function ProjectGroup({
 	entry,
 	activeId,
 	expanded,
-	isFresh,
 	onNewChat,
 	onRemove,
 	onRename,
@@ -450,7 +466,6 @@ function ProjectGroup({
 	activeId: string | undefined;
 	/** A search is narrowing the list, so every surviving project shows its chats. */
 	expanded: boolean;
-	isFresh: (session: SessionSummary) => boolean;
 	onNewChat: () => void;
 	/** Takes the project off the list; the folder stays. */
 	onRemove: () => void;
@@ -473,6 +488,12 @@ function ProjectGroup({
 	// Controlled from the first render: an uncontrolled default that changes after
 	// mount makes Base UI warn, and the user's own toggle must keep working.
 	const [open, setOpen] = useState(holdsActive);
+	const shown = expanded || open;
+	/** One lucide folder, open or closed; switching it remounts and plays the fade. */
+	const Folder = shown ? FolderOpenIcon : FolderIcon;
+	/** Project actions stay out of the way until the row is hovered or focused. */
+	const rowAction =
+		"text-muted-foreground transition duration-fast md:translate-x-1 md:opacity-0 md:group-hover/project:translate-x-0 md:group-hover/project:opacity-100 md:focus-visible:translate-x-0 md:focus-visible:opacity-100 md:data-[popup-open]:translate-x-0 md:data-[popup-open]:opacity-100";
 	return (
 		<Collapsible
 			open={expanded ? true : open}
@@ -481,10 +502,13 @@ function ProjectGroup({
 			}}
 			render={<SidebarMenuItem className="animate-enter-rise" />}
 		>
-			<div className="group/project flex items-center gap-1">
-				<CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-body hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&[data-panel-open]>svg:first-child]:rotate-90">
-					<ChevronRightIcon className="size-4 shrink-0 text-muted-foreground transition-transform" />
-					<FolderIcon className="size-4 shrink-0 text-muted-foreground" />
+			<div className="group/project flex items-center gap-1 rounded-md pr-1 hover:bg-sidebar-accent">
+				<CollapsibleTrigger
+					render={
+						<SidebarMenuButton className="min-w-0 flex-1 gap-1.5 hover:bg-transparent active:bg-transparent" />
+					}
+				>
+					<Folder className="size-4 shrink-0 animate-enter-fade text-muted-foreground" />
 					<span className="truncate">{project.name}</span>
 					{!project.trusted && (
 						<Tip label="Not trusted yet">
@@ -500,7 +524,7 @@ function ProjectGroup({
 						variant="ghost"
 						size="icon-sm"
 						aria-label={`New chat in ${project.name}`}
-						className="text-muted-foreground"
+						className={rowAction}
 						onClick={onNewChat}
 					>
 						<PlusIcon />
@@ -514,7 +538,7 @@ function ProjectGroup({
 									variant="ghost"
 									size="icon-sm"
 									aria-label={`${project.name} actions`}
-									className="text-muted-foreground"
+									className={rowAction}
 								/>
 							}
 						>
@@ -575,21 +599,24 @@ function ProjectGroup({
 				</DropdownMenu>
 			</div>
 			<CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-all duration-base data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
-				<SidebarMenu className="ml-3 w-auto border-l pl-2">
+				<SidebarMenu className="ml-3 w-auto pl-2">
 					{shownSessions.map((session) => (
 						<SessionItem
 							key={session.id}
 							session={session}
 							project={project.path}
 							active={session.id === activeId}
-							animate={isFresh(session)}
 							onRename={onRename}
 							onPin={onPin}
 							onDelete={onDelete}
 						/>
 					))}
 					{!expanded && sessions.length > shownSessions.length && (
-						<LoadMore label={`Load more chats in ${project.name}`} onClick={moreChats} />
+						<LoadMore
+							label={`Load more chats in ${project.name}`}
+							text="Load more chats"
+							onClick={moreChats}
+						/>
 					)}
 				</SidebarMenu>
 			</CollapsibleContent>

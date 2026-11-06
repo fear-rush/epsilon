@@ -88,16 +88,6 @@ export const rowText = (row: TranscriptRow): string => {
 	return row.turn.blocks.map((block) => block?.text ?? "").join(" ");
 };
 
-/** The ids of the rows whose text contains `query`, in display order. */
-export const matchingRowIds = (
-	rows: ReadonlyArray<TranscriptRow>,
-	query: string,
-): ReadonlyArray<string> => {
-	const needle = query.trim().toLowerCase();
-	if (needle === "") return [];
-	return rows.filter((row) => rowText(row).toLowerCase().includes(needle)).map((row) => row.id);
-};
-
 const previewOf = (text: string): string => {
 	const line = text.trimStart().split("\n")[0]?.trim() ?? "";
 	return line.length > PREVIEW_LENGTH ? `${line.slice(0, PREVIEW_LENGTH)}…` : line;
@@ -240,8 +230,6 @@ function TranscriptRail({
 	);
 }
 
-export type Jump = { readonly id: string; readonly nonce: number };
-
 export function Transcript({
 	state,
 	onLoadOlder,
@@ -250,7 +238,6 @@ export function Transcript({
 	onLoadTree,
 	anchorFrom,
 	onAnchored,
-	jump,
 	toolOpen,
 	onToggleTool,
 }: {
@@ -265,8 +252,6 @@ export function Transcript({
 	/** The row index a sent message will land at or after; scroll it to the top. */
 	anchorFrom?: number | undefined;
 	onAnchored: () => void;
-	/** A search result to bring into view. The nonce makes a repeat of the same row move. */
-	jump?: Jump | undefined;
 	toolOpen: ReadonlyMap<string, boolean>;
 	onToggleTool: (toolCallId: string) => void;
 }) {
@@ -437,14 +422,6 @@ export function Transcript({
 		else scroll.current?.querySelector(rowSelector(row.id))?.scrollIntoView({ block: "start" });
 		onAnchored();
 	}, [anchorFrom, rows, virtual, virtualizer, onAnchored]);
-
-	useEffect(() => {
-		if (jump === undefined) return;
-		const index = rows.findIndex((row) => row.id === jump.id);
-		if (index < 0) return;
-		if (virtual) virtualizer.scrollToIndex(index, { align: "center" });
-		else scroll.current?.querySelector(rowSelector(jump.id))?.scrollIntoView({ block: "center" });
-	}, [jump, rows, virtual, virtualizer]);
 
 	/** Bring a loaded row to the top; false means the row is older than this window. */
 	const scrollToRow = useCallback(

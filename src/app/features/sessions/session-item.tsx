@@ -65,7 +65,7 @@ export function SessionItem({
 			<ContextMenuTrigger
 				render={
 					<SidebarMenuItem
-						className={animate ? "chat-row-enter" : undefined}
+						className={animate ? "group/chat chat-row-enter" : "group/chat"}
 						style={{ viewTransitionName: `chat-${session.id}` }}
 					/>
 				}
@@ -98,7 +98,10 @@ export function SessionItem({
 					<Tip label="Chat actions">
 						<DropdownMenuTrigger
 							render={
-								<SidebarMenuAction aria-label="Chat actions" className="text-muted-foreground" />
+								<SidebarMenuAction
+									aria-label="Chat actions"
+									className="text-muted-foreground transition duration-fast md:translate-x-1 md:opacity-0 md:group-focus-within/chat:translate-x-0 md:group-focus-within/chat:opacity-100 md:group-hover/chat:translate-x-0 md:group-hover/chat:opacity-100 md:focus-visible:translate-x-0 md:focus-visible:opacity-100 md:data-[popup-open]:translate-x-0 md:data-[popup-open]:opacity-100"
+								/>
 							}
 						>
 							<MoreHorizontalIcon />
