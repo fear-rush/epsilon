@@ -59,8 +59,8 @@ Two page shapes stay as they are: **form page** (General, Diagnostics, Projects)
 
 ## Done when
 
-- `bun run shoot` of all eight sections empty, plus Providers with the stub provider
-  selected, plus MCP with the `…` menu open, read by you, light.
+- `bun run shoot` of all eight sections empty, plus playwright-cli shots of Providers with
+  the stub provider selected and MCP with the `…` menu open, read by you, light.
 - The settings e2e specs (`controls`, `onboarding`, `projects`, `skills-import`) pass,
   updated for the new words; report durations.
 - `bun run check` passes.

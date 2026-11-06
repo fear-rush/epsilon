@@ -93,10 +93,11 @@ Rules this step makes true: `DESIGN.md` `notice-*`, `status-strip`, `status-row`
 - `bun run check` passes; report the duration.
 - `bun run test:e2e` specs `crash`, `reconnect`, `foreign-writer` pass, updated for the new
   words (assert the new words; do not delete assertions).
-- `bun run shoot` captures, light, all read by you: a chat with `engine-restarting`, a chat
-  with drift (one row, no duplicate), `--state server-down` (strip only, no centred
-  "Server not reachable"), a route that throws (Something went wrong + two buttons), a
-  settings save refused (`Notice` in its new look), `--state mcp-add` (labelled loading).
+- Screenshots, light, all read by you. With playwright-cli (step 04 rules): a chat with
+  `engine-restarting`, a chat with drift (one row, no duplicate), the server stopped
+  (strip only, no centred "Server not reachable"), a settings save refused (`Notice` in
+  its new look), Add MCP server open (labelled loading). With `bun run shoot`: an address
+  nothing serves, and any route that shows the new copy.
 - `docs/rules/feedback.md` FB-5 and FB-6 say `Enforced by:` the test or type that now
   covers them.
 

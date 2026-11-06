@@ -75,8 +75,8 @@ rebuilding, and loosen the rules that lock layout. Evidence:
 - `bun run lint` passes with no new disables; the lint rule's own tests
   (`bun run test:tools`) cover the new cases.
 - `bun run check` passes; report the duration.
-- `bun run shoot` of every settings section, one chat with a run card open, and
-  `--state mcp-add`, read by you, compared side by side with the shots taken at the end of step 05: the
+- `bun run shoot` of every settings section and one chat, plus playwright-cli shots of a
+  run card open and Add MCP server open, read by you, compared side by side with the shots taken at the end of step 05: the
   only differences are the Cancel buttons and the dialog's height.
 - `bun run test:e2e`, full, passes (this step touches more than one feature); report the
   duration.
