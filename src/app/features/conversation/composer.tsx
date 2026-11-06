@@ -19,7 +19,6 @@ import type { ImageBlock } from "#protocol/conversation/frames";
 import type { AutocompleteReply, CommandOffer } from "#protocol/conversation/palette";
 import type { ModelOption, ThinkingLevel } from "#protocol/conversation/session";
 import type { ContextView } from "#protocol/settings/context";
-import { shortcut } from "@/components/patterns/shortcut";
 import { errorView } from "@/components/patterns/status/error-view";
 import { Notice } from "@/components/patterns/status/notice";
 import type { Tone } from "@/components/patterns/status/status-tone";
@@ -381,7 +380,7 @@ export function Composer({
 			if (command === "") return;
 			if (attachments.length > 0) {
 				setNotice({
-					text: "A shell command takes no images: remove them, or send them in a message.",
+					text: "Shell commands can't take images. Remove them or send a message.",
 					tone: "warning",
 				});
 				return;
@@ -592,9 +591,9 @@ export function Composer({
 							placeholder={
 								writable
 									? busy
-										? `Steer this run: Enter steers, ${shortcut("Enter")} waits until it settles, Esc stops`
-										: "Message the agent (/ commands, ! shell, Enter sends, paste or drop images)"
-									: "This chat is read-only until it is reloaded."
+										? "Steer this run…"
+										: "Message the agent…"
+									: "Reload to continue this chat."
 							}
 							value={text}
 							rows={2}

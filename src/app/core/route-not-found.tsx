@@ -14,7 +14,7 @@ export function RouteNotFound() {
 		<StatusView
 			icon={FileQuestionIcon}
 			title="This page does not exist"
-			line="The address names nothing this Epsilon serves. A link from an older build can do it."
+			line="Check the address, or go back."
 			action={
 				<Link to="/" className={cn(buttonVariants({ variant: "outline" }))}>
 					Back to the app

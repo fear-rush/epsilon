@@ -59,7 +59,7 @@ export function ContinueSession({
 				open={picking}
 				onOpenChange={setPicking}
 				title="Continue this chat in a project"
-				description="Its history stays in the same file; only the folder it runs in changes for this open."
+				description="The history is kept. Only the folder changes."
 				action="Continue"
 				recent={others}
 				onPick={async (path) => {

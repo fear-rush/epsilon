@@ -31,14 +31,14 @@ const COPY: Record<
 		action: "Create file",
 		label: "Path",
 		placeholder: "references/notes.md",
-		description: "The file starts empty, and the folders in its path are created too.",
+		description: "Starts empty. Missing folders are created.",
 	},
 	folder: {
 		title: "New folder",
 		action: "Create folder",
 		label: "Path",
 		placeholder: "references",
-		description: "An empty folder, listed in the tree until it holds a file.",
+		description: "An empty folder.",
 	},
 };
 

@@ -66,7 +66,7 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 						: undefined
 				}
 				error={settings.error}
-				help={fileOnly ? "Skills from extensions appear while a chat is open." : undefined}
+				help={fileOnly ? "Extension skills show while a chat is open." : undefined}
 				footer={{
 					primary: (
 						<Button

@@ -125,7 +125,7 @@ export function ReasoningCompatFields({
 			<Choice
 				id={`${idPrefix}-compat-adaptive`}
 				label="Adaptive thinking"
-				description="Leave on Auto unless the gateway requires adaptive thinking for a newer Claude model."
+				description="Leave on Auto unless your gateway needs adaptive thinking."
 				value={triValue(compat.forceAdaptiveThinking)}
 				items={[
 					{ value: "auto", label: "Auto" },
@@ -142,7 +142,7 @@ export function ReasoningCompatFields({
 			<Choice
 				id={`${idPrefix}-compat-format`}
 				label="Reasoning format"
-				description="Where the level goes in the request body. Auto follows the provider URL."
+				description="Where the level goes in the request. Auto follows the URL."
 				value={compat.thinkingFormat ?? "auto"}
 				items={choices(ThinkingFormat.literals)}
 				onChange={(value) => onChange(withKey(compat, "thinkingFormat", formatOf(value)))}
@@ -150,7 +150,7 @@ export function ReasoningCompatFields({
 			<Choice
 				id={`${idPrefix}-compat-effort`}
 				label="Reasoning effort"
-				description="Whether this endpoint accepts an effort value."
+				description="Endpoint accepts an effort value."
 				value={triValue(compat.supportsReasoningEffort)}
 				items={[
 					{ value: "auto", label: "Auto" },
@@ -164,7 +164,7 @@ export function ReasoningCompatFields({
 			<Choice
 				id={`${idPrefix}-compat-budget-field`}
 				label="Token budget field"
-				description="Caps reasoning tokens when this endpoint shares max_tokens with the answer."
+				description="Limits reasoning when it shares max_tokens with the answer."
 				value={compat.thinkingTokenBudgetField ?? "auto"}
 				items={choices(ThinkingTokenBudgetField.literals)}
 				onChange={(value) =>
@@ -174,7 +174,7 @@ export function ReasoningCompatFields({
 			<Choice
 				id={`${idPrefix}-compat-reasoning-content`}
 				label="Reasoning content"
-				description="Whether the model needs its previous reasoning sent back with tool results."
+				description="Send earlier reasoning back with tool results."
 				value={triValue(compat.requiresReasoningContentOnAssistantMessages)}
 				items={[
 					{ value: "auto", label: "Auto" },

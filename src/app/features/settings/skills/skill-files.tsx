@@ -123,7 +123,7 @@ export function SkillFiles({
 			<DeleteDialog
 				open={removing !== undefined}
 				title={`Delete ${shownRemoving?.path ?? "file"}?`}
-				description="The file is removed from the skill folder."
+				description="The file is deleted."
 				error={remove.error}
 				pending={remove.isPending}
 				confirmLabel="Delete"

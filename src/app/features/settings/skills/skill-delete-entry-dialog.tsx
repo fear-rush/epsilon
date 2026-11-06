@@ -50,7 +50,7 @@ export function SkillDeleteEntryDialog({
 			title={`Delete ${shown?.path ?? "this entry"}?`}
 			description={
 				shown?.folder === true
-					? "The empty folder is removed from the skill folder."
+					? "The empty folder is deleted."
 					: "The file is removed from the skill folder."
 			}
 			error={remove.error}

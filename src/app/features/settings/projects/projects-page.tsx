@@ -94,7 +94,7 @@ export function SettingsProjects() {
 			<PaneBar actions={openFolder} title="Projects" column />
 			<PaneBody page>
 				<Section
-					description="Every folder a chat has run in, with pi's trust decision for it. Epsilon starts nothing in an untrusted folder until you answer."
+					description="Folders your chats run in. Untrusted folders ask before anything runs."
 					title="Folders you chat in"
 					empty={
 						projects.length === 0 ? (

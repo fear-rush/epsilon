@@ -99,7 +99,7 @@ export function ForkSessionDialog({
 			onOpenChange={change}
 			size="md"
 			title="Fork from a message"
-			description="The new chat holds this chat up to just before the message you pick, and that message's text waits in the box. This chat stays as it is."
+			description="Starts a new chat from just before the message you pick. This chat stays as it is."
 			footer={
 				<Button type="button" variant="outline" onClick={() => change(false)}>
 					Cancel

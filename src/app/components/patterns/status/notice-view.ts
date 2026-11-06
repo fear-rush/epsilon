@@ -43,13 +43,13 @@ function epsilonView(notice: EpsilonNotice): NoticeView {
 		case "engine-out-of-memory":
 			return { tone: "danger", text: "This chat ran out of memory", action: "diagnostics" };
 		case "slot-freed":
-			return { tone: "info", text: "Closed to free a slot. Send a message to reopen it." };
+			return { tone: "info", text: "Closed to make room. Send a message to reopen it." };
 		case "extensions-failed":
 			return { tone: "danger", text: `Extensions didn't start: ${part("reason")}` };
 		case "run-failed":
 			return { tone: "danger", text: `The run failed: ${part("reason")}` };
 		case "readings-unreadable":
-			return { tone: "warning", text: `Couldn't read this chat's usage: ${part("reason")}` };
+			return { tone: "warning", text: `Couldn't read this chat's token use: ${part("reason")}` };
 		case "extension-closed-chat":
 			return {
 				tone: "warning",
@@ -60,7 +60,7 @@ function epsilonView(notice: EpsilonNotice): NoticeView {
 		case "command-shadowed":
 			return {
 				tone: "warning",
-				text: `/${part("name")} is shadowed by pi's built-in /${part("name")}`,
+				text: `/${part("name")} is a built-in command, so yours is hidden`,
 			};
 		case "retrying":
 			return { tone: "info", text: `Retrying after a failed request: ${part("reason")}` };

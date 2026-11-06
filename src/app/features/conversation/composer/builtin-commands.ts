@@ -103,7 +103,7 @@ const HANDLERS: Partial<Record<ComposerCommandName, Handler>> = {
 		if (blocked !== undefined) return blocked;
 		// The tree itself is read when the dialog opens, so an empty list here only means
 		// no read has happened yet; the chat's messages are what this command needs.
-		if (empty) return "The session tree has no message yet. Send one first.";
+		if (empty) return "Send a message first.";
 		openTree();
 		return undefined;
 	},
@@ -128,7 +128,7 @@ const HANDLERS: Partial<Record<ComposerCommandName, Handler>> = {
 	export: async (argument, { empty, exportChat }) => {
 		const format = exportFormat(argument.trim());
 		if (format === undefined) {
-			return "Epsilon downloads the export, so it takes no path: /export saves HTML and /export .jsonl saves pi's JSONL.";
+			return "/export saves HTML. /export .jsonl saves JSONL.";
 		}
 		if (empty) return "This chat has nothing to export yet.";
 		try {
@@ -145,7 +145,7 @@ const HANDLERS: Partial<Record<ComposerCommandName, Handler>> = {
 		try {
 			await navigator.clipboard.writeText(text);
 		} catch {
-			return "This browser refused clipboard access. Select the reply and copy it instead.";
+			return "Couldn't copy. Select the text instead.";
 		}
 		return "Copied the last agent reply to the clipboard.";
 	},
@@ -194,7 +194,7 @@ const HANDLERS: Partial<Record<ComposerCommandName, Handler>> = {
 		}
 		// Navigating away would take the sentence with it, and dropping the provider
 		// silently is what a refusal is for.
-		return `Provider sign-in lives in Settings, then Providers: sign ${provider} in there.`;
+		return `Sign in to ${provider} in Settings, Providers.`;
 	},
 	logout: (argument, { navigate }) => {
 		const provider = argument.trim();

@@ -234,7 +234,7 @@ export function SkillForm({
 				<CancelDialog
 					open={form.cancelOpen}
 					title="Cancel this skill?"
-					description="Nothing is saved until you press Save. What you entered will be lost."
+					description="What you entered is lost."
 					onOpenChange={form.setCancelOpen}
 					onDiscard={() => {
 						form.allowLeave();
@@ -272,7 +272,7 @@ export function SkillForm({
 			<DeleteDialog
 				open={form.deleteOpen}
 				title={`Remove ${detail?.name ?? draft.name}?`}
-				description="The skill directory and every file in it are deleted."
+				description="The skill and every file in it are deleted."
 				error={remove.error}
 				pending={remove.isPending}
 				onOpenChange={form.setDeleteOpen}

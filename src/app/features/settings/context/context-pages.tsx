@@ -50,16 +50,13 @@ export function ContextFiles({ view }: { view: ContextView }) {
 			<Section title="Context files">
 				<Row
 					title="No context file"
-					description="pi reads one AGENTS.md or CLAUDE.md per folder, from the agent home down to this folder."
+					description="pi reads one AGENTS.md or CLAUDE.md per folder."
 				/>
 			</Section>
 		);
 	}
 	return (
-		<Section
-			title="Context files"
-			description="Every file pi loads before the model answers, in pi's own order."
-		>
+		<Section title="Context files" description="Files pi loads before the model answers.">
 			{view.contextFiles.map((file) => (
 				<Row key={file.path} title={nameOfPath(file.path)} description={file.path}>
 					<Badge variant="outline">{file.order}</Badge>
@@ -125,16 +122,13 @@ export function ContextSkills({ view }: { view: ContextView }) {
 	if (view.skills.length === 0) {
 		return (
 			<Section title="Skills">
-				<Row
-					title="No skill"
-					description="pi found no SKILL.md in this folder, the agent home, or a package."
-				/>
+				<Row title="No skill" description="No SKILL.md found." />
 			</Section>
 		);
 	}
 	return (
 		<>
-			<Section title="Skills" description="What pi found, and whether the model may load it.">
+			<Section title="Skills" description="Skills pi found.">
 				{view.skills.map((skill) => (
 					<Row
 						key={skill.filePath}
@@ -162,12 +156,9 @@ const promptRow = (prompt: ContextPrompt) => (
 export function ContextPrompts({ view }: { view: ContextView }) {
 	return (
 		<>
-			<Section
-				title="Prompt templates"
-				description="A typed name expands one of these instead of reaching the model."
-			>
+			<Section title="Prompt templates" description="Type a name to expand one.">
 				{view.prompts.length === 0 ? (
-					<Row title="No template" description="pi found no prompt template for this folder." />
+					<Row title="No template" description="No prompt template here." />
 				) : (
 					view.prompts.map(promptRow)
 				)}
@@ -192,12 +183,12 @@ export function ContextExtensions({ view }: { view: ContextView }) {
 				title="Extensions"
 				description={
 					view.live
-						? "What pi loaded for the open chat, built-ins included."
+						? "What pi loaded for the open chat."
 						: "What settings and packages declare. pi's built-ins join the list once a chat opens."
 				}
 			>
 				{view.extensions.length === 0 ? (
-					<Row title="No extension" description="Nothing in settings or a package adds one." />
+					<Row title="No extension" description="Nothing adds one." />
 				) : (
 					view.extensions.map(extensionRow)
 				)}
@@ -220,9 +211,9 @@ const packageLine = (entry: ContextPackage): string => {
 
 export function ContextPackages({ view }: { view: ContextView }) {
 	return (
-		<Section title="Packages" description="Declared sources and how much pi resolves from each.">
+		<Section title="Packages" description="Where pi finds extensions, skills and prompts.">
 			{view.packages.length === 0 ? (
-				<Row title="No package" description="No settings file declares one." />
+				<Row title="No package" description="No settings file lists one." />
 			) : (
 				view.packages.map((entry) => (
 					<Row
@@ -245,7 +236,7 @@ export function ContextTools({ view }: { view: ContextView }) {
 			<StatusView
 				icon={WrenchIcon}
 				title="No chat open"
-				line="The tools pi offers belong to a running engine, so this section fills once a chat is open in the folder."
+				line="Open a chat in this folder to see its tools."
 			/>
 		);
 	}
@@ -253,10 +244,7 @@ export function ContextTools({ view }: { view: ContextView }) {
 	const inactive = tools.all.filter((tool) => !active.has(tool.name));
 	return (
 		<>
-			<Section
-				title="Active tools"
-				description="What the model may call in the open chat right now."
-			>
+			<Section title="Active tools" description="Tools the model can call in the open chat.">
 				{tools.all
 					.filter((tool) => active.has(tool.name))
 					.map((tool) => (
@@ -267,9 +255,9 @@ export function ContextTools({ view }: { view: ContextView }) {
 						</Row>
 					))}
 			</Section>
-			<Section title="Offered but inactive" description="Registered, and not in the active set.">
+			<Section title="Offered but inactive" description="Available, but turned off.">
 				{inactive.length === 0 ? (
-					<Row title="Nothing inactive" description="Every registered tool is active." />
+					<Row title="Nothing inactive" description="Every tool is on." />
 				) : (
 					inactive.map((tool) => (
 						<Row key={tool.name} title={tool.name} description={tool.description}>

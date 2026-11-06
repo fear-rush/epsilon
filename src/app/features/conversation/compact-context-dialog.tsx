@@ -36,7 +36,7 @@ export function CompactContextDialog({
 			onOpenChange={onOpenChange}
 			size="sm"
 			title="Compact context"
-			description="pi replaces this chat's history with a summary. A running turn is stopped first."
+			description="Replaces this chat's history with a summary. A running turn stops first."
 			footer={
 				<>
 					<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -70,27 +70,25 @@ export const thinkingOptions: readonly SettingOption[] = THINKING_LEVELS.map((le
 export const settingGroups: readonly SettingGroup[] = [
 	{
 		title: "Queued messages",
-		description: "What pi does with a message sent while it is still working.",
+		description: "Messages sent while the agent works.",
 		entries: [
 			{
 				key: "steeringMode",
 				label: "Steering mode",
-				description:
-					"A message sent while streaming changes the run. One at a time delivers one and waits; all delivers them at once.",
+				description: "Sent while the agent works. One at a time, or all together.",
 				control: { kind: "select", options: queueModeOptions },
 			},
 			{
 				key: "followUpMode",
 				label: "Follow-up mode",
-				description:
-					"A message sent after the run starts waits until the agent stops. One at a time delivers one and waits; all delivers them at once.",
+				description: "Held until the agent stops. One at a time, or all together.",
 				control: { kind: "select", options: queueModeOptions },
 			},
 		],
 	},
 	{
 		title: "Compaction",
-		description: "How pi summarises the context when it nears the window.",
+		description: "Summarising a chat that nears the context limit.",
 		entries: [
 			{
 				key: "compaction.enabled",
@@ -100,20 +98,19 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "compaction.reserveTokens",
 				label: "Reserve tokens",
-				description: "Free context tokens below which automatic compaction starts.",
+				description: "Compacts when free context falls below this.",
 				control: { kind: "number" },
 			},
 			{
 				key: "compaction.keepRecentTokens",
 				label: "Keep recent tokens",
-				description: "Recent tokens retained without summarization.",
+				description: "Recent tokens kept as they are.",
 				control: { kind: "number" },
 			},
 			{
 				key: "compaction.modelOverrides",
 				label: "Per-model reserves",
-				description:
-					"Per-model token settings keyed by exact provider/modelId. A blank field uses the number above.",
+				description: "Per provider/model. Blank uses the number above.",
 				control: { kind: "compactionOverrides" },
 			},
 		],
@@ -124,43 +121,43 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "retry.enabled",
 				label: "Automatic retry",
-				description: "Enable automatic agent-level retry for transient failures.",
+				description: "Retry failed requests.",
 				control: { kind: "switch" },
 			},
 			{
 				key: "retry.maxRetries",
 				label: "Max retries",
-				description: "Maximum agent-level retry attempts.",
+				description: "Most attempts.",
 				control: { kind: "number" },
 			},
 			{
 				key: "retry.baseDelayMs",
 				label: "Base delay",
-				description: "Initial exponential-backoff delay in milliseconds.",
+				description: "First wait, in milliseconds.",
 				control: { kind: "number" },
 			},
 			{
 				key: "retry.maxAgentDelayMs",
 				label: "Longest delay",
-				description: "Maximum agent-level retry delay in milliseconds.",
+				description: "Longest wait, in milliseconds.",
 				control: { kind: "number" },
 			},
 		],
 	},
 	{
 		title: "Branch summaries",
-		description: "What pi writes when it branches from earlier history.",
+		description: "Summaries when you branch from earlier.",
 		entries: [
 			{
 				key: "branchSummary.reserveTokens",
 				label: "Reserve tokens",
-				description: "Tokens reserved when summarizing branch history.",
+				description: "Tokens kept free for the summary.",
 				control: { kind: "number" },
 			},
 			{
 				key: "branchSummary.skipPrompt",
 				label: "Skip the prompt",
-				description: "Skip the branch-summary prompt and default to no summary.",
+				description: "Branch without asking, with no summary.",
 				control: { kind: "switch" },
 			},
 		],
@@ -171,20 +168,20 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "defaultThinkingLevel",
 				label: "Startup thinking level",
-				description: "The thinking level a model starts at.",
+				description: "Thinking level a chat starts with.",
 				control: { kind: "select", options: thinkingOptions },
 			},
 			{
 				key: "modelThinkingLevels",
 				label: "Per-model thinking level",
-				description: "Per-model startup thinking levels keyed by exact provider/modelId.",
+				description: "Per provider/model.",
 				control: { kind: "levels" },
 			},
 			{
 				key: "enabledModels",
 				label: "Enabled models",
 				description:
-					"Model patterns used for startup selection and model cycling, the same format as --models. Empty offers every model; a chat keeps the model it is already using.",
+					"Model patterns to pick from and cycle through, like --models. Empty offers every model.",
 				control: { kind: "models" },
 			},
 		],
@@ -195,7 +192,7 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "transport",
 				label: "Transport",
-				description: "Preferred transport for AI providers that support multiple transports.",
+				description: "How requests reach providers that offer a choice.",
 				control: {
 					kind: "select",
 					options: [
@@ -209,14 +206,13 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "httpIdleTimeoutMs",
 				label: "HTTP idle timeout",
-				description: "HTTP header and body idle timeout in milliseconds. Set to 0 to disable.",
+				description: "Milliseconds of silence before giving up. 0 turns it off.",
 				control: { kind: "number" },
 			},
 			{
 				key: "cacheWarming",
 				label: "Cache warming",
-				description:
-					"Keep eligible provider prompt caches warm during active runs or, with idle, between runs. The agent home's value is the one pi reads.",
+				description: "Keeps provider prompt caches warm. Read from the agent home.",
 				control: {
 					kind: "select",
 					options: [
@@ -234,25 +230,25 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "hideThinkingBlock",
 				label: "Hide thinking",
-				description: "Hide thinking blocks in the transcript.",
+				description: "Hide thinking in the transcript.",
 				control: { kind: "switch" },
 			},
 			{
 				key: "showCacheMissNotices",
 				label: "Cache miss notices",
-				description: "Show transcript notices for cache costs and provider recovery diagnostics.",
+				description: "Show cache costs and provider recovery notes.",
 				control: { kind: "switch" },
 			},
 			{
 				key: "images.autoResize",
 				label: "Resize images",
-				description: "Resize images to at most 2000 by 2000 pixels before sending them to a model.",
+				description: "Shrink images to 2000 by 2000 pixels before sending.",
 				control: { kind: "switch" },
 			},
 			{
 				key: "images.blockImages",
 				label: "Block images",
-				description: "Prevent images from being sent to models.",
+				description: "Never send images to a model.",
 				control: { kind: "switch" },
 			},
 		],
@@ -263,20 +259,19 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "enableSkillCommands",
 				label: "Skill commands",
-				description: "Register skills as /skill:name commands.",
+				description: "Add each skill as a /skill:name command.",
 				control: { kind: "switch" },
 			},
 			{
 				key: "shellPath",
 				label: "Shell path",
-				description:
-					"Custom shell executable path. Supports a leading ~. Empty uses the system default.",
+				description: "Path to the shell. Empty uses the system shell.",
 				control: { kind: "text", placeholder: "/bin/zsh" },
 			},
 			{
 				key: "shellCommandPrefix",
 				label: "Shell command prefix",
-				description: "Prefix prepended to every shell command.",
+				description: "Put before every shell command.",
 				control: { kind: "text", placeholder: "source ~/.profile" },
 			},
 		],
@@ -287,27 +282,25 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "warnings",
 				label: "Anthropic extra usage",
-				description: "Warn when Anthropic subscription authentication may use paid extra usage.",
+				description: "Warn when an Anthropic subscription may bill extra usage.",
 				control: { kind: "warnings" },
 			},
 			{
 				key: "enableInstallTelemetry",
 				label: "Install telemetry",
-				description:
-					"Enable anonymous install/update reporting and selected provider attribution headers.",
+				description: "Anonymous install and update reports.",
 				control: { kind: "switch" },
 			},
 			{
 				key: "enableAnalytics",
 				label: "Analytics",
-				description: "Opt in to analytics data sharing.",
+				description: "Share usage analytics.",
 				control: { kind: "switch" },
 			},
 			{
 				key: "defaultProjectTrust",
 				label: "Default project trust",
-				description:
-					"Fallback behavior when no extension or saved trust decision decides project trust. The agent home's value is the one pi reads.",
+				description: "Used when no extension or saved choice decides. Read from the agent home.",
 				control: {
 					kind: "select",
 					options: [
@@ -320,7 +313,7 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "treeFilterMode",
 				label: "Tree filter",
-				description: "Default filter when opening /tree.",
+				description: "Filter /tree opens with.",
 				control: {
 					kind: "select",
 					options: [
@@ -351,7 +344,7 @@ export const terminalEntries: readonly TerminalEntry[] = [
 	{
 		key: "fullscreenExitOutput",
 		label: "Fullscreen exit output",
-		reason: "It decides what the terminal prints when the fullscreen view closes.",
+		reason: "Controls what the terminal prints on exit.",
 	},
 	{
 		key: "fullscreenScrollbar",
@@ -376,7 +369,7 @@ export const terminalEntries: readonly TerminalEntry[] = [
 	{
 		key: "editorPaddingX",
 		label: "Editor padding",
-		reason: "Padding inside the terminal editor has no browser equivalent.",
+		reason: "Terminal editor padding.",
 	},
 	{
 		key: "outputPad",
@@ -401,7 +394,7 @@ export const terminalEntries: readonly TerminalEntry[] = [
 	{
 		key: "terminal.showImages",
 		label: "Terminal images",
-		reason: "Images are drawn with terminal graphics protocols.",
+		reason: "Terminal image drawing.",
 	},
 	{
 		key: "terminal.imageWidthCells",
@@ -421,7 +414,7 @@ export const terminalEntries: readonly TerminalEntry[] = [
 	{
 		key: "collapseChangelog",
 		label: "Collapse changelog",
-		reason: "It collapses the changelog the terminal prints on start.",
+		reason: "Collapses the changelog the terminal prints.",
 	},
 	{
 		key: "doubleEscapeAction",

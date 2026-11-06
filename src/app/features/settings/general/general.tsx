@@ -179,7 +179,7 @@ function AppSection({
 			</Row>
 			<Row
 				title="Chat engines"
-				description="How many chats may hold an engine at once; the registry evicts an idle one over this."
+				description="Most chats open at once. The oldest idle one closes first."
 			>
 				<Input
 					aria-label="Chat engines"

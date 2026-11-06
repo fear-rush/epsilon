@@ -162,7 +162,7 @@ export function ModelAdvancedFields({
 				<JsonField
 					id="model-sampling-params"
 					label="Sampling params"
-					description="Extra request-body fields, merged into every request for this model."
+					description="Extra fields added to every request."
 					value={form.samplingParams}
 					error={errors.samplingParams}
 					onChange={(samplingParams) => update({ samplingParams })}
@@ -170,7 +170,7 @@ export function ModelAdvancedFields({
 				<JsonField
 					id="model-sampling-by-level"
 					label="Sampling by thinking level"
-					description="An object keyed by thinking level; each value merges over the sampling params."
+					description="One object per thinking level."
 					value={form.samplingParamsByLevel}
 					error={errors.samplingParamsByLevel}
 					onChange={(samplingParamsByLevel) => update({ samplingParamsByLevel })}

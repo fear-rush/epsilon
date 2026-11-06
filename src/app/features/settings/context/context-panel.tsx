@@ -33,7 +33,7 @@ function ContextPanel({ selected }: { selected: ContextSectionId | undefined }) 
 			help={
 				view === undefined || view.live
 					? undefined
-					: "Open a chat here to see the exact prompt and tools."
+					: "Open a chat here to see its prompt and tools."
 			}
 			scope="/settings/context"
 			notices={

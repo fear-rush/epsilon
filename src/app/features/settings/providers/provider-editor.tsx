@@ -245,7 +245,7 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 				<CancelDialog
 					open={form.cancelOpen}
 					title="Cancel this provider?"
-					description="The entered name, endpoint, key and models are lost."
+					description="What you entered is lost."
 					onOpenChange={form.setCancelOpen}
 					onDiscard={() => {
 						form.allowLeave();
@@ -259,7 +259,7 @@ function ProviderForm({ detail }: { detail: ProviderDetail | undefined }) {
 			<DeleteDialog
 				open={form.deleteOpen}
 				title={`Remove ${detail?.name ?? draft.name}?`}
-				description="Removes its models.json entry. A stored credential stays in auth.json; sign out before deleting if you want it gone."
+				description="Your saved sign-in stays until you sign out."
 				error={remove.error}
 				pending={remove.isPending}
 				onOpenChange={form.setDeleteOpen}

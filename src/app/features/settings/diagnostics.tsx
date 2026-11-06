@@ -35,7 +35,7 @@ const diagnosticsQuery = {
 const replacementOf = (method: string): string => {
 	switch (method) {
 		case "custom":
-			return "Epsilon uses its own dialogs; the pi-tui component is not drawn.";
+			return "Shown as a dialog here.";
 		case "onTerminalInput":
 			return "The composer owns typing and paste.";
 		case "setEditorComponent":
@@ -81,7 +81,7 @@ export function SettingsDiagnostics() {
 		stopped === undefined
 			? undefined
 			: {
-					text: `Engine stopped: ${stopped}. Its chat starts a new one on the next message.`,
+					text: `Stopped ${stopped}. Send a message in that chat to restart it.`,
 					tone: "warning",
 				},
 		undefined,
@@ -117,7 +117,6 @@ export function SettingsDiagnostics() {
 			<PaneBody page>
 				<Section
 					title="Running engines"
-					description="One process per live chat. A chat with none starts a new one on its next message."
 					empty={view.engines.length === 0 ? <EmptyState title="No running engines" /> : undefined}
 				>
 					{view.engines.map((engine) => (
@@ -145,8 +144,8 @@ export function SettingsDiagnostics() {
 
 				<Section
 					title="Extension UI"
-					description="Terminal-only calls from live extensions, and what this page uses instead."
-					empty={terminals.length === 0 ? <EmptyState title="No terminal-only calls" /> : undefined}
+					description="Extension features this page can't show."
+					empty={terminals.length === 0 ? <EmptyState title="Nothing to show" /> : undefined}
 				>
 					{terminals.flatMap((engine) =>
 						engine.unsupported.map((method) => (
@@ -161,7 +160,7 @@ export function SettingsDiagnostics() {
 
 				<Section
 					title="Crashes"
-					description="Newest first, written by the supervisor when an engine stopped without being asked."
+					description="Chats that stopped unexpectedly, newest first."
 					empty={view.crashes.length === 0 ? <EmptyState title="No crashes" /> : undefined}
 				>
 					{view.crashes.slice(0, 20).map((crash) => (

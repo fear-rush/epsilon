@@ -18,7 +18,7 @@ const detailOf = (status: CacheWarming): string => {
 	if (status.state === "refreshing") return "pi is refreshing the prompt cache now.";
 	if (status.state === "scheduled") {
 		return status.nextWarmAt === undefined
-			? "pi refreshes the prompt cache on its own timer."
+			? "pi refreshes the prompt cache on a timer."
 			: `pi refreshes the prompt cache at ${timeLabel(status.nextWarmAt)}.`;
 	}
 	return status.reason === undefined

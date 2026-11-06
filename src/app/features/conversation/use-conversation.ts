@@ -160,7 +160,7 @@ export function useConversation(input: {
 		return new Promise((resolve, reject) => {
 			const timer = setTimeout(() => {
 				waiting.current = waiting.current.filter((entry) => entry !== waiter);
-				reject(new Error("The chat did not open. Check the status line, then try again."));
+				reject(new Error("Couldn't open the chat. Try again."));
 			}, OPEN_TIMEOUT_MS);
 			const waiter = (value: string | Error): void => {
 				clearTimeout(timer);

@@ -140,7 +140,7 @@ export function SessionTreeDialog({
 			onOpenChange={onOpenChange}
 			size="lg"
 			title="Session tree"
-			description="Every entry, including branches you left. Picking a user message fills the box; picking any other entry continues after it."
+			description="Every entry, including branches you left. Pick one to continue from it."
 			footer={
 				<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
 					Close

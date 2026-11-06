@@ -51,7 +51,7 @@ const isProtocolError = (error: Error): error is ProtocolError =>
 export const notFoundView = (what: string): ErrorView => ({
 	tone: "neutral",
 	title: `${what} not found`,
-	line: "It may have been removed since this page was opened.",
+	line: "It may have been removed.",
 	icon: FileQuestionIcon,
 });
 
@@ -190,14 +190,14 @@ export function errorView(error: Error): ErrorView {
 			return {
 				tone: "neutral",
 				title: "MCP server not found",
-				line: `The registry has no entry named "${error.server}".`,
+				line: `No server named "${error.server}".`,
 				icon: FileQuestionIcon,
 			};
 		case "StageGone":
 			return {
 				tone: "warning",
 				title: "The import expired",
-				line: "Epsilon discarded the staged files. Start the import again.",
+				line: "The files were discarded. Start the import again.",
 				icon: TimerOffIcon,
 			};
 		case "SkillRefused":

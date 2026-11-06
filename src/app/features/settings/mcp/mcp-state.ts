@@ -23,7 +23,7 @@ export const mcpServerState = (input: {
 	resources: readonly string[];
 }): McpServerState => {
 	if (!input.enabled) {
-		return { text: "Turned off in this file, so pi does not connect it.", warning: false };
+		return { text: "Turned off in this file.", warning: false };
 	}
 	const tools = input.server?.tools.length ?? 0;
 	if (tools > 0) {
@@ -38,7 +38,7 @@ export const mcpServerState = (input: {
 	}
 	if ((input.live?.sessions ?? 0) === 0) {
 		return {
-			text: "No open session reads this server. What pi last said about it is in the log under Advanced.",
+			text: "Open a chat to connect this server.",
 			warning: false,
 		};
 	}
@@ -46,12 +46,12 @@ export const mcpServerState = (input: {
 		// pi registers these once for the session, so they reach resources without naming
 		// which server holds them, and a resources-only server gets no tool row at all.
 		return {
-			text: `No tool from this server yet. Resources reach the model through ${input.resources.join(", ")}, when this server offers any.`,
+			text: `No tools yet. Resources come through ${input.resources.join(", ")}.`,
 			warning: false,
 		};
 	}
 	return {
-		text: "No tool from this server yet. pi names a server it could not use here, so silence means it is still connecting or offers nothing to call.",
+		text: "No tools yet. It may still be connecting.",
 		warning: false,
 	};
 };

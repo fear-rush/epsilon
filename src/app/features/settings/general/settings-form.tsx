@@ -74,10 +74,7 @@ export function SettingsForm({ models, settings }: SettingsRead) {
 					))}
 				</Section>
 			))}
-			<CollapsibleSection
-				title="Terminal-only settings"
-				description="Values that only mean something in pi's terminal interface. This page reports them and never writes them."
-			>
+			<CollapsibleSection title="Terminal-only settings">
 				<Section>
 					{terminalEntries.map((entry) => (
 						<TerminalRow key={entry.key} entry={entry} row={rows.get(entry.key)} />

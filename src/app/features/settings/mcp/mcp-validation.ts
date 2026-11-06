@@ -58,7 +58,7 @@ const timeoutProblem = (value: string): string | undefined => {
 	if (text === "") return undefined;
 	const seconds = Number(text);
 	if (!Number.isFinite(seconds) || seconds <= 0) {
-		return "Enter a positive number of seconds, or leave it blank for 60.";
+		return "Use a positive number, or leave blank for 60.";
 	}
 	return undefined;
 };
