@@ -37,7 +37,7 @@ the child process that hosts pi for one chat; `src/app/` React, Vite, Tailwind, 
 10. Every failure is visible: a tagged error, an error frame or a notice. Silence is a bug.
 11. Time comes from `Clock`. Tests use `TestClock` and stay within budget.
 12. Never edit generated files: `src/app/routeTree.gen.ts`, `src/app/styles/tokens.gen.css` (from `DESIGN.md`).
-13. The repository wins over memory, chat and archive; if they disagree, fix the other.
+13. The repository wins over memory and chat; if they disagree, fix the other. History is git.
 
 ## Commands
 

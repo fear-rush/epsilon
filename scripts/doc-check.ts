@@ -3,7 +3,7 @@
  *
  * bun run doc-check
  *
- * Reads `AGENTS.md` (root and per folder), `DESIGN.md` and `docs/**` except `docs/plan/`,
+ * Reads `AGENTS.md` (root and per folder), `DESIGN.md` and `docs/**`,
  * and prints each failure as `file:line: what`: a link or backticked path that does not
  * exist, a `bun run` of a script `package.json` lacks, a rule ID cited but never defined
  * in a heading, a file over its size limit (docs/README.md, doc rule 3). Paths holding `<`
@@ -16,7 +16,7 @@ import { Schema } from "effect";
 
 export type Failure = { readonly file: string; readonly line: number; readonly what: string };
 
-const SKIP_DIRS = new Set(["node_modules", "archive", ".sandbox", "dist", ".git", "plan"]);
+const SKIP_DIRS = new Set(["node_modules", ".sandbox", "dist", ".git"]);
 const PATH_ROOTS = /^(src|docs|scripts|test|tools)\//;
 
 const walk = (root: string, dir: string, out: string[]): void => {

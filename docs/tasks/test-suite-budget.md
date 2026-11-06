@@ -1,6 +1,6 @@
 # `bun run test` takes about 11 s against a 10 s budget
 
-Measured 2026-11-06 at step 04 of the docs plan, 313 tests in 46 files: 11.00 s, 10.93 s,
+Measured 2026-11-06, 313 tests in 46 files: 11.00 s, 10.93 s,
 10.94 s (median 10.94 s). The budget in `docs/rules/testing.md` TS-1 is 10 s for the suite.
 
 Do: find which files dominate the run (`bun test` prints each file's time) and make them

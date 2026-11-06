@@ -3,8 +3,7 @@
 A web dashboard for the `pi` coding agent on your machine.
 
 > The rebuild is ported: every feature, screen, word and animation of `main` is on this
-> branch, with its tests, and the ledger that tracked them is
-> [archived](archive/README.md). The page runs on one socket: a session sidebar, a
+> branch, with its tests. The page runs on one socket: a session sidebar, a
 > virtualized transcript, the composer, extension dialogs, the `discuss` tool, and the
 > settings sections for General, Providers, MCP, Context, Skills, Packages, Projects and
 > Diagnostics. What is left before the merge — one budget decision and a day on the real
@@ -57,4 +56,3 @@ bun run bench     # the performance budgets
 - [docs/rules/server.md](docs/rules/server.md): the Effect style the server and engine follow
 - [docs/pi/](docs/pi/README.md): what pi exposes, and its traps
 - [docs/decisions/](docs/decisions/README.md): decisions and the options rejected
-- [archive/](archive/README.md): the rebuild's plan and parity ledger, as history

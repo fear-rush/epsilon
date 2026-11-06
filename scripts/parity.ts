@@ -1,6 +1,6 @@
 /**
  * Compares one of main's client files with the branch file(s) that port it, so "1:1"
- * is a check instead of a promise (the rebuild plan, archive/docs/plan/03-port.md). It reads two things out of string
+ * is a check instead of a promise. It reads two things out of string
  * literals and JSX text: the class tokens (layout, colour, motion) and the words a user
  * reads. Anything main has that the port lacks is printed, and the run fails.
  *
