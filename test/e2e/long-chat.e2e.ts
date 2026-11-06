@@ -67,18 +67,22 @@ test("a 5,000-entry chat scrolls to the top without a jump", async ({
 	const activeMarker = rail.locator('[data-rail-active="true"]');
 	await expect(activeMarker).toHaveCount(1);
 	const viewport = rail.locator('[data-rail-viewport="true"]');
-	const [viewportBox, markerBox] = await Promise.all([
-		viewport.boundingBox(),
-		activeMarker.boundingBox(),
-	]);
+	// The rail smooth-follows like main; wait for the active dot to settle in view.
+	await expect
+		.poll(async () => {
+			const [viewportBox, markerBox] = await Promise.all([
+				viewport.boundingBox(),
+				activeMarker.boundingBox(),
+			]);
+			if (viewportBox === null || markerBox === null) return false;
+			return (
+				markerBox.y >= viewportBox.y - 1 &&
+				markerBox.y + markerBox.height <= viewportBox.y + viewportBox.height + 1
+			);
+		})
+		.toBe(true);
+	const viewportBox = await viewport.boundingBox();
 	expect(viewportBox).not.toBeNull();
-	expect(markerBox).not.toBeNull();
-	if (viewportBox !== null && markerBox !== null) {
-		expect(markerBox.y).toBeGreaterThanOrEqual(viewportBox.y - 1);
-		expect(markerBox.y + markerBox.height).toBeLessThanOrEqual(
-			viewportBox.y + viewportBox.height + 1,
-		);
-	}
 	// Hover a dot inside the five-slot window, not an off-screen one that Playwright would
 	// scroll into view first.
 	const buttons = rail.locator('button[aria-label^="Go to message"]');

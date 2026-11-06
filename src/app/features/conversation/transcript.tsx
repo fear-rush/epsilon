@@ -142,10 +142,11 @@ function TranscriptRail({
 					? activeIndex - (RAIL_SLOTS - 2)
 					: firstVisible;
 		const lastStart = Math.max(0, rows.length - RAIL_SLOTS);
-		// The rail is an overview, not a second scroll surface: it follows the reader at once.
-		// A smooth scroll over a long chat would chase for seconds and hide the active dot
-		// outside the five-slot window while it moved.
-		viewport.scrollTop = Math.max(0, Math.min(target, lastStart)) * slot;
+		// The same smooth follow main's rail had: the line moves with the active dot.
+		viewport.scrollTo({
+			top: Math.max(0, Math.min(target, lastStart)) * slot,
+			behavior: "smooth",
+		});
 	}, [activeIndex, rows.length]);
 
 	if (rows.length < RAIL_SLOTS) return null;
@@ -193,7 +194,7 @@ function TranscriptRail({
 									>
 										<span
 											className={cn(
-												"size-1.5 rounded-full",
+												"size-1.5 rounded-full transition duration-fast",
 												active ? "opacity-0" : "bg-muted-foreground/35",
 											)}
 										/>
@@ -204,7 +205,7 @@ function TranscriptRail({
 						<span
 							aria-hidden
 							data-rail-active="true"
-							className="pointer-events-none absolute left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/70"
+							className="pointer-events-none absolute left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/70 transition-all duration-slow ease-in-out"
 							style={{ top: `${((activeIndex + 0.5) / rows.length) * 100}%` }}
 						/>
 					</div>
