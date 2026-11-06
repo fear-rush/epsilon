@@ -9,7 +9,7 @@ import { ListItem } from "@/components/patterns/list/list-item";
 import { MasterDetail } from "@/components/patterns/pane/master-detail";
 import { Notice } from "@/components/patterns/status/notice";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { useSettings, useSettingsProject, useSettingsRefresh } from "@/features/settings/queries";
 import { ListPane } from "@/features/settings/shell/list-pane";
 
@@ -55,37 +55,14 @@ const offerableDefaults = (reach: McpReach): ReadonlyArray<"codemode" | "tool_se
 		.filter((candidate) => !candidate.named && !candidate.off)
 		.map((candidate) => candidate.tool);
 
-/** The switch that decides codemode auto-enable, written to the file the tab shows. */
-function CodemodeBlock({
-	reach,
-	scope,
-	pending,
-	onToggle,
-}: {
-	reach: McpReach;
-	/** The tab: Global writes the home's file, a project its own. */
-	scope: McpScope;
-	pending: boolean;
-	onToggle: (scope: McpScope, enabled: boolean) => void;
-}) {
+/** Whether codemode auto-enable is on in the file the tab shows (on unless a file says off). */
+const codemodeEnabled = (reach: McpReach, scope: McpScope): boolean => {
 	const stored =
 		scope === "project"
 			? (reach.autoEnableCodemode.project ?? reach.autoEnableCodemode.global)
 			: reach.autoEnableCodemode.global;
-	const enabled = stored ?? true;
-	return (
-		<label className="flex items-center justify-between gap-2" htmlFor="mcp-auto-codemode">
-			<span className="text-body">Auto-enable codemode</span>
-			<Switch
-				id="mcp-auto-codemode"
-				size="sm"
-				checked={enabled}
-				disabled={pending}
-				onCheckedChange={(checked) => onToggle(scope, checked)}
-			/>
-		</label>
-	);
-}
+	return stored ?? true;
+};
 
 function ServerGroup({
 	servers,
@@ -240,30 +217,31 @@ function McpPanel({ selected }: { selected: { scope: McpScope; name: string } | 
 					visible.length === 0
 						? own.length === 0
 							? scope === "global"
-								? "No MCP server configured yet."
-								: "No servers in this project."
+								? "No MCP servers yet"
+								: "No MCP servers yet"
 							: "Nothing matches."
 						: undefined
 				}
-				footerStacked
-				footer={
-					<>
-						{reach !== undefined && (
-							<CodemodeBlock
-								reach={reach}
-								scope={scope}
-								pending={codemode.isPending}
-								onToggle={(target, enabled) => codemode.mutate({ enabled, scope: target })}
-							/>
-						)}
+				footer={{
+					primary: (
 						<Button type="button" variant="outline" onClick={() => setAdding(true)}>
 							<PlusIcon />
 							{scope === "global"
 								? "Add MCP server"
 								: `Add to ${settings.data?.project?.name ?? "project"}`}
 						</Button>
-					</>
-				}
+					),
+					more:
+						reach === undefined ? undefined : (
+							<DropdownMenuCheckboxItem
+								checked={codemodeEnabled(reach, scope)}
+								disabled={codemode.isPending}
+								onCheckedChange={(checked) => codemode.mutate({ enabled: checked, scope })}
+							>
+								Auto-enable codemode
+							</DropdownMenuCheckboxItem>
+						),
+				}}
 			>
 				<ServerGroup servers={visible} selected={selected} />
 				{unlisted.length > 0 && (

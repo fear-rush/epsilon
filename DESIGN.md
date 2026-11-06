@@ -266,7 +266,8 @@ target; where the code differs, the code is wrong.
 
 ### pane-bar
 
-Starts every column: `h-bar`, title and content on the column's left edge. A title and
+Starts every column: `h-bar`, title and content on the column's left edge; on a form page
+the bar sits in the same `max-w-content` column as the content. A title and
 count drop in from above, and again when their text changes.
 Don't: start a column without one.
 
@@ -290,7 +291,8 @@ Don't: repeat the label in the description.
 ### empty-state
 
 Icon, "No {plural} yet" (no period) in `meta` size, and an optional action. One component
-for list panes and form pages.
+for list panes and form pages. Its action, when it has one, is the page's main button
+(a list pane's footer already holds it, so the pane's empty state has none).
 Don't: write a second empty look.
 
 ### detail-empty

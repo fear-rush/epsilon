@@ -7,11 +7,14 @@ import type { ReactNode } from "react";
 export function Section({
 	title,
 	description,
+	empty,
 	children,
 }: {
 	title?: string;
 	description?: string | undefined;
-	children: ReactNode;
+	/** Shown in place of the card when there is nothing to list: an `EmptyState`. */
+	empty?: ReactNode;
+	children?: ReactNode;
 }) {
 	return (
 		<section className="grid gap-2">
@@ -19,7 +22,11 @@ export function Section({
 			{description !== undefined && (
 				<p className="text-meta text-muted-foreground">{description}</p>
 			)}
-			<div className="divide-y overflow-hidden rounded-card border bg-card">{children}</div>
+			{empty === undefined ? (
+				<div className="divide-y overflow-hidden rounded-card border bg-card">{children}</div>
+			) : (
+				empty
+			)}
 		</section>
 	);
 }

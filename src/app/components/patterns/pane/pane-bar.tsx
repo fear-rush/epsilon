@@ -23,6 +23,7 @@ export function PaneBar({
 	actions,
 	leading,
 	gutter = "pane",
+	column = false,
 	className,
 }: {
 	title?: ReactNode;
@@ -32,33 +33,43 @@ export function PaneBar({
 	/** Before the title, such as a back link. */
 	leading?: ReactNode;
 	gutter?: Gutter;
+	/** Lay the bar out in the page's content column, so a form page's title shares its left edge. */
+	column?: boolean;
 	className?: string;
 }) {
 	return (
 		<div
 			className={cn(
-				"flex h-bar shrink-0 animate-enter-fade items-center gap-2 border-b",
-				GUTTER_CLASS[gutter],
+				"flex h-bar shrink-0 animate-enter-fade items-center border-b",
+				column ? "justify-center" : cn("gap-2", GUTTER_CLASS[gutter]),
 				className,
 			)}
 		>
-			{leading}
-			{title !== undefined && (
-				<h2 key={textKey(title)} className="min-w-0 animate-enter-drop truncate text-title">
-					{title}
-				</h2>
-			)}
-			{meta !== undefined && (
-				<span
-					key={textKey(meta)}
-					className="shrink-0 animate-enter-drop text-meta text-muted-foreground"
-				>
-					{meta}
-				</span>
-			)}
-			{actions !== undefined && (
-				<div className="ml-auto flex shrink-0 items-center gap-2">{actions}</div>
-			)}
+			<div
+				className={cn(
+					"flex h-full min-w-0 items-center gap-2",
+					column && "mx-auto w-full max-w-content px-page",
+					!column && "w-full",
+				)}
+			>
+				{leading}
+				{title !== undefined && (
+					<h2 key={textKey(title)} className="min-w-0 animate-enter-drop truncate text-title">
+						{title}
+					</h2>
+				)}
+				{meta !== undefined && (
+					<span
+						key={textKey(meta)}
+						className="shrink-0 animate-enter-drop text-meta text-muted-foreground"
+					>
+						{meta}
+					</span>
+				)}
+				{actions !== undefined && (
+					<div className="ml-auto flex shrink-0 items-center gap-2">{actions}</div>
+				)}
+			</div>
 		</div>
 	);
 }

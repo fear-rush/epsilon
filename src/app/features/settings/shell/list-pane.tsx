@@ -1,6 +1,7 @@
-import { InboxIcon } from "lucide-react";
+import { CircleHelpIcon, InboxIcon, MoreHorizontalIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { EmptyState } from "@/components/patterns/empty-state";
 import { SearchField } from "@/components/patterns/list/search-field";
 import { Pane } from "@/components/patterns/pane/pane";
 import { PaneBand } from "@/components/patterns/pane/pane-band";
@@ -9,6 +10,13 @@ import { PaneFooter } from "@/components/patterns/pane/pane-footer";
 import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { StatusView } from "@/components/patterns/status/status-view";
+import { Tip } from "@/components/patterns/tip";
+import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useSettingsProject } from "@/features/settings/queries.ts";
 import { cn } from "@/lib/cn";
 
@@ -20,8 +28,8 @@ import type { ScopedSection } from "./scope-tabs";
  * band, the rows and a footer. A section with a Global/Project scope puts the tabs
  * in the band, the project picker under it and the search below; one without puts
  * the search in the band. Every piece under the bar starts `pane` below the one
- * before it, and a scope switch slides the whole content in from that side. Footer
- * actions fill the width, side by side when there are two. The pane shows its
+ * before it, and a scope switch slides the whole content in from that side. The footer
+ * is one full-width main button and, beside it, an optional `…` menu. The pane shows its
  * pending, read-error and empty states in place of the rows.
  */
 export function ListPane({
@@ -38,7 +46,7 @@ export function ListPane({
 	empty,
 	children,
 	footer,
-	footerStacked = false,
+	help,
 }: {
 	title: string;
 	count: number;
@@ -53,13 +61,13 @@ export function ListPane({
 	pendingLabel: string;
 	/** A failed read, shown instead of the rows. */
 	error?: Error | null;
-	/** The sentence to show instead of rows, or undefined when there are rows. */
+	/** The title to show instead of rows ("No skills yet"), or undefined when there are rows. */
 	empty: string | undefined;
 	children: ReactNode;
-	/** Buttons and rows under the list; each fills the width, buttons share a row. */
-	footer?: ReactNode;
-	/** Stack the footer's children (a switch row over a button) instead of one row. */
-	footerStacked?: boolean;
+	/** The one main button, full width, and the items of an optional `…` menu beside it. */
+	footer?: { primary: ReactNode; more?: ReactNode };
+	/** One sentence behind a `?` button beside the title, for what used to be an info box. */
+	help?: string | undefined;
 }) {
 	const failure = error === undefined || error === null ? undefined : errorView(error);
 	const search = <SearchField value={query} onChange={onQueryChange} label={searchLabel} />;
@@ -75,7 +83,19 @@ export function ListPane({
 	return (
 		<Pane border className="h-full w-full">
 			{/* The count arrives with the rows, so it drops in once instead of flashing 0. */}
-			<PaneBar title={title} meta={pending ? undefined : count} />
+			<PaneBar
+				title={title}
+				meta={pending ? undefined : count}
+				actions={
+					help === undefined ? undefined : (
+						<Tip label={help}>
+							<Button type="button" variant="ghost" size="icon-sm" aria-label={help}>
+								<CircleHelpIcon />
+							</Button>
+						</Tip>
+					)
+				}
+			/>
 			<PaneBand className="animate-enter-drop enter-delay-1">
 				{scope === undefined ? search : <ScopeTabs section={scope} />}
 			</PaneBand>
@@ -102,7 +122,7 @@ export function ListPane({
 						empty === undefined ? (
 							children
 						) : (
-							<StatusView icon={InboxIcon} title={empty} />
+							<EmptyState icon={InboxIcon} title={empty} />
 						)
 					) : (
 						<StatusView {...failure} />
@@ -110,8 +130,22 @@ export function ListPane({
 				</div>
 			</div>
 			{footer !== undefined && (
-				<PaneFooter fill stacked={footerStacked} className="animate-enter-rise enter-delay-2">
-					{footer}
+				<PaneFooter fill className="animate-enter-rise enter-delay-2">
+					<div className="flex w-full items-center gap-2">
+						<div className="grid min-w-0 flex-1 *:w-full">{footer.primary}</div>
+						{footer.more !== undefined && (
+							<DropdownMenu>
+								<DropdownMenuTrigger
+									render={
+										<Button type="button" variant="outline" size="icon" aria-label="More actions" />
+									}
+								>
+									<MoreHorizontalIcon />
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end">{footer.more}</DropdownMenuContent>
+							</DropdownMenu>
+						)}
+					</div>
 				</PaneFooter>
 			)}
 		</Pane>

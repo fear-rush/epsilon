@@ -48,7 +48,7 @@ One step per commit, in this order. A step does not start until the one before i
 | [x]    | 05 DESIGN.md and the token generator        | [05-design-md.md](05-design-md.md)                       | no (tokens unchanged) |
 | [x]    | 06 Feedback: one look, one strip, codes     | [06-feedback.md](06-feedback.md)                         | **yes**               |
 | [x]    | 07 Roles, patterns and lint                 | [07-roles-and-patterns.md](07-roles-and-patterns.md)     | **yes**               |
-| [ ]    | 08 Settings panes                           | [08-settings.md](08-settings.md)                         | **yes**               |
+| [x]    | 08 Settings panes                           | [08-settings.md](08-settings.md)                         | **yes**               |
 | [ ]    | 09 Copy pass                                | [09-copy.md](09-copy.md)                                 | **yes**               |
 | [ ]    | 10 Split the large files                    | [10-splits.md](10-splits.md)                             | no                    |
 

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CircleAlertIcon } from "lucide-react";
 import { useState } from "react";
 
+import { EmptyState } from "@/components/patterns/empty-state";
 import { Pane } from "@/components/patterns/pane/pane";
 import { PaneBar } from "@/components/patterns/pane/pane-bar";
 import { PaneBody } from "@/components/patterns/pane/pane-body";
@@ -90,7 +91,7 @@ export function SettingsDiagnostics() {
 	if (diagnostics.isPending) {
 		return (
 			<Pane className="flex-1">
-				<PaneBar title="Diagnostics" />
+				<PaneBar title="Diagnostics" column />
 				<div className="flex flex-1 items-center justify-center">
 					<LoadingState label="Reading engines…" />
 				</div>
@@ -101,7 +102,7 @@ export function SettingsDiagnostics() {
 	if (diagnostics.error !== null) {
 		return (
 			<Pane className="flex-1">
-				<PaneBar title="Diagnostics" />
+				<PaneBar title="Diagnostics" column />
 				<StatusView error={diagnostics.error} />
 			</Pane>
 		);
@@ -112,81 +113,69 @@ export function SettingsDiagnostics() {
 
 	return (
 		<Pane className="flex-1">
-			<PaneBar title="Diagnostics" />
+			<PaneBar title="Diagnostics" column />
 			<PaneBody page>
 				<Section
 					title="Running engines"
 					description="One process per live chat. A chat with none starts a new one on its next message."
+					empty={view.engines.length === 0 ? <EmptyState title="No running engines" /> : undefined}
 				>
-					{view.engines.length === 0 ? (
-						<Row title="No engine is running" />
-					) : (
-						view.engines.map((engine) => (
-							<Row
-								key={engine.sessionId}
-								title={engine.sessionId}
-								description={`pid ${engine.pid} · ${bytes(engine.rss)} · ${engine.tabs} ${engine.tabs === 1 ? "tab" : "tabs"}`}
+					{view.engines.map((engine) => (
+						<Row
+							key={engine.sessionId}
+							title={engine.sessionId}
+							description={`pid ${engine.pid} · ${bytes(engine.rss)} · ${engine.tabs} ${engine.tabs === 1 ? "tab" : "tabs"}`}
+						>
+							{engine.busy ? (
+								<Badge variant="warning">busy</Badge>
+							) : (
+								<Badge variant="outline">idle</Badge>
+							)}
+							<Button
+								size="sm"
+								variant="outline"
+								disabled={stop.isPending}
+								onClick={() => stop.mutate(engine.sessionId)}
 							>
-								{engine.busy ? (
-									<Badge variant="warning">busy</Badge>
-								) : (
-									<Badge variant="outline">idle</Badge>
-								)}
-								<Button
-									size="sm"
-									variant="outline"
-									disabled={stop.isPending}
-									onClick={() => stop.mutate(engine.sessionId)}
-								>
-									Stop engine
-								</Button>
-							</Row>
-						))
-					)}
+								Stop engine
+							</Button>
+						</Row>
+					))}
 				</Section>
 
 				<Section
 					title="Extension UI"
 					description="Terminal-only calls from live extensions, and what this page uses instead."
+					empty={terminals.length === 0 ? <EmptyState title="No terminal-only calls" /> : undefined}
 				>
-					{terminals.length === 0 ? (
-						<Row
-							title="No terminal-only calls"
-							description="No live engine has asked for terminal-only UI."
-						/>
-					) : (
-						terminals.flatMap((engine) =>
-							engine.unsupported.map((method) => (
-								<Row
-									key={`${engine.sessionId}-${method}`}
-									title={method}
-									description={`${replacementOf(method)} · ${engine.sessionId}`}
-								/>
-							)),
-						)
+					{terminals.flatMap((engine) =>
+						engine.unsupported.map((method) => (
+							<Row
+								key={`${engine.sessionId}-${method}`}
+								title={method}
+								description={`${replacementOf(method)} · ${engine.sessionId}`}
+							/>
+						)),
 					)}
 				</Section>
 
 				<Section
 					title="Crashes"
 					description="Newest first, written by the supervisor when an engine stopped without being asked."
+					empty={view.crashes.length === 0 ? <EmptyState title="No crashes" /> : undefined}
 				>
-					{view.crashes.length === 0 ? (
-						<Row title="No crashes recorded" />
-					) : (
-						view.crashes.slice(0, 20).map((crash) => (
-							<Row
-								key={`${crash.sessionId}-${crash.time}`}
-								title={crash.sessionId}
-								description={`exit ${crash.exit}${crash.signal === undefined || crash.signal === null ? "" : ` · ${crash.signal}`} · pi ${crash.piVersion}`}
-							>
-								<span className="inline-flex items-center gap-1 text-meta text-muted-foreground">
-									<CircleAlertIcon className="size-icon" aria-hidden />
-									{crash.time}
-								</span>
-							</Row>
-						))
-					)}
+					{view.crashes.slice(0, 20).map((crash) => (
+						<Row
+							key={`${crash.sessionId}-${crash.time}`}
+							title={crash.sessionId}
+							description={`exit ${crash.exit}${crash.signal === undefined || crash.signal === null ? "" : ` · ${crash.signal}`} · pi ${crash.piVersion}`}
+						>
+							<span className="inline-flex items-center gap-1 text-meta text-muted-foreground">
+								<CircleAlertIcon className="size-icon" aria-hidden />
+								{crash.time}
+							</span>
+						</Row>
+					))}
 				</Section>
 			</PaneBody>
 		</Pane>

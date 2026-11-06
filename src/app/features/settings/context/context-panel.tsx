@@ -25,23 +25,22 @@ function ContextPanel({ selected }: { selected: ContextSectionId | undefined }) 
 	return (
 		<ListPane
 			title="Context"
-			count={view === undefined ? 0 : CONTEXT_SECTIONS.length}
+			count={
+				view === undefined
+					? 0
+					: CONTEXT_SECTIONS.reduce((total, section) => total + (section.count(view) ?? 0), 0)
+			}
+			help={
+				view === undefined || view.live
+					? undefined
+					: "Open a chat here to see the exact prompt and tools."
+			}
 			scope="/settings/context"
 			notices={
-				view === undefined ? undefined : (
-					<>
-						{view.live ? undefined : (
-							<Notice tone="info">
-								No chat is open in this folder, so this is what its files say. The exact prompt, the
-								tool list and an extension&apos;s load errors appear once a chat opens there.
-							</Notice>
-						)}
-						{settingsProblems.length === 0 ? undefined : (
-							<Notice tone="danger">
-								{settingsProblems.map((problem) => problem.message).join("\n")}
-							</Notice>
-						)}
-					</>
+				settingsProblems.length === 0 ? undefined : (
+					<Notice tone="danger">
+						{settingsProblems.map((problem) => problem.message).join("\n")}
+					</Notice>
 				)
 			}
 			// The sections are fixed, so this pane searches nothing; the band shows the scope.
@@ -61,7 +60,6 @@ function ContextPanel({ selected }: { selected: ContextSectionId | undefined }) 
 							name={section.label}
 							description={section.line(view)}
 							selected={selected === section.id}
-							dimmed={section.count(view) === 0}
 							link={{
 								to: "/settings/context/$section",
 								params: { section: section.id },

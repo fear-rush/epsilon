@@ -39,79 +39,81 @@ function ProvidersPanel({ selectedId }: { selectedId: string | undefined }) {
 	);
 
 	return (
-		<ListPane
-			title="Providers"
-			count={providers.length}
-			error={settings.error}
-			notices={
-				settings.data?.providers.error === undefined ? undefined : (
-					<Notice tone="danger">{settings.data.providers.error}</Notice>
-				)
-			}
-			query={query}
-			onQueryChange={setQuery}
-			searchLabel="Search providers"
-			pending={settings.isPending}
-			pendingLabel="Reading providers…"
-			empty={
-				visible.length === 0
-					? providers.length === 0
-						? "No provider configured yet."
-						: "Nothing matches."
-					: undefined
-			}
-			footer={
-				<>
-					<DropdownMenu>
-						<DropdownMenuTrigger
-							className={cn(buttonVariants({ variant: "outline" }), "group w-full")}
-						>
-							<PlusIcon />
-							Add provider
-							<ChevronDownIcon className="ml-auto transition-transform group-data-[popup-open]:rotate-180" />
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="start" className="w-(--anchor-width)">
-							<DropdownMenuItem
-								onClick={() => {
-									setAddMode("key");
-									setAddOpen(true);
-								}}
+		<>
+			<ListPane
+				title="Providers"
+				count={providers.length}
+				error={settings.error}
+				notices={
+					settings.data?.providers.error === undefined ? undefined : (
+						<Notice tone="danger">{settings.data.providers.error}</Notice>
+					)
+				}
+				query={query}
+				onQueryChange={setQuery}
+				searchLabel="Search providers"
+				pending={settings.isPending}
+				pendingLabel="Reading providers…"
+				empty={
+					visible.length === 0
+						? providers.length === 0
+							? "No providers yet"
+							: "Nothing matches."
+						: undefined
+				}
+				footer={{
+					primary: (
+						<DropdownMenu>
+							<DropdownMenuTrigger
+								className={cn(buttonVariants({ variant: "outline" }), "group w-full")}
 							>
 								<PlusIcon />
-								With an API key
-							</DropdownMenuItem>
-							<DropdownMenuItem
-								onClick={() => {
-									setAddMode("account");
-									setAddOpen(true);
-								}}
-							>
-								<LogInIcon />
-								Sign in with an account
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-					<AddProviderDialog
-						open={addOpen}
-						mode={addMode}
-						onOpenChange={setAddOpen}
-						builtins={settings.data?.providers.builtins ?? []}
-					/>
-				</>
-			}
-		>
-			<div className="grid min-w-0 animate-enter-left grid-cols-[minmax(0,1fr)] gap-row">
-				{visible.map((provider) => (
-					<ListItem
-						key={provider.id}
-						link={{ to: "/settings/providers/$providerId", params: { providerId: provider.id } }}
-						name={provider.name}
-						description={provider.custom ? undefined : "pi default"}
-						selected={selectedId === provider.id}
-					/>
-				))}
-			</div>
-		</ListPane>
+								Add provider
+								<ChevronDownIcon className="ml-auto transition-transform group-data-[popup-open]:rotate-180" />
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="start" className="w-(--anchor-width)">
+								<DropdownMenuItem
+									onClick={() => {
+										setAddMode("key");
+										setAddOpen(true);
+									}}
+								>
+									<PlusIcon />
+									With an API key
+								</DropdownMenuItem>
+								<DropdownMenuItem
+									onClick={() => {
+										setAddMode("account");
+										setAddOpen(true);
+									}}
+								>
+									<LogInIcon />
+									Sign in with an account
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					),
+				}}
+			>
+				<div className="grid min-w-0 animate-enter-left grid-cols-[minmax(0,1fr)] gap-row">
+					{visible.map((provider) => (
+						<ListItem
+							key={provider.id}
+							link={{ to: "/settings/providers/$providerId", params: { providerId: provider.id } }}
+							name={provider.name}
+							description={provider.custom ? undefined : "pi default"}
+							selected={selectedId === provider.id}
+						/>
+					))}
+				</div>
+			</ListPane>
+			<AddProviderDialog
+				open={addOpen}
+				mode={addMode}
+				onOpenChange={setAddOpen}
+				builtins={settings.data?.providers.builtins ?? []}
+			/>
+		</>
 	);
 }
 

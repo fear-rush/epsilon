@@ -1,8 +1,8 @@
 import { Switch } from "@/components/ui/switch";
 
 /**
- * An on/off switch with its state written beside it, "Enabled" or "Disabled",
- * so a switch in a page's bar says what it controls without a tooltip.
+ * An on/off switch. The state is the switch's own position, so no "Enabled" is written
+ * beside it (VO-5); `label` names it for screen readers.
  */
 export function EnabledSwitch({
 	checked,
@@ -17,14 +17,11 @@ export function EnabledSwitch({
 	onCheckedChange: (checked: boolean) => void;
 }) {
 	return (
-		<label className="flex items-center gap-2 text-meta text-muted-foreground">
-			{checked ? "Enabled" : "Disabled"}
-			<Switch
-				aria-label={`${checked ? "Disable" : "Enable"} ${label}`}
-				checked={checked}
-				disabled={disabled}
-				onCheckedChange={onCheckedChange}
-			/>
-		</label>
+		<Switch
+			aria-label={`${checked ? "Disable" : "Enable"} ${label}`}
+			checked={checked}
+			disabled={disabled}
+			onCheckedChange={onCheckedChange}
+		/>
 	);
 }

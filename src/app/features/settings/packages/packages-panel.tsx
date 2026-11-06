@@ -52,21 +52,18 @@ function PackagesList({ selected }: { selected: string | undefined }) {
 				empty={
 					visible.length === 0
 						? rows.length === 0
-							? "No packages installed"
+							? "No packages yet"
 							: "Nothing matches"
 						: undefined
 				}
-				footer={
-					<Button
-						type="button"
-						variant="outline"
-						className="w-full"
-						onClick={() => setInstalling(true)}
-					>
-						<PlusIcon />
-						Install package
-					</Button>
-				}
+				footer={{
+					primary: (
+						<Button type="button" variant="outline" onClick={() => setInstalling(true)}>
+							<PlusIcon />
+							Install package
+						</Button>
+					),
+				}}
 			>
 				<ListGroup>
 					{visible.map((entry) => {

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { agentHomeQuery } from "@/core/queries";
 import { call } from "@/core/runtime";
 
+import { counted } from "../context/context-sections.ts";
 import { useModels, useSettings, useSettingsRefresh } from "../queries.ts";
 import { ModelPicker } from "./model-picker.tsx";
 import { SettingsForm } from "./settings-form.tsx";
@@ -28,14 +29,14 @@ export function SettingsGeneral() {
 
 	if (query.isPending) {
 		return (
-			<DetailPage title="General">
+			<DetailPage title="General" column>
 				<LoadingState label="Reading the agent home…" />
 			</DetailPage>
 		);
 	}
 	if (query.error !== null) {
 		return (
-			<DetailPage title="General">
+			<DetailPage title="General" column>
 				<StatusView error={query.error} />
 			</DetailPage>
 		);
@@ -56,7 +57,7 @@ export function SettingsGeneral() {
 	const usable = sorted.filter((model) => configured.has(model.provider));
 
 	return (
-		<DetailPage title="General">
+		<DetailPage title="General" column>
 			<div className="grid gap-section">
 				{snapshot.providers.error !== undefined && (
 					<Notice tone="danger">{snapshot.providers.error}</Notice>
@@ -136,7 +137,9 @@ function AppSection({
 			<Row
 				title="Status"
 				description={
-					ready ? `${models.length} models can run a turn.` : "No provider can run a turn yet."
+					ready
+						? `${counted(models.length, "model", "models")} can run a turn.`
+						: "No provider can run a turn yet."
 				}
 			>
 				<Badge variant={ready ? "secondary" : "warning"}>

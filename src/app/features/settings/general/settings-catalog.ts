@@ -44,7 +44,7 @@ export type SettingEntry = {
 	/** pi's key path, which is also the read's `key`. */
 	key: string;
 	label: string;
-	description: string;
+	description?: string;
 	control: SettingControl;
 };
 
@@ -95,7 +95,6 @@ export const settingGroups: readonly SettingGroup[] = [
 			{
 				key: "compaction.enabled",
 				label: "Automatic compaction",
-				description: "Enable automatic compaction.",
 				control: { kind: "switch" },
 			},
 			{

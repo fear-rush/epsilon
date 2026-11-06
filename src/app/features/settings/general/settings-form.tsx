@@ -120,7 +120,7 @@ function ControlRow({
 			title={entry.label}
 			description={
 				overridden
-					? `${entry.description} This project's .pi/settings.json sets it, so the panel leaves it alone.`
+					? `${entry.description ?? ""} This project's .pi/settings.json sets it, so the panel leaves it alone.`.trim()
 					: entry.description
 			}
 			stacked={stacked}

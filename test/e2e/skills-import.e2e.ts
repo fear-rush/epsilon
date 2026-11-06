@@ -17,7 +17,9 @@ test("a zipped skill is imported through the wizard", async ({ app, page }) => {
 	await page.getByRole("button", { name: "App menu" }).click();
 	await page.getByRole("menuitem", { name: /skills/i }).click();
 
-	await page.getByRole("button", { name: /^import$/i }).click();
+	// Import sits in the list pane's `…` menu beside Add skill.
+	await page.getByRole("button", { name: "More actions" }).click();
+	await page.getByRole("menuitem", { name: /^import…$/i }).click();
 	const dialog = page.getByRole("dialog");
 	await expect(dialog).toBeVisible();
 

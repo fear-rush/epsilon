@@ -17,7 +17,11 @@ test("an untrusted project folder is gated, then a chat runs in it", async ({
 	writeFileSync(join(folder, ".pi", "settings.json"), "{}\n");
 
 	await page.goto(`${app.url}/settings/projects`);
-	await page.getByRole("button", { name: /open folder/i }).click();
+	// The empty list repeats the bar's button, so take the bar's.
+	await page
+		.getByRole("button", { name: /open folder/i })
+		.first()
+		.click();
 
 	const dialog = page.getByRole("dialog");
 	await expect(dialog).toBeVisible();

@@ -25,6 +25,7 @@ export function DetailPage({
 	footer,
 	footerStatus,
 	fill = false,
+	column = false,
 	bodyKey,
 	children,
 }: {
@@ -39,6 +40,8 @@ export function DetailPage({
 	footerStatus?: ReactNode;
 	/** The body holds one editor that fills its height. */
 	fill?: boolean;
+	/** A form page: the title shares the content column's left edge. */
+	column?: boolean;
 	/** The open tab: a new key remounts the body, so switching tabs replays its entrance. */
 	bodyKey?: string;
 	children: ReactNode;
@@ -47,6 +50,7 @@ export function DetailPage({
 		<Pane className="flex-1">
 			<PaneBar
 				gutter="page"
+				column={column}
 				title={title}
 				actions={actions}
 				leading={

@@ -1,12 +1,12 @@
 import { Link, useMatchRoute, useSearch } from "@tanstack/react-router";
-import { PlusIcon, UploadIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 
 import { ListGroup } from "@/components/patterns/list/list-group";
 import { ListItem } from "@/components/patterns/list/list-item";
 import { MasterDetail } from "@/components/patterns/pane/master-detail";
-import { Notice } from "@/components/patterns/status/notice";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { ListPane } from "@/features/settings/shell/list-pane";
 
 import { useSettings, useSettingsProject } from "../queries.ts";
@@ -51,70 +51,66 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 	const fileOnly = settings.data?.skills.live === false;
 
 	return (
-		<ListPane
-			title="Skills"
-			count={shown}
-			scope="/settings/skills"
-			empty={
-				nothing
-					? needle !== "" && skills.length > 0
-						? "Nothing matches."
-						: inProject
-							? "No skills in this project."
-							: "No skill yet."
-					: undefined
-			}
-			error={settings.error}
-			notices={
-				fileOnly ? (
-					<Notice tone="info">
-						Skills an extension adds appear only while an engine runs in this scope. This list is
-						from files.
-					</Notice>
-				) : undefined
-			}
-			footer={
-				<>
-					<Button type="button" variant="outline" onClick={() => setImporting(true)}>
-						<UploadIcon />
-						Import
-					</Button>
-					<Link to="/settings/skills/new" search className={buttonVariants({ variant: "outline" })}>
-						<PlusIcon />
-						Add skill
-					</Link>
-					<ImportSkillsDialog open={importing} onOpenChange={setImporting} />
-				</>
-			}
-			onQueryChange={setQuery}
-			pending={settings.isPending}
-			pendingLabel="Reading skills…"
-			query={query}
-			searchLabel="Search skills"
-		>
-			<div className="grid min-w-0 grid-cols-[minmax(0,1fr)]">
-				{groups.map((group) => (
-					<ListGroup key={group.id} title={group.title}>
-						{group.skills.map((skill) => (
-							<ListItem
-								key={skillKey(skill)}
-								name={skill.name}
-								description={skill.description === "" ? "No description" : skill.description}
-								selected={selected === skillKey(skill)}
-								dimmed={isQuiet(skill.status)}
-								link={{
-									params: { name: skill.folder },
-									search: skillSearch(skill, current),
-									to: "/settings/skills/$name",
-								}}
-							/>
-						))}
-					</ListGroup>
-				))}
-				<SkillPaths paths={settings.data?.skills.paths ?? []} />
-				<ForeignSkills skills={foreign} />
-			</div>
-		</ListPane>
+		<>
+			<ListPane
+				title="Skills"
+				count={shown}
+				scope="/settings/skills"
+				empty={
+					nothing
+						? needle !== "" && skills.length > 0
+							? "Nothing matches."
+							: inProject
+								? "No skills yet"
+								: "No skills yet"
+						: undefined
+				}
+				error={settings.error}
+				help={fileOnly ? "Skills from extensions appear while a chat is open." : undefined}
+				footer={{
+					primary: (
+						<Link
+							to="/settings/skills/new"
+							search
+							className={buttonVariants({ variant: "outline" })}
+						>
+							<PlusIcon />
+							Add skill
+						</Link>
+					),
+					more: <DropdownMenuItem onClick={() => setImporting(true)}>Import…</DropdownMenuItem>,
+				}}
+				onQueryChange={setQuery}
+				pending={settings.isPending}
+				pendingLabel="Reading skills…"
+				query={query}
+				searchLabel="Search skills"
+			>
+				<div className="grid min-w-0 grid-cols-[minmax(0,1fr)]">
+					{groups.map((group) => (
+						<ListGroup key={group.id} title={group.title}>
+							{group.skills.map((skill) => (
+								<ListItem
+									key={skillKey(skill)}
+									name={skill.name}
+									description={skill.description === "" ? "No description" : skill.description}
+									selected={selected === skillKey(skill)}
+									dimmed={isQuiet(skill.status)}
+									link={{
+										params: { name: skill.folder },
+										search: skillSearch(skill, current),
+										to: "/settings/skills/$name",
+									}}
+								/>
+							))}
+						</ListGroup>
+					))}
+					<SkillPaths paths={settings.data?.skills.paths ?? []} />
+					<ForeignSkills skills={foreign} />
+				</div>
+			</ListPane>
+			<ImportSkillsDialog open={importing} onOpenChange={setImporting} />
+		</>
 	);
 }
 

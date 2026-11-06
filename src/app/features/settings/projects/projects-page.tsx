@@ -4,6 +4,7 @@ import { FolderPlusIcon, MessageSquarePlusIcon, MoreHorizontalIcon } from "lucid
 import { useState } from "react";
 
 import type { ProjectStatus, ProjectTrustAction } from "#protocol/settings/projects";
+import { EmptyState } from "@/components/patterns/empty-state";
 import { Pane } from "@/components/patterns/pane/pane";
 import { PaneBar } from "@/components/patterns/pane/pane-bar";
 import { PaneBody } from "@/components/patterns/pane/pane-body";
@@ -61,7 +62,7 @@ export function SettingsProjects() {
 	if (sessions.isPending) {
 		return (
 			<Pane className="flex-1">
-				<PaneBar title="Projects" />
+				<PaneBar title="Projects" column />
 				<div className="flex flex-1 items-center justify-center">
 					<LoadingState label="Reading the chats on disk…" />
 				</div>
@@ -82,34 +83,34 @@ export function SettingsProjects() {
 		);
 	}
 
+	const openFolder = (
+		<Button size="sm" variant="outline" onClick={() => setPicking(true)}>
+			<FolderPlusIcon /> Open folder
+		</Button>
+	);
+
 	return (
 		<Pane className="flex-1">
-			<PaneBar
-				actions={
-					<Button size="sm" variant="outline" onClick={() => setPicking(true)}>
-						<FolderPlusIcon /> Open folder
-					</Button>
-				}
-				title="Projects"
-			/>
+			<PaneBar actions={openFolder} title="Projects" column />
 			<PaneBody page>
 				<Section
 					description="Every folder a chat has run in, with pi's trust decision for it. Epsilon starts nothing in an untrusted folder until you answer."
 					title="Folders you chat in"
+					empty={
+						projects.length === 0 ? (
+							<EmptyState title="No projects yet" action={openFolder} />
+						) : undefined
+					}
 				>
-					{projects.length === 0 ? (
-						<Row description="Open one above to start a chat in it." title="No projects yet" />
-					) : (
-						projects.map((project) => (
-							<ProjectRow
-								key={project.path}
-								pending={trust.isPending}
-								project={project}
-								onNewChat={start}
-								onTrust={(action) => trust.mutate({ action, path: project.path })}
-							/>
-						))
-					)}
+					{projects.map((project) => (
+						<ProjectRow
+							key={project.path}
+							pending={trust.isPending}
+							project={project}
+							onNewChat={start}
+							onTrust={(action) => trust.mutate({ action, path: project.path })}
+						/>
+					))}
 				</Section>
 				{trust.error !== null && (
 					<Notice error={trust.error} title="The trust decision was not saved" />
