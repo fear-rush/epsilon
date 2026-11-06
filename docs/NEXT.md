@@ -25,6 +25,26 @@ remains is one decision, two runs, and the merge. Status lives here and nowhere 
       and ledger stay in [`archive/`](../archive/README.md); they are history, not
       instructions.
 
+- [ ] **A failed step's line says `failed` twice.** `Failed to run bun run test … failed`
+      in a run card: `Terminal`'s title already carries the outcome and `ToolTrace`'s
+      description repeats it. One of the two should go, for every failed card, not only in
+      a run. (Noticed while shooting the run card.)
+- [x] **The rail marks the newest turn at the end, and its dots answer the pointer.** The
+      active dot no longer follows the row above the fold when the reader is at the end;
+      hovering a dot grows it. Covered by `test/e2e/long-chat.e2e.ts` ("the rail marks the
+      newest turn"), which fails without the change.
+- [x] **One thought line everywhere.** A run step's thinking and an answer's thinking were
+      two shapes of the same fact; both now come from `Reasoning`, with the first line
+      quoted and the same transition.
+- [x] **An older page names itself and does not move the reader.** The transcript holds
+      its scroll position when a page is prepended, shows `Loading earlier messages` at the
+      top of the scroller, and offers a retry when the page did not arrive. Covered by
+      `test/e2e/long-chat.e2e.ts`, which fails with the position kept off.
+- [x] **A run of steps is one row.** Landed: `src/domain/conversation/selectors.ts` groups
+      the messages, `run-card.tsx` draws them, `test/e2e/run-card.e2e.ts` covers closed,
+      open, failed and single-step runs, and `docs/DECISIONS.md` records the rule. The
+      doubled 48px row gap is gone with it.
+
 ## Done, for the record
 
 The six checks that gate a merge were run on 2026-11-05:

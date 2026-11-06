@@ -358,6 +358,8 @@ export function Conversation({
 					<Transcript
 						state={state}
 						onLoadOlder={() => void conversation.loadOlder()}
+						loadingOlder={conversation.loadingOlder}
+						olderFailure={conversation.olderFailure}
 						onLoadTree={conversation.loadTree}
 						anchorFrom={anchorFrom}
 						onAnchored={() => setAnchorFrom(undefined)}

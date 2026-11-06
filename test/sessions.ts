@@ -16,7 +16,15 @@ import { join } from "node:path";
 export const sessionVersion = 3;
 const firstTimestamp = Date.UTC(2026, 0, 1, 0, 0, 0);
 
-type Block = { readonly type: "text"; readonly text: string };
+type Block =
+	| { readonly type: "text"; readonly text: string }
+	| { readonly type: "thinking"; readonly thinking: string }
+	| {
+			readonly type: "toolCall";
+			readonly id: string;
+			readonly name: string;
+			readonly arguments?: unknown;
+	  };
 
 export type MessageEntry = {
 	readonly type: "message";
@@ -110,6 +118,53 @@ export function assistantEntry(
 		message: {
 			role: "assistant",
 			content: [{ type: "text", text }],
+			usage: {
+				cacheRead: 40,
+				cacheWrite: 8,
+				cost: { total: 0.0002 },
+				input: 120,
+				output: 30,
+			},
+		},
+	};
+}
+
+/**
+ * One step of the agent loop as pi writes it: a message that thought and called a tool.
+ * A run of these, with their results, is what the transcript folds into one row.
+ */
+export function callEntry(
+	id: string,
+	parentId: string | null,
+	options: {
+		readonly calls: ReadonlyArray<{
+			readonly id: string;
+			readonly name: string;
+			readonly arguments?: unknown;
+		}>;
+		readonly thinking?: string;
+		readonly index?: number;
+	},
+): MessageEntry {
+	const content: ReadonlyArray<Block> = [
+		...(options.thinking === undefined
+			? []
+			: [{ type: "thinking" as const, thinking: options.thinking }]),
+		...options.calls.map((call) => ({
+			type: "toolCall" as const,
+			id: call.id,
+			name: call.name,
+			arguments: call.arguments,
+		})),
+	];
+	return {
+		type: "message",
+		id,
+		parentId,
+		timestamp: at(options.index ?? 2),
+		message: {
+			role: "assistant",
+			content,
 			usage: {
 				cacheRead: 40,
 				cacheWrite: 8,

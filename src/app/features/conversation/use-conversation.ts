@@ -38,6 +38,10 @@ export type Conversation = {
 	readonly send: (text: string, images?: ReadonlyArray<ImageBlock>) => Promise<void>;
 	readonly answer: (answer: DialogAnswer) => Promise<void>;
 	readonly loadOlder: () => Promise<void>;
+	/** An older page is in flight; the transcript says so above the first row. */
+	readonly loadingOlder: boolean;
+	/** The last older page did not arrive, in words the reader can act on. */
+	readonly olderFailure: string | undefined;
 	readonly reload: () => Promise<void>;
 	readonly abort: () => Promise<void>;
 	readonly compact: (instructions?: string) => Promise<void>;
@@ -115,12 +119,14 @@ export function useConversation(input: {
 	const entries = useRef(state.entries);
 	const hasOlder = useRef(state.hasOlder);
 	const busy = useRef(state.busy);
-	const loadingOlder = useRef(false);
+	const olderInFlight = useRef(false);
 	/** The engine's stream ended; the next command subscribes again and starts one. */
 	const stopped = useRef(false);
 	const [epoch, setEpoch] = useState(0);
 	const [loaded, setLoaded] = useState(false);
 	const [toolOpen, setToolOpen] = useState<ReadonlyMap<string, boolean>>(new Map());
+	const [loadingOlder, setLoadingOlder] = useState(false);
+	const [olderFailure, setOlderFailure] = useState<string>();
 
 	// Commands are sent from event handlers, which read the latest rendered state here.
 	useEffect(() => {
@@ -165,7 +171,11 @@ export function useConversation(input: {
 
 	const dispatch = useCallback(
 		(frame: ServerFrame) => {
-			if (frame.t === "prepend") loadingOlder.current = false;
+			if (frame.t === "prepend") {
+				olderInFlight.current = false;
+				setLoadingOlder(false);
+				setOlderFailure(undefined);
+			}
 			if (frame.t === "snapshot") setLoaded(true);
 			// A fork's text belongs to the new chat, which is not this one yet: carry it
 			// across the route change and keep it out of this chat's draft, or the new
@@ -291,9 +301,19 @@ export function useConversation(input: {
 
 	const loadOlder = useCallback(async () => {
 		const first = entries.current[0];
-		if (first === undefined || !hasOlder.current || busy.current || loadingOlder.current) return;
-		loadingOlder.current = true;
-		await command({ before: first.id, t: "loadHistory" });
+		if (first === undefined || !hasOlder.current || busy.current || olderInFlight.current) return;
+		olderInFlight.current = true;
+		setLoadingOlder(true);
+		setOlderFailure(undefined);
+		try {
+			await command({ before: first.id, t: "loadHistory" });
+		} catch {
+			// A refusal's words are the translator's, not the error's; the reader gets the
+			// fact and a retry instead of an empty message.
+			olderInFlight.current = false;
+			setLoadingOlder(false);
+			setOlderFailure("Earlier messages did not load.");
+		}
 	}, [command]);
 
 	const reload = useCallback(async () => command({ t: "reloadFromDisk" }), [command]);
@@ -483,6 +503,8 @@ export function useConversation(input: {
 		compact,
 		fork,
 		loadOlder,
+		loadingOlder,
+		olderFailure,
 		loadTree,
 		loaded,
 		models,

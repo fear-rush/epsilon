@@ -72,6 +72,53 @@ test("a 5,000-entry chat scrolls to the top without a jump", async ({
 	}).toPass({ timeout: 10_000 });
 });
 
+/** Six short turns, so the last one and the one before it share the viewport at the end. */
+const shortTurnsSession = (id: string, cwd: string): string => {
+	const lines = [sessionHeader(id, cwd)];
+	let parent: string | null = null;
+	for (let turn = 0; turn < 6; turn++) {
+		const user = userEntry(`u${turn}`, parent, `turn ${turn}`, turn * 2);
+		lines.push(JSON.stringify(user));
+		const answer = assistantEntry(`a${turn}`, user.id, `answer ${turn}`, turn * 2 + 1);
+		lines.push(JSON.stringify(answer));
+		parent = answer.id;
+	}
+	return `${lines.join("\n")}\n`;
+};
+
+test("the rail marks the newest turn when the chat opens at its end", async ({
+	agentHome,
+	app,
+	page,
+	projectsRoot,
+}) => {
+	const project = join(projectsRoot, "rail-end-project");
+	mkdirSync(project, { recursive: true });
+	writeSession(
+		`${agentHome}/sessions/--rail-end--`,
+		"rail-end",
+		shortTurnsSession("rail-end", project),
+	);
+
+	await page.goto(app.url);
+	await page.getByRole("button", { name: "rail-end-project", exact: true }).click();
+	await page.getByRole("link", { name: /turn 0/ }).click();
+	const rail = page.getByRole("navigation", { name: "Jump to a message" });
+	await expect(rail).toBeVisible({ timeout: 10_000 });
+	await expect(rail.getByRole("button", { name: /^Go to message \d+:/ })).toHaveCount(6);
+
+	// The chat opens on its newest turn, so that turn is the one marked: the rows above the
+	// fold belong to the turn before it.
+	await expect(rail.getByRole("button", { name: /^Go to message 6:/ })).toHaveAttribute(
+		"aria-current",
+		"step",
+	);
+	await expect(rail.getByRole("button", { name: /^Go to message 1:/ })).not.toHaveAttribute(
+		"aria-current",
+		"step",
+	);
+});
+
 test("the rail stays when the recent window has no user turn", async ({
 	agentHome,
 	app,
@@ -93,9 +140,52 @@ test("the rail stays when the recent window has no user turn", async ({
 	await expect(rail).toBeVisible({ timeout: 10_000 });
 	await expect(rail.getByRole("button", { name: /^Go to message \d+:/ })).toHaveCount(6);
 
+	// The chat opens on its newest turn, so the rail marks that turn, not the one whose
+	// rows happen to sit above the fold.
+	await expect(rail.getByRole("button", { name: /^Go to message 6:/ })).toHaveAttribute(
+		"aria-current",
+		"step",
+	);
+
 	// A dot for a turn older than the window loads the history page that holds it.
 	await rail.getByRole("button", { name: /Go to message 1: user turn 0/ }).click();
 	await expect(transcript.getByText("user turn 0", { exact: true })).toBeVisible({
 		timeout: 10_000,
 	});
+});
+
+test("an older page arrives without moving what the reader is reading", async ({
+	agentHome,
+	app,
+	page,
+	projectsRoot,
+}) => {
+	const project = join(projectsRoot, "page-project");
+	mkdirSync(project, { recursive: true });
+	writeSession(
+		`${agentHome}/sessions/--page-window--`,
+		"page",
+		linearSession("page", project, 120),
+	);
+
+	await page.goto(app.url);
+	await page.getByRole("button", { name: "page-project", exact: true }).click();
+	await page.getByRole("link", { name: /prompt 0/ }).click();
+	const transcript = page.getByRole("feed");
+	await expect(transcript).toBeVisible();
+
+	/** The oldest mounted row; a page landing above the reader changes it. */
+	const windowStart = (): Promise<string | null> =>
+		page.locator("[data-row-id]").first().getAttribute("data-row-id");
+
+	const before = await windowStart();
+	// The reader's own wheel to the top is what asks for the page. One gesture: the window
+	// is a few screens tall, and a second wheel would carry the reader into the new page.
+	await transcript.hover();
+	await page.mouse.wheel(0, -20_000);
+	await expect.poll(windowStart, { timeout: 8_000 }).not.toBe(before);
+
+	// The page landed above the fold and the reader kept their place: the row they were on
+	// is still on screen, not a page below it.
+	await expect(page.locator(`[data-row-id="${String(before)}"]`)).toBeInViewport();
 });

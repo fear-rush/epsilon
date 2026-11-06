@@ -1,5 +1,12 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { CheckIcon, ChevronsDownIcon, ChevronsUpIcon, CopyIcon } from "lucide-react";
+import {
+	CheckIcon,
+	ChevronsDownIcon,
+	ChevronsUpIcon,
+	CircleAlertIcon,
+	CopyIcon,
+	LoaderCircleIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { assistantText, assistantThinking, entryLabel } from "#domain/conversation/content";
@@ -12,12 +19,12 @@ import type {
 	AssistantEntry,
 	TranscriptEntry,
 } from "#protocol/conversation/frames";
-import { ChainOfThought } from "@/components/ai-elements/chain-of-thought";
 import { Checkpoint } from "@/components/ai-elements/checkpoint";
 import { Plan, type PlanStep } from "@/components/ai-elements/plan";
 import { Reasoning } from "@/components/ai-elements/reasoning";
 import { Sources } from "@/components/ai-elements/sources";
 import { Markdown } from "@/components/editor/markdown";
+import { InlineStatus } from "@/components/patterns/status/inline-status";
 import { Tip } from "@/components/patterns/tip";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
@@ -27,6 +34,7 @@ import { cn } from "@/lib/cn";
 import { changedFilesOf } from "./changed-files";
 import { ChangedFiles } from "./changed-files-view";
 import { sourcesOf } from "./links";
+import { RunCard } from "./run-card";
 import { OrphanToolResult, ToolTrace, stepStatusOf, toolTitle } from "./tool-trace";
 
 /**
@@ -47,8 +55,9 @@ import { OrphanToolResult, ToolTrace, stepStatusOf, toolTitle } from "./tool-tra
 const VIRTUALIZE_ABOVE = 150;
 
 /** A row's starting height, by what it holds. The virtualizer measures after mounting. */
-const ESTIMATE: Record<TranscriptEntry["role"] | "streaming", number> = {
+const ESTIMATE: Record<TranscriptEntry["role"] | "run" | "streaming", number> = {
 	assistant: 240,
+	run: 48,
 	streaming: 120,
 	summary: 160,
 	toolResult: 44,
@@ -72,6 +81,10 @@ export type TranscriptRow = ReturnType<typeof transcript>[number];
 /** The text a search can find in one row. */
 export const rowText = (row: TranscriptRow): string => {
 	if (row.kind === "entry") return entryLabel(row.entry);
+	if (row.kind === "run")
+		return row.steps
+			.map((step) => `${step.thinking} ${step.call.toolName} ${step.run?.output ?? ""}`)
+			.join(" ");
 	return row.turn.blocks.map((block) => block?.text ?? "").join(" ");
 };
 
@@ -189,13 +202,15 @@ function TranscriptRail({
 										type="button"
 										aria-label={`Go to message ${index + 1}: ${preview}`}
 										aria-current={active ? "step" : undefined}
-										className="relative flex h-16 w-6 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+										className="group relative flex h-16 w-6 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
 										onClick={() => onJump(row.id)}
 									>
 										<span
 											className={cn(
-												"size-1.5 rounded-full transition duration-fast",
-												active ? "opacity-0" : "bg-muted-foreground/35",
+												"size-1.5 rounded-full transition duration-fast group-hover:scale-150 group-focus-visible:scale-150 motion-reduce:transition-none",
+												active
+													? "opacity-0"
+													: "bg-muted-foreground/35 group-hover:bg-muted-foreground/70",
 											)}
 										/>
 									</button>
@@ -230,6 +245,8 @@ export type Jump = { readonly id: string; readonly nonce: number };
 export function Transcript({
 	state,
 	onLoadOlder,
+	loadingOlder,
+	olderFailure,
 	onLoadTree,
 	anchorFrom,
 	onAnchored,
@@ -239,6 +256,10 @@ export function Transcript({
 }: {
 	state: ConversationState;
 	onLoadOlder: () => void;
+	/** The engine is reading the page before this window. */
+	loadingOlder: boolean;
+	/** The last page did not arrive; the transcript offers a retry. */
+	olderFailure: string | undefined;
 	/** Read the branch tree, so a rail wider than the loaded window can list every turn. */
 	onLoadTree: () => Promise<void>;
 	/** The row index a sent message will land at or after; scroll it to the top. */
@@ -263,6 +284,8 @@ export function Transcript({
 	/** A tree dot older than the window: load history until the row is here, then scroll. */
 	const [pendingJump, setPendingJump] = useState<string>();
 	const treeAsked = useRef(false);
+	/** The scroll height before an older page was asked for, so its arrival adds no jump. */
+	const prependHeight = useRef<number | undefined>(undefined);
 	const userRows = rows.flatMap((row) =>
 		row.kind === "entry" && row.entry.role === "user" ? [{ id: row.id, text: rowText(row) }] : [],
 	);
@@ -281,10 +304,16 @@ export function Transcript({
 	const railRows =
 		userRows.length >= RAIL_SLOTS ? userRows : treeUsers.length > 0 ? treeUsers : userRows;
 
-	/** The user row at or above the first row the viewport shows. */
+	/** The user row the reader is on, or the newest turn when they are at the end. */
 	const syncActive = (): void => {
 		const element = scroll.current;
 		if (element === null) return;
+		// At the end the newest turn is the one being read, even when the row above the fold
+		// still belongs to the turn before it.
+		if (atEnd.current) {
+			setActiveUserId(railRows.at(-1)?.id);
+			return;
+		}
 		const top = element.getBoundingClientRect().top;
 		let shown: string | undefined;
 		for (const node of element.querySelectorAll<HTMLElement>("[data-row-id]")) {
@@ -322,6 +351,7 @@ export function Transcript({
 		estimateSize: (index) => {
 			const row = rows[index];
 			if (row === undefined) return 88;
+			if (row.kind === "run") return ESTIMATE.run;
 			return ESTIMATE[row.kind === "streaming" ? "streaming" : row.entry.role];
 		},
 		followOnAppend: anchored.current ? false : "auto",
@@ -353,16 +383,39 @@ export function Transcript({
 		element.scrollTop = element.scrollHeight;
 	}, [rows.length, virtual]);
 
+	/**
+	 * Ask for the page above this one, remembering the height it will add. The page lands
+	 * above the reader, so the layout effect below moves the scroll by that height: the
+	 * message they were reading stays where it was instead of being pushed down by fifty
+	 * rows arriving over it.
+	 */
+	const requestOlder = useCallback((): void => {
+		const element = scroll.current;
+		if (element !== null) prependHeight.current = element.scrollHeight;
+		onLoadOlder();
+	}, [onLoadOlder]);
+
+	useLayoutEffect(() => {
+		const element = scroll.current;
+		const before = prependHeight.current;
+		if (element === null || before === undefined) return;
+		prependHeight.current = undefined;
+		const added = element.scrollHeight - before;
+		if (added > 0) element.scrollTop += added;
+	}, [rows.length]);
+
 	// Holding at the top keeps pulling: one page arrives, the reader has not moved away, so
-	// the next page is asked for. A 5,000-entry chat reaches its first message this way.
+	// the next page is asked for. A 5,000-entry chat reaches its first message this way. A
+	// page that failed stops the loop: the line above offers the retry, and the next scroll
+	// to the top tries again.
 	useEffect(() => {
 		if (!pulling) return;
-		if (!state.hasOlder) {
+		if (!state.hasOlder || olderFailure !== undefined) {
 			setPulling(false);
 			return;
 		}
-		onLoadOlder();
-	}, [pulling, rows.length, state.hasOlder, onLoadOlder]);
+		requestOlder();
+	}, [pulling, rows.length, state.hasOlder, olderFailure, requestOlder]);
 
 	// A finished reply is announced once; the region never repeats the visible text.
 	const wasBusy = useRef(false);
@@ -429,8 +482,8 @@ export function Transcript({
 			setPendingJump(undefined);
 			return;
 		}
-		onLoadOlder();
-	}, [onLoadOlder, pendingJump, scrollToRow, state.hasOlder]);
+		requestOlder();
+	}, [requestOlder, pendingJump, scrollToRow, state.hasOlder]);
 
 	const onScroll = (): void => {
 		const element = scroll.current;
@@ -462,6 +515,32 @@ export function Transcript({
 					onTouchMove={() => setPulling(false)}
 					className="h-full min-w-0 flex-1 overflow-y-auto px-page"
 				>
+					{/* A zero-height line that stays at the top of the viewport while a page loads;
+					    it takes no space from the transcript, so nothing moves under it. */}
+					{loadingOlder || olderFailure !== undefined ? (
+						<output className="sticky top-0 z-10 flex h-0 justify-center">
+							<span className="mt-2 flex animate-enter-drop items-center gap-2 rounded-full border bg-background/95 px-3 py-1 text-meta text-muted-foreground shadow-sm backdrop-blur">
+								{olderFailure === undefined ? (
+									<>
+										<LoaderCircleIcon
+											aria-hidden="true"
+											className="size-3.5 animate-spin motion-reduce:animate-none"
+										/>
+										Loading earlier messages
+									</>
+								) : (
+									<>
+										<InlineStatus icon={CircleAlertIcon} tone="danger">
+											{olderFailure}
+										</InlineStatus>
+										<Button variant="ghost" size="xs" onClick={requestOlder}>
+											Retry
+										</Button>
+									</>
+								)}
+							</span>
+						</output>
+					) : undefined}
 					{virtual ? (
 						<div
 							className="relative mx-auto w-full max-w-content"
@@ -478,7 +557,7 @@ export function Transcript({
 										data-row-id={row.id}
 										aria-posinset={item.index + 1}
 										aria-setsize={rows.length}
-										className="absolute inset-x-0 top-0 pb-6"
+										className="absolute inset-x-0 top-0"
 										style={{ transform: `translateY(${item.start}px)` }}
 									>
 										<Row row={row} state={state} toolOpen={toolOpen} onToggleTool={onToggleTool} />
@@ -527,6 +606,9 @@ function Row({
 	onToggleTool: (toolCallId: string) => void;
 }) {
 	if (row.kind === "streaming") return <StreamingRow turn={row.turn} />;
+	if (row.kind === "run") {
+		return <RunCard row={row} toolOpen={toolOpen} onToggleTool={onToggleTool} />;
+	}
 	const { entry } = row;
 	switch (entry.role) {
 		case "user":
@@ -636,18 +718,7 @@ function AssistantRow({
 
 	const runs = calls.map((call) => toolRunOf(state, call.toolCallId));
 	const failed = runs.filter((run) => run?.status === "error").length;
-	const running = runs.some((run) => run?.status === "running");
 	const count = calls.length;
-	const chainTitle =
-		count === 0
-			? running
-				? "Thinking"
-				: "Thought"
-			: running
-				? `Running ${count} ${count === 1 ? "tool" : "tools"}`
-				: thinking === ""
-					? `Ran ${count} ${count === 1 ? "tool" : "tools"}`
-					: `Thought and ran ${count} ${count === 1 ? "tool" : "tools"}`;
 	const steps: PlanStep[] = calls.map((call, index) => ({
 		key: call.toolCallId,
 		status: stepStatusOf(runs[index]),
@@ -678,9 +749,9 @@ function AssistantRow({
 			onToggle={() => onToggleTool(call.toolCallId)}
 		/>
 	));
-	// One reasoning block or one call is already a line; a chain only earns its summary
-	// when there is more than one step to fold into it.
-	const chained = thinking === "" ? count > 1 : count > 0;
+	// This row wrote text, so it is not part of a run: the prose is the reader's boundary.
+	// Its calls stay here, as lines, rather than folding behind a heading that would sit
+	// above the answer.
 	const stepsContent = (
 		<>
 			{reasoning}
@@ -692,18 +763,7 @@ function AssistantRow({
 	return (
 		<Message>
 			<MessageContent className="gap-3">
-				{chained ? (
-					<ChainOfThought
-						title={chainTitle}
-						status={running ? "running" : failed > 0 ? "error" : undefined}
-						description={failed > 0 ? `${failed} failed` : undefined}
-						defaultOpen={failed > 0}
-					>
-						{stepsContent}
-					</ChainOfThought>
-				) : (
-					stepsContent
-				)}
+				{stepsContent}
 				{text !== "" && (
 					<div className="text-body">
 						<Markdown links="citation">{text}</Markdown>

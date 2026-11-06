@@ -14,20 +14,23 @@ import {
 import { StepStatusIcon } from "./status-icon";
 
 /**
- * A summary that expands into the steps an agent took. The summary is a line like
- * "Thought and ran 3 steps"; the steps themselves stay mounted, so a tool the reader
- * opened is still open when the summary is opened again. It starts open while the work
- * runs and closes once the agent starts answering.
+ * A run of work that expands into its steps. The summary is a line like "Ran 8 steps" with
+ * what it did beside it, and a failed count while it is closed; the steps themselves stay
+ * mounted, so a tool the reader opened is still open when the run is opened again. It
+ * starts open while the work runs and closes once the agent starts answering.
  */
 export function ChainOfThought({
 	title,
 	description,
+	failed,
 	status,
 	defaultOpen = false,
 	children,
 }: {
 	title: string;
 	description?: string | undefined;
+	/** Steps that failed, which the summary keeps visible while it is closed. */
+	failed?: number | undefined;
 	status: "running" | "error" | undefined;
 	/** Open a finished chain, such as one that failed. */
 	defaultOpen?: boolean;
@@ -47,6 +50,9 @@ export function ChainOfThought({
 						<TraceTitle>{title}</TraceTitle>
 						{description === undefined ? undefined : (
 							<TraceDescription>{description}</TraceDescription>
+						)}
+						{failed === undefined || failed === 0 ? undefined : (
+							<span className="shrink-0 text-destructive tabular-nums">{failed} failed</span>
 						)}
 					</TraceLine>
 				</TraceCollapsibleTrigger>

@@ -300,7 +300,12 @@ the rail visible, and a wide row cannot reach it. A long assistant reply pushes 
 turns out of the 50-row window; hiding the rail there removed the only overview of the chat.
 
 Not: adding more left padding to the transcript, which still meets a wide tool result in a
-narrow window. Not: hiding the rail on wide screens, where it is most useful. Not: a second
+narrow window. The dot of the newest turn is marked whenever the reader is at the end of the transcript,
+even when the rows above the fold belong to the turn before it: "I am on the last message"
+is what the rail has to say then. A dot grows and darkens under the pointer, so the small
+target reads as clickable.
+
+Not: hiding the rail on wide screens, where it is most useful. Not: a second
 session read for the rail; it uses the tree the picker already asks for.
 
 ## Local security is checked where the attack is
@@ -665,3 +670,49 @@ prototype turns every UI decision into a red test that says nothing about the co
 
 Not: keeping both UIs alive to satisfy the specs. Not deleting a spec that found a real
 bug: `onboarding` found that a custom model without cost rates could not be saved at all.
+
+## A run of steps is one row
+
+Consecutive assistant messages that only called tools are drawn as one row, keyed by the
+first of them: a header that names the work (`Ran 8 steps · 8 commands · 1 failed`), the
+steps as one line each behind it. A message that wrote text ends the run, a user message
+ends it, a tool result never does. The run opens while it works, opens when a step failed,
+and closes once the answer starts. A run of one step is the step's own line, with no
+header over it.
+
+Why: pi's loop sends one assistant message per call, so a stretch of work arrives as
+dozens of messages. A row each produced a ladder of `Thought and ran 1 tool` headings,
+each one repeating the message before it; in the owner's chat one run was 24 messages and
+another 80. The heading was also less informative than the line it replaced, which main
+drew as the command itself. Every reference does one of the two halves (opencode and
+codeshell fold a run, Claude Code and pi's TUI give each step one compact line) and none
+draws a heading per message.
+
+A page read from history carries entries, not live runs, so a step's status and output are
+read from its `toolResult` entry when the engine did not replay one; without that an old
+run would read `running` and open into nothing.
+
+Not: a heading for each message with better words, which is still one row per message. Not:
+folding the turn through its answer (codeshell's second level): the answer is what the
+reader is looking for, and a run that swallowed it would hide it behind a click. Not:
+swallowing the thinking into the header — each thought is its own labelled line above the
+step it led to, quoting its first line and opening into the whole of it with the same
+height transition as every other trace line, so it reads as a card and not as loose prose.
+One component draws every thought: a step's, an answer's, the streaming one. Two of them
+(beside a step and above an answer) were the same fact in two shapes, which read as two
+different things.
+
+## An older page arrives without moving the reader
+
+The transcript remembers the scroll height before it asks for the page above, and the
+layout effect adds the height that page brought. A zero-height line at the top of the
+scroller says `Loading earlier messages` while the page is in flight, and says so with a
+retry when it did not arrive.
+
+Why: the page lands above the fold, so the content under the reader moved down by its
+whole height — a jump of several screens in a chat with history. Nothing said a page was
+being read, and a refused page was silent.
+
+Not: following the new page to its top, which loses the reader's place in the opposite
+direction. Not: animating the prepended rows into place, which would move what is being
+read; the line above the fold is what moves, not the reader.
