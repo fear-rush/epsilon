@@ -1,11 +1,12 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { CheckIcon, ChevronsDownIcon, ChevronsUpIcon, CopyIcon } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { assistantText, assistantThinking, entryLabel } from "#domain/conversation/content";
 import { toolRunOf, transcript } from "#domain/conversation/selectors";
 import type { ConversationState, StreamingTurn } from "#domain/conversation/state";
 import { argsOf } from "#domain/conversation/tools";
+import type { SnapshotTreeNode } from "#domain/conversation/tree";
 import type {
 	AssistantBlock,
 	AssistantEntry,
@@ -89,12 +90,30 @@ const previewOf = (text: string): string => {
 	return line.length > PREVIEW_LENGTH ? `${line.slice(0, PREVIEW_LENGTH)}…` : line;
 };
 
+/** The active branch's user messages in tree order, for a rail wider than the window. */
+const treeUserRows = (
+	tree: ReadonlyArray<SnapshotTreeNode>,
+): ReadonlyArray<{ readonly id: string; readonly text: string }> => {
+	const users: Array<{ id: string; text: string }> = [];
+	const stack = [...tree].toReversed();
+	while (stack.length > 0) {
+		const node = stack.pop();
+		if (node === undefined) continue;
+		if (node.kind === "user" && node.active) users.push({ id: node.entryId, text: node.text });
+		for (let index = node.children.length - 1; index >= 0; index -= 1) {
+			const child = node.children[index];
+			if (child !== undefined) stack.push(child);
+		}
+	}
+	return users;
+};
+
 /**
  * The quick jump rail: a five-slot viewport that scrolls through one dot per user message
  * at the transcript's left edge. It owns a gutter beside the scroller rather than sitting
  * over it, so a wide tool result never runs under the dots. The viewport follows the
  * current turn, the chevrons jump to the ends, and it stays faint until used. A chat with
- * fewer than five messages has none: there is too little to navigate.
+ * fewer than five user turns has none: there is too little to navigate.
  */
 function TranscriptRail({
 	rows,
@@ -210,6 +229,7 @@ export type Jump = { readonly id: string; readonly nonce: number };
 export function Transcript({
 	state,
 	onLoadOlder,
+	onLoadTree,
 	anchorFrom,
 	onAnchored,
 	jump,
@@ -218,6 +238,8 @@ export function Transcript({
 }: {
 	state: ConversationState;
 	onLoadOlder: () => void;
+	/** Read the branch tree, so a rail wider than the loaded window can list every turn. */
+	onLoadTree: () => Promise<void>;
 	/** The row index a sent message will land at or after; scroll it to the top. */
 	anchorFrom?: number | undefined;
 	onAnchored: () => void;
@@ -237,9 +259,26 @@ export function Transcript({
 	const [announcement, setAnnouncement] = useState("");
 	/** The user message the rail marks as current, from where the reader is. */
 	const [activeUserId, setActiveUserId] = useState<string>();
+	/** A tree dot older than the window: load history until the row is here, then scroll. */
+	const [pendingJump, setPendingJump] = useState<string>();
+	const treeAsked = useRef(false);
 	const userRows = rows.flatMap((row) =>
 		row.kind === "entry" && row.entry.role === "user" ? [{ id: row.id, text: rowText(row) }] : [],
 	);
+	const treeUsers = useMemo(() => treeUserRows(state.tree), [state.tree]);
+	// The tree is already read when the picker opens; this is the same on-demand read for a
+	// window that has fewer than five user turns, so the rail does not disappear in a long
+	// assistant reply. A short chat with fewer than five turns still has none.
+	useEffect(() => {
+		if (treeAsked.current) return;
+		if (state.tree.length > 0 || !state.hasOlder || userRows.length >= RAIL_SLOTS) return;
+		treeAsked.current = true;
+		void onLoadTree().catch(() => {
+			treeAsked.current = false;
+		});
+	}, [onLoadTree, state.hasOlder, state.tree.length, userRows.length]);
+	const railRows =
+		userRows.length >= RAIL_SLOTS ? userRows : treeUsers.length > 0 ? treeUsers : userRows;
 
 	/** The user row at or above the first row the viewport shows. */
 	const syncActive = (): void => {
@@ -261,18 +300,6 @@ export function Transcript({
 			}
 		}
 		setActiveUserId(user);
-	};
-
-	/** Bring one row to the top of the view, the rail's jump. */
-	const jumpToRow = (id: string): void => {
-		const index = rows.findIndex((row) => row.id === id);
-		if (index < 0) return;
-		if (virtual) virtualizer.scrollToIndex(index, { align: "start", behavior: "smooth" });
-		else {
-			scroll.current
-				?.querySelector(rowSelector(id))
-				?.scrollIntoView({ behavior: "smooth", block: "start" });
-		}
 	};
 
 	const jumpToEnd = (): void => {
@@ -365,6 +392,45 @@ export function Transcript({
 		else scroll.current?.querySelector(rowSelector(jump.id))?.scrollIntoView({ block: "center" });
 	}, [jump, rows, virtual, virtualizer]);
 
+	/** Bring a loaded row to the top; false means the row is older than this window. */
+	const scrollToRow = useCallback(
+		(id: string): boolean => {
+			const index = rows.findIndex((row) => row.id === id);
+			if (index < 0) return false;
+			if (virtual) virtualizer.scrollToIndex(index, { align: "start", behavior: "smooth" });
+			else {
+				scroll.current
+					?.querySelector(rowSelector(id))
+					?.scrollIntoView({ behavior: "smooth", block: "start" });
+			}
+			return true;
+		},
+		[rows, virtual, virtualizer],
+	);
+
+	const jumpToRow = (id: string): void => {
+		if (scrollToRow(id)) {
+			setPendingJump(undefined);
+			return;
+		}
+		setPendingJump(id);
+	};
+
+	// A rail dot for a turn older than the window walks the history a page at a time, then
+	// scrolls once the row arrives. The page loads are the transcript's, not a second read.
+	useEffect(() => {
+		if (pendingJump === undefined) return;
+		if (scrollToRow(pendingJump)) {
+			setPendingJump(undefined);
+			return;
+		}
+		if (!state.hasOlder) {
+			setPendingJump(undefined);
+			return;
+		}
+		onLoadOlder();
+	}, [onLoadOlder, pendingJump, scrollToRow, state.hasOlder]);
+
 	const onScroll = (): void => {
 		const element = scroll.current;
 		if (element === null) return;
@@ -379,7 +445,7 @@ export function Transcript({
 		<>
 			<div className="flex min-h-0 flex-1">
 				<TranscriptRail
-					rows={userRows}
+					rows={railRows}
 					activeId={activeUserId}
 					onJump={jumpToRow}
 					onJumpEnd={jumpToEnd}

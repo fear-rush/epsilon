@@ -159,8 +159,10 @@ reloads mid-run already rebuilds from the session file.
 ## The tree travels on demand
 
 The snapshot carries the window, notices and the session id; the flat branch tree is
-sent only when a tab asks (`loadTree`), as one `tree` frame. 50,000 rows in every
-snapshot would exceed the 2 MB frame budget and re-send what the picker already has.
+sent only when a tab asks (`loadTree`), as one `tree` frame. The picker asks when it opens,
+and the jump rail asks when its loaded window has fewer than five user turns, so a long
+assistant reply cannot hide the rail. 50,000 rows in every snapshot would exceed the 2 MB
+frame budget and re-send what the picker already has.
 
 Why: the old snapshot held the whole transcript and a recursive tree, 46 MB for a 46 MB
 file (F5).
@@ -288,14 +290,18 @@ be searched by scrolling.
 
 ## The jump rail owns a gutter
 
-The transcript's jump rail is a sibling of the scroll area with its own reserved column, not
-an absolutely positioned layer over the transcript.
+The transcript's jump rail is a sibling of the scroll area with its own reserved column on
+the transcript's left, not an absolutely positioned layer over the transcript. It lists the
+active branch's user turns: the loaded window when it holds at least five, else the tree.
+A dot older than the window walks history pages until its row is loaded, then scrolls there.
 
 Why: its dots sat over a tool result's code and stole the clicks under them. A gutter keeps
-the rail visible at every width, and a wide row cannot reach it.
+the rail visible, and a wide row cannot reach it. A long assistant reply pushes the user
+turns out of the 50-row window; hiding the rail there removed the only overview of the chat.
 
-Not: adding more right padding to the transcript, which still meets a wide tool result in a
-narrow window. Not: hiding the rail on wide screens, where it is most useful.
+Not: adding more left padding to the transcript, which still meets a wide tool result in a
+narrow window. Not: hiding the rail on wide screens, where it is most useful. Not: a second
+session read for the rail; it uses the tree the picker already asks for.
 
 ## Local security is checked where the attack is
 

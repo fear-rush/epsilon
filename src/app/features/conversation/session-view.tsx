@@ -358,6 +358,7 @@ export function Conversation({
 					<Transcript
 						state={state}
 						onLoadOlder={() => void conversation.loadOlder()}
+						onLoadTree={conversation.loadTree}
 						anchorFrom={anchorFrom}
 						onAnchored={() => setAnchorFrom(undefined)}
 						jump={jump}

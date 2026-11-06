@@ -96,8 +96,8 @@ view, built from the shared patterns.
 4. The engine sends a windowed snapshot (entry ids, recent entries, notices); older
    pages arrive when the transcript asks. The readings are computed on the engine's event
    loop, so a chat pi cannot total skips them with a notice instead of taking the engine
-   down with it. The flat tree arrives when the picker opens,
-   and the reducer nests it so the picker draws main's shape. The composer's readings
+   down with it. The flat tree arrives when the picker or the jump rail asks, and the
+   reducer nests it so the picker draws main's shape. The composer's readings
    (pi's context usage, the session's totals, the cache warmer) follow the snapshot and
    again whenever pi's numbers change, and the keyed statuses extensions set travel as a
    `statuses` frame.

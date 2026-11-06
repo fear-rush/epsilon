@@ -1,8 +1,34 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { linearSession, writeSession } from "../sessions.ts";
+import {
+	assistantEntry,
+	linearSession,
+	sessionHeader,
+	userEntry,
+	writeSession,
+} from "../sessions.ts";
 import { expect, test } from "./fixture.ts";
+
+/**
+ * Six user turns followed by sixty assistant rows: the newest fifty-row window contains no
+ * user message, which used to hide the rail completely.
+ */
+const userPacedSession = (id: string, cwd: string): string => {
+	const lines = [sessionHeader(id, cwd)];
+	let parent: string | null = null;
+	for (let turn = 0; turn < 6; turn++) {
+		const entry = userEntry(`u${turn}`, parent, `user turn ${turn}`, turn * 2);
+		lines.push(JSON.stringify(entry));
+		parent = entry.id;
+	}
+	for (let answer = 0; answer < 60; answer++) {
+		const entry = assistantEntry(`a${answer}`, parent, `answer ${answer}`, 20 + answer);
+		lines.push(JSON.stringify(entry));
+		parent = entry.id;
+	}
+	return `${lines.join("\n")}\n`;
+};
 
 /**
  * Flow 6: a 5,000-entry chat opens without loading everything, and scrolling to the top
@@ -89,4 +115,33 @@ test("a 5,000-entry chat scrolls to the top without a jump", async ({
 		await page.mouse.wheel(0, -20_000);
 		expect(await firstPrompt()).toBeLessThan(before);
 	}).toPass({ timeout: 10_000 });
+});
+
+test("the rail stays when the recent window has no user turn", async ({
+	agentHome,
+	app,
+	page,
+	projectsRoot,
+}) => {
+	const project = join(projectsRoot, "rail-project");
+	mkdirSync(project, { recursive: true });
+	writeSession(`${agentHome}/sessions/--rail-window--`, "rail", userPacedSession("rail", project));
+
+	await page.goto(app.url);
+	await page.getByRole("button", { name: "rail-project", exact: true }).click();
+	await page.getByRole("link", { name: /user turn 0/ }).click();
+	const transcript = page.getByRole("feed");
+	await expect(transcript).toBeVisible();
+
+	// The window has no user row, so the rail reads the branch tree and shows all six.
+	const rail = page.getByRole("navigation", { name: "Jump to a message" });
+	await expect(rail).toBeVisible({ timeout: 10_000 });
+	await expect(rail.getByRole("button", { name: /^Go to message \d+:/ })).toHaveCount(6);
+	await expect(rail.locator('[data-rail-active="true"]')).toHaveCount(1);
+
+	// A dot for a turn older than the window loads the history page that holds it.
+	await rail.getByRole("button", { name: /Go to message 1: user turn 0/ }).click();
+	await expect(transcript.getByText("user turn 0", { exact: true })).toBeVisible({
+		timeout: 10_000,
+	});
 });
