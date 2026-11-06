@@ -5,7 +5,7 @@ import { useState } from "react";
 import { ListGroup } from "@/components/patterns/list/list-group";
 import { ListItem } from "@/components/patterns/list/list-item";
 import { MasterDetail } from "@/components/patterns/pane/master-detail";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { ListPane } from "@/features/settings/shell/list-pane";
 
@@ -69,14 +69,14 @@ function SkillsPanel({ selected }: { selected: string | undefined }) {
 				help={fileOnly ? "Skills from extensions appear while a chat is open." : undefined}
 				footer={{
 					primary: (
-						<Link
-							to="/settings/skills/new"
-							search
-							className={buttonVariants({ variant: "outline" })}
+						<Button
+							variant="outline"
+							nativeButton={false}
+							render={<Link to="/settings/skills/new" search />}
 						>
 							<PlusIcon />
 							Add skill
-						</Link>
+						</Button>
 					),
 					more: <DropdownMenuItem onClick={() => setImporting(true)}>Import…</DropdownMenuItem>,
 				}}
