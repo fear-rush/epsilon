@@ -49,7 +49,7 @@ export function Reasoning({
 			<TraceIcon>
 				<StepStatusIcon status={running ? "running" : "done"} />
 			</TraceIcon>
-			<TraceTitle>{title}</TraceTitle>
+			<TraceTitle className="shrink-0">{title}</TraceTitle>
 			{shown || hidden || first === "" ? undefined : (
 				<span className="min-w-0 truncate text-muted-foreground/70">{first}</span>
 			)}
