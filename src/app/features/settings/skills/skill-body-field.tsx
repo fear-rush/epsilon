@@ -11,7 +11,7 @@ import {
 	PaperclipIcon,
 	SquareCodeIcon,
 } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { isRelativeTarget, resolveBodyLinkPath } from "#domain/skills/body";
 import { linkSkillReferences, skillLinkName } from "#domain/skills/references";
@@ -233,26 +233,34 @@ function BodyPreview({
 		() => (references === undefined ? body : linkSkillReferences(body, references.skillExists)),
 		[body, references],
 	);
+	const preview = useRef<HTMLDivElement>(null);
+	// A link to a skill or to a file of this skill stays inside the page. The links keep their
+	// own keyboard activation; this only intercepts their clicks.
+	useEffect(() => {
+		const element = preview.current;
+		if (element === null) return undefined;
+		const onClick = (event: MouseEvent): void => {
+			const anchor = event.target instanceof Element ? event.target.closest("a") : null;
+			const href = anchor?.getAttribute("href");
+			if (href === null || href === undefined) return;
+			const skill = skillLinkName(href);
+			if (skill !== undefined) {
+				event.preventDefault();
+				references?.openSkill(skill);
+			} else if (isRelativeTarget(href)) {
+				event.preventDefault();
+				const path = resolveBodyLinkPath(href);
+				if (path !== undefined) references?.openFile(path);
+			}
+		};
+		element.addEventListener("click", onClick);
+		return () => element.removeEventListener("click", onClick);
+	}, [references]);
 	return (
-		// oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- the rendered links keep their own keyboard activation; this only intercepts their clicks
 		<div
+			ref={preview}
 			className="max-h-dialog-body-lg min-h-dialog-body-sm overflow-auto rounded-card border bg-card p-4 text-body"
 			aria-label="Instructions preview"
-			// A link to a skill or to a file of this skill stays inside the page.
-			onClick={(event) => {
-				const anchor = event.target instanceof Element ? event.target.closest("a") : null;
-				const href = anchor?.getAttribute("href");
-				if (href === null || href === undefined) return;
-				const skill = skillLinkName(href);
-				if (skill !== undefined) {
-					event.preventDefault();
-					references?.openSkill(skill);
-				} else if (isRelativeTarget(href)) {
-					event.preventDefault();
-					const path = resolveBodyLinkPath(href);
-					if (path !== undefined) references?.openFile(path);
-				}
-			}}
 		>
 			{body.trim() === "" ? (
 				<p className="text-muted-foreground">Nothing to preview yet.</p>

@@ -239,18 +239,6 @@
 			}
 		},
 		{
-			// Both rows are render-only and keep no state: the same file can legitimately be
-			// attached twice, and a streaming block is its index in the turn.
-			"files": [
-				"src/app/features/conversation/composer/attachments.tsx",
-				"src/app/features/conversation/transcript-rows.tsx",
-				"src/app/features/conversation/tool-trace.tsx"
-			],
-			"rules": {
-				"react/no-array-index-key": "off"
-			}
-		},
-		{
 			"files": ["src/protocol/**"],
 			"rules": {
 				"no-restricted-imports": [

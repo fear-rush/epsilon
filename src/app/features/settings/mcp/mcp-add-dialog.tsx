@@ -115,14 +115,15 @@ function AddFlow({ open, onOpenChange }: { open: boolean; onOpenChange: (open: b
 
 	const add = useMutation({
 		mutationFn: async () => {
-			const added: Candidate[] = [];
-			for (const candidate of candidates) {
+			// One file, one write at a time: each write starts when the one before it landed.
+			const addFrom = async (at: number, added: Candidate[]): Promise<Candidate[]> => {
+				const candidate = candidates[at];
+				if (candidate === undefined) return added;
 				const filled: Candidate =
 					candidate.resolved === true
 						? candidate
 						: { ...candidate, server: withValues(candidate.server, values[candidate.id] ?? {}) };
 				try {
-					// oxlint-disable-next-line no-await-in-loop -- one file, one write at a time
 					await saveMcpServer(project, inputOfCandidate(filled, scope));
 				} catch (error) {
 					const message = error instanceof Error ? error.message : "The write failed";
@@ -132,9 +133,9 @@ function AddFlow({ open, onOpenChange }: { open: boolean; onOpenChange: (open: b
 						{ cause: error },
 					);
 				}
-				added.push(candidate);
-			}
-			return added;
+				return addFrom(at + 1, [...added, candidate]);
+			};
+			return addFrom(0, []);
 		},
 		onSuccess: (added) => {
 			refresh();

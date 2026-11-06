@@ -25,6 +25,7 @@ import {
 	CodeBlockLine,
 	CodeBlockTitle,
 } from "@/components/ui/code-block";
+import { imageKeys, occurrenceKeys } from "@/lib/occurrence-keys";
 
 import { stackTraceOf } from "./stack";
 import { testResultsOf } from "./test-results";
@@ -251,6 +252,9 @@ function toolBody(
 	}
 
 	if (args?.kind === "edit") {
+		const editKeys = occurrenceKeys(
+			args.edits.map((change) => `${change.oldText}\n${change.newText}`),
+		);
 		return (
 			<CodeBlock size="sm">
 				<CodeBlockHeader>
@@ -258,7 +262,7 @@ function toolBody(
 				</CodeBlockHeader>
 				<CodeBlockContent className="max-h-64">
 					{args.edits.map((change, index) => (
-						<DiffBlock key={index} newText={change.newText} oldText={change.oldText} />
+						<DiffBlock key={editKeys[index]} newText={change.newText} oldText={change.oldText} />
 					))}
 				</CodeBlockContent>
 			</CodeBlock>
@@ -266,14 +270,16 @@ function toolBody(
 	}
 
 	if (args?.kind === "write") {
+		const writeLines = args.content.split("\n");
+		const writeKeys = occurrenceKeys(writeLines);
 		return (
 			<CodeBlock size="sm">
 				<CodeBlockHeader>
 					<CodeBlockTitle>{args.path}</CodeBlockTitle>
 				</CodeBlockHeader>
 				<CodeBlockContent className="max-h-64">
-					{args.content.split("\n").map((line, index) => (
-						<CodeBlockLine key={index} variant="added">
+					{writeLines.map((line, index) => (
+						<CodeBlockLine key={writeKeys[index]} variant="added">
 							{line}
 						</CodeBlockLine>
 					))}
@@ -284,11 +290,12 @@ function toolBody(
 
 	const images = run?.images ?? [];
 	if (images.length > 0) {
+		const keys = imageKeys(images);
 		return (
 			<div className="flex flex-col gap-2">
 				{images.map((image, index) => (
 					<img
-						key={index}
+						key={keys[index]}
 						alt="tool result"
 						className="max-h-64 w-auto rounded-control border"
 						src={`data:${image.mimeType};base64,${image.data}`}
@@ -316,15 +323,19 @@ function toolBody(
 }
 
 function DiffBlock({ oldText, newText }: { oldText: string; newText: string }) {
+	const oldLines = oldText.split("\n");
+	const newLines = newText.split("\n");
+	const oldKeys = occurrenceKeys(oldLines);
+	const newKeys = occurrenceKeys(newLines);
 	return (
 		<>
-			{oldText.split("\n").map((line, index) => (
-				<CodeBlockLine key={`o${index}`} variant="removed">
+			{oldLines.map((line, index) => (
+				<CodeBlockLine key={`o${oldKeys[index]}`} variant="removed">
 					{line}
 				</CodeBlockLine>
 			))}
-			{newText.split("\n").map((line, index) => (
-				<CodeBlockLine key={`n${index}`} variant="added">
+			{newLines.map((line, index) => (
+				<CodeBlockLine key={`n${newKeys[index]}`} variant="added">
 					{line}
 				</CodeBlockLine>
 			))}

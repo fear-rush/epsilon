@@ -12,6 +12,7 @@ import { PlusIcon, Trash2Icon } from "lucide-react";
 import { AnimatedRow } from "@/components/patterns/section/animated-row";
 import { Section } from "@/components/patterns/section/section";
 import { useAnimatedRows } from "@/components/patterns/section/use-animated-rows";
+import { useRowIds } from "@/components/patterns/section/use-row-ids";
 import { Tip } from "@/components/patterns/tip";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
@@ -29,15 +30,18 @@ export function McpToolExposureRows({
 	error?: string | undefined;
 	onChange: (rows: ExposureRow[]) => void;
 }) {
-	const { closing, remove } = useAnimatedRows(rows, onChange);
+	const { ids, drop } = useRowIds(rows.length);
+	const { closing, remove } = useAnimatedRows(rows, (kept, removed) => {
+		drop(removed);
+		onChange(kept);
+	});
 	const update = (index: number, patch: Partial<ExposureRow>) =>
 		onChange(rows.map((row, at) => (at === index ? { ...row, ...patch } : row)));
 	return (
 		<Section title="Tool rules">
 			<div className="grid gap-2 pad-row">
 				{rows.map((row, index) => (
-					// oxlint-disable-next-line react/no-array-index-key -- a rule's order is its identity in pi's file
-					<AnimatedRow key={index} closing={closing === index}>
+					<AnimatedRow key={ids[index]} closing={closing === index}>
 						<div className="flex items-center gap-2">
 							<Input
 								value={row.pattern}

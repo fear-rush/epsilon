@@ -47,8 +47,22 @@ function InputField({
 					</span>
 				)}
 			</FieldLabel>
-			{/* oxlint-disable-next-line no-negated-condition -- main's order: the select is the common case */}
-			{input.choices !== undefined ? (
+			{input.choices === undefined ? (
+				<InputGroup>
+					<InputGroupAddon>
+						<InputGroupText>{input.target}</InputGroupText>
+					</InputGroupAddon>
+					<InputGroupInput
+						id={id}
+						type={input.secret ? "password" : "text"}
+						autoComplete="off"
+						required={input.required}
+						value={value}
+						placeholder={input.required ? "Required" : "Optional"}
+						onChange={(event) => onChange(event.target.value)}
+					/>
+				</InputGroup>
+			) : (
 				<Select
 					items={input.choices.map((choice) => ({ value: choice, label: choice }))}
 					value={value === "" ? null : value}
@@ -69,21 +83,6 @@ function InputField({
 						</SelectGroup>
 					</SelectContent>
 				</Select>
-			) : (
-				<InputGroup>
-					<InputGroupAddon>
-						<InputGroupText>{input.target}</InputGroupText>
-					</InputGroupAddon>
-					<InputGroupInput
-						id={id}
-						type={input.secret ? "password" : "text"}
-						autoComplete="off"
-						required={input.required}
-						value={value}
-						placeholder={input.required ? "Required" : "Optional"}
-						onChange={(event) => onChange(event.target.value)}
-					/>
-				</InputGroup>
 			)}
 			{input.description !== undefined && <FieldDescription>{input.description}</FieldDescription>}
 		</Field>

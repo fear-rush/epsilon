@@ -16,6 +16,7 @@ import { Tip } from "@/components/patterns/tip";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
 import { Message, MessageContent, MessageFooter } from "@/components/ui/message";
+import { imageKeys, occurrenceKeys } from "@/lib/occurrence-keys";
 
 import { changedFilesOf } from "./changed-files";
 import { ChangedFiles } from "./changed-files-view";
@@ -49,16 +50,16 @@ export const Row = memo(function Row({
 	}
 	const { entry } = row;
 	switch (entry.role) {
-		case "user":
+		case "user": {
+			const keys = imageKeys(entry.images);
 			return (
 				<Message align="end">
 					<MessageContent>
 						<Bubble align="end" variant="muted">
 							<BubbleContent>
 								{entry.images.map((image, index) => (
-									// An image in one message has no id of its own; its position in the message is it.
 									<img
-										key={index}
+										key={keys[index]}
 										alt="attached"
 										className="mb-2 max-h-48 rounded-control"
 										src={`data:${image.mimeType};base64,${image.data}`}
@@ -70,6 +71,7 @@ export const Row = memo(function Row({
 					</MessageContent>
 				</Message>
 			);
+		}
 		case "assistant":
 			return (
 				<AssistantRow entry={entry} state={state} toolOpen={toolOpen} onToggleTool={onToggleTool} />
@@ -220,16 +222,16 @@ const AssistantRow = memo(function AssistantRow({
 }, assistantRowPropsEqual);
 
 function StreamingRow({ turn }: { turn: StreamingTurn }) {
+	// A streaming block has no id of its own: its kind and how many of that kind came before.
+	const blockKeys = occurrenceKeys(turn.blocks.map((block) => block?.kind ?? "gap"));
 	return (
 		<Message>
 			<MessageContent className="gap-3 text-body">
 				{turn.blocks.map((block, index) =>
 					block === undefined ? null : block.kind === "thinking" ? (
-						// A streaming block is its index in the turn; it has no id of its own.
-						<Reasoning key={index} text={block.text} running />
+						<Reasoning key={blockKeys[index]} text={block.text} running />
 					) : (
-						// A text block is its index in the turn too.
-						<p key={index} className="whitespace-pre-wrap">
+						<p key={blockKeys[index]} className="whitespace-pre-wrap">
 							{block.text}
 						</p>
 					),

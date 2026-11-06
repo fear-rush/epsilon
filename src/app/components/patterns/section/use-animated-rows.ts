@@ -18,7 +18,7 @@ export type AnimatedRows = {
 
 export function useAnimatedRows<T>(
 	rows: readonly T[],
-	onChange: (rows: T[]) => void,
+	onChange: (rows: T[], removed: number) => void,
 ): AnimatedRows {
 	const [closing, setClosing] = useState<number | undefined>();
 	const latest = useRef({ rows, onChange });
@@ -29,7 +29,10 @@ export function useAnimatedRows<T>(
 		setClosing(index);
 		window.setTimeout(() => {
 			const { rows: current, onChange: apply } = latest.current;
-			apply(current.filter((_, at) => at !== index));
+			apply(
+				current.filter((_, at) => at !== index),
+				index,
+			);
 			setClosing(undefined);
 		}, COLLAPSE_MS);
 	};

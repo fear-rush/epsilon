@@ -5,7 +5,6 @@
  * incomplete row. Rows grow and collapse instead of popping in and out.
  */
 import { PlusIcon, Trash2Icon } from "lucide-react";
-import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
@@ -15,6 +14,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { AnimatedRow } from "./animated-row";
 import { Section } from "./section";
 import { useAnimatedRows } from "./use-animated-rows";
+import { useRowIds } from "./use-row-ids";
 
 export type PairRow = {
 	key: string;
@@ -77,20 +77,9 @@ export function PairRowList({
 	keyPlaceholder?: string;
 	onChange: (rows: PairRow[]) => void;
 }) {
-	// A row has no id of its own, so the list hands each one: new rows take the next
-	// number and a removal drops its number with it.
-	const [ids, setIds] = useState<{ list: number[]; next: number }>({ list: [], next: 0 });
-	if (ids.list.length !== rows.length) {
-		const list = ids.list.slice(0, rows.length);
-		let next = ids.next;
-		while (list.length < rows.length) list.push(next++);
-		setIds({ list, next });
-	}
-	const { closing, remove } = useAnimatedRows(rows, (kept) => {
-		setIds((current) => ({
-			...current,
-			list: current.list.filter((_, at) => at !== closing),
-		}));
+	const { ids, drop } = useRowIds(rows.length);
+	const { closing, remove } = useAnimatedRows(rows, (kept, removed) => {
+		drop(removed);
 		onChange(kept);
 	});
 	const update = (index: number, patch: Partial<PairRow>) =>
@@ -99,7 +88,7 @@ export function PairRowList({
 	return (
 		<div className="grid gap-2">
 			{rows.map((row, index) => (
-				<AnimatedRow key={ids.list[index]} closing={closing === index}>
+				<AnimatedRow key={ids[index]} closing={closing === index}>
 					<div className="flex items-center gap-2">
 						<Input
 							value={row.key}

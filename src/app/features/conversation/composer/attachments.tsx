@@ -8,6 +8,7 @@ import {
 	AttachmentMedia,
 	AttachmentTitle,
 } from "@/components/ui/attachment";
+import { occurrenceKeys } from "@/lib/occurrence-keys";
 
 /** One image the composer holds, byte for byte as the browser read it. */
 export type Attachment = {
@@ -30,10 +31,11 @@ export function AttachmentStrip({
 	attachments: Attachment[];
 	onRemove: (index: number) => void;
 }) {
+	const keys = occurrenceKeys(attachments.map((attachment) => attachment.name));
 	return (
 		<ul aria-label="Attached images" className="flex flex-wrap gap-1">
 			{attachments.map((attachment, index) => (
-				<li key={`${attachment.name}-${index}`} className="max-w-full">
+				<li key={keys[index]} className="max-w-full">
 					<AttachmentCard size="sm" className="rounded-control">
 						<AttachmentMedia variant="image">
 							<img src={`data:${attachment.mimeType};base64,${attachment.data}`} alt="" />

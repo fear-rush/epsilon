@@ -10,3 +10,8 @@ export function occurrenceKeys(values: readonly string[]): string[] {
 		return `${value}-${occurrence}`;
 	});
 }
+
+/** Keys for inline images: the head of each one's data, which differs between pictures. */
+export function imageKeys(images: readonly { readonly data: string }[]): string[] {
+	return occurrenceKeys(images.map((image) => image.data.slice(0, 64)));
+}
