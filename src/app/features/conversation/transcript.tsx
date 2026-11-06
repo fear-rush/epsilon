@@ -91,7 +91,7 @@ const previewOf = (text: string): string => {
 
 /**
  * The quick jump rail: a five-slot viewport that scrolls through one dot per user message
- * at the transcript's right edge. It owns a gutter beside the scroller rather than sitting
+ * at the transcript's left edge. It owns a gutter beside the scroller rather than sitting
  * over it, so a wide tool result never runs under the dots. The viewport follows the
  * current turn, the chevrons jump to the ends, and it stays faint until used. A chat with
  * fewer than five messages has none: there is too little to navigate.
@@ -107,7 +107,6 @@ function TranscriptRail({
 	onJump: (id: string) => void;
 	onJumpEnd: () => void;
 }) {
-	const [hovered, setHovered] = useState<number | null>(null);
 	const railRef = useRef<HTMLDivElement>(null);
 	const anchored = rows.findIndex((row) => row.id === activeId);
 	const activeIndex = anchored === -1 ? rows.length - 1 : anchored;
@@ -124,17 +123,17 @@ function TranscriptRail({
 					? activeIndex - (RAIL_SLOTS - 2)
 					: firstVisible;
 		const lastStart = Math.max(0, rows.length - RAIL_SLOTS);
-		viewport.scrollTo({
-			top: Math.max(0, Math.min(target, lastStart)) * slot,
-			behavior: "smooth",
-		});
+		// The rail is an overview, not a second scroll surface: it follows the reader at once.
+		// A smooth scroll over a long chat would chase for seconds and hide the active dot
+		// outside the five-slot window while it moved.
+		viewport.scrollTop = Math.max(0, Math.min(target, lastStart)) * slot;
 	}, [activeIndex, rows.length]);
 
 	if (rows.length < RAIL_SLOTS) return null;
 	const first = rows[0];
 
 	return (
-		<div className="hidden w-8 shrink-0 items-center justify-center pr-1 sm:flex">
+		<div className="hidden w-8 shrink-0 items-center justify-center pl-1 sm:flex">
 			<nav
 				aria-label="Jump to a message"
 				className="flex flex-col items-center opacity-40 transition-all duration-base focus-within:opacity-100 hover:opacity-100 starting:scale-95 starting:opacity-0"
@@ -153,6 +152,7 @@ function TranscriptRail({
 				</Tip>
 				<div
 					ref={railRef}
+					data-rail-viewport="true"
 					className="relative scrollbar-none h-80 w-6 overflow-y-auto overscroll-contain"
 				>
 					<div className="relative flex flex-col items-center">
@@ -170,17 +170,12 @@ function TranscriptRail({
 										aria-label={`Go to message ${index + 1}: ${preview}`}
 										aria-current={active ? "step" : undefined}
 										className="relative flex h-16 w-6 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
-										onPointerEnter={() => setHovered(index)}
-										onPointerLeave={() => setHovered(null)}
-										onFocus={() => setHovered(index)}
-										onBlur={() => setHovered(null)}
 										onClick={() => onJump(row.id)}
 									>
 										<span
 											className={cn(
-												"size-1.5 rounded-full transition duration-fast",
+												"size-1.5 rounded-full",
 												active ? "opacity-0" : "bg-muted-foreground/35",
-												hovered === index && "scale-150 bg-foreground/70",
 											)}
 										/>
 									</button>
@@ -189,10 +184,8 @@ function TranscriptRail({
 						})}
 						<span
 							aria-hidden
-							className={cn(
-								"pointer-events-none absolute left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/70 transition-all duration-slow ease-in-out",
-								hovered === activeIndex && "scale-150",
-							)}
+							data-rail-active="true"
+							className="pointer-events-none absolute left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/70"
 							style={{ top: `${((activeIndex + 0.5) / rows.length) * 100}%` }}
 						/>
 					</div>
@@ -385,6 +378,12 @@ export function Transcript({
 	return (
 		<>
 			<div className="flex min-h-0 flex-1">
+				<TranscriptRail
+					rows={userRows}
+					activeId={activeUserId}
+					onJump={jumpToRow}
+					onJumpEnd={jumpToEnd}
+				/>
 				<div
 					ref={scroll}
 					role="feed"
@@ -436,12 +435,6 @@ export function Transcript({
 						</div>
 					)}
 				</div>
-				<TranscriptRail
-					rows={userRows}
-					activeId={activeUserId}
-					onJump={jumpToRow}
-					onJumpEnd={jumpToEnd}
-				/>
 			</div>
 			{/* The feed is not a live region itself; a finished reply is announced once. */}
 			<div aria-live="polite" className="sr-only">

@@ -152,7 +152,7 @@ cannot represent is a visible notice, never silence.
   and `Chain of Thought` for the turn's summary. The element owns the shape; the feature
   supplies the data. Composition is Base UI (`render={<Button />}`), never `asChild`.
 - The transcript's jump rail is a sibling of the scroll area, never an overlay. It owns a
-  narrow gutter at the pane's right edge, so a wide tool result cannot run under it.
+  narrow gutter at the pane's left edge, so a wide tool result cannot run under it.
 - A tool result whose call is in the window is drawn in that call's card, not as a row.
   Only a result whose call is outside the window is its own row; a hidden row would leave
   its gap behind.
