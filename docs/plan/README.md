@@ -42,7 +42,7 @@ One step per commit, in this order. A step does not start until the one before i
 | Status | Step                                        | File                                                     | Visible to the user?  |
 | ------ | ------------------------------------------- | -------------------------------------------------------- | --------------------- |
 | [x]    | 01 Archive the old docs, build the skeleton | [01-archive-and-skeleton.md](01-archive-and-skeleton.md) | no                    |
-| [ ]    | 02 AGENTS.md: root and per folder           | [02-agents-md.md](02-agents-md.md)                       | no                    |
+| [x]    | 02 AGENTS.md: root and per folder           | [02-agents-md.md](02-agents-md.md)                       | no                    |
 | [ ]    | 03 Rules, map, decisions, pi, tasks         | [03-rules-and-reference.md](03-rules-and-reference.md)   | no                    |
 | [ ]    | 04 Guards: doc check, lint policy, shoot    | [04-guards.md](04-guards.md)                             | no                    |
 | [ ]    | 05 DESIGN.md and the token generator        | [05-design-md.md](05-design-md.md)                       | no (tokens unchanged) |
