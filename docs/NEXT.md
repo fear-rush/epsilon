@@ -29,6 +29,16 @@ remains is one decision, two runs, and the merge. Status lives here and nowhere 
       in a run card: `Terminal`'s title already carries the outcome and `ToolTrace`'s
       description repeats it. One of the two should go, for every failed card, not only in
       a run. (Noticed while shooting the run card.)
+- [x] **Moving between chats no longer refreshes the sidebar.** pi's thinking-level entry
+      on engine start no longer publishes a list change, and an appended chunk's activity
+      never falls back to the file's mtime. Covered by a catalog test ("an appended entry
+      the list cannot show is not an update"); `sessions.list` calls measured at 1 before
+      and after two chat switches.
+- [x] **The sidebar and the chat header are quieter.** Row actions appear on their own
+      row's hover or focus, a folder no longer reveals its chats' actions, the folder icon
+      is the open/closed state, the two `Load more` buttons name their lists, and the chat
+      header lost its search and folder pill. Screenshots read: `sidebar-rest`,
+      `sidebar-hover`, `project-hover`, `load-more-projects`, `load-more-chats`, `chat-header`.
 - [x] **The rail marks the newest turn at the end, and its dots answer the pointer.** The
       active dot no longer follows the row above the fold when the reader is at the end;
       hovering a dot grows it. Covered by `test/e2e/long-chat.e2e.ts` ("the rail marks the

@@ -716,3 +716,38 @@ being read, and a refused page was silent.
 Not: following the new page to its top, which loses the reader's place in the opposite
 direction. Not: animating the prepended rows into place, which would move what is being
 read; the line above the fold is what moves, not the reader.
+
+## The sidebar's row actions wait for the pointer
+
+A project's `+` and `⋯` and a chat's `⋯` appear when their own row is hovered or focused,
+and a project row reveals only its own: the chats inside it carry their own group scope,
+because the shared `group/menu-item` made a focused folder light every nested row. They
+fade and slide in by a pixel rather than popping. A folder row is the same surface as a
+chat row — same padding, same hover fill, same focus ring — and the actions sit inside
+that surface, so the two highlights are one shape. A chat created inside a folder no longer
+slides into the list; a fresh top-level chat still does. The two `Load more` buttons name
+what they load. The chat's search button and folder pill are gone from its header; the
+composer still names the folder it runs in.
+
+Why: the folder row showed eleven chat menus at once the moment it was selected, and the
+two page buttons read the same. The chat's header repeated the folder the composer already
+names, and the search was the only way into a search the owner does not use.
+
+Not: hiding the actions on touch widths, where there is no hover to reveal them. Not:
+`aria-expanded` as the open test for the actions: Base UI keeps that attribute on a closed
+trigger, so the selector pinned them visible; `data-popup-open` is the real state.
+
+## Opening a chat is not a list change
+
+pi appends a `thinking_level_change` entry when an engine starts, so every chat switch
+touched the session file and the catalog published a change — the sidebar refetched, its
+rows reordered, and every open tab paid for it. The catalog now publishes only when a
+field the list shows changed, and an appended chunk's activity never falls back to the
+file's mtime the way a whole-file parse does: only a user or assistant message moves a
+chat's activity.
+
+Why: the sidebar refreshed every time the reader moved between chats, for a file byte that
+no row displays. Nothing had changed on screen.
+
+Not: dropping the change stream, which is how a message sent from a terminal reaches the
+list. Not: making the sidebar ignore changes, which would hide a real rename or a new chat.
