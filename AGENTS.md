@@ -11,18 +11,18 @@ and a terminal using that home are one agent, and Settings configures it there.
 (`48226bb`) is on this branch with its tests; the plan and its 282-row parity ledger are
 history in [archive/docs/plan/](archive/docs/plan/README.md). `main` stays the
 specification: a visible change beyond the feedback system needs the owner's yes. What is
-left before the merge is [docs/NEXT.md](docs/NEXT.md).
+left before the merge is [docs/tasks/](docs/tasks/README.md).
 
 Then read what your task needs ([docs/README.md](docs/README.md) has the full table):
 
-| You are about to                               | Read first                                                         |
-| ---------------------------------------------- | ------------------------------------------------------------------ |
-| know what is left before the merge             | [docs/NEXT.md](docs/NEXT.md)                                       |
-| touch anything pi                              | [docs/pi-sdk.md](docs/pi-sdk.md)                                   |
-| write server, engine or runtime code           | [docs/effect.md](docs/effect.md)                                   |
-| show an error, warning, empty or loading state | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#feedback-surfaces)     |
-| add or move a file                             | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#file-rules)            |
-| propose an option that sounds obvious          | [docs/DECISIONS.md](docs/DECISIONS.md) (it may have been rejected) |
+| You are about to                               | Read first                                                              |
+| ---------------------------------------------- | ----------------------------------------------------------------------- |
+| know what is left before the merge             | [docs/tasks/](docs/tasks/README.md)                                     |
+| touch anything pi                              | [docs/pi/](docs/pi/README.md)                                           |
+| write server, engine or runtime code           | [docs/rules/server.md](docs/rules/server.md)                            |
+| show an error, warning, empty or loading state | [docs/rules/feedback.md](docs/rules/feedback.md)                        |
+| add or move a file                             | [docs/rules/client.md](docs/rules/client.md)                            |
+| propose an option that sounds obvious          | [docs/decisions/](docs/decisions/README.md) (it may have been rejected) |
 
 Code wins over prose: fix a doc that disagrees in the same commit. Never copy code or
 file lists into a doc. `.sandbox/` is scratch, not instructions; `archive/` is history,
@@ -63,7 +63,7 @@ not instructions.
 2. `src/protocol/` and `src/domain/` import no `node:*`, no React, no Effect services or
    layers (Schema and data types only). The reducer stays pure.
 3. One boundary: `src/protocol/rpc.ts`. No HTTP routes except serving the page.
-4. Do not invent a pi capability. If `docs/pi-sdk.md` does not list it, pi does not
+4. Do not invent a pi capability. If `docs/pi/` does not list it, pi does not
    expose it.
 5. Credentials change only through `ModelRuntime.login()`/`logout()`; never hand-write
    `auth.json` or `trust.json`. Other files: use an exported writer, else `JsonDocument`
@@ -95,16 +95,16 @@ not instructions.
    all three and in the route.
 3. Server code outside `platform/` reaches IO through a service: `Context.Service`, its
    `Layer` in the same file, `Effect.fn` on every operation
-   ([docs/effect.md](docs/effect.md)).
+   ([docs/rules/server.md](docs/rules/server.md)).
 4. Run the check the change calls for ([Check by change](#check-by-change)). A feature
    is done when its behavior is verified and its failures are visible in the UI.
 
 There is no line limit; split files by meaning, as
-[ARCHITECTURE.md, File rules](docs/ARCHITECTURE.md#file-rules) says.
+[the client rules](docs/rules/client.md) says.
 
 ## Working on this repository as an agent
 
-- **One item at a time.** Take the next unticked item of [docs/NEXT.md](docs/NEXT.md).
+- **One item at a time.** Take the next unticked item of [docs/tasks/](docs/tasks/README.md).
   Something else you notice becomes a new unticked item there, not part of this commit.
 - **Done needs evidence, at the change's risk.** A tick needs what the item's _Done when_
   asks for. A UI slice gets one screenshot of the running app read by you and the one spec
@@ -112,7 +112,7 @@ There is no line limit; split files by meaning, as
   passing say nothing about pixels, and a pixel assertion does not prove feel.
 - **Never drop, never improvise.** Removing or restyling something of `main`'s, or a
   visible change beyond the feedback system, needs the owner's yes first.
-- **Same commit**: the code, its tests, the `docs/NEXT.md` tick, and the ARCHITECTURE or
+- **Same commit**: the code, its tests, the `docs/tasks/` update, and the ARCHITECTURE or
   DECISIONS change it causes. Messages are `type(scope): what changed`.
 - **Report**: what changed, the commands run and their results, the test duration,
   screenshot paths, and what you could not do. Say plainly when something failed or was
@@ -156,6 +156,6 @@ reviewed in the screenshot, not asserted.
 ## Ask before acting when
 
 - Something of `main`'s seems wrong, unused or not worth keeping.
-- The request needs a capability [pi-sdk.md](docs/pi-sdk.md) does not list.
+- The request needs a capability [the pi reference](docs/pi/README.md) does not list.
 - The engine would stop being an SDK call inside a process Epsilon supervises.
 - A check fails for a reason you do not understand.

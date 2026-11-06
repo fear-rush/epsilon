@@ -19,3 +19,7 @@ Kept because it is the record of what `main` had, which file came from where, an
 ported screen differs. What lasts was lifted out before archiving: how the code is now is
 [ARCHITECTURE](../docs/ARCHITECTURE.md), why it is that way is
 [DECISIONS](../docs/DECISIONS.md), and the measurements are in the commits they changed.
+
+## Docs of 2026-11
+
+[docs-2026-11/](docs-2026-11/README.md): the six docs that preceded the rebuilt `docs/`, moved unchanged.

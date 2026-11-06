@@ -75,7 +75,7 @@ const devOrigin = process.env["EPSILON_DEV_ORIGIN"];
 const appDir = new URL("../app", import.meta.url).pathname;
 
 // pi's MCP loader takes no directory and resolves `getAgentDir()` itself, so the variable
-// it reads is published here, once, before anything can load MCP. See docs/pi-sdk.md.
+// it reads is published here, once, before anything can load MCP. See docs/pi/README.md.
 process.env["PI_CODING_AGENT_DIR"] = agentDir;
 
 const homeLayer = AgentHomeLive(agentDir, userHome, projectsRoot);

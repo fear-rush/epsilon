@@ -23,7 +23,7 @@ export type BuiltinCommand = {
 	/**
 	 * Why this build cannot run it, in the words the tab shows instead. A refusal is a
 	 * sentence that names where the ability lives, never a silent no-op
-	 * (docs/DECISIONS.md, UI contract). Absent when the command has a web surface.
+	 * (docs/decisions/, UI contract). Absent when the command has a web surface.
 	 */
 	refusal?: string;
 };

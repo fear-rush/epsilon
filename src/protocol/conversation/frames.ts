@@ -132,7 +132,7 @@ export const TreeRowKind = Schema.Literals(["user", "assistant", "summary", "too
  *
  * The wire carries rows, not a tree: a 50,000-entry chat must not recurse through a
  * nested schema, and the tree is read when the picker opens, not in every snapshot
- * (DECISIONS.md, "The tree travels on demand"). `parentId` is the nearest row that is
+ * (docs/decisions/, "The tree travels on demand"). `parentId` is the nearest row that is
  * also kept, so a dropped bookkeeping entry promotes its children instead of hiding
  * them; the page rebuilds main's nested shape from these rows.
  */

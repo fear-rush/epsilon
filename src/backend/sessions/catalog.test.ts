@@ -23,7 +23,7 @@ import { Catalog, CatalogLive, makeCatalog } from "./catalog.ts";
 
 /**
  * The conformance test: the index must agree with pi's own `listAll` on every field the
- * session list shows. This is also what guards pi upgrades (docs/pi-sdk.md, Upgrading pi): when pi's
+ * session list shows. This is also what guards pi upgrades (docs/pi/README.md, Upgrading pi): when pi's
  * rules move, this test fails before a chat disappears from the sidebar.
  */
 

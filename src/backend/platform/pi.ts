@@ -36,7 +36,7 @@ import type { JsonObject } from "./patch.ts";
  * back to `getAgentDir()`, which reads `PI_CODING_AGENT_DIR`, so a forgotten argument
  * would silently point at the operator's real home while a test believes it is on a
  * scratch one. (MCP is the exception that forces `main.ts` to export that variable: its
- * config loader takes no directory. See `docs/pi-sdk.md`.)
+ * config loader takes no directory. See `docs/pi/README.md`.)
  */
 
 /** What pi hands the prompt and notify callbacks of one sign-in. */

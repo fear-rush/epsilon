@@ -6,7 +6,7 @@ import { ProviderApi } from "#protocol/settings/providers";
  * labels the choices with the same list.
  */
 
-/** pi's API family names, from `docs/pi-sdk.md` and its own model clients. */
+/** pi's API family names, from `docs/pi/README.md` and its own model clients. */
 export const providerApis: ReadonlyArray<ProviderApi> = ProviderApi.literals;
 
 export type { ProviderApi };
@@ -29,7 +29,7 @@ export const isBaseUrl = (value: string): boolean => /^https?:\/\/[^\s]+$/.test(
 
 /**
  * What pi appends to a provider's base URL for each API family, verified against the
- * clients pi uses (docs/pi-sdk.md). The API picker labels each family with its path, and
+ * clients pi uses (docs/pi/README.md). The API picker labels each family with its path, and
  * the model list knows where a compatible `/models` lives.
  */
 export type ProviderApiInfo = {

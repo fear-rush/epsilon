@@ -81,7 +81,7 @@ type Question = Exclude<DialogQuestion, { kind: "confirm" }>;
 /**
  * pi's permission extension prefixes each option with a colour dot. The choice is
  * already said in words, so the glyph is dropped instead of carrying pi's palette
- * into the dialog (docs/ARCHITECTURE.md, UI rules: colour carries state only).
+ * into the dialog (DESIGN.md, UI rules: colour carries state only).
  */
 const DECORATIVE_PREFIX = /^[\p{Extended_Pictographic}\uFE0F\u200D\s]+/u;
 const plainOption = (option: string): string => option.replace(DECORATIVE_PREFIX, "");

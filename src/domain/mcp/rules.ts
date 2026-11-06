@@ -7,7 +7,7 @@ import type { McpOAuthView } from "#protocol/settings/mcp";
  * tool's exposure).
  *
  * pi exports no validator Epsilon can reach through its package, so these are pi's rules
- * restated from `docs/pi-sdk.md` and its installed `mcp.json` reader. The server refuses a
+ * restated from `docs/pi/README.md` and its installed `mcp.json` reader. The server refuses a
  * save that breaks them; the form labels its choices from the same lists.
  */
 

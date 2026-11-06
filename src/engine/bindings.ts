@@ -32,7 +32,7 @@ export const bindEngineSession = (
 		try: () =>
 			session.bindExtensions({
 				// "json" is the presentation pi names for a headless host, and `hasUI` is the
-				// field extensions branch on. docs/pi-sdk.md explains why both are honest.
+				// field extensions branch on. docs/pi/README.md explains why both are honest.
 				commandContextActions: {
 					waitForIdle: () => session.waitForIdle(),
 					newSession: (options) =>

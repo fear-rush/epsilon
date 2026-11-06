@@ -3,7 +3,7 @@
  * transcript no longer shows. Picking a user message puts its text back in the
  * composer; picking any other entry continues after it. This is the `/tree`
  * command's dialog and the way an abandoned branch stays reachable
- * (DECISIONS.md, "Moves and copies are pi's own").
+ * (docs/decisions/, "Moves and copies are pi's own").
  *
  * The filter is pi's own `treeFilterMode` setting, read from the engine and written
  * back through its setter. Labels are pi's `label` entries on a target entry, so the
