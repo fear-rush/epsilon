@@ -25,7 +25,17 @@ export type ErrorView = {
 	title: string;
 	line: string;
 	icon: LucideIcon;
+	/** Buttons the surface adds; the caller supplies what "retry" does. Absent means none. */
+	actions?: ReadonlyArray<ErrorAction>;
 };
+
+export type ErrorAction = "retry" | "diagnostics" | "reload";
+
+/** The one sentence a plain-text surface shows: the line, or the title when there is none. */
+export function errorText(error: Error): string {
+	const view = errorView(error);
+	return view.line === "" ? view.title : view.line;
+}
 
 /**
  * Every tagged error the wire can carry, derived from the protocol's own exports so a new
@@ -53,9 +63,10 @@ const noWords = (error: never): ErrorView => {
 /** A failure nobody named: a bug, so it is said plainly and the detail stays in the log. */
 const UNKNOWN: ErrorView = {
 	tone: "danger",
-	title: "Couldn't finish that",
-	line: "This page met a problem it cannot explain. Try again, and open Diagnostics if it keeps happening.",
+	title: "Something went wrong",
+	line: "",
 	icon: CircleAlertIcon,
+	actions: ["retry", "diagnostics"],
 };
 
 /**
@@ -70,16 +81,17 @@ export function errorView(error: Error): ErrorView {
 	if (error instanceof PageOutOfDate) {
 		return {
 			tone: "warning",
-			title: "This page is out of date",
-			line: "Reload to get the version that matches the server.",
+			title: "Epsilon was updated",
+			line: "",
 			icon: RefreshCwIcon,
+			actions: ["reload"],
 		};
 	}
 	if (error instanceof ServerUnreachable) {
 		return {
 			tone: "warning",
-			title: "Server not reachable",
-			line: "This page reconnects on its own.",
+			title: "Reconnecting…",
+			line: "",
 			icon: WifiOffIcon,
 		};
 	}
@@ -106,8 +118,8 @@ export function errorView(error: Error): ErrorView {
 		case "EngineStopped":
 			return {
 				tone: "warning",
-				title: "The chat's engine stopped",
-				line: "Your next message starts a new one from the session file.",
+				title: "The chat stopped",
+				line: "Send a message to restart it.",
 				icon: UnplugIcon,
 			};
 		case "CommandRefused":
@@ -120,16 +132,17 @@ export function errorView(error: Error): ErrorView {
 		case "EngineLimitReached":
 			return {
 				tone: "warning",
-				title: "Every chat engine is busy",
-				line: `${error.running} of ${error.max} are running a turn. Close an idle chat or raise the limit in Settings.`,
+				title: "Every chat slot is busy",
+				line: `${error.running} of ${error.max} are running. Close an idle chat or raise the limit in Settings.`,
 				icon: GaugeIcon,
 			};
 		case "EngineCrashLoop":
 			return {
 				tone: "danger",
-				title: "This chat keeps stopping",
-				line: "It crashed three times in a minute, so Epsilon stopped restarting it. Open Diagnostics for the reason.",
+				title: "This chat keeps crashing",
+				line: "",
 				icon: CircleAlertIcon,
+				actions: ["diagnostics"],
 			};
 		case "FileUnreadable":
 			return {
@@ -225,9 +238,10 @@ export function errorView(error: Error): ErrorView {
 		case "HandshakeRefused":
 			return {
 				tone: "warning",
-				title: "This page cannot use the server",
-				line: "Reload to try again.",
+				title: "Can't use this server",
+				line: "",
 				icon: PlugZapIcon,
+				actions: ["reload"],
 			};
 		default:
 			return noWords(error);

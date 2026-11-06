@@ -135,7 +135,7 @@ const HANDLERS: Partial<Record<ComposerCommandName, Handler>> = {
 			downloadExport(await exportChat(format));
 		} catch (cause) {
 			const view = errorView(cause instanceof Error ? cause : new Error(String(cause)));
-			return `The export failed: ${view.line}`;
+			return `The export failed: ${view.line === "" ? view.title : view.line}`;
 		}
 		return undefined;
 	},
@@ -168,7 +168,7 @@ const HANDLERS: Partial<Record<ComposerCommandName, Handler>> = {
 			context = contextSentence(await readContext());
 		} catch (cause) {
 			const view = errorView(cause instanceof Error ? cause : new Error(String(cause)));
-			context = `The context could not be read: ${view.line}`;
+			context = `The context could not be read: ${view.line === "" ? view.title : view.line}`;
 		}
 		return `Chat ${name}: ${model}, ${counted}. ${context}`;
 	},

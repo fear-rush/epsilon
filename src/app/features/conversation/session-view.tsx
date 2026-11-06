@@ -11,10 +11,10 @@ import { useEffect, useState } from "react";
 import { transcript } from "#domain/conversation/selectors";
 import type { ConversationState } from "#domain/conversation/state";
 import type { DialogQuestion } from "#protocol/conversation/extui";
-import type { ImageBlock, Notice as NoticeFrame } from "#protocol/conversation/frames";
+import type { ImageBlock } from "#protocol/conversation/frames";
 import type { ModelOption } from "#protocol/conversation/session";
 import type { ContextView } from "#protocol/settings/context";
-import { Notice } from "@/components/patterns/status/notice";
+import { noticeView } from "@/components/patterns/status/notice-view";
 import { Button } from "@/components/ui/button";
 import { call } from "@/core/runtime";
 import { useReportStatus } from "@/core/status";
@@ -164,6 +164,7 @@ export function Conversation({
 			bashOutput={state.bash.output}
 			queue={state.queue}
 			drift={state.drift}
+			notices={state.notices}
 			onReload={() => void conversation.reload()}
 			onAbortCompaction={() => void conversation.abortCompaction()}
 			onCancelRetry={() => void conversation.cancelRetry()}
@@ -282,7 +283,6 @@ export function Conversation({
 						toolOpen={conversation.toolOpen}
 						onToggleTool={conversation.toggleTool}
 					/>
-					<ChatNotices notices={state.notices} />
 					{runStatus}
 					<div className="animate-enter-rise">{composer}</div>
 				</>
@@ -298,23 +298,9 @@ export function Conversation({
  */
 function chatReport(state: ConversationState) {
 	const stopped = state.notices.findLast((notice) => notice.kind === "error");
-	if (stopped !== undefined) return { text: stopped.text, tone: "warning" as const };
+	if (stopped !== undefined) {
+		const view = noticeView(stopped);
+		return { text: view.text, tone: view.tone };
+	}
 	return undefined;
-}
-
-/** The engine's last few notices: a compaction, a retry, an extension's warning. */
-function ChatNotices({ notices }: { notices: ReadonlyArray<NoticeFrame> }) {
-	const recent = notices.slice(-3);
-	if (recent.length === 0) return null;
-	return (
-		<div className="grid gap-1 border-t px-page py-2">
-			{recent.map((notice) => (
-				<Notice
-					key={notice.id}
-					tone={notice.kind === "error" ? "danger" : notice.kind === "warning" ? "warning" : "info"}
-					title={notice.text}
-				/>
-			))}
-		</div>
-	);
 }

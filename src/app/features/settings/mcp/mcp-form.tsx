@@ -167,7 +167,7 @@ function McpServerForm({
 			bodyKey={tab}
 			actions={
 				<>
-					{enable.isPending && <Spinner />}
+					{enable.isPending && <LoadingState label="Saving…" />}
 					<EnabledSwitch
 						checked={detail.enabled}
 						disabled={enable.isPending}

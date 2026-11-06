@@ -166,14 +166,66 @@ export type TreeFilterMode = typeof TreeFilterMode.Type;
 export const NoticeKind = Schema.Literals(["notice", "warning", "error", "compaction", "retry"]);
 export type NoticeKind = typeof NoticeKind.Type;
 
-export const Notice = Schema.Struct({
-	/** Stable for the life of the frame stream, so the page can dismiss one by id. */
-	id: Schema.String,
+/**
+ * Every notice Epsilon itself raises. The server sends the code and the variable parts;
+ * the words live in the page (`notice-view.ts`), so a new code does not type-check there
+ * without them.
+ */
+export const NoticeCode = Schema.Literals([
+	"engine-crashed",
+	"engine-restarting",
+	"engine-unresponsive",
+	"engine-out-of-memory",
+	"slot-freed",
+	"extensions-failed",
+	"run-failed",
+	"readings-unreadable",
+	"extension-closed-chat",
+	"session-unbound",
+	"command-shadowed",
+	"retrying",
+	"import-done",
+	"chat-name",
+	"command-unavailable",
+	"command-failed",
+	"chat-ended",
+	"chat-error",
+]);
+export type NoticeCode = typeof NoticeCode.Type;
+
+/** The variable parts of a code's words, as strings. */
+export const NoticeData = Schema.Record(Schema.String, Schema.String);
+export type NoticeData = typeof NoticeData.Type;
+
+/** Words from pi or an extension, shown as they came. */
+const PiNoticeFields = {
 	kind: NoticeKind,
+	source: Schema.Literals(["pi"]),
 	text: Schema.String,
-	/** The entry the notice followed, or null before any. An id, never an index. */
-	afterEntryId: Schema.NullOr(Schema.String),
-});
+};
+
+/** A notice Epsilon raised: a code and its data, never a finished sentence. */
+const EpsilonNoticeFields = {
+	kind: NoticeKind,
+	source: Schema.Literals(["epsilon"]),
+	code: NoticeCode,
+	data: NoticeData,
+};
+
+export const Notice = Schema.Union([
+	Schema.Struct({
+		/** Stable for the life of the frame stream, so the page can dismiss one by id. */
+		id: Schema.String,
+		/** The entry the notice followed, or null before any. An id, never an index. */
+		afterEntryId: Schema.NullOr(Schema.String),
+		...PiNoticeFields,
+	}),
+	Schema.Struct({
+		id: Schema.String,
+		afterEntryId: Schema.NullOr(Schema.String),
+		...EpsilonNoticeFields,
+	}),
+]);
 export type Notice = typeof Notice.Type;
 
 export const StreamingBlockKind = Schema.Literals(["text", "thinking"]);
@@ -242,12 +294,10 @@ export const ToolDeltaFrame = Schema.Struct({
 	durationMs: Schema.optional(Schema.Finite),
 });
 
-export const NoticeFrame = Schema.Struct({
-	t: Schema.Literals(["notice"]),
-	id: Schema.String,
-	kind: NoticeKind,
-	text: Schema.String,
-});
+export const NoticeFrame = Schema.Union([
+	Schema.Struct({ t: Schema.Literals(["notice"]), id: Schema.String, ...PiNoticeFields }),
+	Schema.Struct({ t: Schema.Literals(["notice"]), id: Schema.String, ...EpsilonNoticeFields }),
+]);
 
 export const DialogFrame = Schema.Struct({
 	t: Schema.Literals(["dialog"]),

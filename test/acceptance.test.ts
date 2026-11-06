@@ -240,7 +240,10 @@ describe("acceptance", () => {
 				yield* engine.attachTab("tab");
 				const notice = yield* engine.frames("tab").pipe(
 					Stream.filter(
-						(frame) => frame.t === "notice" && /readings could not be read/i.test(frame.text),
+						(frame) =>
+							frame.t === "notice" &&
+							frame.source === "epsilon" &&
+							frame.code === "readings-unreadable",
 					),
 					Stream.take(1),
 					Stream.runHead,

@@ -104,7 +104,9 @@ export const makeSupervisor = (deps: {
 			yield* engine.broadcast({
 				id: crypto.randomUUID(),
 				kind: "error",
-				text: `This chat's engine stopped (${describeExit(info)}). Other chats are unaffected.`,
+				source: "epsilon",
+				code: "engine-crashed",
+				data: { exit: describeExit(info) },
 				t: "notice",
 			});
 
@@ -166,7 +168,9 @@ export const makeSupervisor = (deps: {
 									yield* engine.broadcast({
 										id: crypto.randomUUID(),
 										kind: "error",
-										text: "This chat's engine is out of memory and is being closed.",
+										source: "epsilon",
+										code: "engine-out-of-memory",
+										data: {},
 										t: "notice",
 									});
 									yield* engine.killNow();
@@ -196,7 +200,9 @@ export const makeSupervisor = (deps: {
 							yield* engine.broadcast({
 								id: crypto.randomUUID(),
 								kind: "error",
-								text: "This chat's engine is not responding and is being restarted.",
+								source: "epsilon",
+								code: "engine-restarting",
+								data: {},
 								t: "notice",
 							});
 							yield* engine.killNow();
@@ -206,7 +212,9 @@ export const makeSupervisor = (deps: {
 							yield* engine.broadcast({
 								id: crypto.randomUUID(),
 								kind: "warning",
-								text: "This chat's engine is not responding.",
+								source: "epsilon",
+								code: "engine-unresponsive",
+								data: {},
 								t: "notice",
 							});
 						}

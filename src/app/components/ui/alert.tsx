@@ -3,19 +3,19 @@ import * as React from "react";
 
 import { cn } from "@/lib/cn";
 
+// Local change to shadcn source: every variant is one look (DESIGN.md notice-*), tinted border
+// and fill with the tone on the icon only.
 const alertVariants = cva(
-	"group/alert relative grid w-full gap-0.5 rounded-xl border px-4 py-3 text-left text-sm has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2.5 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-4",
+	"group/alert relative grid w-full gap-0.5 rounded-xl border px-4 py-3 text-left text-sm has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2.5 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg:not([class*='size-'])]:size-4",
 	{
 		variants: {
 			variant: {
-				default: "bg-card text-card-foreground",
+				default: "border-border bg-muted/40 text-foreground *:[svg]:text-muted-foreground",
 				destructive:
-					"bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90 *:[svg]:text-current",
-				success:
-					"bg-card text-success *:data-[slot=alert-description]:text-success/90 *:[svg]:text-current",
-				info: "border-info/40 bg-info/10 text-info *:data-[slot=alert-description]:text-current *:[svg]:text-info",
-				warning:
-					"border-warning/40 bg-warning/10 text-warning-foreground *:data-[slot=alert-description]:text-current dark:text-warning *:[svg]:text-warning",
+					"border-destructive/30 bg-destructive/5 text-foreground *:[svg]:text-destructive",
+				success: "border-success/30 bg-success/5 text-foreground *:[svg]:text-success",
+				info: "border-info/30 bg-info/5 text-foreground *:[svg]:text-info",
+				warning: "border-warning/30 bg-warning/5 text-foreground *:[svg]:text-warning",
 			},
 		},
 		defaultVariants: {

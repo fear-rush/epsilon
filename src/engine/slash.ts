@@ -3,6 +3,7 @@ import { resolve, sep } from "node:path";
 import { Effect, FileSystem } from "effect";
 import type { Scope } from "effect";
 
+import type { NoticeCode, NoticeData } from "#protocol/conversation/frames";
 import { CommandRefused } from "#protocol/errors";
 
 import type { ParsedBuiltinCommand } from "../domain/conversation/commands.ts";
@@ -37,7 +38,7 @@ export type BuiltinHost = {
 	>;
 	readonly reload: () => Effect.Effect<void, CommandRefused>;
 	readonly rename: (name: string | undefined) => Effect.Effect<void, CommandRefused>;
-	readonly notice: (text: string) => void;
+	readonly notice: (code: NoticeCode, data?: NoticeData) => void;
 };
 
 /** Everything after the name, trimmed; undefined when the command took nothing. */
@@ -126,7 +127,7 @@ const handler = (
 			return Effect.gen(function* () {
 				const file = yield* importFile(host, argument);
 				yield* host.importSession(file);
-				host.notice(`Imported ${file}. This chat continues in the imported session.`);
+				host.notice("import-done", { file });
 			});
 		case "name":
 			return host.rename(textArgument(argument));
@@ -135,12 +136,7 @@ const handler = (
 		case "reload":
 			return host.reload();
 		default:
-			return Effect.sync(() =>
-				host.notice(
-					command.refusal ??
-						`/${command.name} is answered by Epsilon's own interface, not by this engine. Nothing was sent to the model.`,
-				),
-			);
+			return Effect.sync(() => host.notice("command-unavailable", { name: command.name }));
 	}
 };
 
@@ -154,6 +150,8 @@ export const runBuiltin = (
 ): Effect.Effect<void, never, FileSystem.FileSystem | Scope.Scope> =>
 	handler(host, parsed).pipe(
 		Effect.catchTag("CommandRefused", (error) =>
-			Effect.sync(() => host.notice(`/${parsed.command.name}: ${error.reason}`)),
+			Effect.sync(() =>
+				host.notice("command-failed", { name: parsed.command.name, reason: error.reason }),
+			),
 		),
 	);

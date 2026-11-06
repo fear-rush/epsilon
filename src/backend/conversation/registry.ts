@@ -203,7 +203,9 @@ export const makeEngines = (options: {
 				yield* entry.engine.broadcast({
 					id: crypto.randomUUID(),
 					kind: "warning",
-					text: "This chat was closed to free an engine slot. It reopens when you continue.",
+					source: "epsilon",
+					code: "slot-freed",
+					data: {},
 					t: "notice",
 				});
 				yield* withLock(entry.sessionId, closeEntry(entry));

@@ -105,7 +105,7 @@ describe("frames", () => {
 		// The version covers exactly the tags the socket can carry: adding a frame without
 		// naming it here means a stale tab would meet a frame it cannot decode.
 		expect(new Set(samples.map((sample) => sample.t))).toEqual(new Set(frameTags));
-		expect(PROTOCOL_VERSION).toBe("18");
+		expect(PROTOCOL_VERSION).toBe("19");
 		for (const sample of samples) expect(() => decodeServerFrame(sample)).not.toThrow();
 	});
 });
@@ -443,12 +443,13 @@ describe("reduce", () => {
 				t: "notice",
 				id: `n${index}`,
 				kind: "notice",
+				source: "pi",
 				text: `notice ${index}`,
 			});
 		}
 		expect(state.notices).toHaveLength(noticeLimit);
-		expect(state.notices[0]?.text).toBe("notice 5");
-		expect(state.notices.at(-1)?.text).toBe(`notice ${noticeLimit + 4}`);
+		expect(state.notices[0]).toMatchObject({ source: "pi", text: "notice 5" });
+		expect(state.notices.at(-1)).toMatchObject({ text: `notice ${noticeLimit + 4}` });
 		expect(state.notices.at(-1)?.afterEntryId).toBeNull();
 	});
 

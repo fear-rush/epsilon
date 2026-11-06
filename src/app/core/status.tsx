@@ -12,6 +12,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 
+import { toneSurface } from "@/components/patterns/status/status-tone";
 import type { Tone } from "@/components/patterns/status/status-tone";
 import { Button } from "@/components/ui/button";
 import { call, link } from "@/core/runtime";
@@ -118,7 +119,7 @@ export function useStatus(): StatusApi | undefined {
 	return useContext(StatusContext);
 }
 
-export type AppHealth = "ok" | "reconnecting" | "stale";
+export type AppHealth = "ok" | "connecting" | "reconnecting" | "stale";
 
 /**
  * The socket, plus whether this page is still the one the server serves.
@@ -129,16 +130,30 @@ export type AppHealth = "ok" | "reconnecting" | "stale";
 export function useAppHealth(): AppHealth {
 	const current = useSyncExternalStore(link.subscribe, link.current, link.current);
 	if (current.outOfDate) return "stale";
-	return current.socket === "open" ? "ok" : "reconnecting";
+	if (current.socket === "open") return "ok";
+	// Before the first answer nothing was lost, so it is not a reconnect.
+	return current.socket === "connecting" ? "connecting" : "reconnecting";
 }
 
-const TONE: Record<Tone, string> = {
-	neutral: "border-border bg-muted/40 text-muted-foreground",
-	info: "border-info/40 bg-info/10 text-info",
-	success: "border-success/40 bg-success/10 text-success",
-	warning: "border-warning/40 bg-warning/5 text-warning-foreground",
-	danger: "border-destructive/40 bg-destructive/5 text-destructive",
-};
+/** Draws nothing for its first second, so a normal page load never flashes a strip. */
+function Connecting() {
+	const [late, setLate] = useState(false);
+	useEffect(() => {
+		const timer = window.setTimeout(() => setLate(true), CONNECTING_GRACE_MS);
+		return () => window.clearTimeout(timer);
+	}, []);
+	if (!late) return null;
+	return (
+		<Strip tone="info">
+			<span className="inline-flex items-center gap-2">
+				<LoaderCircleIcon className="size-4 animate-spin" aria-hidden />
+				Connecting…
+			</span>
+		</Strip>
+	);
+}
+
+const CONNECTING_GRACE_MS = 1000;
 
 /**
  * The one status line above every surface.
@@ -156,16 +171,17 @@ export function AppStatus() {
 	if (health === "stale") {
 		return (
 			<Strip tone="danger" action={<Reload />}>
-				Epsilon was updated. Reload to continue.
+				Epsilon was updated
 			</Strip>
 		);
 	}
+	if (health === "connecting") return <Connecting />;
 	if (health === "reconnecting") {
 		return (
 			<Strip tone="warning">
 				<span className="inline-flex items-center gap-2">
 					<LoaderCircleIcon className="size-4 animate-spin" aria-hidden />
-					Reconnecting to the server…
+					Reconnecting…
 				</span>
 			</Strip>
 		);
@@ -210,7 +226,7 @@ function Strip({
 		<output
 			className={cn(
 				"flex w-full shrink-0 animate-enter-fade items-center justify-center gap-3 border-b px-4 py-1.5 text-meta",
-				TONE[tone],
+				toneSurface(tone, "text-foreground"),
 			)}
 		>
 			<span className="min-w-0 truncate">{children}</span>

@@ -489,7 +489,11 @@ test("built-in commands are answered here, never by the model", async () => {
 			yield* control(engine, { t: "prompt", text: "/model" });
 			const notice = yield* frameOf(
 				engine,
-				(frame) => frame.t === "notice" && frame.text.includes("/model"),
+				(frame) =>
+					frame.t === "notice" &&
+					frame.source === "epsilon" &&
+					frame.code === "command-unavailable" &&
+					frame.data["name"] === "model",
 			);
 			const history = yield* engine.request((id) => ({ id, kind: "history", t: "query" }));
 			// A pi-surface name runs pi's operation on the host.
@@ -522,9 +526,7 @@ test("built-in commands are answered here, never by the model", async () => {
 
 	if (Option.isNone(result.notice)) throw new Error("no notice for /model");
 	if (result.notice.value.t !== "notice") throw new Error("not a notice");
-	expect(result.notice.value.text).toBe(
-		"/model is answered by Epsilon's own interface, not by this engine. Nothing was sent to the model.",
-	);
+	expect(result.notice.value).toMatchObject({ source: "epsilon", code: "command-unavailable" });
 	if (result.history === undefined) throw new Error("no history answer");
 	if (typeof result.history !== "object" || result.history === null) {
 		throw new Error("the history answer is not a window");

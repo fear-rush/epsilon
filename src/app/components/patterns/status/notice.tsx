@@ -40,7 +40,7 @@ export function Notice({
 	const resolved = view?.tone ?? tone;
 	const Icon = view?.icon ?? TONE[resolved].icon;
 	const heading = title ?? view?.title;
-	const body = view?.line ?? children;
+	const body = view === undefined ? children : view.line === "" ? undefined : view.line;
 	return (
 		<Alert variant={TONE[resolved].variant}>
 			<Icon />

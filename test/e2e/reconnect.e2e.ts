@@ -7,6 +7,9 @@ import { expect, test } from "./fixture.ts";
  */
 test("a dropped socket shows a banner and recovers", async ({ app, page }) => {
 	await page.goto(app.url);
+	// The first connection is not a reconnect: a fresh load never says so.
+	await expect(page.locator("html")).toHaveAttribute("data-ready", "true");
+	await expect(page.getByText(/reconnecting/i)).toHaveCount(0);
 	await page.getByRole("button", { name: /new chat/i }).click();
 	await page.getByRole("textbox", { name: /message/i }).fill("before the drop");
 	await page.getByRole("textbox", { name: /message/i }).press("Enter");

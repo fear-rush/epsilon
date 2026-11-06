@@ -157,12 +157,25 @@ export const reduce = (state: ConversationState, frame: ServerFrame): Conversati
 			return { ...state, tools: upsertTool(state.tools, toolFromDelta(frame, existing)) };
 		}
 		case "notice":
-			return withNotice(state, {
-				id: frame.id,
-				kind: frame.kind,
-				text: frame.text,
-				afterEntryId: state.entries.at(-1)?.id ?? null,
-			});
+			return withNotice(
+				state,
+				frame.source === "pi"
+					? {
+							id: frame.id,
+							kind: frame.kind,
+							source: "pi",
+							text: frame.text,
+							afterEntryId: state.entries.at(-1)?.id ?? null,
+						}
+					: {
+							id: frame.id,
+							kind: frame.kind,
+							source: "epsilon",
+							code: frame.code,
+							data: frame.data,
+							afterEntryId: state.entries.at(-1)?.id ?? null,
+						},
+			);
 		case "dialog": {
 			const question = decodeDialog(frame.question);
 			return {

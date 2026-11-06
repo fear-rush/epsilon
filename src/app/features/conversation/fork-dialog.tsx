@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 
 import type { SnapshotTreeNode } from "#domain/conversation/tree";
 import { DialogFrame } from "@/components/patterns/dialog-frame";
-import { errorView } from "@/components/patterns/status/error-view";
+import { errorText } from "@/components/patterns/status/error-view";
 import { InlineStatus } from "@/components/patterns/status/inline-status";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
@@ -63,7 +63,7 @@ export function ForkSessionDialog({
 				setLoaded(true);
 			} catch (cause) {
 				if (cancelled) return;
-				setProblem(errorView(cause instanceof Error ? cause : new Error(String(cause))).line);
+				setProblem(errorText(cause instanceof Error ? cause : new Error(String(cause))));
 			}
 		};
 		if (open) void load();
@@ -79,7 +79,7 @@ export function ForkSessionDialog({
 			await conversation.fork(message.entryId, "before");
 			onOpenChange(false);
 		} catch (cause) {
-			setProblem(errorView(cause instanceof Error ? cause : new Error(String(cause))).line);
+			setProblem(errorText(cause instanceof Error ? cause : new Error(String(cause))));
 		} finally {
 			setPending(false);
 		}

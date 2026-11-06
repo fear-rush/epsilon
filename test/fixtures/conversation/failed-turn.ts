@@ -6,7 +6,13 @@ import { windowSession } from "./frames.ts";
 export const failedTurnFrames: ReadonlyArray<ServerFrame> = [
 	{ t: "snapshot", ...windowSession("s-failed"), hasOlder: false, notices: [], resync: false },
 	{ t: "busy", busy: true },
-	{ t: "notice", id: "n1", kind: "error", text: "provider rejected the request (401)" },
+	{
+		t: "notice",
+		id: "n1",
+		kind: "error",
+		source: "pi",
+		text: "provider rejected the request (401)",
+	},
 	{ t: "busy", busy: false },
 	{ t: "drift", reason: "this chat was changed outside Epsilon" },
 ];

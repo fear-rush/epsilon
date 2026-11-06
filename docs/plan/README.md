@@ -46,7 +46,7 @@ One step per commit, in this order. A step does not start until the one before i
 | [x]    | 03 Rules, map, decisions, pi, tasks         | [03-rules-and-reference.md](03-rules-and-reference.md)   | no                    |
 | [x]    | 04 Guards: doc check, lint policy, shoot    | [04-guards.md](04-guards.md)                             | no                    |
 | [x]    | 05 DESIGN.md and the token generator        | [05-design-md.md](05-design-md.md)                       | no (tokens unchanged) |
-| [ ]    | 06 Feedback: one look, one strip, codes     | [06-feedback.md](06-feedback.md)                         | **yes**               |
+| [x]    | 06 Feedback: one look, one strip, codes     | [06-feedback.md](06-feedback.md)                         | **yes**               |
 | [ ]    | 07 Roles, patterns and lint                 | [07-roles-and-patterns.md](07-roles-and-patterns.md)     | **yes**               |
 | [ ]    | 08 Settings panes                           | [08-settings.md](08-settings.md)                         | **yes**               |
 | [ ]    | 09 Copy pass                                | [09-copy.md](09-copy.md)                                 | **yes**               |

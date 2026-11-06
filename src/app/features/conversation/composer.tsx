@@ -366,7 +366,7 @@ export function Composer({
 			setNotice(answer === undefined ? undefined : { text: answer, tone: "info" });
 		} catch (cause) {
 			const view = errorView(cause instanceof Error ? cause : new Error(String(cause)));
-			setNotice({ text: view.line, tone: view.tone });
+			setNotice({ text: view.line === "" ? view.title : view.line, tone: view.tone });
 		}
 	};
 
@@ -533,7 +533,7 @@ export function Composer({
 
 	return (
 		<div className={inline ? undefined : "border-t p-3"}>
-			<div ref={surfaceRef} className="mx-auto w-full max-w-4xl">
+			<div ref={surfaceRef} className="mx-auto w-full max-w-content">
 				{header !== undefined && <div className="min-w-0 pb-2">{header}</div>}
 				{aboveEditor.length > 0 && <div className="pb-2">{widgetLines(aboveEditor)}</div>}
 				{rail.length > 0 && (

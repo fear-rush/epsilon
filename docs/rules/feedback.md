@@ -42,15 +42,15 @@ Enforced by: review
 
 ### FB-5 · An Epsilon notice travels as a code
 
-Do: send a code and give it words on the client (not true until step 06; `review` until then).
+Do: send a `NoticeCode` and its `data` (`source: "epsilon"`); the words are `noticeView` in `src/app/components/patterns/status/notice-view.ts`. pi's and an extension's words stay `source: "pi"` text.
 Don't: send finished sentences from the server for a notice Epsilon raises.
-Enforced by: review
+Enforced by: tsc (the exhaustive switch in `notice-view.ts`, the `NoticeFrame` union in `src/protocol/conversation/frames.ts`)
 
 ### FB-6 · One condition, one surface
 
-Do: show a lost connection on the status strip only.
+Do: show a lost connection on the status strip only; a pane that hit `ServerUnreachable` keeps waiting (`StatusView` draws its loading state).
 Don't: also show it in a notice, a pane or a toast.
-Enforced by: review
+Enforced by: `test/e2e/reconnect.e2e.ts` (the strip says "Reconnecting…"; a fresh load says nothing) and `StatusView`
 
 ### FB-7 · Errors get their words from the translator
 

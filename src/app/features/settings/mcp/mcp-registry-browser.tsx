@@ -12,6 +12,7 @@ import type {
 	McpRegistryItem,
 	McpRegistrySource,
 } from "#protocol/settings/mcp-registry";
+import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { Tip } from "@/components/patterns/tip";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +80,7 @@ function ResultList({
 	if (search.isPending) {
 		return (
 			<Centered>
-				<Spinner />
+				<LoadingState label="Loading servers…" />
 			</Centered>
 		);
 	}
@@ -246,7 +247,7 @@ function ServerView({
 			<div className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto">
 				{detail.isPending && (
 					<Centered>
-						<Spinner />
+						<LoadingState label="Loading details…" />
 					</Centered>
 				)}
 				{detail.isError && <Notice error={detail.error} />}

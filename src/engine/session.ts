@@ -22,6 +22,8 @@ import type { DialogAnswer, UiWidget } from "#protocol/conversation/extui";
 import type {
 	ImageBlock,
 	Notice,
+	NoticeCode,
+	NoticeData,
 	NoticeKind,
 	ServerFrame,
 	StreamingBlockKind,
@@ -364,7 +366,7 @@ export class EngineSession {
 				this.bound,
 				Effect.fail(new CommandRefused({ command: "engine", reason })),
 			);
-			this.notice(`This chat's extensions did not start: ${reason}`, "error");
+			this.raise("extensions-failed", "error", { reason });
 		}
 		// The gate was part of `busy`, so the page has to hear that it opened.
 		this.sendStatus();
@@ -627,7 +629,7 @@ export class EngineSession {
 			homeDir: this.input.homeDir,
 			importSession: (file) => this.importSession(file),
 			newSession: () => this.newSession(),
-			notice: (text) => this.notice(text, "notice"),
+			notice: (code, data) => this.raise(code, "notice", data),
 			reload: () => this.reload(),
 			rename: (name) => this.rename(name),
 			sandboxRoot: this.input.sandboxRoot,
@@ -639,12 +641,7 @@ export class EngineSession {
 	private rename(name: string | undefined): Effect.Effect<void, CommandRefused> {
 		if (name !== undefined) return this.setLabel(name);
 		const current = this.runtime.session.sessionName;
-		this.notice(
-			current === undefined
-				? "This chat has no name. Use /name <name>."
-				: `This chat is called "${current}". Use /name <name> to change it.`,
-			"notice",
-		);
+		this.raise("chat-name", "notice", current === undefined ? undefined : { name: current });
 		return Effect.void;
 	}
 
@@ -698,7 +695,7 @@ export class EngineSession {
 		const reject = (error: CommandRefused): void => {
 			if (Deferred.isDoneUnsafe(accepted)) {
 				self.log("warn", "a run failed after pi accepted it", { reason: error.reason });
-				self.notice(`The run failed: ${error.reason}`, "error");
+				self.raise("run-failed", "error", { reason: error.reason });
 				return;
 			}
 			Deferred.doneUnsafe(accepted, Effect.fail(error));
@@ -1358,7 +1355,7 @@ export class EngineSession {
 			if ("failure" in outcome) {
 				if (self.readingsProblemReported) return;
 				self.readingsProblemReported = true;
-				self.notice(`This chat's readings could not be read: ${outcome.failure}`, "warning");
+				self.raise("readings-unreadable", "warning", { reason: outcome.failure });
 				return;
 			}
 			self.broadcast(outcome.frame);
@@ -1410,6 +1407,33 @@ export class EngineSession {
 		this.frames.to("all", frame);
 	}
 
+	/** A notice Epsilon raises: a code and its parts; the page owns the words. */
+	private raise(code: NoticeCode, kind: NoticeKind, data?: NoticeData): void {
+		const notice: Notice = {
+			afterEntryId: null,
+			id: crypto.randomUUID(),
+			kind,
+			source: "epsilon",
+			code,
+			data: data ?? {},
+		};
+		this.push(notice);
+		this.frames.to("all", {
+			id: notice.id,
+			kind,
+			source: "epsilon",
+			code,
+			data: data ?? {},
+			t: "notice",
+		});
+	}
+
+	private push(notice: Notice): void {
+		this.notices.push(notice);
+		if (this.notices.length > noticeLimit) this.notices.shift();
+	}
+
+	/** pi's or an extension's own words, shown as they came. */
 	private notice(text: string, kind: NoticeKind): void {
 		// pi's MCP extension reports every server that needs attention in one notice, and
 		// a fresh one replaces the previous answer. Any other notice leaves it alone.
@@ -1419,11 +1443,11 @@ export class EngineSession {
 			afterEntryId: null,
 			id: crypto.randomUUID(),
 			kind,
+			source: "pi",
 			text,
 		};
-		this.notices.push(notice);
-		if (this.notices.length > noticeLimit) this.notices.shift();
-		this.frames.to("all", { id: notice.id, kind, text, t: "notice" });
+		this.push(notice);
+		this.frames.to("all", { id: notice.id, kind, source: "pi", text, t: "notice" });
 	}
 
 	/**
@@ -1434,10 +1458,7 @@ export class EngineSession {
 		for (const name of shadowedCommandsOf(this.runtime.session)) {
 			if (this.reportedShadowed.has(name)) continue;
 			this.reportedShadowed.add(name);
-			this.notice(
-				`An extension command named /${name} is shadowed by pi's built-in /${name}, so the built-in runs here.`,
-				"notice",
-			);
+			this.raise("command-shadowed", "notice", { name });
 		}
 	}
 
@@ -1477,10 +1498,7 @@ export class EngineSession {
 	private requestShutdown(): void {
 		if (this.shutdownRequested) return;
 		this.shutdownRequested = true;
-		this.notice(
-			"An extension asked to close this chat, so its engine is closing. Every other chat keeps running; the next message reopens this one from its file.",
-			"warning",
-		);
+		this.raise("extension-closed-chat", "warning");
 		if (!this.isBusy) this.onShutdown();
 	}
 
@@ -1546,10 +1564,6 @@ export class EngineSession {
 		if (this.driftReason !== undefined) return;
 		this.driftReason = reason;
 		this.broadcast({ reason, t: "drift" });
-		this.notice(
-			`This chat changed outside Epsilon (${reason}). It is read-only here until you reload it.`,
-			"warning",
-		);
 	}
 
 	private handle(item: SessionInput) {
@@ -1588,9 +1602,7 @@ export class EngineSession {
 				.bind(session)
 				.pipe(
 					Effect.catchTag("EngineStartFailed", (error) =>
-						Effect.sync(() =>
-							self.notice(`The new session could not be bound: ${error.reason}`, "error"),
-						),
+						Effect.sync(() => self.raise("session-unbound", "error", { reason: error.reason })),
 					),
 				);
 			self.reportShadowedCommands();
@@ -1742,7 +1754,7 @@ export class EngineSession {
 					return;
 				case "auto_retry_start":
 					// The reason stays in the notice until the run status row can carry it.
-					self.notice(`Retrying the request: ${event.errorMessage}`, "retry");
+					self.raise("retrying", "retry", { reason: event.errorMessage });
 					self.sendStatus();
 					return;
 				case "auto_retry_end":

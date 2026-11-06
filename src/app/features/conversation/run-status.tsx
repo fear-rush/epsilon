@@ -4,13 +4,20 @@
  * that is already going. The live work is a Task over the steps taken so far; the
  * queue is the AI Elements Queue, with its only action, Clear.
  */
+import { Link } from "@tanstack/react-router";
+import { CircleAlertIcon, CircleCheckIcon, InfoIcon, TriangleAlertIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
 import type { Queue as QueueState } from "#domain/conversation/state";
+import type { Notice } from "#protocol/conversation/frames";
 import { Queue } from "@/components/ai-elements/queue";
 import type { QueueItem } from "@/components/ai-elements/queue";
 import { Task } from "@/components/ai-elements/task";
 import { Terminal } from "@/components/ai-elements/terminal";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+import { noticeView } from "@/components/patterns/status/notice-view";
+import { StatusRow } from "@/components/patterns/status/status-row";
+import type { Tone } from "@/components/patterns/status/status-tone";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 import type { LiveStep } from "./live-steps";
 
@@ -34,6 +41,8 @@ type RunStatusProps = {
 	queue: QueueState;
 	/** A message naming a change another process made to this chat's file. */
 	drift: string | undefined;
+	/** The engine's notices; the last three are drawn. */
+	notices: ReadonlyArray<Notice>;
 	onReload: () => void;
 	onAbortCompaction: () => void;
 	onCancelRetry: () => void;
@@ -52,12 +61,14 @@ export function RunStatus({
 	bashOutput,
 	queue,
 	drift,
+	notices,
 	onReload,
 	onAbortCompaction,
 	onCancelRetry,
 	onAbortBash,
 	onClearQueue,
 }: RunStatusProps) {
+	const recent = notices.slice(-3);
 	const queued = [
 		...queue.steering.map((text) => ({ text, label: "Steering" })),
 		...queue.followUp.map((text) => ({ text, label: "Follow-up" })),
@@ -68,6 +79,7 @@ export function RunStatus({
 		!isRetrying &&
 		!isBashRunning &&
 		drift === undefined &&
+		recent.length === 0 &&
 		queued.length === 0
 	)
 		return null;
@@ -79,9 +91,9 @@ export function RunStatus({
 	}));
 
 	return (
-		<div className="mx-auto flex w-full max-w-4xl flex-col gap-2 px-3 pt-3">
+		<div className="mx-auto flex w-full max-w-content flex-col gap-2 px-3 pt-3">
 			{working && (
-				<div className="rounded-xl border bg-background px-3 py-2">
+				<StatusRow>
 					<Task
 						title={
 							workingMessage === undefined || workingMessage.trim() === ""
@@ -91,56 +103,69 @@ export function RunStatus({
 						status="running"
 						steps={steps}
 					/>
-				</div>
+				</StatusRow>
 			)}
+			{recent.map((notice) => (
+				<NoticeRow key={notice.id} notice={notice} />
+			))}
 			{drift !== undefined && (
-				<div className="flex items-center gap-2 rounded-xl border bg-background px-3 py-2 text-meta">
-					<span className="min-w-0 flex-1">{drift}</span>
-					<Button size="sm" variant="outline" onClick={onReload}>
-						Reload
-					</Button>
-				</div>
+				<StatusRow
+					icon={TriangleAlertIcon}
+					tone="warning"
+					text="Changed in another window"
+					action={
+						<Button size="sm" variant="outline" onClick={onReload}>
+							Reload
+						</Button>
+					}
+				/>
 			)}
 			{isCompacting && (
-				<div className="flex items-center gap-2 rounded-xl border bg-background px-3 py-2 text-meta">
-					<Spinner />
-					<span className="min-w-0 flex-1">Compacting the conversation…</span>
-					<Button size="sm" variant="destructive" onClick={onAbortCompaction}>
-						Stop
-					</Button>
-				</div>
+				<StatusRow
+					spinner
+					text="Compacting the conversation…"
+					action={
+						<Button size="sm" variant="destructive" onClick={onAbortCompaction}>
+							Stop
+						</Button>
+					}
+				/>
 			)}
 			{isRetrying && (
-				<div className="flex items-center gap-2 rounded-xl border bg-background px-3 py-2 text-meta">
-					<Spinner />
-					<span className="min-w-0 flex-1">Retrying after a failed request…</span>
-					<Button size="sm" variant="outline" onClick={onCancelRetry}>
-						Cancel retry
-					</Button>
-				</div>
+				<StatusRow
+					spinner
+					text="Retrying after a failed request…"
+					action={
+						<Button size="sm" variant="outline" onClick={onCancelRetry}>
+							Cancel retry
+						</Button>
+					}
+				/>
 			)}
 			{isBashRunning && (
-				<div className="flex items-start gap-2 rounded-xl border bg-background px-3 py-2">
-					<div className="min-w-0 flex-1">
-						<Terminal
-							command={bashCommand ?? "shell command"}
-							output={bashOutput}
-							running
-							failed={false}
-							title={
-								bashCommand === undefined
-									? "Shell command running…"
-									: `Shell command running: ${bashCommand}`
-							}
-						/>
-					</div>
-					<Button size="sm" variant="destructive" onClick={onAbortBash}>
-						Stop
-					</Button>
-				</div>
+				<StatusRow
+					className="items-start"
+					action={
+						<Button size="sm" variant="destructive" onClick={onAbortBash}>
+							Stop
+						</Button>
+					}
+				>
+					<Terminal
+						command={bashCommand ?? "shell command"}
+						output={bashOutput}
+						running
+						failed={false}
+						title={
+							bashCommand === undefined
+								? "Shell command running…"
+								: `Shell command running: ${bashCommand}`
+						}
+					/>
+				</StatusRow>
 			)}
 			{queued.length > 0 && (
-				<div className="rounded-xl border bg-background px-3 py-2">
+				<StatusRow>
 					<Queue
 						pending={pending}
 						completed={[]}
@@ -151,8 +176,39 @@ export function RunStatus({
 							</Button>
 						}
 					/>
-				</div>
+				</StatusRow>
 			)}
 		</div>
+	);
+}
+
+const NOTICE_ICON: Record<Tone, LucideIcon> = {
+	neutral: InfoIcon,
+	info: InfoIcon,
+	success: CircleCheckIcon,
+	warning: TriangleAlertIcon,
+	danger: CircleAlertIcon,
+};
+
+/** One notice from the engine: its words are the row's text, not a title. */
+function NoticeRow({ notice }: { notice: Notice }) {
+	const view = noticeView(notice);
+	return (
+		<StatusRow
+			icon={NOTICE_ICON[view.tone]}
+			tone={view.tone}
+			spinner={view.spinner === true}
+			text={view.text}
+			action={
+				view.action === undefined ? undefined : (
+					<Link
+						to="/settings/diagnostics"
+						className={buttonVariants({ size: "sm", variant: "outline" })}
+					>
+						Diagnostics
+					</Link>
+				)
+			}
+		/>
 	);
 }

@@ -1,11 +1,16 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { ServerUnreachable } from "@/core/errors";
+
+import { ErrorActions } from "./error-actions";
 import { errorView } from "./error-view";
+import type { ErrorAction } from "./error-view";
+import { LoadingState } from "./loading-state";
 import { toneText } from "./status-tone";
 import type { Tone } from "./status-tone";
 
-type StatusViewProps =
+type StatusViewProps = (
 	| { error: Error; title?: string; action?: ReactNode }
 	| {
 			error?: undefined;
@@ -14,7 +19,9 @@ type StatusViewProps =
 			line?: string;
 			tone?: Tone;
 			action?: ReactNode;
-	  };
+			actions?: ReadonlyArray<ErrorAction>;
+	  }
+) & { onRetry?: () => void };
 
 /** What the view draws, whether it was named explicitly or translated from a failure. */
 type ResolvedView = {
@@ -22,6 +29,7 @@ type ResolvedView = {
 	title: string;
 	line: string | undefined;
 	tone: Tone;
+	actions?: ReadonlyArray<ErrorAction> | undefined;
 };
 
 /** A failure's words come from the translator; only a more precise title may override it. */
@@ -35,6 +43,7 @@ function viewOf(props: StatusViewProps): ResolvedView {
 		title: props.title,
 		line: props.line,
 		tone: props.tone ?? "neutral",
+		actions: props.actions,
 	};
 }
 
@@ -46,6 +55,14 @@ function viewOf(props: StatusViewProps): ResolvedView {
  * pane never writes its own sentence about one.
  */
 export function StatusView(props: StatusViewProps) {
+	// A lost connection is the status strip's alone (FB-6): the pane keeps waiting.
+	if (props.error instanceof ServerUnreachable) {
+		return (
+			<div className="flex h-full min-h-0 items-center justify-center p-6">
+				<LoadingState label="Loading…" />
+			</div>
+		);
+	}
 	const view = viewOf(props);
 	const Icon = view.icon;
 	return (
@@ -53,8 +70,11 @@ export function StatusView(props: StatusViewProps) {
 			<Icon className={toneText(view.tone, "size-6")} aria-hidden />
 			<div className="grid max-w-sm gap-1">
 				<p className="text-section">{view.title}</p>
-				{view.line !== undefined && <p className="text-meta text-muted-foreground">{view.line}</p>}
+				{view.line !== undefined && view.line !== "" && (
+					<p className="text-meta text-muted-foreground">{view.line}</p>
+				)}
 			</div>
+			<ErrorActions actions={view.actions} onRetry={props.onRetry} />
 			{props.action}
 		</div>
 	);

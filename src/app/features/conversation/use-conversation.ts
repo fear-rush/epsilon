@@ -16,7 +16,7 @@ import { AutocompleteReply } from "#protocol/conversation/palette";
 import { ModelOptions, ToolsView } from "#protocol/conversation/session";
 import type { ModelOption, ThinkingLevel } from "#protocol/conversation/session";
 import { EngineStopped } from "#protocol/errors";
-import { errorView } from "@/components/patterns/status/error-view";
+import { errorText, errorView } from "@/components/patterns/status/error-view";
 import { call, keepSubscribed, runStream } from "@/core/runtime";
 
 import { handOffDraft } from "./draft.ts";
@@ -94,10 +94,12 @@ export type TreeMoveOptions = {
 /** How long a message waits for the chat to open before it is refused. */
 const OPEN_TIMEOUT_MS = 10_000;
 
-const notice = (text: string): ServerFrame => ({
+const notice = (code: "chat-ended" | "chat-error", reason?: string): ServerFrame => ({
 	id: crypto.randomUUID(),
 	kind: "error",
-	text,
+	source: "epsilon",
+	code,
+	data: reason === undefined ? {} : { reason },
 	t: "notice",
 });
 
@@ -225,13 +227,7 @@ export function useConversation(input: {
 			tab.current = undefined;
 			stopped.current = true;
 			settle(error ?? new Error("The engine stopped before this chat opened."));
-			dispatch(
-				notice(
-					error === undefined
-						? "The engine for this chat stopped. Send a message to start a new one."
-						: errorView(error).line,
-				),
-			);
+			dispatch(error === undefined ? notice("chat-ended") : notice("chat-error", errorText(error)));
 		},
 		[dispatch, settle],
 	);
@@ -475,11 +471,11 @@ export function useConversation(input: {
 			// A report is either an error or the words a caller already has.
 			const error = cause instanceof Error ? cause : new Error(String(cause));
 			if (error.message.trim() !== "") {
-				dispatch(notice(error.message));
+				dispatch(notice("chat-error", error.message));
 				return;
 			}
 			const view = errorView(error);
-			dispatch(notice(view.line === "" ? view.title : view.line));
+			dispatch(notice("chat-error", view.line === "" ? view.title : view.line));
 		},
 		[dispatch],
 	);
