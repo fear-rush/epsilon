@@ -11,9 +11,16 @@ const MarkdownBlock = lazy(() => import("./markdown-blocks"));
  * value goes through `useDeferredValue`, so scrolling stays responsive during a long turn.
  *
  * The block renderer is a lazy chunk: the route never loads react-markdown for a chat with
- * no rows, and the plain text stands in until the parser arrives.
+ * no rows, and the plain text stands in until the parser arrives. `links="citation"` turns
+ * an external link into an inline citation; a preview keeps the ordinary link.
  */
-export function Markdown({ children }: { children: string }) {
+export function Markdown({
+	children,
+	links = "plain",
+}: {
+	children: string;
+	links?: "plain" | "citation";
+}) {
 	const deferred = useDeferredValue(children);
 	const blocks = splitBlocks(deferred);
 
@@ -23,7 +30,7 @@ export function Markdown({ children }: { children: string }) {
 				{blocks.map((block, index) => (
 					// Blocks are positional within one message; they never reorder.
 					// oxlint-disable-next-line react/no-array-index-key
-					<MarkdownBlock key={index} text={block} />
+					<MarkdownBlock key={index} links={links} text={block} />
 				))}
 			</Suspense>
 		</div>

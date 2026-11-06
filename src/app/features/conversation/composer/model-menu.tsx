@@ -1,17 +1,18 @@
 import { ChevronDownIcon } from "lucide-react";
-import { useState } from "react";
+import { Fragment } from "react";
 
 import type { ModelOption } from "#protocol/conversation/session";
 import {
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-} from "@/components/ui/command";
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuGroup,
+	DropdownMenuLabel,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { InputGroupButton } from "@/components/ui/input-group";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /** pi names a model by its provider and id; this is the one string both sides compare. */
@@ -26,56 +27,46 @@ type ModelMenuProps = {
 	onSelect: (model: ModelOption) => void;
 };
 
-/** Current provider first, the rest alphabetically; names sorted inside each. */
+/** Current provider first, and the model in use first in its group; the rest by name. */
 const byProvider = (
 	models: ModelOption[],
-	current: string | undefined,
+	current: ModelOption | undefined,
 ): { provider: string; models: ModelOption[] }[] => {
 	const groups = new Map<string, ModelOption[]>();
 	for (const candidate of models) {
 		groups.set(candidate.provider, [...(groups.get(candidate.provider) ?? []), candidate]);
 	}
 	const providers = [...groups.keys()].toSorted((a, b) => {
-		if (a === current) return -1;
-		if (b === current) return 1;
+		if (a === current?.provider) return -1;
+		if (b === current?.provider) return 1;
 		return a.localeCompare(b);
 	});
+	const currentKey = current === undefined ? undefined : modelKey(current);
 	return providers.map((provider) => ({
 		provider,
-		models: (groups.get(provider) ?? []).toSorted((a, b) => a.name.localeCompare(b.name)),
+		models: (groups.get(provider) ?? []).toSorted((a, b) => {
+			if (currentKey !== undefined && modelKey(a) === currentKey) return -1;
+			if (currentKey !== undefined && modelKey(b) === currentKey) return 1;
+			return a.name.localeCompare(b.name);
+		}),
 	}));
 };
 
-/** What the search reads: every field a model can be remembered by. */
-const searchText = (model: ModelOption): string =>
-	`${model.name} ${model.id} ${model.provider}`.toLowerCase();
-
 /**
- * The model picker: a `Command` in a `Popover`, because pi offers 510 models and
- * scrolling a radio group is not a way to find one. The search matches the name,
- * the id and the provider case-insensitively, the current provider's group leads,
- * and the box opens scrolled to the model in use.
+ * The model picker: the AI Elements Model Selector's first menu, a radio group per
+ * provider. pi offers hundreds of models, so the list scrolls inside the menu; the
+ * current provider leads and the model in use is the checked row.
  */
 export function ModelMenu({ models, model, open, onOpenChange, onSelect }: ModelMenuProps) {
-	const [query, setQuery] = useState("");
 	const current = model === undefined ? "" : modelKey(model);
-	const needle = query.trim().toLowerCase();
-	const matches =
-		needle === "" ? models : models.filter((candidate) => searchText(candidate).includes(needle));
-	const groups = byProvider(matches, model?.provider);
+	const groups = byProvider(models, model);
 
 	return (
-		<Popover
-			open={open}
-			onOpenChange={(next) => {
-				onOpenChange(next);
-				if (!next) setQuery("");
-			}}
-		>
+		<DropdownMenu open={open} onOpenChange={onOpenChange}>
 			<Tooltip>
 				<TooltipTrigger
 					render={
-						<PopoverTrigger
+						<DropdownMenuTrigger
 							render={
 								<InputGroupButton
 									size="sm"
@@ -90,39 +81,35 @@ export function ModelMenu({ models, model, open, onOpenChange, onSelect }: Model
 				</TooltipTrigger>
 				<TooltipContent side="top">Model</TooltipContent>
 			</Tooltip>
-			<PopoverContent side="top" align="start" className="w-80 p-0">
-				<Command
-					// The list is already filtered above, so cmdk neither filters again nor
-					// hides a row; `defaultValue` marks the model in use and scrolls to it.
-					shouldFilter={false}
-					defaultValue={current}
+			<DropdownMenuContent side="top" align="start" className="w-64">
+				<DropdownMenuRadioGroup
+					value={current}
+					onValueChange={(value: string) => {
+						const picked = models.find((candidate) => modelKey(candidate) === value);
+						if (picked === undefined) return;
+						onSelect(picked);
+						onOpenChange(false);
+					}}
 				>
-					<CommandInput placeholder="Search models…" value={query} onValueChange={setQuery} />
-					<CommandList>
-						<CommandEmpty>No model matches.</CommandEmpty>
-						{groups.map((group) => (
-							<CommandGroup key={group.provider} heading={group.provider}>
-								{group.models.map((candidate) => {
-									const value = modelKey(candidate);
-									return (
-										<CommandItem
-											key={value}
-											value={value}
-											data-checked={value === current}
-											onSelect={() => {
-												onSelect(candidate);
-												onOpenChange(false);
-											}}
-										>
-											<span className="truncate">{candidate.name}</span>
-										</CommandItem>
-									);
-								})}
-							</CommandGroup>
-						))}
-					</CommandList>
-				</Command>
-			</PopoverContent>
-		</Popover>
+					{groups.map((group, index) => (
+						<Fragment key={group.provider}>
+							{index > 0 && <DropdownMenuSeparator />}
+							<DropdownMenuGroup>
+								<DropdownMenuLabel>{group.provider}</DropdownMenuLabel>
+								{group.models.map((candidate) => (
+									<DropdownMenuRadioItem
+										key={modelKey(candidate)}
+										value={modelKey(candidate)}
+										closeOnClick
+									>
+										<span className="truncate">{candidate.name}</span>
+									</DropdownMenuRadioItem>
+								))}
+							</DropdownMenuGroup>
+						</Fragment>
+					))}
+				</DropdownMenuRadioGroup>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }

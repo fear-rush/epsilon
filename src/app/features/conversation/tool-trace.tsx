@@ -157,6 +157,7 @@ export function ToolTrace({
 		return (
 			<Subagent
 				name={name}
+				noun={name === "codemode" ? "script" : "subagent"}
 				status={status}
 				calls={calls}
 				open={open}

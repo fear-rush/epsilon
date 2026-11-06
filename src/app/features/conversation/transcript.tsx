@@ -646,7 +646,7 @@ function AssistantRow({
 				)}
 				{text !== "" && (
 					<div className="text-body">
-						<Markdown>{text}</Markdown>
+						<Markdown links="citation">{text}</Markdown>
 					</div>
 				)}
 				{sources.length > 0 ? <Sources sources={sources} /> : undefined}

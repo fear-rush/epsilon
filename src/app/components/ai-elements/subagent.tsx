@@ -27,12 +27,13 @@ const lineStatus = (status: StepStatus): "running" | "error" | undefined => {
 };
 
 /**
- * A subagent run: the calls it made and the result it reported. Epsilon receives those
- * calls as codemode's nested rows, so the section opens with the subagent's own work
- * rather than repeating it as top-level tool cards.
+ * A nested run: the calls it made and the result it reported. Epsilon receives codemode's
+ * rows this way, so the section opens with the script's own work rather than repeating it
+ * as top-level tool cards.
  */
 export function Subagent({
 	name,
+	noun = "subagent",
 	status,
 	calls,
 	open,
@@ -40,6 +41,8 @@ export function Subagent({
 	children,
 }: {
 	name: string;
+	/** What the run is, as the line reads it: a subagent, a script, a pipeline. */
+	noun?: string;
 	status: "running" | "error" | undefined;
 	calls: ReadonlyArray<SubagentCall>;
 	open?: boolean | undefined;
@@ -54,10 +57,10 @@ export function Subagent({
 	});
 	const title =
 		status === "running"
-			? `Running the ${name} subagent`
+			? `Running the ${name} ${noun}`
 			: status === "error"
-				? `Failed to run the ${name} subagent`
-				: `Ran the ${name} subagent`;
+				? `Failed to run the ${name} ${noun}`
+				: `Ran the ${name} ${noun}`;
 	const line = (
 		<TraceLine status={status}>
 			<TraceIcon>

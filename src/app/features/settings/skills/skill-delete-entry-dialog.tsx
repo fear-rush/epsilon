@@ -6,7 +6,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { SkillRoot } from "#protocol/settings/skills";
-import type { FileTreeTarget } from "@/components/editor/file-tree";
+import type { FileTreeTarget } from "@/components/ai-elements/file-tree";
 import { DeleteDialog } from "@/components/patterns/confirm-dialogs";
 import { useLastDefined } from "@/hooks/use-last-defined";
 

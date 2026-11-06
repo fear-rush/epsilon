@@ -81,7 +81,7 @@ export function ChangedFiles({ files }: { files: ReadonlyArray<ChangedFile> }) {
 				<TraceCollapsibleContent keepMounted>
 					<div className="flex min-w-0 flex-col gap-2">
 						<FileTree
-							paths={files.map((file) => file.path)}
+							files={files.map((file) => ({ path: file.path }))}
 							selected={current.path}
 							label="Changed files"
 							onSelect={setSelected}

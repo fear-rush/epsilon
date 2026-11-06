@@ -132,8 +132,9 @@ cannot represent is a visible notice, never silence.
   by role, type roles, dialog sizes, motion) and the motion that is not a token entrance
   (`motion.css`). `src/app/components/ui` is shadcn registry source.
   `src/app/components/ai-elements` is the copied AI Elements patterns: agent steps, plans,
-  tools, terminals, tests and the chat primitives they compose. `src/app/components/patterns`
-  is what features compose. `components/editor` is the file tree, markdown and highlighting.
+  tools, terminals, tests, file trees and the chat primitives they compose.
+  `src/app/components/patterns` is what features compose. `components/editor` is markdown
+  and highlighting.
 - Every column starts with a `PaneBar` (`h-bar`, the one rule columns share), so the
   sidebar, a list and a chat share one line. One inset per column: bar title, search, a
   group heading and a row's text start on the column's gutter.
@@ -153,6 +154,9 @@ cannot represent is a visible notice, never silence.
 - A tool result whose call is in the window is drawn in that call's card, not as a row.
   Only a result whose call is outside the window is its own row; a hidden row would leave
   its gap behind.
+- A reply's external Markdown links are inline citations: the chip names the host, the
+  card names the page and carries the link, and the same links are listed under Sources.
+  A relative or hash link stays an ordinary link.
 - Radius follows one ladder: `rounded-md` for rows and chips, `rounded-lg` for controls,
   menus and code, `rounded-xl` for dialogs, panels and bordered lists, `rounded-2xl` for
   message bubbles only, and `rounded-full` only for pills and circular icon buttons.

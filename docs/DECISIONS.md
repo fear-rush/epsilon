@@ -256,6 +256,13 @@ Not: keeping bespoke rows for each kind, which is what the port had and what mad
 a tool two layouts. Not: a dependency on a pattern package, because the patterns are source
 that a feature composes.
 
+The thread is the one place the pattern stops at Message and Bubble: TanStack Virtual owns
+the scroll and the rows, because a 5,000-entry chat and the jump rail need one scroll owner.
+Message Scroller's content mutation and auto-scroll would fight the virtualizer.
+
+Not: dropping the virtualizer for the primitive's viewport; the long-chat flow and the jump
+rail are the behavior the transcript is tested on.
+
 ## The jump rail owns a gutter
 
 The transcript's jump rail is a sibling of the scroll area with its own reserved column, not

@@ -1,8 +1,8 @@
 import { FilePlusIcon, FolderPlusIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { FileTree } from "@/components/editor/file-tree";
-import type { FileTreeTarget } from "@/components/editor/file-tree";
+import { FileTree } from "@/components/ai-elements/file-tree";
+import type { FileTreeTarget } from "@/components/ai-elements/file-tree";
 import { CancelDialog } from "@/components/patterns/confirm-dialogs";
 import { errorView } from "@/components/patterns/status/error-view";
 import { LoadingState } from "@/components/patterns/status/loading-state";

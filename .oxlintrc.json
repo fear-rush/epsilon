@@ -201,7 +201,7 @@
 			// inside a treeitem, which is the ARIA group role with no element of its own. The
 			// pane bar keys an entrance on its text; the helper already excludes elements.
 			"files": [
-				"src/app/components/editor/file-tree.tsx",
+				"src/app/components/ai-elements/file-tree.tsx",
 				"src/app/components/patterns/pane/pane-bar.tsx"
 			],
 			"rules": {
