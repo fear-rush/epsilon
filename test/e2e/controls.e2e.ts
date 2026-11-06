@@ -18,7 +18,7 @@ test("the composer's menus switch model, thinking and tools, and compact refuses
 
 	// The model menu lists every model pi composed; picking one switches the chat.
 	await page.getByRole("button", { name: "Stub Model" }).click();
-	await page.getByRole("menuitemradio", { name: /Stub Model Two/ }).click();
+	await page.getByRole("option", { name: /Stub Model Two/ }).click();
 	await expect(page.getByRole("button", { name: "Stub Model Two" })).toBeVisible();
 
 	// The thinking menu shows pi's level and writes the one chosen.

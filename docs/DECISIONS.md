@@ -263,6 +263,13 @@ Message Scroller's content mutation and auto-scroll would fight the virtualizer.
 Not: dropping the virtualizer for the primitive's viewport; the long-chat flow and the jump
 rail are the behavior the transcript is tested on.
 
+The model picker is the other exception: pi offers hundreds of models, so it keeps a
+searchable Command in a Popover instead of the Model Selector's scroll-only radio menu.
+The thinking menu stays the second menu of that pattern.
+
+Not: making the model menu literal; a 94-model sandbox list and a 510-model real list cannot
+be searched by scrolling.
+
 ## The jump rail owns a gutter
 
 The transcript's jump rail is a sibling of the scroll area with its own reserved column, not
