@@ -246,8 +246,7 @@ The turn's steps are the copied AI Elements patterns in
 `src/app/components/ai-elements/`: Chain of Thought around a turn, Reasoning inside it, Plan
 when the assistant declared its calls up front, Task for the live steps, and Tool, Terminal,
 Test Results, Stack Trace, Subagent and File Tree for what a call produced. The composer's
-menus, the welcome's suggestions, the context card, the confirmation and the sources use the
-same set.
+menus, the context card, the confirmation and the sources use the same set.
 
 Why: the owner asked for the AI Elements surface, and the patterns share one Trace and one
 Code Block, so a new step reads like the steps beside it. The code is vendored, so it can

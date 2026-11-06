@@ -352,8 +352,6 @@ export function Conversation({
 					composer={composer}
 					place={place === null ? "chat" : "project"}
 					status={runStatus}
-					onSuggestion={(text) => void send(text)}
-					suggestionsDisabled={!conversation.writable || state.busy}
 				/>
 			) : (
 				<>
