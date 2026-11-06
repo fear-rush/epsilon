@@ -65,7 +65,7 @@ From the repository root: `bun run dev` (sandboxed agent home) / `dev:host` (rea
 - Done needs the evidence the task names, at the change's risk.
 - Same commit: code, tests, docs and the task's deletion. Message: `type(scope): what`.
 - Never `oxlint-disable`, `@ts-expect-error`, `as unknown as` or `.skip` to get green.
-- Never drop or restyle something of `main`'s without the owner's yes.
+- Never drop a feature of `main`'s. Restyle only toward `DESIGN.md`; any other visible change needs the owner's yes.
 - Report commands, results, durations, and what you skipped.
 - Rule levels: Invariant (lint, no disable); Role (lint checks a role token is used);
   Default (written down; a deviation carries `// ui: <reason>`).
