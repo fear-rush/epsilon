@@ -121,6 +121,13 @@
 	transition-duration: 360ms;
 }
 
+/* A collapsible's height, driven by Base UI's `--collapsible-panel-height`. */
+@utility transition-panel {
+	transition-property: height;
+	transition-duration: 200ms;
+	transition-timing-function: var(--ease-settle);
+}
+
 /* A rail that scrolls its dots without drawing a scrollbar. */
 @utility scrollbar-none {
 	scrollbar-width: none;

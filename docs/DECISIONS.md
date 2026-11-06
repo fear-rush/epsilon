@@ -240,6 +240,34 @@ Cost accepted: some output arrives off-screen while the anchor is held.
 
 Not: "always follow output", which was offered and declined.
 
+## The chat is composed from shadcn AI Elements
+
+The turn's steps are the copied AI Elements patterns in
+`src/app/components/ai-elements/`: Chain of Thought around a turn, Reasoning inside it, Plan
+when the assistant declared its calls up front, Task for the live steps, and Tool, Terminal,
+Test Results, Stack Trace, Subagent and File Tree for what a call produced. The composer's
+menus, the welcome's suggestions, the context card, the confirmation and the sources use the
+same set.
+
+Why: the owner asked for the AI Elements surface, and the patterns share one Trace and one
+Code Block, so a new step reads like the steps beside it. The code is vendored, so it can
+follow this branch's tokens without a package release.
+
+Not: keeping bespoke rows for each kind, which is what the port had and what made a plan and
+a tool two layouts. Not: a dependency on a pattern package, because the patterns are source
+that a feature composes.
+
+## The jump rail owns a gutter
+
+The transcript's jump rail is a sibling of the scroll area with its own reserved column, not
+an absolutely positioned layer over the transcript.
+
+Why: its dots sat over a tool result's code and stole the clicks under them. A gutter keeps
+the rail visible at every width, and a wide row cannot reach it.
+
+Not: adding more right padding to the transcript, which still meets a wide tool result in a
+narrow window. Not: hiding the rail on wide screens, where it is most useful.
+
 ## Local security is checked where the attack is
 
 Bind `127.0.0.1` only. On every request and upgrade check `Host` (defeats DNS
@@ -555,6 +583,25 @@ crash. A missing usage block is a bad reading, not a bad chat.
 
 Not: refusing the file with words. Not trusting the numbers and rendering zero totals,
 which would be a lie about cost.
+
+## Terminal-only extension calls live in Diagnostics
+
+`setFooter(undefined)`, `setHeader(undefined)` and `setEditorComponent(undefined)` are
+clears: they restore the built-in UI and succeed without a notice. A call the browser
+cannot serve — a custom editor, footer or header, a component widget, raw terminal input,
+a terminal-only dialog — is recorded on the running engine and listed under Settings →
+Diagnostics → Extension UI, together with what the page uses instead. It does not become
+a warning in the chat.
+
+Why: the chat showed one card per method every time it opened, and the same three alerts
+buried the conversation with a gap the reader could not fix from there. The status bar was
+only clearing its footer, so that warning was false. The paster's user-visible job, image
+paste, is already the composer's paste and paperclip. Diagnostics is where a capability
+gap belongs: visible, specific and away from the conversation.
+
+Not: pretending `mode` is `tui`, which would invite every terminal component into a page
+that cannot draw it. Not: hiding a gap that the page truly has. Not: keeping a custom
+editor factory that is never mounted, or a raw-input subscription that is never called.
 
 ## A refusal's words come from the translator
 

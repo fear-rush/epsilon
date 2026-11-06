@@ -26,6 +26,7 @@ import { useRecentProjects, useSessionRow } from "@/features/sessions";
 import { ChatBar } from "./chat-bar";
 import { Composer } from "./composer";
 import { ConfirmDialog, QuestionDialog } from "./dialogs";
+import { liveSteps } from "./live-steps";
 import { RunStatus } from "./run-status";
 import { ComposerPlace, SessionHeader, SessionLoader } from "./session-header";
 import { Transcript, matchingRowIds } from "./transcript";
@@ -131,6 +132,7 @@ export function Conversation({
 
 	const rows = transcript(state);
 	const empty = rows.length === 0;
+	const taskSteps = liveSteps(state);
 	const confirmations = state.dialogs.filter(isConfirm);
 	const questions = state.dialogs.filter((dialog) => !isConfirm(dialog));
 	const { blocked, cloning, openTree, openFork, clone, dialogs } = useBranching({
@@ -172,6 +174,7 @@ export function Conversation({
 		<RunStatus
 			working={state.busy && state.workingVisible}
 			workingMessage={state.workingMessage}
+			steps={taskSteps}
 			isCompacting={state.compacting}
 			isRetrying={state.retrying}
 			isBashRunning={state.bash.running}
@@ -195,6 +198,7 @@ export function Conversation({
 			codingTools={state.codingTools}
 			commands={state.commands}
 			draft={state.draft}
+			inline={empty}
 			header={
 				place === null ? undefined : <ComposerPlace path={place} onChange={onChangeProject} />
 			}
@@ -347,12 +351,9 @@ export function Conversation({
 				<ConversationWelcome
 					composer={composer}
 					place={place === null ? "chat" : "project"}
-					status={
-						<>
-							{runStatus}
-							<ChatNotices notices={state.notices} />
-						</>
-					}
+					status={runStatus}
+					onSuggestion={(text) => void send(text)}
+					suggestionsDisabled={!conversation.writable || state.busy}
 				/>
 			) : (
 				<>

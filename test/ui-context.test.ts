@@ -111,3 +111,34 @@ test("an extension's working row reaches the engine, and can be restored", () =>
 	expect(log.visible).toEqual([false]);
 	expect(log.refused).toEqual([]);
 });
+
+test("clearing terminal UI is not a gap; requesting it is recorded", () => {
+	const log = {
+		edits: [] as Array<{ text: string; mode: "replace" | "append" }>,
+		labels: [] as string[],
+		refused: [] as string[],
+		visible: [] as boolean[],
+		widgets: [] as Parameters<typeof hostOf>[0]["widgets"],
+		working: [] as Array<string | undefined>,
+	};
+	const ui = createUiContext(hostOf(log));
+
+	// These are the calls an extension makes to restore the built-in UI.
+	ui.setFooter(undefined);
+	ui.setHeader(undefined);
+	ui.setEditorComponent(undefined);
+	expect(log.refused).toEqual([]);
+
+	// The page records what it cannot draw; it no longer puts a notice in the chat.
+	const component = {
+		getText: () => "",
+		handleInput: () => undefined,
+		invalidate: () => undefined,
+		render: () => [],
+		setText: () => undefined,
+	};
+	ui.setFooter(() => component);
+	ui.setEditorComponent(() => component);
+	ui.onTerminalInput(() => undefined);
+	expect(log.refused).toEqual(["setFooter", "setEditorComponent", "onTerminalInput"]);
+});

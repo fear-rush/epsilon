@@ -1,18 +1,32 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ChevronsDownIcon, ChevronsUpIcon } from "lucide-react";
+import { CheckIcon, ChevronsDownIcon, ChevronsUpIcon, CopyIcon } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { assistantText, assistantThinking, entryLabel } from "#domain/conversation/content";
 import { toolRunOf, transcript } from "#domain/conversation/selectors";
 import type { ConversationState, StreamingTurn } from "#domain/conversation/state";
-import type { AssistantEntry, TranscriptEntry } from "#protocol/conversation/frames";
+import { argsOf } from "#domain/conversation/tools";
+import type {
+	AssistantBlock,
+	AssistantEntry,
+	TranscriptEntry,
+} from "#protocol/conversation/frames";
+import { ChainOfThought } from "@/components/ai-elements/chain-of-thought";
+import { Checkpoint } from "@/components/ai-elements/checkpoint";
+import { Plan, type PlanStep } from "@/components/ai-elements/plan";
+import { Reasoning } from "@/components/ai-elements/reasoning";
+import { Sources } from "@/components/ai-elements/sources";
 import { Markdown } from "@/components/editor/markdown";
-import { toneText } from "@/components/patterns/status/status-tone";
 import { Tip } from "@/components/patterns/tip";
-import { Marker } from "@/components/ui/marker";
+import { Bubble, BubbleContent } from "@/components/ui/bubble";
+import { Button } from "@/components/ui/button";
+import { Message, MessageContent, MessageFooter } from "@/components/ui/message";
 import { cn } from "@/lib/cn";
 
-import { ToolTrace } from "./tool-trace";
+import { changedFilesOf } from "./changed-files";
+import { ChangedFiles } from "./changed-files-view";
+import { sourcesOf } from "./links";
+import { OrphanToolResult, ToolTrace, stepStatusOf, toolTitle } from "./tool-trace";
 
 /**
  * The conversation.
@@ -77,9 +91,10 @@ const previewOf = (text: string): string => {
 
 /**
  * The quick jump rail: a five-slot viewport that scrolls through one dot per user message
- * at the transcript's right edge. The viewport follows the current turn, the chevrons jump
- * to the ends, and it stays faint until used. A chat with fewer than five messages has
- * none: there is too little to navigate.
+ * at the transcript's right edge. It owns a gutter beside the scroller rather than sitting
+ * over it, so a wide tool result never runs under the dots. The viewport follows the
+ * current turn, the chevrons jump to the ends, and it stays faint until used. A chat with
+ * fewer than five messages has none: there is too little to navigate.
  */
 function TranscriptRail({
 	rows,
@@ -119,10 +134,10 @@ function TranscriptRail({
 	const first = rows[0];
 
 	return (
-		<div className="pointer-events-none absolute inset-y-0 left-1/2 w-full max-w-content -translate-x-1/2">
+		<div className="hidden w-8 shrink-0 items-center justify-center pr-1 sm:flex">
 			<nav
 				aria-label="Jump to a message"
-				className="pointer-events-auto absolute top-1/2 right-3 hidden -translate-y-1/2 flex-col items-center opacity-40 transition-all duration-base focus-within:opacity-100 hover:opacity-100 sm:flex xl:right-0 starting:scale-95 starting:opacity-0"
+				className="flex flex-col items-center opacity-40 transition-all duration-base focus-within:opacity-100 hover:opacity-100 starting:scale-95 starting:opacity-0"
 			>
 				<Tip label="First message">
 					<button
@@ -369,16 +384,17 @@ export function Transcript({
 
 	return (
 		<>
-			<div className="relative min-h-0 flex-1">
+			<div className="flex min-h-0 flex-1">
 				<div
 					ref={scroll}
 					role="feed"
 					aria-busy={state.busy}
 					aria-label="Conversation"
+					data-slot="chat"
 					onScroll={onScroll}
 					onWheel={() => setPulling(false)}
 					onTouchMove={() => setPulling(false)}
-					className="h-full overflow-y-auto px-page"
+					className="h-full min-w-0 flex-1 overflow-y-auto px-page"
 				>
 					{virtual ? (
 						<div
@@ -437,6 +453,8 @@ export function Transcript({
 
 const rowSelector = (id: string): string => `[data-row-id="${CSS.escape(id)}"]`;
 
+type ToolCallBlock = Extract<AssistantBlock, { type: "toolCall" }>;
+
 function Row({
 	row,
 	state,
@@ -453,18 +471,24 @@ function Row({
 	switch (entry.role) {
 		case "user":
 			return (
-				<div className="ml-auto w-fit max-w-xl rounded-xl bg-muted px-3 py-2">
-					{entry.images.map((image, index) => (
-						// An image in one message has no id of its own; its position in the message is it.
-						<img
-							key={index}
-							alt="attached"
-							className="mb-2 max-h-48 rounded-lg"
-							src={`data:${image.mimeType};base64,${image.data}`}
-						/>
-					))}
-					<p className="text-body whitespace-pre-wrap">{entry.text}</p>
-				</div>
+				<Message align="end">
+					<MessageContent>
+						<Bubble align="end" variant="muted">
+							<BubbleContent>
+								{entry.images.map((image, index) => (
+									// An image in one message has no id of its own; its position in the message is it.
+									<img
+										key={index}
+										alt="attached"
+										className="mb-2 max-h-48 rounded-lg"
+										src={`data:${image.mimeType};base64,${image.data}`}
+									/>
+								))}
+								<p className="text-body whitespace-pre-wrap">{entry.text}</p>
+							</BubbleContent>
+						</Bubble>
+					</MessageContent>
+				</Message>
 			);
 		case "assistant":
 			return (
@@ -474,14 +498,16 @@ function Row({
 			// The tool card beside the call already shows this output; only a result whose
 			// call is outside the window stands on its own.
 			if (toolRunOf(state, entry.toolCallId) !== undefined) return null;
-			return <ToolOutput output={entry.output} isError={entry.isError} />;
+			return (
+				<OrphanToolResult name={entry.toolName} output={entry.output} isError={entry.isError} />
+			);
 		}
 		case "summary":
 			// pi's own block where it replaced the history: the label says how much, the
 			// text is the summary, and it stays where it happened.
 			return (
 				<>
-					<Marker variant="separator">{entry.label}</Marker>
+					<Checkpoint label={entry.label} />
 					<p className="max-h-64 overflow-auto px-1 text-meta whitespace-pre-wrap text-muted-foreground">
 						{entry.text}
 					</p>
@@ -492,6 +518,42 @@ function Row({
 			return unreachable;
 		}
 	}
+}
+
+function CopyReply({ text }: { text: string }) {
+	const [copied, setCopied] = useState(false);
+
+	useEffect(() => {
+		if (copied) {
+			const timer = setTimeout(() => setCopied(false), 2000);
+			return () => clearTimeout(timer);
+		}
+		return undefined;
+	}, [copied]);
+
+	const label = copied ? "Copied" : "Copy reply";
+	return (
+		<>
+			<Tip label={label}>
+				<Button
+					variant="ghost"
+					size="icon-xs"
+					aria-label={label}
+					onClick={() => {
+						void navigator.clipboard.writeText(text).then(
+							() => setCopied(true),
+							() => {},
+						);
+					}}
+				>
+					{copied ? <CheckIcon /> : <CopyIcon />}
+				</Button>
+			</Tip>
+			<span aria-live="polite" className="sr-only">
+				{copied ? "Copied" : ""}
+			</span>
+		</>
+	);
 }
 
 function AssistantRow({
@@ -507,74 +569,115 @@ function AssistantRow({
 }) {
 	const text = assistantText(entry);
 	const thinking = assistantThinking(entry);
+	const calls = entry.blocks.filter((block): block is ToolCallBlock => block.type === "toolCall");
 	// A message that only called tools still has a row: its calls are what it said.
-	const silent = text === "" && thinking === "" && !entry.blocks.some((b) => b.type === "toolCall");
+	const silent = text === "" && thinking === "" && calls.length === 0;
+	if (silent) return null;
+
+	const runs = calls.map((call) => toolRunOf(state, call.toolCallId));
+	const failed = runs.filter((run) => run?.status === "error").length;
+	const running = runs.some((run) => run?.status === "running");
+	const count = calls.length;
+	const chainTitle =
+		count === 0
+			? running
+				? "Thinking"
+				: "Thought"
+			: running
+				? `Running ${count} ${count === 1 ? "tool" : "tools"}`
+				: thinking === ""
+					? `Ran ${count} ${count === 1 ? "tool" : "tools"}`
+					: `Thought and ran ${count} ${count === 1 ? "tool" : "tools"}`;
+	const steps: PlanStep[] = calls.map((call, index) => ({
+		key: call.toolCallId,
+		status: stepStatusOf(runs[index]),
+		title: toolTitle(call.toolName, argsOf(call.toolName, call.args)),
+	}));
+	const sources = sourcesOf(text);
+	const changed = changedFilesOf(entry);
+	const reasoning =
+		thinking === "" ? undefined : (
+			<Reasoning
+				text={state.hideThinking ? "" : thinking}
+				hidden={state.hideThinking}
+				label={
+					state.hideThinking
+						? (state.hiddenThinkingLabel ?? DEFAULT_HIDDEN_THINKING_LABEL)
+						: undefined
+				}
+				running={false}
+			/>
+		);
+	const tools = calls.map((call) => (
+		<ToolTrace
+			key={call.toolCallId}
+			args={call.args}
+			name={call.toolName}
+			open={toolOpen.get(call.toolCallId)}
+			run={toolRunOf(state, call.toolCallId)}
+			onToggle={() => onToggleTool(call.toolCallId)}
+		/>
+	));
+	// One reasoning block or one call is already a line; a chain only earns its summary
+	// when there is more than one step to fold into it.
+	const chained = thinking === "" ? count > 1 : count > 0;
+	const stepsContent = (
+		<>
+			{reasoning}
+			{count > 1 ? <Plan title="Plan" steps={steps} defaultOpen={failed > 0} /> : undefined}
+			{tools}
+		</>
+	);
+
 	return (
-		<div className={cn("grid gap-2", silent && "hidden")}>
-			{thinking === "" ? null : state.hideThinking ? (
-				// pi draws a label where it hid thinking instead of dropping the block, so a
-				// reply that only thought still has a row to stand on.
-				<p className="mb-2 text-meta whitespace-pre-wrap text-muted-foreground">
-					{state.hiddenThinkingLabel ?? DEFAULT_HIDDEN_THINKING_LABEL}
-				</p>
-			) : (
-				<details className="text-meta text-muted-foreground">
-					<summary className="cursor-pointer select-none">Thinking</summary>
-					<p className="mt-1 whitespace-pre-wrap">{thinking}</p>
-				</details>
-			)}
-			{text !== "" && (
-				<div className="text-body">
-					<Markdown>{text}</Markdown>
-				</div>
-			)}
-			{entry.blocks.map((block) =>
-				block.type === "toolCall" ? (
-					<ToolTrace
-						key={block.toolCallId}
-						args={block.args}
-						name={block.toolName}
-						open={toolOpen.get(block.toolCallId) ?? false}
-						run={toolRunOf(state, block.toolCallId)}
-						onToggle={() => onToggleTool(block.toolCallId)}
-					/>
-				) : null,
-			)}
-		</div>
+		<Message>
+			<MessageContent className="gap-3">
+				{chained ? (
+					<ChainOfThought
+						title={chainTitle}
+						status={running ? "running" : failed > 0 ? "error" : undefined}
+						description={failed > 0 ? `${failed} failed` : undefined}
+						defaultOpen={failed > 0}
+					>
+						{stepsContent}
+					</ChainOfThought>
+				) : (
+					stepsContent
+				)}
+				{text !== "" && (
+					<div className="text-body">
+						<Markdown>{text}</Markdown>
+					</div>
+				)}
+				{sources.length > 0 ? <Sources sources={sources} /> : undefined}
+				<ChangedFiles files={changed} />
+				{text === "" || count > 0 ? undefined : (
+					<MessageFooter className="px-0">
+						<CopyReply text={text} />
+					</MessageFooter>
+				)}
+			</MessageContent>
+		</Message>
 	);
 }
 
 function StreamingRow({ turn }: { turn: StreamingTurn }) {
 	return (
-		<div className="grid gap-2 text-body">
-			{turn.blocks.map((block, index) =>
-				block === undefined ? null : block.kind === "thinking" ? (
-					// A streaming block is its index in the turn; it has no id of its own.
-					<p key={index} className="text-meta whitespace-pre-wrap text-muted-foreground">
-						{block.text}
-					</p>
-				) : (
-					// A text block is its index in the turn too.
-					<p key={index} className="whitespace-pre-wrap">
-						{block.text}
-					</p>
-				),
-			)}
-			<span className="animate-pulse text-muted-foreground motion-reduce:animate-none">▍</span>
-		</div>
-	);
-}
-
-function ToolOutput({ output, isError }: { output: string; isError: boolean }) {
-	if (output === "") return null;
-	return (
-		<pre
-			className={toneText(
-				isError ? "danger" : "neutral",
-				"overflow-auto rounded-lg border bg-card px-3 py-2 text-code break-words whitespace-pre-wrap",
-			)}
-		>
-			{output}
-		</pre>
+		<Message>
+			<MessageContent className="gap-3 text-body">
+				{turn.blocks.map((block, index) =>
+					block === undefined ? null : block.kind === "thinking" ? (
+						// A streaming block is its index in the turn; it has no id of its own.
+						<Reasoning key={index} text={block.text} running />
+					) : (
+						// A text block is its index in the turn too.
+						<p key={index} className="whitespace-pre-wrap">
+							{block.text}
+						</p>
+					),
+				)}
+				<span className="animate-pulse text-muted-foreground motion-reduce:animate-none">▍</span>
+			</MessageContent>
+		</Message>
 	);
 }

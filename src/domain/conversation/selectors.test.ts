@@ -21,7 +21,7 @@ const frames = (values: ReadonlyArray<ServerFrame>): ReadonlyArray<ServerFrame> 
 const state = frames(bashTurnFrames).reduce(reduce, emptyConversation);
 
 describe("selectors", () => {
-	test("transcript follows arrival order and puts streaming last", () => {
+	test("transcript follows arrival order, hides a drawn tool result, and puts streaming last", () => {
 		const streaming = reduce(state, {
 			t: "streaming",
 			streamId: "next",
@@ -30,7 +30,7 @@ describe("selectors", () => {
 			delta: "hi",
 		});
 		const rows = transcript(streaming);
-		expect(rows.map((row) => row.id)).toEqual(["u1", "a1", "t1", "a2", "next"]);
+		expect(rows.map((row) => row.id)).toEqual(["u1", "a1", "a2", "next"]);
 		expect(rows.at(-1)?.kind).toBe("streaming");
 	});
 

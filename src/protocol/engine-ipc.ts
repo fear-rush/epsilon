@@ -100,6 +100,11 @@ export const EngineToSupervisor = Schema.Union([
 		busy: Schema.Boolean,
 		needsInput: Schema.Boolean,
 	}),
+	/** Methods an extension asked for that the browser cannot draw; the page names them. */
+	Schema.Struct({
+		t: Schema.Literals(["capabilities"]),
+		methods: Schema.Array(Schema.String),
+	}),
 	Schema.Struct({
 		t: Schema.Literals(["heartbeat"]),
 		seq: Schema.Finite,

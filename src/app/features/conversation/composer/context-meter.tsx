@@ -1,14 +1,13 @@
 /**
  * How full the context window is, from pi's `getContextUsage`. pi leaves the reading
  * unknown before the first response and right after a compaction, so an unknown context
- * is absent rather than a made-up 0%. The Tip carries the exact numbers: the window, the
- * four token counts pi summed, the share served from the provider's cache, and what the
- * session has cost so far.
+ * is absent rather than a made-up 0%. The hover card carries the exact numbers: the
+ * window, the four token counts pi summed, the share served from the provider's cache,
+ * and what the session has cost so far.
  */
 import { cacheHitRate, costLabel } from "#domain/conversation/format";
 import type { ContextUsage, SessionStats } from "#protocol/usage";
-import { Tip } from "@/components/patterns/tip";
-import { InputGroupText } from "@/components/ui/input-group";
+import { Context } from "@/components/ai-elements/context";
 
 const grouped = new Intl.NumberFormat(undefined);
 
@@ -27,13 +26,6 @@ const percentLabel = (percent: number): string => {
 	return `${percent.toFixed(1).replace(/\.0$/, "")}%`;
 };
 
-/** The token split pi summed over the session's whole history, in one sentence. */
-const tokensLabel = (tokens: SessionStats["tokens"]): string => {
-	const share = cacheHitRate(tokens);
-	const cached = share === undefined ? "no cache use yet" : `${percentLabel(share)} from cache`;
-	return `${grouped.format(tokens.input)} input, ${grouped.format(tokens.output)} output, ${grouped.format(tokens.cacheRead)} cache read, ${grouped.format(tokens.cacheWrite)} cache write, ${cached}`;
-};
-
 export function ContextMeter({
 	usage,
 	stats,
@@ -47,18 +39,25 @@ export function ContextMeter({
 	const { contextWindow, percent: share, tokens } = usage;
 	if (tokens === null || share === null) return null;
 	const percent = percentLabel(share);
-	const detail = `Context window: ${grouped.format(tokens)} of ${grouped.format(contextWindow)} tokens (${percent}). Tokens: ${tokensLabel(stats.tokens)}. ${costLabel(stats.cost)} spent in this session.`;
+	const cached = cacheHitRate(stats.tokens);
 	return (
-		<Tip label={detail}>
-			<InputGroupText
-				tabIndex={0}
-				aria-label={`Context: ${detail}`}
-				className="gap-1 rounded-md text-meta tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
-			>
-				<span>{percent}</span>
-				<span className="text-muted-foreground/70">·</span>
-				<span>{compactTokens(tokens)}</span>
-			</InputGroupText>
-		</Tip>
+		<Context
+			label={`${percent} · ${compactTokens(tokens)}`}
+			ariaLabel={`Context: ${percent} of ${grouped.format(contextWindow)} tokens used`}
+			used={grouped.format(tokens)}
+			limit={grouped.format(contextWindow)}
+			percent={share}
+			rows={[
+				{ label: "Input", value: grouped.format(stats.tokens.input) },
+				{ label: "Output", value: grouped.format(stats.tokens.output) },
+				{ label: "Cache read", value: grouped.format(stats.tokens.cacheRead) },
+				{ label: "Cache write", value: grouped.format(stats.tokens.cacheWrite) },
+				{
+					label: "Cached",
+					value: cached === undefined ? "no cache use yet" : percentLabel(cached),
+				},
+			]}
+			footer={`${costLabel(stats.cost)} spent in this session.`}
+		/>
 	);
 }

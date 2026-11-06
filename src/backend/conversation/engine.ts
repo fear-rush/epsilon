@@ -85,6 +85,8 @@ export class RemoteEngine {
 	readonly sessionId: Ref.Ref<string>;
 	readonly status: Ref.Ref<Status>;
 	readonly heartbeat: Ref.Ref<Heartbeat | undefined>;
+	/** Terminal-only extension methods the engine reported, for Diagnostics. */
+	readonly capabilities: Ref.Ref<ReadonlyArray<string>>;
 	readonly events: Stream.Stream<LifecycleEvent>;
 	readonly pid: number;
 	readonly startedAt: number;
@@ -123,6 +125,7 @@ export class RemoteEngine {
 		const initial: Status = { busy: false, needsInput: false, sessionId: options.sessionId };
 		this.status = Ref.makeUnsafe(initial);
 		this.heartbeat = Ref.makeUnsafe<Heartbeat | undefined>(undefined);
+		this.capabilities = Ref.makeUnsafe<ReadonlyArray<string>>([]);
 		this.startedAt = options.startedAt;
 		this.events = Stream.fromPubSub(options.pubsub);
 	}
@@ -312,6 +315,9 @@ export class RemoteEngine {
 					yield* self.publish({ status, type: "status" });
 					return;
 				}
+				case "capabilities":
+					yield* Ref.set(self.capabilities, message.methods);
+					return;
 				case "heartbeat": {
 					const at = yield* Clock.currentTimeMillis;
 					const heartbeat: Heartbeat = {

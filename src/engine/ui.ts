@@ -19,10 +19,10 @@ import type { AskOptions, Dialogs } from "./dialogs.ts";
  * hands extensions Promises, so this file runs the dialog Effect and answers with its
  * value. Everywhere else in the engine yields Effects.
  *
- * A method with no wire yet is refused once per method with a notice, never silently
- * dropped (AGENTS.md, "Every failure is visible"). Keyed statuses and widgets have a frame,
- * and the hidden-thinking label rides `sessionMeta`; the working label and the editor text
- * do not yet.
+ * A method with no browser equivalent is recorded for Settings → Diagnostics, never
+ * silently dropped and never drawn as a chat warning. Keyed statuses and widgets have a
+ * frame, the hidden-thinking label rides `sessionMeta`, and the working label and editor
+ * text have their own callbacks.
  */
 
 export type UiHost = {
@@ -251,6 +251,8 @@ export const createUiContext = (host: UiHost): ExtensionUIContext => ({
 		host.putEditorText(text, "append");
 	},
 	onTerminalInput() {
+		// The browser never produces terminal bytes; the native composer owns typing and
+		// paste. The call is recorded in Diagnostics rather than drawn in the chat.
 		host.unsupported("onTerminalInput");
 		return () => undefined;
 	},
@@ -266,10 +268,14 @@ export const createUiContext = (host: UiHost): ExtensionUIContext => ({
 	setHiddenThinkingLabel(label: string) {
 		host.setHiddenThinkingLabel(label);
 	},
-	setFooter() {
+	setFooter(factory) {
+		// Undefined restores the built-in footer; the browser already has one. A custom
+		// footer is a pi-tui component, which this page cannot mount.
+		if (factory === undefined) return;
 		host.unsupported("setFooter");
 	},
-	setHeader() {
+	setHeader(factory) {
+		if (factory === undefined) return;
 		host.unsupported("setHeader");
 	},
 	custom<T>(): Promise<T> {
@@ -284,7 +290,10 @@ export const createUiContext = (host: UiHost): ExtensionUIContext => ({
 	addAutocompleteProvider(factory) {
 		host.addAutocompleteProvider(factory);
 	},
-	setEditorComponent() {
+	setEditorComponent(factory) {
+		// Undefined restores pi's own editor, which is the browser composer. A custom editor
+		// is a pi-tui component: the composer stays, and Diagnostics names the substitution.
+		if (factory === undefined) return;
 		host.unsupported("setEditorComponent");
 	},
 	getEditorComponent() {

@@ -52,12 +52,26 @@ describe("diagnostics", () => {
 					fs,
 					log: { engine: () => ({ write: () => Effect.void }), write: () => Effect.void },
 					running: Effect.succeed([
-						{ busy: true, pid: 42, rss: 1024, sessionId: "s-live", tabs: 1 },
+						{
+							busy: true,
+							pid: 42,
+							rss: 1024,
+							sessionId: "s-live",
+							tabs: 1,
+							unsupported: ["onTerminalInput"],
+						},
 					]),
 				});
 				const view = yield* service.read;
 				expect(view.engines).toEqual([
-					{ busy: true, pid: 42, rss: 1024, sessionId: "s-live", tabs: 1 },
+					{
+						busy: true,
+						pid: 42,
+						rss: 1024,
+						sessionId: "s-live",
+						tabs: 1,
+						unsupported: ["onTerminalInput"],
+					},
 				]);
 				expect(view.crashes.map((row) => row.sessionId)).toEqual(["s-new", "s-old"]);
 				expect(view.crashes[0]?.lastHeartbeat?.rss).toBe(4096);

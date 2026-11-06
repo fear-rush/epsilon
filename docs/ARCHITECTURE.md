@@ -128,11 +128,12 @@ cannot represent is a visible notice, never silence.
 
 ## UI rules that are not obvious from the code
 
-- Three client layers. `src/app/styles/` holds the tokens (`tokens.css`: layout sizes, gaps
+- Four client layers. `src/app/styles/` holds the tokens (`tokens.css`: layout sizes, gaps
   by role, type roles, dialog sizes, motion) and the motion that is not a token entrance
   (`motion.css`). `src/app/components/ui` is shadcn registry source.
-  `src/app/components/patterns` is what features compose. `components/editor` is the file
-  tree, markdown and highlighting.
+  `src/app/components/ai-elements` is the copied AI Elements patterns: agent steps, plans,
+  tools, terminals, tests and the chat primitives they compose. `src/app/components/patterns`
+  is what features compose. `components/editor` is the file tree, markdown and highlighting.
 - Every column starts with a `PaneBar` (`h-bar`, the one rule columns share), so the
   sidebar, a list and a chat share one line. One inset per column: bar title, search, a
   group heading and a row's text start on the column's gutter.
@@ -142,8 +143,16 @@ cannot represent is a visible notice, never silence.
 - A dialog is `DialogFrame size="sm|md|lg"`, with a fixed body height unless
   `body="content"`; its content stays mounted while closed, so the transitions play.
 - Compose the installed shadcn components. Chat primitives (`Message`, `Trace`,
-  `CodeBlock`, `Marker`) mean something, so do not fake them with divs. Composition is
-  Base UI (`render={<Button />}`), never `asChild`.
+  `CodeBlock`, `Marker`) mean something, so do not fake them with divs. A transcript step
+  is an AI element: `Reasoning` for thinking, `Plan` for calls known up front, `Task` for a
+  live run, `Tool`/`Terminal`/`Test Results`/`Stack Trace`/`Subagent` for a call's result,
+  and `Chain of Thought` for the turn's summary. The element owns the shape; the feature
+  supplies the data. Composition is Base UI (`render={<Button />}`), never `asChild`.
+- The transcript's jump rail is a sibling of the scroll area, never an overlay. It owns a
+  narrow gutter at the pane's right edge, so a wide tool result cannot run under it.
+- A tool result whose call is in the window is drawn in that call's card, not as a row.
+  Only a result whose call is outside the window is its own row; a hidden row would leave
+  its gap behind.
 - Radius follows one ladder: `rounded-md` for rows and chips, `rounded-lg` for controls,
   menus and code, `rounded-xl` for dialogs, panels and bordered lists, `rounded-2xl` for
   message bubbles only, and `rounded-full` only for pills and circular icon buttons.
@@ -168,6 +177,7 @@ Choose by the scope of what the message is about. A feature never invents its ow
 | The whole app                     | the status line: `AppStatus` in `src/app/core/status.tsx`, fed by `useReportStatus`                                                                                            | server unreachable, page out of date, no model ready, a chat that cannot continue |
 | A route crashed or does not exist | `RouteError`, `RouteNotFound` on `StatusView`, inside the shell: `errorComponent` and `notFoundComponent` on the `_app` and `settings` layouts; the router's defaults are last | a render throws, an address nothing serves                                        |
 | A pane's own read                 | `StatusView`: loading, empty, failed, not found                                                                                                                                | the provider list failed to read, no skills yet                                   |
+| A terminal-only extension call    | Settings → Diagnostics → Extension UI                                                                                                                                          | a custom editor, footer or widget the browser cannot mount                        |
 | A section, form or card           | `Notice` at the top of what it is about                                                                                                                                        | save refused, pi could not parse `settings.json`, a project overrides this server |
 | Beside one control                | `InlineStatus`                                                                                                                                                                 | Saved, Checking…, connection test failed                                          |
 | One field                         | shadcn `FieldError` under the field                                                                                                                                            | "Use a whole number."                                                             |

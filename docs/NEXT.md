@@ -7,13 +7,14 @@ remains is one decision, two runs, and the merge. Status lives here and nowhere 
 ## Open
 
 - [ ] **The first-paint budget is over.** `bun run bench` fails one budget: `bundle-size`
-      reads **369.5 KiB against 315**, for `/` and `/sessions/$id`. Every other budget is
+      reads **390.4 KiB against 315**, for `/` and `/sessions/$id`. Every other budget is
       within. Built at five commits, first paint was 310.1 KiB before the chat port,
       **360.3 KiB at the first checkpoint after the composer, palette and transcript
-      landed**, 364.7 at S8 and 368.4–368.5 through S9. So the 58 KiB is the ported chat
-      surface; React (66.8), Effect (51) and TanStack (38.5) are 156 KiB of the 369 and are
-      the foundation's own cost. Two ways out, and the owner picks: - defer the palette and the model menu out of first paint (worth ~21–30 KiB, still
-      short of 54), or - set the budget to the branch's own figure with that reasoning recorded.
+      landed**, 364.7 at S8, 368.4–368.5 through S9, and 390.4 after the AI Elements chat
+      pass. So the 80 KiB over the pre-chat baseline is the ported chat surface; React
+      (66.8), Effect (51) and TanStack (38.5) are 156 KiB of the 390 and are the
+      foundation's own cost. Two ways out, and the owner picks: - defer the palette and the model menu out of first paint (worth ~21–30 KiB, still
+      short of 75), or - set the budget to the branch's own figure with that reasoning recorded.
 - [ ] **The owner uses `bun run dev:host` for a day with no regression.** Nothing can
       stand in for this: the sandbox is fresh, the real home has 955 chats and 333 of them
       name a folder that no longer exists.

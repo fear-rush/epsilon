@@ -79,7 +79,7 @@ export function ModelMenu({ models, model, open, onOpenChange, onSelect }: Model
 							render={
 								<InputGroupButton
 									size="sm"
-									className="ml-auto w-auto max-w-40 cursor-pointer gap-1 truncate rounded-md text-meta sm:max-w-64"
+									className="w-auto max-w-40 cursor-pointer gap-1 truncate rounded-md text-meta sm:max-w-64"
 								/>
 							}
 						/>

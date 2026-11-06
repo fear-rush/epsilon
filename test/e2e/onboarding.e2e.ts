@@ -35,7 +35,8 @@ test("an empty home shows readiness, and a provider makes it ready", async ({ ap
 	await page.getByRole("button", { name: "Save", exact: true }).click();
 
 	await page.getByRole("link", { name: /back to app/i }).click();
-	await expect(page.getByRole("status")).toContainText(/ready/i);
+	// A healthy app draws no status line, so the landing is the signal that the gate opened.
+	await expect(page.getByRole("heading", { name: "Ask epsilon anything." })).toBeVisible();
 
 	// The Status row counts what can run a turn, not pi's whole catalog: one stub model.
 	await page.goto(`${app.url}/settings/general`);

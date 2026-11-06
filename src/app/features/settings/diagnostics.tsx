@@ -30,6 +30,30 @@ const diagnosticsQuery = {
 	refetchInterval: 5_000,
 };
 
+/** What the page substitutes for a terminal-only call. */
+const replacementOf = (method: string): string => {
+	switch (method) {
+		case "custom":
+			return "Epsilon uses its own dialogs; the pi-tui component is not drawn.";
+		case "onTerminalInput":
+			return "The composer owns typing and paste.";
+		case "setEditorComponent":
+			return "The composer is the editor.";
+		case "setFooter":
+			return "The browser header and composer rows stand in.";
+		case "setHeader":
+			return "The browser header stands in.";
+		case "setTitle":
+			return "The page keeps its own title.";
+		case "setWidget":
+			return "Only text-line widgets are drawn.";
+		case "setWorkingIndicator":
+			return "The page draws its own working spinner.";
+		default:
+			return "This page has no equivalent for the call.";
+	}
+};
+
 /** Bytes to something a reader can size up. */
 const bytes = (value: number): string => {
 	if (value < 1024) return `${value} B`;
@@ -84,6 +108,7 @@ export function SettingsDiagnostics() {
 	}
 
 	const view = diagnostics.data;
+	const terminals = view.engines.filter((engine) => engine.unsupported.length > 0);
 
 	return (
 		<Pane className="flex-1">
@@ -117,6 +142,28 @@ export function SettingsDiagnostics() {
 								</Button>
 							</Row>
 						))
+					)}
+				</Section>
+
+				<Section
+					title="Extension UI"
+					description="Terminal-only calls from live extensions, and what this page uses instead."
+				>
+					{terminals.length === 0 ? (
+						<Row
+							title="No terminal-only calls"
+							description="No live engine has asked for terminal-only UI."
+						/>
+					) : (
+						terminals.flatMap((engine) =>
+							engine.unsupported.map((method) => (
+								<Row
+									key={`${engine.sessionId}-${method}`}
+									title={method}
+									description={`${replacementOf(method)} · ${engine.sessionId}`}
+								/>
+							)),
+						)
 					)}
 				</Section>
 

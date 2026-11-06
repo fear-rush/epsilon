@@ -47,7 +47,8 @@ test("a message typed while the server is down is refused visibly, and the chat 
 	await expect(page.getByText("The message was not sent")).toBeVisible({ timeout: 15_000 });
 
 	await app.restart();
-	await expect(page.getByRole("status")).toContainText(/ready/i, { timeout: 15_000 });
+	// A healthy app draws no status line; the banner's absence is the recovered signal.
+	await expect(page.getByRole("status")).toHaveCount(0, { timeout: 15_000 });
 
 	await composer.fill("after the restart");
 	await composer.press("Enter");

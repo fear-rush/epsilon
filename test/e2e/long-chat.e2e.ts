@@ -26,6 +26,16 @@ test("a 5,000-entry chat scrolls to the top without a jump", async ({
 	const transcript = page.getByRole("feed");
 	await expect(transcript).toBeVisible();
 
+	// The jump rail owns a gutter beside the feed: its dots must never sit over text.
+	const rail = page.getByRole("navigation", { name: "Jump to a message" });
+	await expect(rail).toBeVisible();
+	const [feedBox, railBox] = await Promise.all([transcript.boundingBox(), rail.boundingBox()]);
+	expect(feedBox).not.toBeNull();
+	expect(railBox).not.toBeNull();
+	if (feedBox !== null && railBox !== null) {
+		expect(railBox.x).toBeGreaterThanOrEqual(feedBox.x + feedBox.width);
+	}
+
 	// The chat opens on a window near its end, not on all 5,000 entries.
 	const firstPrompt = async (): Promise<number> => {
 		const text = await transcript.innerText();

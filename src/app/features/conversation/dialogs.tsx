@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 
 import type { DialogAnswer, DialogQuestion } from "#protocol/conversation/extui";
+import { Confirmation } from "@/components/ai-elements/confirmation";
 import { DialogFrame } from "@/components/patterns/dialog-frame";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,20 +60,17 @@ export function ConfirmDialog({
 				if (!next) answer(false);
 			}}
 			size="sm"
+			body="content"
 			title={question.title}
-			footer={
-				<>
-					<Countdown seconds={remaining} />
-					<Button variant="outline" onClick={() => answer(false)}>
-						No
-					</Button>
-					<Button onClick={() => answer(true)}>Yes</Button>
-				</>
-			}
+			footer={remaining === undefined ? undefined : <Countdown seconds={remaining} />}
 		>
-			{question.message !== undefined && (
-				<p className="text-body break-words whitespace-pre-wrap">{question.message}</p>
-			)}
+			<Confirmation
+				description={question.message}
+				approveLabel="Yes"
+				denyLabel="No"
+				onApprove={() => answer(true)}
+				onDeny={() => answer(false)}
+			/>
 		</DialogFrame>
 	);
 }

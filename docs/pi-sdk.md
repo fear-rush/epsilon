@@ -151,11 +151,13 @@ Other facts worth having before embedding:
     therefore supply its own `Theme` value where every colour method returns its text
     unchanged. A host that returns a stub which throws kills whichever handler reads
     it, and pi counts a failed `tool_call` handler as blocking the tool. Of the 28
-    members (27 methods and `theme`), Epsilon answers 18: the dialog group, the display
-    and composer groups, the autocomplete chain and `theme`. It refuses 7 with one notice
-    each (`custom`, `onTerminalInput`, `setFooter`, `setHeader`, `setEditorComponent`,
-    `getEditorComponent`, `setWorkingIndicator`) and answers the theme trio with an empty
-    or failing result by design.
+    members (27 methods and `theme`), Epsilon answers the dialog group, the display and
+    composer groups, the autocomplete chain and `theme`. It answers the clear calls
+    (`setFooter(undefined)`, `setHeader(undefined)`, `setEditorComponent(undefined)`) as
+    no-ops, records a custom editor, footer or header, raw terminal input, a custom
+    dialog, a component widget and a working indicator in Settings → Diagnostics, and
+    answers `getEditorComponent` with `undefined`. The theme trio answers with an empty or
+    failing result by design.
 - `mode` and `hasUI` answer different questions, and only one of them matters to an
   extension. `ExtensionMode` is `"tui" | "rpc" | "json" | "print"`: a presentation, not
   a transport, and its doc comment says to use `"tui"` as the guard for terminal-only UI.

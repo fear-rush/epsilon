@@ -18,11 +18,19 @@ export type TranscriptRow =
  * streaming. A streaming row keeps its own id until `append` replaces it.
  */
 export function transcript(state: ConversationState): ReadonlyArray<TranscriptRow> {
-	const rows: TranscriptRow[] = state.entries.map((entry) => ({
-		kind: "entry",
-		id: entry.id,
-		entry,
-	}));
+	const rows: TranscriptRow[] = state.entries
+		// A tool result whose call is in the window is drawn inside that call's card. Keeping
+		// the entry as a row would leave an empty article and the gap between rows behind it.
+		.filter(
+			(entry) =>
+				entry.role !== "toolResult" ||
+				!state.tools.some((tool) => tool.toolCallId === entry.toolCallId),
+		)
+		.map((entry) => ({
+			kind: "entry",
+			id: entry.id,
+			entry,
+		}));
 	for (const turn of state.streaming) rows.push({ kind: "streaming", id: turn.streamId, turn });
 	return rows;
 }

@@ -139,6 +139,8 @@ export function Composer({
 	codingTools,
 	commands,
 	header,
+	/** An empty chat draws the box in the page, not docked under a transcript. */
+	inline = false,
 	blocked,
 	onExport,
 	onOpenFork,
@@ -170,6 +172,8 @@ export function Composer({
 	commands: ReadonlyArray<CommandOffer>;
 	/** Drawn above the box, inside its column: where this conversation runs. */
 	header: ReactNode;
+	/** An empty session draws the box in the page, not docked under a transcript. */
+	inline?: boolean;
 	/** Why pi refuses a branch action right now; undefined when it is possible. */
 	blocked: string | undefined;
 
@@ -528,7 +532,7 @@ export function Composer({
 	};
 
 	return (
-		<div className="border-t p-3">
+		<div className={inline ? undefined : "border-t p-3"}>
 			<div ref={surfaceRef} className="mx-auto w-full max-w-4xl">
 				{header !== undefined && <div className="min-w-0 pb-2">{header}</div>}
 				{aboveEditor.length > 0 && <div className="pb-2">{widgetLines(aboveEditor)}</div>}
@@ -552,6 +556,7 @@ export function Composer({
 					</div>
 				)}
 				<form
+					data-slot="prompt-input"
 					onSubmit={(event) => {
 						event.preventDefault();
 						void submit(busy ? "steer" : undefined);
@@ -614,20 +619,23 @@ export function Composer({
 									<PaperclipIcon />
 								</InputGroupButton>
 							</Tip>
-							<ModelMenu
-								models={[...models]}
-								model={model}
-								open={modelMenuOpen}
-								onOpenChange={setModelMenuOpen}
-								onSelect={(next) => onSetModel(next.provider, next.id)}
-							/>
-							<ThinkingMenu
-								level={thinking ?? "off"}
-								levels={[...thinkingLevels]}
-								open={thinkingMenuOpen}
-								onOpenChange={setThinkingMenuOpen}
-								onSelect={onSetThinking}
-							/>
+							<fieldset data-slot="model-selector" className="ml-auto flex min-w-0 items-center">
+								<legend className="sr-only">Model and thinking</legend>
+								<ModelMenu
+									models={[...models]}
+									model={model}
+									open={modelMenuOpen}
+									onOpenChange={setModelMenuOpen}
+									onSelect={(next) => onSetModel(next.provider, next.id)}
+								/>
+								<ThinkingMenu
+									level={thinking ?? "off"}
+									levels={[...thinkingLevels]}
+									open={thinkingMenuOpen}
+									onOpenChange={setThinkingMenuOpen}
+									onSelect={onSetThinking}
+								/>
+							</fieldset>
 							<ToolsMenu codingTools={codingTools} onSelect={onSetCodingTools} />
 							<PermissionMenu
 								statuses={[...state.statuses]}
@@ -638,7 +646,7 @@ export function Composer({
 									<InputGroupButton
 										size="icon-sm"
 										variant="destructive"
-										className="ml-auto rounded-full"
+										className="rounded-full"
 										aria-label="Stop the run"
 										onClick={() => void onAbort()}
 									>
@@ -651,7 +659,7 @@ export function Composer({
 									type="submit"
 									size="icon-sm"
 									variant="default"
-									className={busy ? "rounded-full" : "ml-auto rounded-full"}
+									className="rounded-full"
 									disabled={text.trim() === "" || !writable || sending}
 									aria-label={busy ? "Steer the run" : "Send"}
 								>

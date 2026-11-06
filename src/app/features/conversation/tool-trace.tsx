@@ -12,6 +12,12 @@ import type { ReactNode } from "react";
 import type { ToolRun } from "#domain/conversation/state";
 import { argsOf } from "#domain/conversation/tools";
 import type { ToolArgs } from "#domain/conversation/tools";
+import { StackTrace } from "@/components/ai-elements/stack-trace";
+import type { StepStatus } from "@/components/ai-elements/status-icon";
+import { Subagent, type SubagentCall } from "@/components/ai-elements/subagent";
+import { Terminal } from "@/components/ai-elements/terminal";
+import { TestResults } from "@/components/ai-elements/test-results";
+import { Tool } from "@/components/ai-elements/tool";
 import {
 	CodeBlock,
 	CodeBlockContent,
@@ -19,25 +25,16 @@ import {
 	CodeBlockLine,
 	CodeBlockTitle,
 } from "@/components/ui/code-block";
-import {
-	Trace,
-	TraceCollapsible,
-	TraceCollapsibleContent,
-	TraceCollapsibleTrigger,
-	TraceDescription,
-	TraceIcon,
-	TraceLine,
-	TraceTitle,
-} from "@/components/ui/trace";
+
+import { stackTraceOf } from "./stack";
+import { testResultsOf } from "./test-results";
 
 /**
  * One tool call, whatever the tool is. The name decides which arguments to read and which
- * body to draw; a name with no renderer falls back to its arguments and output, so a tool
- * is never blank. Main's file, taking the call's arguments from the message the way this
- * branch holds them.
- *
- * A call that made other calls inside itself (codemode's scripts) draws them as compact
- * rows inside its own card: the model never issued them, so they have no card of their own.
+ * element draws the result: Terminal for a shell command, Test Results for a test run,
+ * Stack Trace for a failure, Subagent for the calls a tool made inside itself, and Tool for
+ * everything else. A name with no renderer still falls back to its arguments and output,
+ * so a tool is never blank.
  */
 
 const ICONS = new Map<string, ReactNode>([
@@ -50,6 +47,7 @@ const ICONS = new Map<string, ReactNode>([
 	["grep", <SearchIcon key="grep" />],
 ]);
 
+/** The line's word for a run, and the duration a finished one took. */
 const statusWord = (status: ToolRun["status"] | undefined): string => {
 	if (status === "error") return "failed";
 	if (status === undefined || status === "running") return "running";
@@ -62,7 +60,29 @@ const detail = (run: ToolRun | undefined): string => {
 	return run?.note === undefined ? words : `${words}: ${run.note}`;
 };
 
-const toolTitle = (name: string, args: ToolArgs | undefined): string => {
+/** The one-line detail a nested call shows inside its subagent. */
+const nestedDetail = (child: ToolRun): string => {
+	const seconds =
+		child.durationMs === undefined ? "" : ` (${(child.durationMs / 1000).toFixed(1)}s)`;
+	const status = statusWord(child.status);
+	const first = child.output.split("\n")[0]?.trim() ?? "";
+	return first === "" ? `${status}${seconds}` : `${status}${seconds}: ${first}`;
+};
+
+const nestedStatus = (status: ToolRun["status"]): StepStatus => {
+	if (status === "running") return "running";
+	if (status === "error") return "error";
+	return "done";
+};
+
+/** The step state a plan or a task draws for one run. A call with no run yet is pending. */
+export const stepStatusOf = (run: ToolRun | undefined): StepStatus => {
+	if (run === undefined) return "pending";
+	return nestedStatus(run.status);
+};
+
+/** The words a tool call's line uses when it has arguments worth reading. */
+export const toolTitle = (name: string, args: ToolArgs | undefined): string => {
 	switch (args?.kind) {
 		case "bash": {
 			const first = args.command.split("\n")[0] ?? "";
@@ -91,46 +111,111 @@ export function ToolTrace({
 	args: Json | undefined;
 	/** What the tool has produced so far, or undefined before its first event. */
 	run: ToolRun | undefined;
-	open: boolean;
+	/** A choice the chat remembers; undefined lets the element pick its own default. */
+	open: boolean | undefined;
 	onToggle: () => void;
 }) {
 	const known = argsOf(name, args);
-	const body = toolBody(run, known, args);
+	const output = run?.output ?? "";
 	const children = run?.children ?? [];
-	const line = (
-		<TraceLine
-			status={run?.status === "error" ? "error" : run?.status === "running" ? "running" : undefined}
-		>
-			<TraceIcon>{ICONS.get(name) ?? <WrenchIcon />}</TraceIcon>
-			<TraceTitle>{toolTitle(name, known)}</TraceTitle>
-			<TraceDescription>{detail(run)}</TraceDescription>
-		</TraceLine>
-	);
-	if (body === null && children.length === 0) return <Trace>{line}</Trace>;
+	const status: "running" | "error" | undefined =
+		run?.status === "error" ? "error" : run?.status === "running" ? "running" : undefined;
+
+	// A failed call that printed a stack gets the frames, whatever tool it was.
+	if (run?.status === "error") {
+		const stack = stackTraceOf(output);
+		if (stack !== undefined) {
+			return <StackTrace stack={stack} open={open} onOpenChange={() => onToggle()} />;
+		}
+	}
+
+	if (known?.kind === "bash") {
+		const results = run?.status === "running" ? undefined : testResultsOf(known.command, output);
+		if (results !== undefined) {
+			return <TestResults summary={results} open={open} onOpenChange={() => onToggle()} />;
+		}
+		return (
+			<Terminal
+				command={known.command}
+				output={output}
+				running={run?.status === "running"}
+				failed={run?.status === "error"}
+				description={detail(run)}
+				open={open}
+				onOpenChange={() => onToggle()}
+			/>
+		);
+	}
+
+	if (children.length > 0) {
+		const calls: SubagentCall[] = children.map((child) => ({
+			detail: nestedDetail(child),
+			key: child.toolCallId,
+			name: child.toolName,
+			status: nestedStatus(child.status),
+		}));
+		return (
+			<Subagent
+				name={name}
+				status={status}
+				calls={calls}
+				open={open}
+				onOpenChange={() => onToggle()}
+			>
+				{output === "" ? undefined : (
+					<CodeBlock size="sm">
+						<CodeBlockContent wrap className="max-h-64">
+							{output}
+						</CodeBlockContent>
+					</CodeBlock>
+				)}
+			</Subagent>
+		);
+	}
+
 	return (
-		<Trace>
-			<TraceCollapsible open={open} onOpenChange={() => onToggle()}>
-				<TraceCollapsibleTrigger>{line}</TraceCollapsibleTrigger>
-				<TraceCollapsibleContent>
-					{children.length === 0 ? undefined : (
-						<div className="grid gap-1 pb-1">
-							{children.map((child) => (
-								<div key={child.toolCallId} className="flex min-w-0 items-center gap-2">
-									<TraceIcon>{ICONS.get(child.toolName) ?? <WrenchIcon />}</TraceIcon>
-									<span className="truncate text-meta font-medium">{child.toolName}</span>
-									<span className="truncate text-meta text-muted-foreground">
-										{child.output === ""
-											? detail(child)
-											: `${detail(child)}: ${child.output.split("\n")[0] ?? ""}`}
-									</span>
-								</div>
-							))}
-						</div>
-					)}
-					{body}
-				</TraceCollapsibleContent>
-			</TraceCollapsible>
-		</Trace>
+		<Tool
+			title={toolTitle(name, known)}
+			icon={ICONS.get(name) ?? <WrenchIcon />}
+			status={status}
+			description={detail(run)}
+			open={open}
+			onOpenChange={() => onToggle()}
+		>
+			{toolBody(run, known, args)}
+		</Tool>
+	);
+}
+
+/** A tool result whose call is outside the window: the output stands on its own. */
+export function OrphanToolResult({
+	name,
+	output,
+	isError,
+}: {
+	name: string;
+	output: string;
+	isError: boolean;
+}) {
+	if (isError) {
+		const stack = stackTraceOf(output);
+		if (stack !== undefined) return <StackTrace stack={stack} />;
+	}
+	return (
+		<Tool
+			title={name}
+			icon={ICONS.get(name) ?? <WrenchIcon />}
+			status={isError ? "error" : undefined}
+			description={isError ? "failed" : "done"}
+		>
+			{output === "" ? undefined : (
+				<CodeBlock size="sm" variant={isError ? "destructive" : "default"}>
+					<CodeBlockContent wrap className="max-h-64">
+						{output}
+					</CodeBlockContent>
+				</CodeBlock>
+			)}
+		</Tool>
 	);
 }
 
@@ -140,6 +225,19 @@ function toolBody(
 	raw: Json | undefined,
 ): ReactNode {
 	const output = run?.output ?? "";
+	const variant = run?.status === "error" ? "destructive" : "default";
+
+	// A call that failed says why; its intended change is not worth reading over the error.
+	if (run?.status === "error" && output !== "") {
+		return (
+			<CodeBlock size="sm" variant={variant}>
+				<CodeBlockContent wrap className="max-h-64">
+					{output}
+				</CodeBlockContent>
+			</CodeBlock>
+		);
+	}
+
 	if (args?.kind === "bash") {
 		return (
 			<CodeBlock size="sm">
@@ -205,11 +303,13 @@ function toolBody(
 	}
 
 	const argsText = raw === undefined ? "" : JSON.stringify(raw, null, 2);
-	if (argsText === "" && output === "") return null;
+	if (argsText === "" && output === "") return undefined;
 	const text = [argsText, output].filter((part) => part !== "").join("\n\n");
 	return (
-		<CodeBlock size="sm">
-			<CodeBlockContent className="max-h-64">{text}</CodeBlockContent>
+		<CodeBlock size="sm" variant={variant}>
+			<CodeBlockContent wrap className="max-h-64">
+				{text}
+			</CodeBlockContent>
 		</CodeBlock>
 	);
 }

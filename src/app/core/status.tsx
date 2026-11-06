@@ -145,7 +145,7 @@ const TONE: Record<Tone, string> = {
  *
  * A stale page outranks a lost connection, because reconnecting cannot fix it; a chat that
  * cannot continue outranks readiness, because it is about what the reader is doing. When
- * nothing is wrong it says so, quietly, rather than disappearing.
+ * nothing is wrong no line is drawn, so every screen keeps its first row.
  */
 export function AppStatus() {
 	const health = useAppHealth();
@@ -194,9 +194,7 @@ export function AppStatus() {
 		return <Strip tone="warning">{`Not ready: ${readiness.data.detail}`}</Strip>;
 	}
 
-	return (
-		<output className="block border-b px-page py-1 text-meta text-muted-foreground">Ready</output>
-	);
+	return null;
 }
 
 function Strip({

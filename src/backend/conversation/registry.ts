@@ -59,6 +59,8 @@ export type RunningEngine = {
 	readonly rss: number;
 	readonly busy: boolean;
 	readonly tabs: number;
+	/** Terminal-only extension methods this engine reported, for Diagnostics. */
+	readonly unsupported: ReadonlyArray<string>;
 };
 
 export type EnginesApi = {
@@ -371,6 +373,7 @@ export const makeEngines = (options: {
 			rss: entry.rss,
 			sessionId: entry.engine.currentSessionId,
 			tabs: entry.tabs.size,
+			unsupported: [...Ref.getUnsafe(entry.engine.capabilities)],
 		})),
 	);
 

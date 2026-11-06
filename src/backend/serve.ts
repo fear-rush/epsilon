@@ -1,6 +1,12 @@
 import { BunHttpServer } from "@effect/platform-bun";
 import { Effect, FileSystem, Layer, Option, Path, type Types } from "effect";
-import { Headers, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http";
+import {
+	Headers,
+	HttpMiddleware,
+	HttpRouter,
+	HttpServerRequest,
+	HttpServerResponse,
+} from "effect/http";
 import { type Rpc, type RpcGroup, RpcSerialization, RpcServer } from "effect/rpc";
 
 import { EpsilonRpcs, SOCKET_PATH } from "#protocol/rpc";
@@ -190,8 +196,12 @@ export const BoundaryLive = <Rpcs extends Rpc.Any, E, R>(
 		HttpRouter.add(
 			"GET",
 			"/api/health",
-			Effect.succeed(HttpServerResponse.text("ok")).pipe(
-				Effect.map(HttpServerResponse.setHeader("cache-control", "no-store")),
+			// The page polls this address to notice a stopping server; one response line every
+			// two seconds would bury the log it is meant to help with.
+			HttpMiddleware.withLoggerDisabled(
+				Effect.succeed(HttpServerResponse.text("ok")).pipe(
+					Effect.map(HttpServerResponse.setHeader("cache-control", "no-store")),
+				),
 			),
 		),
 		HttpRouter.add("GET", "/*", page(config)),

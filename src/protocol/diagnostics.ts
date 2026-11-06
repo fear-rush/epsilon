@@ -14,6 +14,8 @@ export const RunningEngine = Schema.Struct({
 	rss: Schema.Finite,
 	busy: Schema.Boolean,
 	tabs: Schema.Finite,
+	/** Terminal-only extension methods this engine was asked to render, if any. */
+	unsupported: Schema.Array(Schema.String),
 });
 export type RunningEngine = typeof RunningEngine.Type;
 

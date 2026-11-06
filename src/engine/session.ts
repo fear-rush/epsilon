@@ -192,7 +192,10 @@ export class EngineSession {
 	private readonly dialogs: Dialogs;
 	private readonly ui: UiBridge;
 	private readonly notices: Notice[] = [];
+	/** Methods reported already, so Diagnostics keeps one row per method. */
 	private readonly unsupported = new Set<string>();
+	/** Methods not yet sent to the parent, kept until `session_start` settles. */
+	private readonly unreportedUnsupported = new Set<string>();
 	/** Names already reported, so a rebind does not repeat the same shadowing notice. */
 	private readonly reportedShadowed = new Set<string>();
 	private readonly toolEntries = new Map<string, string>();
@@ -306,6 +309,7 @@ export class EngineSession {
 					const outcome = yield* Effect.exit(self.bind(self.runtime.session));
 					self.settleBinding(outcome);
 					self.reportShadowedCommands();
+					self.reportUnsupportedMethods();
 				}),
 			);
 			yield* Effect.forkScoped(
@@ -1440,10 +1444,17 @@ export class EngineSession {
 	private unsupportedMethod(method: string): void {
 		if (this.unsupported.has(method)) return;
 		this.unsupported.add(method);
-		this.notice(
-			`An extension used ${method}, which this dashboard does not render yet.`,
-			"warning",
-		);
+		this.unreportedUnsupported.add(method);
+		// A terminal-only method is a gap in this dashboard, not a failure of the chat. It is
+		// reported to Diagnostics; methods seen during `session_start` wait until binding ends
+		// so the parent is already watching this engine.
+		if (!this.binding) this.reportUnsupportedMethods();
+	}
+
+	private reportUnsupportedMethods(): void {
+		if (this.unreportedUnsupported.size === 0) return;
+		this.unreportedUnsupported.clear();
+		this.emit({ methods: [...this.unsupported].toSorted(), t: "capabilities" });
 	}
 
 	private sendStatus(): void {

@@ -1,13 +1,18 @@
 /**
  * What the engine is doing with the composer's next message: a compaction, an
  * automatic retry, a shell command this tab sent, or prompts pi holds for the run
- * that is already going. pi exposes one queue with no per-item removal, so the only
- * queue action is Clear.
+ * that is already going. The live work is a Task over the steps taken so far; the
+ * queue is the AI Elements Queue, with its only action, Clear.
  */
-import type { Queue } from "#domain/conversation/state";
-import { Badge } from "@/components/ui/badge";
+import type { Queue as QueueState } from "#domain/conversation/state";
+import { Queue } from "@/components/ai-elements/queue";
+import type { QueueItem } from "@/components/ai-elements/queue";
+import { Task } from "@/components/ai-elements/task";
+import { Terminal } from "@/components/ai-elements/terminal";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+
+import type { LiveStep } from "./live-steps";
 
 /** pi's own word for the working row, which an extension may replace. */
 const DEFAULT_WORKING_MESSAGE = "Working";
@@ -17,6 +22,8 @@ type RunStatusProps = {
 	working: boolean;
 	/** The label an extension set for that row; absent means pi's own word. */
 	workingMessage: string | undefined;
+	/** The steps the current run has taken so far, for the working Task. */
+	steps: ReadonlyArray<LiveStep>;
 	isCompacting: boolean;
 	isRetrying: boolean;
 	isBashRunning: boolean;
@@ -24,7 +31,7 @@ type RunStatusProps = {
 	bashCommand: string | undefined;
 	/** What that command has written so far, as pi streams it. */
 	bashOutput: string;
-	queue: Queue;
+	queue: QueueState;
 	/** A message naming a change another process made to this chat's file. */
 	drift: string | undefined;
 	onReload: () => void;
@@ -37,6 +44,7 @@ type RunStatusProps = {
 export function RunStatus({
 	working,
 	workingMessage,
+	steps,
 	isCompacting,
 	isRetrying,
 	isBashRunning,
@@ -64,16 +72,25 @@ export function RunStatus({
 	)
 		return null;
 
+	const pending: QueueItem[] = queued.map((entry, index) => ({
+		description: entry.label,
+		key: `${entry.label}-${index}`,
+		title: entry.text,
+	}));
+
 	return (
 		<div className="mx-auto flex w-full max-w-4xl flex-col gap-2 px-3 pt-3">
 			{working && (
-				<div className="flex items-center gap-2 rounded-xl border bg-background px-3 py-2 text-meta">
-					<Spinner />
-					<span className="min-w-0 flex-1 truncate">
-						{workingMessage === undefined || workingMessage.trim() === ""
-							? `${DEFAULT_WORKING_MESSAGE}…`
-							: workingMessage}
-					</span>
+				<div className="rounded-xl border bg-background px-3 py-2">
+					<Task
+						title={
+							workingMessage === undefined || workingMessage.trim() === ""
+								? `${DEFAULT_WORKING_MESSAGE}…`
+								: workingMessage
+						}
+						status="running"
+						steps={steps}
+					/>
 				</div>
 			)}
 			{drift !== undefined && (
@@ -103,46 +120,37 @@ export function RunStatus({
 				</div>
 			)}
 			{isBashRunning && (
-				<div className="flex flex-col gap-2 rounded-xl border bg-background px-3 py-2 text-meta">
-					<div className="flex items-center gap-2">
-						<Spinner />
-						<span className="min-w-0 flex-1 truncate">
-							{bashCommand === undefined
-								? "Shell command running…"
-								: `Shell command running: ${bashCommand}`}
-						</span>
-						<Button size="sm" variant="destructive" onClick={onAbortBash}>
-							Stop
-						</Button>
+				<div className="flex items-start gap-2 rounded-xl border bg-background px-3 py-2">
+					<div className="min-w-0 flex-1">
+						<Terminal
+							command={bashCommand ?? "shell command"}
+							output={bashOutput}
+							running
+							failed={false}
+							title={
+								bashCommand === undefined
+									? "Shell command running…"
+									: `Shell command running: ${bashCommand}`
+							}
+						/>
 					</div>
-					{bashOutput !== "" && (
-						<pre className="max-h-40 overflow-auto rounded-md border bg-muted/40 p-2 whitespace-pre-wrap">
-							{bashOutput}
-						</pre>
-					)}
+					<Button size="sm" variant="destructive" onClick={onAbortBash}>
+						Stop
+					</Button>
 				</div>
 			)}
 			{queued.length > 0 && (
-				<div className="overflow-hidden rounded-xl border bg-background">
-					<div className="flex items-center gap-2 border-b px-3 py-2">
-						<span className="min-w-0 flex-1 text-meta font-medium">Queued for this run</span>
-						<Button size="xs" variant="ghost" onClick={onClearQueue}>
-							Clear
-						</Button>
-					</div>
-					<ul className="divide-y">
-						{queued.map((entry, index) => (
-							// oxlint-disable-next-line react/no-array-index-key -- pi holds queued prompts as text, so there is no id to key a row by.
-							<li key={`${entry.label}-${index}`} className="flex items-start gap-2 px-3 py-2">
-								<Badge variant="secondary" className="mt-0.5">
-									{entry.label}
-								</Badge>
-								<span className="line-clamp-2 min-w-0 flex-1 text-meta whitespace-pre-wrap">
-									{entry.text}
-								</span>
-							</li>
-						))}
-					</ul>
+				<div className="rounded-xl border bg-background px-3 py-2">
+					<Queue
+						pending={pending}
+						completed={[]}
+						title="Queued for this run"
+						action={
+							<Button size="xs" variant="ghost" onClick={onClearQueue}>
+								Clear
+							</Button>
+						}
+					/>
 				</div>
 			)}
 		</div>
