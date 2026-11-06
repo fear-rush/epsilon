@@ -5,6 +5,7 @@
  * incomplete row. Rows grow and collapse instead of popping in and out.
  */
 import { PlusIcon, Trash2Icon } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
@@ -76,16 +77,29 @@ export function PairRowList({
 	keyPlaceholder?: string;
 	onChange: (rows: PairRow[]) => void;
 }) {
-	const { closing, remove } = useAnimatedRows(rows, onChange);
+	// A row has no id of its own, so the list hands each one: new rows take the next
+	// number and a removal drops its number with it.
+	const [ids, setIds] = useState<{ list: number[]; next: number }>({ list: [], next: 0 });
+	if (ids.list.length !== rows.length) {
+		const list = ids.list.slice(0, rows.length);
+		let next = ids.next;
+		while (list.length < rows.length) list.push(next++);
+		setIds({ list, next });
+	}
+	const { closing, remove } = useAnimatedRows(rows, (kept) => {
+		setIds((current) => ({
+			...current,
+			list: current.list.filter((_, at) => at !== closing),
+		}));
+		onChange(kept);
+	});
 	const update = (index: number, patch: Partial<PairRow>) =>
 		onChange(rows.map((row, at) => (at === index ? { ...row, ...patch } : row)));
 
 	return (
 		<div className="grid gap-2">
 			{rows.map((row, index) => (
-				// A row is its position: there is no id, and a removal animates by position.
-				// oxlint-disable-next-line react/no-array-index-key -- a row has no id and a removal animates by position
-				<AnimatedRow key={index} closing={closing === index}>
+				<AnimatedRow key={ids.list[index]} closing={closing === index}>
 					<div className="flex items-center gap-2">
 						<Input
 							value={row.key}

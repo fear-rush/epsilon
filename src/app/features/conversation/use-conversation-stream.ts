@@ -49,7 +49,7 @@ export function useConversationStream(input: {
 	const olderInFlight = useRef(false);
 	/** The engine's stream ended; the next command subscribes again and starts one. */
 	const stopped = useRef(false);
-	const [epoch, setEpoch] = useState(0);
+	const unsubscribe = useRef<(() => void) | undefined>(undefined);
 	const [loaded, setLoaded] = useState(false);
 	const [loadingOlder, setLoadingOlder] = useState(false);
 	const [olderFailure, setOlderFailure] = useState<string>();
@@ -119,32 +119,26 @@ export function useConversationStream(input: {
 		[sessionId],
 	);
 
-	const attempt = useCallback(
-		() =>
-			Effect.gen(function* () {
-				// A new name per connection, so a reconnect receives a fresh window rather
-				// than a replay it might have missed.
-				const name = crypto.randomUUID();
-				// The tab belongs to this attempt only. When the connection drops, the name
-				// goes with it, so a command waits for the next attempt instead of writing to
-				// a tab the new connection never subscribed.
-				yield* Effect.ensuring(
-					runStream(
-						(client) => client["conversation.attach"]({ place, sessionId, tab: name }),
-						(frame) => {
-							opened(name);
-							dispatch(frame);
-						},
-					),
-					Effect.sync(() => {
-						if (tab.current === name) tab.current = undefined;
-					}),
-				);
+	const attempt = useCallback(() => {
+		// A new name per connection, so a reconnect receives a fresh window rather
+		// than a replay it might have missed.
+		const name = crypto.randomUUID();
+		// The tab belongs to this attempt only. When the connection drops, the name
+		// goes with it, so a command waits for the next attempt instead of writing to
+		// a tab the new connection never subscribed.
+		return Effect.ensuring(
+			runStream(
+				(client) => client["conversation.attach"]({ place, sessionId, tab: name }),
+				(frame) => {
+					opened(name);
+					dispatch(frame);
+				},
+			),
+			Effect.sync(() => {
+				if (tab.current === name) tab.current = undefined;
 			}),
-		// All three are read inside the Effect.gen below, which the rule cannot see through.
-		// oxlint-disable-next-line react/memo-dependencies -- all three are read inside the Effect.gen, which the rule cannot see through
-		[sessionId, place, dispatch, opened],
-	);
+		);
+	}, [sessionId, place, dispatch, opened]);
 
 	const onEnd = useCallback(
 		(error: Error | undefined) => {
@@ -156,22 +150,24 @@ export function useConversationStream(input: {
 		[dispatch, settle],
 	);
 
-	useEffect(() => {
+	const subscribe = useCallback(() => {
 		currentId.current = sessionId;
 		tab.current = undefined;
 		stopped.current = false;
-		return keepSubscribed(attempt, onEnd);
-		// `epoch` exists only to re-subscribe after the engine stopped.
-		// oxlint-disable-next-line react/exhaustive-effect-dependencies -- epoch exists only to re-subscribe after the engine stopped
-	}, [sessionId, attempt, onEnd, epoch]);
+		unsubscribe.current = keepSubscribed(attempt, onEnd);
+	}, [sessionId, attempt, onEnd]);
+
+	useEffect(() => {
+		subscribe();
+		return () => unsubscribe.current?.();
+	}, [subscribe]);
 
 	/** Subscribes again, then waits for the new tab to open. The old one is dead. */
 	const reattach = useCallback(async (): Promise<string> => {
-		tab.current = undefined;
-		stopped.current = false;
-		setEpoch((current) => current + 1);
+		unsubscribe.current?.();
+		subscribe();
 		return tabFor();
-	}, [tabFor]);
+	}, [subscribe, tabFor]);
 
 	const command = useCallback(
 		async (value: Command) => {

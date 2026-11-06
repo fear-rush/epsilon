@@ -42,7 +42,7 @@ import {
 	lineNumbers,
 	placeholder as placeholderExtension,
 } from "@codemirror/view";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
 
@@ -134,10 +134,11 @@ export function CodeEditor({
 	const diagnosticsRef = useRef(diagnostics);
 	const onViewRef = useRef(onView);
 	const languageRef = useRef(language);
-	onChangeRef.current = onChange;
-	diagnosticsRef.current = diagnostics;
-	onViewRef.current = onView;
-	languageRef.current = language;
+	useEffect(() => {
+		onChangeRef.current = onChange;
+		onViewRef.current = onView;
+		languageRef.current = language;
+	});
 	const [status, setStatus] = useState<Status>({ line: 1, column: 1, problems: 0 });
 	const [formatProblem, setFormatProblem] = useState<string | undefined>();
 
@@ -151,12 +152,14 @@ export function CodeEditor({
 		return true;
 	};
 	const formatRef = useRef(format);
-	formatRef.current = format;
-
 	useEffect(() => {
-		if (host.current === null) return undefined;
+		formatRef.current = format;
+	});
+
+	// The view reads the first render's props; later changes have their own effects below.
+	const mount = useEffectEvent((parent: HTMLElement) => {
 		const editor = new EditorView({
-			parent: host.current,
+			parent,
 			state: EditorState.create({
 				doc: value,
 				extensions: [
@@ -225,8 +228,11 @@ export function CodeEditor({
 			editor.destroy();
 			view.current = null;
 		};
-		// The view is created once; every later prop change has its own effect below.
-		// oxlint-disable-next-line react-hooks/exhaustive-deps -- the view is created once; later prop changes have their own effects
+	});
+
+	useEffect(() => {
+		if (host.current === null) return undefined;
+		return mount(host.current);
 	}, []);
 
 	useEffect(() => {
@@ -266,6 +272,7 @@ export function CodeEditor({
 	}, [readOnly]);
 
 	useEffect(() => {
+		diagnosticsRef.current = diagnostics;
 		if (view.current !== null) forceLinting(view.current);
 	}, [diagnostics]);
 

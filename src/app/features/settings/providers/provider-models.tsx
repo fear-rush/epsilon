@@ -20,6 +20,7 @@ import { Tip } from "@/components/patterns/tip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useLastDefined } from "@/hooks/use-last-defined";
+import { occurrenceKeys } from "@/lib/occurrence-keys";
 
 import { testProvider } from "./api";
 import { testInputOf } from "./provider-draft";
@@ -276,11 +277,11 @@ function CustomModelRows({
 	onChange: (models: ProviderModelInput[]) => void;
 }) {
 	const { closing, remove } = useAnimatedRows(models, onChange);
+	// A draft may hold two rows with the same id until it is validated; the occurrence
+	// tells them apart.
+	const keys = occurrenceKeys(models.map((model) => model.id));
 	return models.map((model, index) => (
-		// A draft may hold two rows with the same id until it is validated, so the
-		// position is what tells them apart.
-		// oxlint-disable-next-line react/no-array-index-key -- a draft can hold two rows with one id, so the position tells them apart
-		<AnimatedRow key={`${model.id}-${index}`} closing={closing === index}>
+		<AnimatedRow key={keys[index]} closing={closing === index}>
 			<ModelRow name={model.name ?? model.id} id={model.id}>
 				<Tip label={`Edit ${model.name ?? model.id}`}>
 					<Button

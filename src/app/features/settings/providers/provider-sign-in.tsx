@@ -49,6 +49,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { keepSubscribed, runStream } from "@/core/runtime";
 import { cn } from "@/lib/cn";
+import { occurrenceKeys } from "@/lib/occurrence-keys";
 
 import { settingsKeys } from "../keys";
 import { useProviderLogin, useSettingsRefresh } from "../queries";
@@ -199,6 +200,8 @@ function SignInFlow({
 	onCancel: () => void;
 }) {
 	const { authUrl, deviceCode, question } = flow;
+	const shownNotices = flow.notices.slice(-3);
+	const noticeKeys = occurrenceKeys(shownNotices.map((notice) => notice.message));
 	return (
 		<>
 			<div className="flex flex-col gap-4">
@@ -270,11 +273,9 @@ function SignInFlow({
 
 				{flow.notices.length > 0 && (
 					<ul className="flex animate-enter-fade flex-col gap-1 text-meta text-muted-foreground">
-						{flow.notices.slice(-3).map((notice, index) => (
-							// pi may report the same sentence twice, and only the last three are
-							// shown, so the position tells the two apart.
-							// oxlint-disable-next-line react/no-array-index-key -- pi may repeat a notice, so the position tells the two apart
-							<li key={`${index}-${notice.message}`}>
+						{shownNotices.map((notice, index) => (
+							// pi may report the same sentence twice; the occurrence tells them apart.
+							<li key={noticeKeys[index]}>
 								{notice.message}
 								{(notice.links ?? []).map((link) => (
 									<a

@@ -18,40 +18,26 @@ import {
 	TraceLine,
 	TraceTitle,
 } from "@/components/ui/trace";
+import { occurrenceKeys } from "@/lib/occurrence-keys";
 
 import type { ChangedFile } from "./changed-files";
 
 /** One edit's lines, removed then added, the way a diff reads. */
+const linesOf = (text: string) => text.split("\n").filter((line) => line !== "");
+
 function DiffLines({ file }: { file: ChangedFile }) {
+	const rows = file.edits.flatMap((edit) => [
+		...linesOf(edit.oldText).map((line) => ({ variant: "removed" as const, line })),
+		...linesOf(edit.newText).map((line) => ({ variant: "added" as const, line })),
+	]);
+	const keys = occurrenceKeys(rows.map((row) => `${row.variant}-${row.line}`));
 	return (
 		<>
-			{file.edits.flatMap((edit, editIndex) => [
-				...edit.oldText
-					.split("\n")
-					.filter((line) => line !== "")
-					.map((line, lineIndex) => (
-						<CodeBlockLine
-							// An edit carries no id; its position in the call and the line's position identify it.
-							// oxlint-disable-next-line react/no-array-index-key -- an edit carries no id; its position and the line's position identify it
-							key={`old-${editIndex}-${lineIndex}`}
-							variant="removed"
-						>
-							{line}
-						</CodeBlockLine>
-					)),
-				...edit.newText
-					.split("\n")
-					.filter((line) => line !== "")
-					.map((line, lineIndex) => (
-						<CodeBlockLine
-							// oxlint-disable-next-line react/no-array-index-key -- an edit carries no id; its position and the line's position identify it
-							key={`new-${editIndex}-${lineIndex}`}
-							variant="added"
-						>
-							{line}
-						</CodeBlockLine>
-					)),
-			])}
+			{rows.map((row, at) => (
+				<CodeBlockLine key={keys[at]} variant={row.variant}>
+					{row.line}
+				</CodeBlockLine>
+			))}
 		</>
 	);
 }

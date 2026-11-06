@@ -1,5 +1,11 @@
+import { Option, Schema } from "effect";
 import * as React from "react";
-import { createHighlighterCore, type GrammarState, type HighlighterCore } from "shiki/core";
+import {
+	createHighlighterCore,
+	type GrammarState,
+	type HighlighterCore,
+	type ThemedToken,
+} from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 
 // Add the languages you need. Each one loads the first time it is used.
@@ -65,6 +71,11 @@ function getLanguage(language: string): keyof typeof languages | "ansi" | null {
 	return aliasTarget(name) ?? null;
 }
 
+/** shiki gives a token's style as camelCased CSS properties, or as one string we ignore. */
+const decodeStyle = Schema.decodeUnknownOption(Schema.Record(Schema.String, Schema.String));
+const styleOf = (htmlStyle: ThemedToken["htmlStyle"]): React.CSSProperties | undefined =>
+	Option.getOrUndefined(decodeStyle(htmlStyle));
+
 // Loads a language and returns a highlighter for it, or null for a language
 // that is not listed.
 export async function loadHighlighter(language: string) {
@@ -99,15 +110,11 @@ export async function loadHighlighter(language: string) {
 
 			return {
 				lines: tokens.map((line) =>
-					line.map((token, index) => (
+					line.map((token) => (
 						<span
-							// A token never reorders within its line; the index is its identity here.
-							// oxlint-disable-next-line react/no-array-index-key -- a token never reorders within its line
-							key={index}
-							// SAFETY: shiki builds htmlStyle as camelCased CSS properties and
-							// values for the token, so it satisfies React's style object.
-							// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- shiki builds htmlStyle as camelCased CSS properties, which satisfy React's style object
-							style={token.htmlStyle as React.CSSProperties}
+							// A token's offset in its line is unique within that line.
+							key={token.offset}
+							style={styleOf(token.htmlStyle)}
 							className="text-(--shiki-light) dark:text-(--shiki-dark)"
 						>
 							{token.content}

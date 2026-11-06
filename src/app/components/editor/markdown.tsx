@@ -1,5 +1,7 @@
 import { lazy, Suspense, useDeferredValue } from "react";
 
+import { occurrenceKeys } from "@/lib/occurrence-keys";
+
 /** The parsing half, fetched when a message first renders. */
 const MarkdownBlock = lazy(() => import("./markdown-blocks"));
 
@@ -23,14 +25,13 @@ export function Markdown({
 }) {
 	const deferred = useDeferredValue(children);
 	const blocks = splitBlocks(deferred);
+	const keys = occurrenceKeys(blocks);
 
 	return (
 		<div className="typeset typeset-chat max-w-full min-w-0 wrap-break-word">
 			<Suspense fallback={<p className="whitespace-pre-wrap">{deferred}</p>}>
 				{blocks.map((block, index) => (
-					// Blocks are positional within one message; they never reorder.
-					// oxlint-disable-next-line react/no-array-index-key -- blocks are positional within one message and never reorder
-					<MarkdownBlock key={index} links={links} text={block} />
+					<MarkdownBlock key={keys[index]} links={links} text={block} />
 				))}
 			</Suspense>
 		</div>

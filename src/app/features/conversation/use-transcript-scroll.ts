@@ -136,7 +136,7 @@ export function useTranscriptScroll({
 		initialized.current = true;
 		syncActive();
 		// The first mount only: later appends are the virtualizer's or onScroll's business.
-		// oxlint-disable-next-line react-hooks/exhaustive-deps -- runs on first mount only; later appends belong to the virtualizer and onScroll
+		// oxlint-disable-next-line react-hooks/exhaustive-deps -- runs on first mount only; also the component calls useVirtualizer, which react(incompatible-library) rejects once the compiler no longer skips this file
 	}, []);
 
 	useEffect(() => {
