@@ -164,7 +164,12 @@ export function useSessionList() {
 		if (folder !== undefined && status.data !== undefined) byFolder.set(folder, status.data);
 	}
 
-	const reading = statuses.some((status) => status.isPending);
+	// A folder's trust read goes back to pending whenever it is fetched again, and one pi
+	// refuses — the agent home, a deleted folder — answers with an error, so it carries no
+	// data to keep it out of that state. Waiting for that answer again would blank the
+	// column and replay every row's entrance on a chat click, so only a folder that has
+	// never answered is worth waiting for.
+	const reading = statuses.some((status) => status.isPending && !status.isFetched);
 	const data =
 		sessions.data === undefined || reading
 			? undefined

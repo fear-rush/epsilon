@@ -29,11 +29,16 @@ remains is one decision, two runs, and the merge. Status lives here and nowhere 
       in a run card: `Terminal`'s title already carries the outcome and `ToolTrace`'s
       description repeats it. One of the two should go, for every failed card, not only in
       a run. (Noticed while shooting the run card.)
-- [x] **Moving between chats no longer refreshes the sidebar.** pi's thinking-level entry
-      on engine start no longer publishes a list change, and an appended chunk's activity
-      never falls back to the file's mtime. Covered by a catalog test ("an appended entry
-      the list cannot show is not an update"); `sessions.list` calls measured at 1 before
-      and after two chat switches.
+- [x] **Moving between chats no longer refreshes the sidebar.** Two causes. pi's
+      thinking-level entry on engine start no longer publishes a list change (catalog test
+      "an appended entry the list cannot show is not an update"; `sessions.list` calls at 1
+      across two chat switches). And a folder's trust read that is refetching, or refused,
+      no longer counts as still loading, so the column keeps its rows instead of blanking
+      and replaying their entrance. Measured in `bun run dev:host` on the 1,200-chat home:
+      four chat switches produced 0 new sidebar nodes and 0 entrance animations, against 25
+      new nodes and 21 animations before the fix. The second has no spec: the test suite
+      has no DOM access, and an entrance is an animation, which this repository reviews in
+      a screenshot.
 - [x] **The sidebar and the chat header are quieter.** Row actions appear on their own
       row's hover or focus, a folder no longer reveals its chats' actions, the folder icon
       is the open/closed state, the two `Load more` buttons name their lists, and the chat

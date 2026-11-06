@@ -751,3 +751,17 @@ no row displays. Nothing had changed on screen.
 
 Not: dropping the change stream, which is how a message sent from a terminal reaches the
 list. Not: making the sidebar ignore changes, which would hide a real rename or a new chat.
+
+The column itself had a second way to blink. Every folder's trust read goes back to
+`pending` when it is fetched again, and the ones pi refuses — the agent home, a folder that
+is gone — answer with an error, so they hold no data to keep them out of that state. The
+list waited for every read in that state and showed `Loading chats…` in between, so
+mounting the chat's own list on a click blanked the column and replayed each row's
+entrance. It now waits only for a folder that has never answered.
+
+Why: the reader clicked a chat; nothing about the folders changed. A pending refetch and a
+refusal already known are not news.
+
+Not: caching the last list in a ref, which reads a ref during render and lets a stale list
+outlive a deleted folder. Not: giving the trust read a `staleTime`, which would hide a
+trust decision made in a terminal.
