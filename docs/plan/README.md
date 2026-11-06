@@ -87,3 +87,4 @@ The evidence behind every step (file:line, counts, screenshots) is in
 - `highlight.tsx` casts shiki's `htmlStyle` with `no-unsafe-type-assertion`; a decoded style object would remove the cast → step 04
 - Index keys in `provider-models.tsx`, `provider-sign-in.tsx`, `changed-files-view.tsx`, `markdown.tsx`, `markdown-code-block.tsx`, `pair-rows.tsx` and `highlight.tsx` could take stable ids where the data can carry one → step 04
 - `scripts/shoot.ts` cannot see a pane that loads outside TanStack Query; `data-ready` covers the socket, the router and every query → step 04
+- Step 06 notice words to check in step 09 against VO-3: `command-shadowed` ("shadowed by pi's built-in"), `slot-freed` ("Closed to free a slot"), `readings-unreadable` ("usage"), and the Diagnostics "Engine stopped: {id}…" status text (src/app/features/settings/diagnostics.tsx)
