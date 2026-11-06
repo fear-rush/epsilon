@@ -9,7 +9,7 @@ An index. Read the file your task needs, not all of them.
 | [rules/client.md](rules/client.md)     | add or move a file, or write UI code           |
 | [rules/feedback.md](rules/feedback.md) | show an error, warning, empty or loading state |
 | [rules/testing.md](rules/testing.md)   | write or run a test                            |
-| [../DESIGN.md](../DESIGN.md)           | choose a color, size, radius or other token    |
+| `DESIGN.md` (from step 05)             | choose a color, size, radius or other token    |
 | [pi/](pi/README.md)                    | touch anything pi                              |
 | [decisions/](decisions/README.md)      | propose an option that sounds obvious          |
 | [tasks/](tasks/README.md)              | find out what is left to do                    |

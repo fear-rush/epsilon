@@ -1,3 +1,49 @@
 # Decisions
 
-Filled by step 03.
+The choices that hold today, with the reason and the option rejected, so a rejected option is not proposed again. Code and commits cite a decision by its title.
+
+- [001](001-web-interface-for-pi-keeping-pi-s-concepts.md) · Web interface for pi, keeping pi's concepts · Epsilon brings pi to the browser instead of the TUI.
+- [002](002-one-program-one-socket.md) · One program, one socket · One Bun process serves the page and holds one WebSocket.
+- [003](003-one-engine-process-per-live-chat.md) · One engine process per live chat · Each open chat runs Epsilon's own small program in a child process, embedding pi's SDK inside an `AgentSessionRuntime`.
+- [004](004-ready-before-extension-binding.md) · `ready` before extension binding · An engine reports ready, and accepts tabs, as soon as its runtime and session exist.
+- [005](005-the-session-index-is-derived.md) · The session index is derived · A SQLite index in `<home>/.epsilon/session-index.sqlite`, with one write connection, rebuilt on any doubt.
+- [006](006-the-sidebar-pages-its-lists.md) · The sidebar pages its lists · The session column shows ten Projects, ten Chats and ten chats inside an expanded project; `Load more` adds ten to that list.
+- [007](007-an-engine-cap.md) · An engine cap · `Engines.maxRunning` (default 8, in Epsilon's own settings file) counts engine processes, including the transient ones used for copy and export.
+- [008](008-concurrent-writers-are-detected-not-prevented.md) · Concurrent writers are detected, not prevented · pi does not lock session files.
+- [009](009-a-command-is-acknowledged-not-completed.md) · A command is acknowledged, not completed · The engine answers a `prompt` when pi accepts it (`preflightResult`), not when the run ends.
+- [010](010-the-tree-travels-on-demand.md) · The tree travels on demand · The snapshot carries the window, notices and the session id; the flat branch tree is sent only when a tab asks (`loadTree`), as one `tree` frame.
+- [011](011-moves-and-copies-are-pi-s-own.md) · Moves and copies are pi's own · `/tree` moves pi's leaf inside the same session file; `/fork` copies the history before a chosen message into a new file; `/clone` is the same copy taken where the chat stands.
+- [012](012-the-composer-s-readings-travel-as-their-own.md) · The composer's readings travel as their own frame · pi's context usage, the session's totals and the cache warmer are one `readings` frame.
+- [013](013-effect-on-the-server-react-on-the-page.md) · Effect on the server, React on the page · Server, engine and the client's runtime layer use Effect: typed errors, scoped resources, fibers for runs, `Clock` for time.
+- [014](014-effect-schema-replaces-zod.md) · Effect Schema replaces zod · Every wire shape, tagged error and form contract is an Effect `Schema`.
+- [015](015-virtualize-the-transcript-and-the-session-list.md) · Virtualize the transcript and the session list · `@tanstack/react-virtual` drives both, after the per-frame work is fixed and row keys are stable entry ids.
+- [016](016-scrolling-on-send.md) · Scrolling on send · Sending scrolls your message to the top of the view.
+- [017](017-the-chat-is-composed-from-shadcn-ai-elements.md) · The chat is composed from shadcn AI Elements · The turn's steps are the copied AI Elements patterns in `src/app/components/ai-elements/`: Chain of Thought around a turn, Reasoning inside it, Plan when the assistant declared its calls up front, Task for the live steps, and Tool, Terminal, Test Results, Stack Trace, Subagent and File Tree for what a call produced.
+- [018](018-local-security-is-checked-where-the-attack-is.md) · Local security is checked where the attack is · Bind `127.0.0.1` only.
+- [019](019-logs-and-crash-reports-exist-before-the-failures.md) · Logs and crash reports exist before the failures do · One JSON-lines log in `<home>/.epsilon/logs/` with rotation and secret redaction.
+- [020](020-tests-are-bounded-and-time-aware.md) · Tests are bounded and time-aware · `bun test` with an Effect wrapper; `TestClock` for every timer; `until()` as the only waiting helper; a suite budget of 10 s; real-process tests under 5 s with a finalizer.
+- [021](021-full-rebuild-no-transition-code.md) · Full rebuild, no transition code · The old `client/`, `server/` and `shared/` were deleted at the start and kept only as `main`'s history.
+- [022](022-main-is-the-feature-specification.md) · `main` is the feature specification · Every feature, screen, word, animation and test of `main` at `48226bb` is ported 1:1.
+- [023](023-one-name-per-concept-across-the-roots.md) · One name per concept across the roots · A concept has one name in `src/protocol/`, `src/backend/`, `src/app/features/` and the URL: `settings/mcp` everywhere, not `config` on the server and `settings` on the page.
+- [024](024-feedback-has-one-surface-per-scope.md) · Feedback has one surface per scope · An app-wide problem goes to the status line, a crashed route to a route error inside the shell, a pane's state to `StatusView`, a section's message to `Notice`, a control's result to `InlineStatus`, a field's to `FieldError`, a turn's to the transcript.
+- [025](025-one-package-no-workspaces.md) · One package, no workspaces · One `package.json`, one lockfile, no turbo.
+- [026](026-files-are-split-by-meaning.md) · Files are split by meaning · No file that only re-exports or wraps one line.
+- [027](027-tight-tooling-strict-from-line-one.md) · Tight tooling, strict from line one · Type-aware Oxlint with every rule at error, the Effect rule preset, Oxfmt sorting, Knip with config hints as errors and cycle detection, strict TypeScript, `prek` hooks.
+- [028](028-upgrading-pi-is-a-procedure-not-a-version.md) · Upgrading pi is a procedure, not a version bump · pi is pinned exactly.
+- [029](029-a-feature-that-needs-the-other-direction-takes.md) · A feature that needs the other direction takes data as a prop · `sessions` imports `projects` (the sidebar opens the folder picker), so `projects` may not import `sessions`.
+- [030](030-the-chat-s-missing-folder-is-a-field.md) · The chat's missing folder is a field of the list · `SessionSummary.cwdMissing` is computed by the server when the list is read, one stat per distinct folder, and it travels with the row.
+- [031](031-a-dialog-s-deadline-is-a-clock-time.md) · A dialog's deadline is a clock time, not a countdown · The engine sends `deadlineAt`, the time the question closes at, read from `Clock`.
+- [032](032-moving-a-chat-into-a-project-is-a.md) · Moving a chat into a project is a fork, and the original goes · `sessions.move` hands the file to pi's `SessionManager.forkFrom`: the whole history is written as a new session in the project folder, under a new id, and Epsilon then deletes the old file.
+- [033](033-another-agent-s-skill-folder-is-linked-not.md) · Another agent's skill folder is linked, not copied · A folder other agents keep (`~/.claude/skills`, `~/.codex/skills`, a project's `.claude/skills`) is read through pi's own loader and, when linked, its absolute path goes into the `skills` setting of the scope it belongs to.
+- [034](034-a-pasted-skill-archive-is-unpacked-on-the.md) · A pasted skill archive is unpacked on the server · The import sends a picked `.zip`, `.tar`, `.tar.gz` or `.tgz` as one file.
+- [035](035-a-project-s-chats-are-chosen-by-the.md) · A project's chats are chosen by the server · `sessions.removeProject` takes a folder, asks the index which chats ran in it, checks every one for a live engine, and only then deletes the files and their pins.
+- [036](036-mcp-sign-in-runs-in-the-chat-s.md) · MCP sign-in runs in the chat's engine · `settings.mcp.command` sends pi's own `/mcp login|logout|reconnect <name>` line to a chat already running in the settings folder, through `Engines.command`.
+- [037](037-the-index-yields-between-slices-it-is-not.md) · The index yields between slices, it is not a worker · The catalog reconciles session files in the process that holds the socket, and Effect does not preempt synchronous work.
+- [038](038-pi-s-sessiondir-decides-where-the-list-reads.md) · pi's `sessionDir` decides where the list reads · pi writes a folder's sessions under `<agent>/sessions` unless a settings file names a `sessionDir`, which pi resolves against the folder.
+- [039](039-can-run-a-turn-counts-configured-providers.md) · "Can run a turn" counts configured providers · The General page's Status row counts, and the Default model picker offers, only models whose provider pi reports as configured.
+- [040](040-a-chat-pi-cannot-total-opens-and-says.md) · A chat pi cannot total opens, and says why · pi's `getSessionStats()` reads `message.usage.input` on every assistant message and throws when one has none, which only a hand-written file does.
+- [041](041-terminal-only-extension-calls-live-in-diagnostics.md) · Terminal-only extension calls live in Diagnostics · `setFooter(undefined)`, `setHeader(undefined)` and `setEditorComponent(undefined)` are clears: they restore the built-in UI and succeed without a notice.
+- [042](042-a-refusal-s-words-come-from-the-translator.md) · A refusal's words come from the translator · A refused command reaches the page as a tagged error whose `message` is empty by design; the composer reports the error itself and lets `errorView` supply the sentence.
+- [043](043-the-e2e-specs-assert-the-app-as-built.md) · The e2e specs assert the app as built · The Playwright specs are updated to the controls the pages draw, and a spec that expects a control no version of the app has is a spec bug.
+- [044](044-an-older-page-arrives-without-moving-the-reader.md) · An older page arrives without moving the reader · The transcript remembers the scroll height before it asks for the page above, and the layout effect adds the height that page brought.
+- [045](045-opening-a-chat-is-not-a-list-change.md) · Opening a chat is not a list change · pi appends a `thinking_level_change` entry when an engine starts, which touched the session file and made the catalog publish a change on every chat switch.

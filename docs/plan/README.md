@@ -43,7 +43,7 @@ One step per commit, in this order. A step does not start until the one before i
 | ------ | ------------------------------------------- | -------------------------------------------------------- | --------------------- |
 | [x]    | 01 Archive the old docs, build the skeleton | [01-archive-and-skeleton.md](01-archive-and-skeleton.md) | no                    |
 | [x]    | 02 AGENTS.md: root and per folder           | [02-agents-md.md](02-agents-md.md)                       | no                    |
-| [ ]    | 03 Rules, map, decisions, pi, tasks         | [03-rules-and-reference.md](03-rules-and-reference.md)   | no                    |
+| [x]    | 03 Rules, map, decisions, pi, tasks         | [03-rules-and-reference.md](03-rules-and-reference.md)   | no                    |
 | [ ]    | 04 Guards: doc check, lint policy, shoot    | [04-guards.md](04-guards.md)                             | no                    |
 | [ ]    | 05 DESIGN.md and the token generator        | [05-design-md.md](05-design-md.md)                       | no (tokens unchanged) |
 | [ ]    | 06 Feedback: one look, one strip, codes     | [06-feedback.md](06-feedback.md)                         | **yes**               |
@@ -81,3 +81,8 @@ The evidence behind every step (file:line, counts, screenshots) is in
 ## Noticed while working (not part of any step)
 
 <!-- Add one line per item: what, where, which step found it. -->
+
+- The jump rail owns a gutter → DESIGN.md components (step 05)
+- A run of steps is one row → DESIGN.md components (step 05)
+- The sidebar's row actions wait for the pointer → DESIGN.md components (step 05)
+- Archived ARCHITECTURE "UI rules not obvious from the code" not yet carried over: radius ladder, every column starts with a `PaneBar`, session list pages by ten, jump rail is a sibling not an overlay, external links as inline citations, a tool result is drawn in its call's card, colour carries state only → DESIGN.md (step 05), or `docs/rules/client.md` for the behaviour ones (step 03 left them out)
