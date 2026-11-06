@@ -15,7 +15,7 @@ the child process that hosts pi for one chat; `src/app/` React, Vite, Tailwind, 
 
 1. pi's runtime is imported only in `src/engine/`. pi's exporters, `ModelRuntime`, trust,
    `SettingsManager` reads and `SessionManager` only in `src/backend/platform/pi.ts`.
-   `src/protocol/pi.ts` is type-only.
+   `src/protocol/` imports nothing from pi.
 2. `src/protocol/` and `src/domain/` import no `node:*`, React, or Effect services or
    layers (Schema and data types only). The reducer stays pure.
 3. One boundary: `src/protocol/rpc.ts`. No HTTP routes except serving the page.
@@ -42,9 +42,9 @@ the child process that hosts pi for one chat; `src/app/` React, Vite, Tailwind, 
 ## Commands
 
 From the repository root: `bun run dev` (sandboxed agent home) / `dev:host` (real `~/.pi`) /
-`sandbox:clean`; `check` (format, lint, type-check, dead code, tests); `build` / `start`;
+`sandbox:clean`; `check` (format, docs, lint, type-check, dead code, tests); `build` / `start`;
 `test` / `test:tools` / `test:e2e` / `bench`; `lint` / `lint:fix`; `dead-code` / `format`;
-`routes:generate`; `parity <main> <port…>` (what a ported file lacks of `main`);
+`routes:generate`; `doc-check`; `shoot <route…>` (iris screenshots); `parity <main> <port…>` (what a ported file lacks of `main`);
 `hooks:install` (once per clone).
 
 ## Before you edit

@@ -27,7 +27,7 @@ export default function MarkdownCodeBlock({ code, language }: { code: string; la
 			<CodeBlockContent>
 				{lines.map((line, index) => (
 					// Code lines never reorder; the position is the line number.
-					// oxlint-disable-next-line react/no-array-index-key
+					// oxlint-disable-next-line react/no-array-index-key -- code lines never reorder; the position is the line number
 					<CodeBlockLine key={index}>{line}</CodeBlockLine>
 				))}
 			</CodeBlockContent>

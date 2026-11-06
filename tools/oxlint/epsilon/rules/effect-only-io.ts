@@ -21,13 +21,14 @@ export const effectOnlyIoRule = defineRule({
 		},
 		messages: {
 			attempt:
-				"`{{name}}` is imperatively handled here. Yield an Effect that fails and let the caller `catchTag`.",
-			call: "`{{name}}` is ambient IO. Use `{{replacement}}`.",
-			import: "`{{name}}` bypasses the platform layer. Use `{{replacement}}`.",
+				"`{{name}}` is imperatively handled here. Yield an Effect that fails and let the caller `catchTag` (see docs/rules/server.md SV-7).",
+			call: "`{{name}}` is ambient IO. Use `{{replacement}}` (see docs/rules/server.md SV-7).",
+			import:
+				"`{{name}}` bypasses the platform layer. Use `{{replacement}}` (see docs/rules/server.md SV-7).",
 			member:
-				"`{{name}}` is ambient process state. Use the service that owns it (`{{replacement}}`).",
+				"`{{name}}` is ambient process state. Use the service that owns it (`{{replacement}}`; see docs/rules/server.md SV-7).",
 			promise:
-				"A Promise chain here bypasses the Effect error channel. Wrap it with `Effect.tryPromise` or use the service.",
+				"A Promise chain here bypasses the Effect error channel. Wrap it with `Effect.tryPromise` or use the service (see docs/rules/server.md SV-8).",
 		},
 	},
 	createOnce(context) {

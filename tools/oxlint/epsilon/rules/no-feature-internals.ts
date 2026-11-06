@@ -62,7 +62,7 @@ export const noFeatureInternalsRule = defineRule({
 		],
 		messages: {
 			internal:
-				"`{{source}}` reaches inside feature `{{feature}}`. Import `{{feature}}/index.ts` (export what is needed there) or move the shared piece to `platform/` or `lib/`.",
+				"`{{source}}` reaches inside feature `{{feature}}`. Import `{{feature}}/index.ts` (export what is needed there) or move the shared piece to `platform/` or `lib/` (see docs/rules/server.md SV-4, docs/rules/client.md CL-2).",
 		},
 	},
 	createOnce(context) {

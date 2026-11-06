@@ -137,4 +137,34 @@ describe("epsilon plugin", () => {
 
 		expect(output).not.toContain("feedback-surfaces");
 	});
+
+	test("disable-reason refuses a bare disable and accepts one with a reason", () => {
+		const bare = lint(
+			{
+				rule: "disable-reason",
+				source: "// oxlint-disable-next-line no-console\nexport const a = 1;\n",
+			},
+			"disable-bare",
+		);
+		const reasoned = lint(
+			{
+				rule: "disable-reason",
+				source: "// oxlint-disable-next-line no-console -- the CLI prints\nexport const a = 1;\n",
+			},
+			"disable-reasoned",
+		);
+
+		expect(bare).toContain("This disable has no reason");
+		expect(reasoned).not.toContain("This disable has no reason");
+	});
+
+	test("disable-reason keeps design-tokens disabled only in the vendored folders", () => {
+		const source =
+			"// oxlint-disable-next-line epsilon/design-tokens -- a reason\nexport const a = 1;\n";
+		const feature = lint({ rule: "disable-reason", source }, "src/app/features/x/disable");
+		const vendored = lint({ rule: "disable-reason", source }, "src/app/components/ui/disable");
+
+		expect(feature).toContain("`epsilon/design-tokens` cannot be disabled here");
+		expect(vendored).not.toContain("cannot be disabled here");
+	});
 });

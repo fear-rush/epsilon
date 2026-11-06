@@ -102,11 +102,11 @@ export async function loadHighlighter(language: string) {
 					line.map((token, index) => (
 						<span
 							// A token never reorders within its line; the index is its identity here.
-							// oxlint-disable-next-line react/no-array-index-key
+							// oxlint-disable-next-line react/no-array-index-key -- a token never reorders within its line
 							key={index}
 							// SAFETY: shiki builds htmlStyle as camelCased CSS properties and
 							// values for the token, so it satisfies React's style object.
-							// oxlint-disable-next-line typescript/no-unsafe-type-assertion
+							// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- shiki builds htmlStyle as camelCased CSS properties, which satisfy React's style object
 							style={token.htmlStyle as React.CSSProperties}
 							className="text-(--shiki-light) dark:text-(--shiki-dark)"
 						>

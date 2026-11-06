@@ -67,6 +67,30 @@ Do: review animations, placement and feel in a screenshot you read.
 Don't: treat passing type-check, lint or a pixel assertion as proof of how it looks or feels.
 Enforced by: review
 
+### TS-11 · Screenshot a route with `bun run shoot`; an interactive state with playwright-cli
+
+Do: `bun run build`, then `bun run shoot <route…> [--out dir]`; it starts the built server on a scratch home with the stub model, runs iris against it and waits for `data-ready="true"` on the app root (the socket is open, the router is idle, no query is in flight). For a dialog, a menu, hover or a stopped server, run `bun run start` on a scratch `EPSILON_AGENT_HOME` and use playwright-cli.
+Don't: write a one-off Playwright, Puppeteer or Chrome script for a screenshot or a quick look.
+Enforced by: review
+
+### TS-12 · A quick inspection uses the playwright-cli skill
+
+Do: read `~/.agents/skills/playwright-cli/SKILL.md`, then `playwright-cli open/goto/snapshot/click/screenshot/close` for what is on the page, a console error or a DOM value; close its browser when done.
+Don't: leave the browser open, or point it at the real `~/.pi`.
+Enforced by: review
+
+### TS-13 · The pi agent may capture with the iris MCP tool
+
+Do: call `capture` against a server it started on a scratch home.
+Don't: capture a server running on the real agent home.
+Enforced by: review
+
+### TS-14 · A screenshot is read before it is reported
+
+Do: open the PNG, and say in one line what it shows.
+Don't: report a screenshot you did not look at.
+Enforced by: review
+
 ## Not covered here
 
 A check that fails for a reason you do not understand: stop and ask.

@@ -84,7 +84,7 @@ export function PairRowList({
 		<div className="grid gap-2">
 			{rows.map((row, index) => (
 				// A row is its position: there is no id, and a removal animates by position.
-				// oxlint-disable-next-line react/no-array-index-key
+				// oxlint-disable-next-line react/no-array-index-key -- a row has no id and a removal animates by position
 				<AnimatedRow key={index} closing={closing === index}>
 					<div className="flex items-center gap-2">
 						<Input

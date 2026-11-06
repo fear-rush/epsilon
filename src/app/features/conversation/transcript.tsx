@@ -359,7 +359,7 @@ export function Transcript({
 		initialized.current = true;
 		syncActive();
 		// The first mount only: later appends are the virtualizer's or onScroll's business.
-		// oxlint-disable-next-line react-hooks/exhaustive-deps
+		// oxlint-disable-next-line react-hooks/exhaustive-deps -- runs on first mount only; later appends belong to the virtualizer and onScroll
 	}, []);
 
 	useEffect(() => {

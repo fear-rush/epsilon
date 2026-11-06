@@ -48,9 +48,9 @@ export const feedbackSurfacesRule = defineRule({
 		},
 		messages: {
 			import:
-				"`@/components/ui/alert` is the status surfaces' own banner; use `Notice`, or `StatusView` for a whole pane.",
+				"`@/components/ui/alert` is the status surfaces' own banner; use `Notice`, or `StatusView` for a whole pane (see docs/rules/feedback.md FB-10).",
 			colour:
-				"`{{className}}` paints a state outside the status surfaces; pass a `Tone` to `StatusView`, `Notice` or `InlineStatus` instead.",
+				"`{{className}}` paints a state outside the status surfaces; pass a `Tone` to `StatusView`, `Notice` or `InlineStatus` instead (see docs/rules/feedback.md FB-10).",
 		},
 	},
 	createOnce(context) {

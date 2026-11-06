@@ -273,7 +273,7 @@ function SignInFlow({
 						{flow.notices.slice(-3).map((notice, index) => (
 							// pi may report the same sentence twice, and only the last three are
 							// shown, so the position tells the two apart.
-							// oxlint-disable-next-line react/no-array-index-key
+							// oxlint-disable-next-line react/no-array-index-key -- pi may repeat a notice, so the position tells the two apart
 							<li key={`${index}-${notice.message}`}>
 								{notice.message}
 								{(notice.links ?? []).map((link) => (

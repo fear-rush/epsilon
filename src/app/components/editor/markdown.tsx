@@ -29,7 +29,7 @@ export function Markdown({
 			<Suspense fallback={<p className="whitespace-pre-wrap">{deferred}</p>}>
 				{blocks.map((block, index) => (
 					// Blocks are positional within one message; they never reorder.
-					// oxlint-disable-next-line react/no-array-index-key
+					// oxlint-disable-next-line react/no-array-index-key -- blocks are positional within one message and never reorder
 					<MarkdownBlock key={index} links={links} text={block} />
 				))}
 			</Suspense>

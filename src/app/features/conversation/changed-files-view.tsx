@@ -32,7 +32,7 @@ function DiffLines({ file }: { file: ChangedFile }) {
 					.map((line, lineIndex) => (
 						<CodeBlockLine
 							// An edit carries no id; its position in the call and the line's position identify it.
-							// oxlint-disable-next-line react/no-array-index-key
+							// oxlint-disable-next-line react/no-array-index-key -- an edit carries no id; its position and the line's position identify it
 							key={`old-${editIndex}-${lineIndex}`}
 							variant="removed"
 						>
@@ -44,7 +44,7 @@ function DiffLines({ file }: { file: ChangedFile }) {
 					.filter((line) => line !== "")
 					.map((line, lineIndex) => (
 						<CodeBlockLine
-							// oxlint-disable-next-line react/no-array-index-key
+							// oxlint-disable-next-line react/no-array-index-key -- an edit carries no id; its position and the line's position identify it
 							key={`new-${editIndex}-${lineIndex}`}
 							variant="added"
 						>

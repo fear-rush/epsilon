@@ -1,6 +1,7 @@
 import { eslintCompatPlugin } from "@oxlint/plugins";
 
 import { designTokensRule } from "./rules/design-tokens.ts";
+import { disableReasonRule } from "./rules/disable-reason.ts";
 import { effectOnlyIoRule } from "./rules/effect-only-io.ts";
 import { feedbackSurfacesRule } from "./rules/feedback-surfaces.ts";
 import { noFeatureInternalsRule } from "./rules/no-feature-internals.ts";
@@ -11,6 +12,7 @@ const epsilonPlugin = eslintCompatPlugin({
 	meta: { name: "epsilon" },
 	rules: {
 		"design-tokens": designTokensRule,
+		"disable-reason": disableReasonRule,
 		"effect-only-io": effectOnlyIoRule,
 		"feedback-surfaces": feedbackSurfacesRule,
 		"no-feature-internals": noFeatureInternalsRule,

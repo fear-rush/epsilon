@@ -216,7 +216,7 @@ export function useConversation(input: {
 				);
 			}),
 		// All three are read inside the Effect.gen below, which the rule cannot see through.
-		// oxlint-disable-next-line react/memo-dependencies
+		// oxlint-disable-next-line react/memo-dependencies -- all three are read inside the Effect.gen, which the rule cannot see through
 		[sessionId, place, dispatch, opened],
 	);
 
@@ -242,7 +242,7 @@ export function useConversation(input: {
 		stopped.current = false;
 		return keepSubscribed(attempt, onEnd);
 		// `epoch` exists only to re-subscribe after the engine stopped.
-		// oxlint-disable-next-line react/exhaustive-effect-dependencies
+		// oxlint-disable-next-line react/exhaustive-effect-dependencies -- epoch exists only to re-subscribe after the engine stopped
 	}, [sessionId, attempt, onEnd, epoch]);
 
 	/** Subscribes again, then waits for the new tab to open. The old one is dead. */

@@ -44,6 +44,7 @@
 		"anti-slop/require-safety-comment-for-type-assertion": "error",
 		"anti-slop-effect/no-service-constructor-imports": "error",
 		"epsilon/design-tokens": "error",
+		"epsilon/disable-reason": "error",
 		"epsilon/effect-only-io": "off",
 		"epsilon/no-feature-internals": "off",
 		"epsilon/no-real-sleep": "off",
@@ -75,7 +76,10 @@
 		"react/react-in-jsx-scope": "off",
 		"react/self-closing-comp": "error",
 		"typescript/await-thenable": "error",
-		"typescript/ban-ts-comment": "error",
+		"typescript/ban-ts-comment": [
+			"error",
+			{ "ts-expect-error": true, "ts-ignore": true, "ts-nocheck": true, "ts-check": false }
+		],
 		"typescript/consistent-type-imports": "error",
 		"typescript/no-base-to-string": "error",
 		"typescript/no-deprecated": "error",
@@ -130,6 +134,14 @@
 				"typescript/no-unsafe-member-access": "off",
 				"typescript/no-unsafe-return": "off",
 				"unicorn/consistent-function-scoping": "off"
+			}
+		},
+		{
+			// A platform wrapper or a test may need a cast the types cannot express; nowhere else.
+			"files": ["src/backend/platform/**", "test/**", "**/*.test.ts", "**/*.test.tsx"],
+			"rules": {
+				"anti-slop/no-chained-type-assertions": "off",
+				"typescript/ban-ts-comment": "off"
 			}
 		},
 		{

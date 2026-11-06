@@ -22,8 +22,8 @@ export const noRealSleepRule = defineRule({
 		},
 		messages: {
 			sleep:
-				"`{{name}}` waits on the real clock. Advance time with `TestClock.adjust` or wait with `until()` from `test/until.ts`.",
-			now: "`{{name}}` reads the real clock. Read time from the `Clock` service so a test can control it.",
+				"`{{name}}` waits on the real clock. Advance time with `TestClock.adjust` or wait with `until()` from `test/until.ts` (see docs/rules/testing.md TS-2).",
+			now: "`{{name}}` reads the real clock. Read time from the `Clock` service so a test can control it (see docs/rules/testing.md TS-2).",
 		},
 	},
 	createOnce(context) {

@@ -279,7 +279,7 @@ function CustomModelRows({
 	return models.map((model, index) => (
 		// A draft may hold two rows with the same id until it is validated, so the
 		// position is what tells them apart.
-		// oxlint-disable-next-line react/no-array-index-key
+		// oxlint-disable-next-line react/no-array-index-key -- a draft can hold two rows with one id, so the position tells them apart
 		<AnimatedRow key={`${model.id}-${index}`} closing={closing === index}>
 			<ModelRow name={model.name ?? model.id} id={model.id}>
 				<Tip label={`Edit ${model.name ?? model.id}`}>

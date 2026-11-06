@@ -31,7 +31,11 @@ export const designTokensRule = defineRule({
 	createOnce(context) {
 		return classStringVisitors((at, text) => {
 			for (const violation of findTokenViolations(text, readAllowed(context.options[0]))) {
-				context.report({ node: at, messageId: "token", data: { message: violation.message } });
+				context.report({
+					node: at,
+					messageId: "token",
+					data: { message: `${violation.message} (see docs/rules/client.md CL-7)` },
+				});
 			}
 		});
 	},

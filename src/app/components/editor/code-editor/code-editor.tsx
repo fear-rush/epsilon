@@ -226,7 +226,7 @@ export function CodeEditor({
 			view.current = null;
 		};
 		// The view is created once; every later prop change has its own effect below.
-		// oxlint-disable-next-line react-hooks/exhaustive-deps
+		// oxlint-disable-next-line react-hooks/exhaustive-deps -- the view is created once; later prop changes have their own effects
 	}, []);
 
 	useEffect(() => {
