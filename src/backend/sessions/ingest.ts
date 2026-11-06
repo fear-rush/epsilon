@@ -211,6 +211,14 @@ export function appendToSession(
 		};
 	}
 	const summary = parsed.summary;
+	// A chunk parsed on its own has no message activity to find, and `parseSession` falls
+	// back to the file's mtime for a whole file. Folding that in would say an appended
+	// thinking-level entry moved the chat to now; only a user or assistant message counts.
+	const appendedActivity = appendedEntries.reduce(
+		(max, entry) =>
+			entry.kind === "user" || entry.kind === "assistant" ? Math.max(max, entry.ts ?? 0) : max,
+		0,
+	);
 	return {
 		entries: appendedEntries,
 		summary: {
@@ -219,7 +227,7 @@ export function appendToSession(
 				previous.firstMessage === "(no messages)" && summary.firstMessage !== "(no messages)"
 					? summary.firstMessage
 					: previous.firstMessage,
-			lastActivity: Math.max(previous.lastActivity, summary.lastActivity),
+			lastActivity: Math.max(previous.lastActivity, appendedActivity),
 			leafId: summary.leafId ?? previous.leafId,
 			messageCount: previous.messageCount + summary.messageCount,
 			mtimeNs: stats.mtimeNs,

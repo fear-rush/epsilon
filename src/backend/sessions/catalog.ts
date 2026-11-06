@@ -61,6 +61,21 @@ const headHash = (path: string): Effect.Effect<string | null> =>
 		Effect.orElseSucceed(() => null),
 	);
 
+/**
+ * The fields the sidebar shows. Size, mtime, hashes and the leaf say how the row was read
+ * or where its branch ends — none of them is a word the list shows, so a file whose only
+ * change is one of those refreshes no list.
+ */
+const sameSummary = (previous: StoredSummary, next: StoredSummary): boolean =>
+	previous.id === next.id &&
+	previous.cwd === next.cwd &&
+	previous.name === next.name &&
+	previous.parentSession === next.parentSession &&
+	previous.created === next.created &&
+	previous.lastActivity === next.lastActivity &&
+	previous.messageCount === next.messageCount &&
+	previous.firstMessage === next.firstMessage;
+
 export const makeCatalog = (
 	db: Database,
 	onChanged: (version: number) => void = () => undefined,
@@ -101,7 +116,9 @@ export const makeCatalog = (
 				const result = appendToSession(previous, path, text, stats, previous.parsedBytes);
 				upsertSession(db, result.summary);
 				appendEntries(db, path, result.entries);
-				return "updated";
+				// pi writes a thinking-level entry when a chat opens. The file changed, the
+				// list did not; answering "updated" would refetch every sidebar for it.
+				return sameSummary(previous, result.summary) ? null : "updated";
 			}
 			const text = yield* readTextSync(path);
 			const parsed = parseSession(path, text, stats);
@@ -111,7 +128,8 @@ export const makeCatalog = (
 			}
 			upsertSession(db, parsed.summary);
 			replaceEntries(db, path, parsed.entries);
-			return previous === null ? "added" : "updated";
+			if (previous === null) return "added";
+			return sameSummary(previous, parsed.summary) ? null : "updated";
 		});
 
 	const sync = (roots: ReadonlyArray<string>): Effect.Effect<SyncResult> =>

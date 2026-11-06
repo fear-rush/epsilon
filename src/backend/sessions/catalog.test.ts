@@ -144,6 +144,28 @@ describe("catalog conformance", () => {
 		expect(after.row?.messageCount).toBe(before.messageCount + 1);
 	});
 
+	test("an appended entry the list cannot show is not an update", async () => {
+		// pi appends this when a chat opens; every sidebar used to refetch for it.
+		appendFileSync(
+			fileFor("s-linear"),
+			`${JSON.stringify({
+				id: "e-thinking",
+				parentId: "e000009",
+				thinkingLevel: "off",
+				timestamp: "2026-01-02T01:00:00.000Z",
+				type: "thinking_level_change",
+			})}\n`,
+		);
+
+		const result = await runEffect(
+			Effect.gen(function* () {
+				const catalog = yield* Catalog;
+				return yield* catalog.sync([root]);
+			}).pipe(Effect.provide(catalogLayer)),
+		);
+		expect(result.updated).toBe(0);
+	});
+
 	test("a deleted file loses its rows", async () => {
 		rmSync(fileFor("s-branch"));
 		const result = await runEffect(
