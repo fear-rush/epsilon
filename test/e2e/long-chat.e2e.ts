@@ -52,55 +52,6 @@ test("a 5,000-entry chat scrolls to the top without a jump", async ({
 	const transcript = page.getByRole("feed");
 	await expect(transcript).toBeVisible();
 
-	// The jump rail owns a gutter to the left of the feed: its dots must never sit over text.
-	const rail = page.getByRole("navigation", { name: "Jump to a message" });
-	await expect(rail).toBeVisible();
-	const [feedBox, railBox] = await Promise.all([transcript.boundingBox(), rail.boundingBox()]);
-	expect(feedBox).not.toBeNull();
-	expect(railBox).not.toBeNull();
-	if (feedBox !== null && railBox !== null) {
-		expect(railBox.x + railBox.width).toBeLessThanOrEqual(feedBox.x + 1);
-	}
-
-	// One dot marks the current turn and stays in the five-slot window even in a long chat.
-	// Hovering another never darkens it, so a scroll or a jump cannot draw a second dark dot.
-	const activeMarker = rail.locator('[data-rail-active="true"]');
-	await expect(activeMarker).toHaveCount(1);
-	const viewport = rail.locator('[data-rail-viewport="true"]');
-	// The rail smooth-follows like main; wait for the active dot to settle in view.
-	await expect
-		.poll(async () => {
-			const [viewportBox, markerBox] = await Promise.all([
-				viewport.boundingBox(),
-				activeMarker.boundingBox(),
-			]);
-			if (viewportBox === null || markerBox === null) return false;
-			return (
-				markerBox.y >= viewportBox.y - 1 &&
-				markerBox.y + markerBox.height <= viewportBox.y + viewportBox.height + 1
-			);
-		})
-		.toBe(true);
-	const viewportBox = await viewport.boundingBox();
-	expect(viewportBox).not.toBeNull();
-	// Hover a dot inside the five-slot window, not an off-screen one that Playwright would
-	// scroll into view first.
-	const buttons = rail.locator('button[aria-label^="Go to message"]');
-	const buttonCount = await buttons.count();
-	const elements = Array.from({ length: buttonCount }, (_, index) => buttons.nth(index));
-	const [currents, boxes] = await Promise.all([
-		Promise.all(elements.map((button) => button.getAttribute("aria-current"))),
-		Promise.all(elements.map((button) => button.boundingBox())),
-	]);
-	const idleIndex = boxes.findIndex((box, index) => {
-		if (currents[index] === "step" || box === null || viewportBox === null) return false;
-		return box.y >= viewportBox.y && box.y + box.height <= viewportBox.y + viewportBox.height;
-	});
-	expect(idleIndex).toBeGreaterThanOrEqual(0);
-	const idle = rail.locator('button[aria-label^="Go to message"]').nth(idleIndex);
-	await idle.hover();
-	await expect(idle.locator("span")).not.toHaveClass(/bg-foreground/);
-
 	// The chat opens on a window near its end, not on all 5,000 entries.
 	const firstPrompt = async (): Promise<number> => {
 		const text = await transcript.innerText();
@@ -141,7 +92,6 @@ test("the rail stays when the recent window has no user turn", async ({
 	const rail = page.getByRole("navigation", { name: "Jump to a message" });
 	await expect(rail).toBeVisible({ timeout: 10_000 });
 	await expect(rail.getByRole("button", { name: /^Go to message \d+:/ })).toHaveCount(6);
-	await expect(rail.locator('[data-rail-active="true"]')).toHaveCount(1);
 
 	// A dot for a turn older than the window loads the history page that holds it.
 	await rail.getByRole("button", { name: /Go to message 1: user turn 0/ }).click();

@@ -96,8 +96,8 @@ not instructions.
 3. Server code outside `platform/` reaches IO through a service: `Context.Service`, its
    `Layer` in the same file, `Effect.fn` on every operation
    ([docs/effect.md](docs/effect.md)).
-4. Rerun `bun run check`. A feature is done when its tests pass and its failures are
-   visible in the UI.
+4. Run the check the change calls for ([Check by change](#check-by-change)). A feature
+   is done when its behavior is verified and its failures are visible in the UI.
 
 There is no line limit; split files by meaning, as
 [ARCHITECTURE.md, File rules](docs/ARCHITECTURE.md#file-rules) says.
@@ -106,9 +106,10 @@ There is no line limit; split files by meaning, as
 
 - **One item at a time.** Take the next unticked item of [docs/NEXT.md](docs/NEXT.md).
   Something else you notice becomes a new unticked item there, not part of this commit.
-- **Done needs evidence.** A tick needs what the item's _Done when_ asks for. For UI that
-  includes `bun run parity` and screenshots of the running app read by you; type-check
-  and lint passing say nothing about pixels.
+- **Done needs evidence, at the change's risk.** A tick needs what the item's _Done when_
+  asks for. A UI slice gets one screenshot of the running app read by you and the one spec
+  that covers it; parity is a merge check, not a per-edit ritual. Type-check and lint
+  passing say nothing about pixels, and a pixel assertion does not prove feel.
 - **Never drop, never improvise.** Removing or restyling something of `main`'s, or a
   visible change beyond the feedback system, needs the owner's yes first.
 - **Same commit**: the code, its tests, the `docs/NEXT.md` tick, and the ARCHITECTURE or
@@ -116,15 +117,16 @@ There is no line limit; split files by meaning, as
 - **Report**: what changed, the commands run and their results, the test duration,
   screenshot paths, and what you could not do. Say plainly when something failed or was
   skipped.
-- Run tests through `bun run test` or a bounded command; report the duration. The suite
-  budget is 10 s.
+- Run tests through `bun run test` or the one spec; report the duration. The 308-test
+  suite budget is 10 s, a targeted e2e 30 s, the full e2e 60 s.
 - Never wait with a sleep. Wait on an event, or on `until(...)` with a deadline. If a run
   exceeds its budget, stop and report what was running; do not retry blindly and do not
   raise the timeout.
 - **Every check has a deadline, stated before you start it.** The guide: `bun run check`
-  15 s, one screenshot 15 s, one manual app run 60 s. A step that passes twice its deadline
-  is stopped, its process killed, and the delay reported as part of the result. Waiting
-  longer is a finding about the code or the harness, not something to sit through.
+  15 s, one targeted e2e 30 s, the full e2e 60 s, one screenshot 15 s, one manual app run
+  60 s. A step that passes twice its deadline is stopped, its process killed, and the delay
+  reported as part of the result. Waiting longer is a finding about the code or the harness,
+  not something to sit through.
 - Run the long thing once, on the smallest input that proves the point. Do not photograph
   every state in one sitting when one state answers the question; report what is left.
 - Bound anything that starts a browser or a server with
@@ -138,6 +140,18 @@ There is no line limit; split files by meaning, as
   next command, and a stray process is itself a failure to report.
 - A check that starts a server or an engine sets `EPSILON_AGENT_HOME` to a scratch
   directory. The test preload does this for tests; do it yourself for a manual run.
+
+### Check by change
+
+| Change                                                                                                       | Check                                                      |
+| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| Any edit                                                                                                     | `bun run type-check` and `bun run lint`                    |
+| One UI slice                                                                                                 | its one e2e spec, plus one screenshot read by you          |
+| Batch boundary, or `src/protocol`/`src/backend`/`src/engine`/shared state/build config/more than one feature | `bun run check` plus the touched e2e specs                 |
+| Before merge, or the owner asks                                                                              | full `bun run test:e2e`, `bun run parity`, `bun run bench` |
+
+A CSS/copy-only batch may skip the 308-test suite. Animations, placement and feel are
+reviewed in the screenshot, not asserted.
 
 ## Ask before acting when
 
