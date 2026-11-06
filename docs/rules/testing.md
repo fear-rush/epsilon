@@ -69,7 +69,7 @@ Enforced by: review
 
 ### TS-11 · Screenshot a route with `bun run shoot`; an interactive state with playwright-cli
 
-Do: `bun run build`, then `bun run shoot <route…> [--out dir]`; it starts the built server on a scratch home with the stub model, runs iris against it and waits for `data-ready="true"` on the app root (the socket is open, the router is idle, no query is in flight). For a dialog, a menu, hover or a stopped server, run `bun run start` on a scratch `EPSILON_AGENT_HOME` and use playwright-cli.
+Do: `bun run build`, then `bun run shoot <route…> [--out dir]`; it starts the built server on a scratch home with the stub model, runs iris against it and waits for `data-ready="true"` on `<html>` (the socket is open, the router is idle, no query is in flight). For a dialog, a menu, hover or a stopped server, run `bun run start` on a scratch `EPSILON_AGENT_HOME` and use playwright-cli.
 Don't: write a one-off Playwright, Puppeteer or Chrome script for a screenshot or a quick look.
 Enforced by: review
 

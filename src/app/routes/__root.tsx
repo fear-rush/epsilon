@@ -5,6 +5,7 @@ import {
 	Outlet,
 	useRouterState,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { RouterContext } from "@/core/router";
@@ -18,21 +19,30 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 	component: Root,
 });
 
-/** True only when the socket is open, the router is idle and no query is in flight. */
-function useReady(): boolean {
+/**
+ * Marks `<html data-ready="true">` only when the socket is open, the router is idle and no
+ * query is in flight, for `bun run shoot`. A leaf that renders nothing, so a fetch
+ * re-renders it alone, not the tree under `Root`.
+ */
+function ReadyMarker() {
 	const health = useAppHealth();
 	const routing = useRouterState({ select: (state) => state.status === "pending" });
 	const fetching = useIsFetching();
-	return health === "ok" && !routing && fetching === 0;
+	const ready = health === "ok" && !routing && fetching === 0;
+	useEffect(() => {
+		if (ready) document.documentElement.dataset["ready"] = "true";
+		else delete document.documentElement.dataset["ready"];
+	}, [ready]);
+	return null;
 }
 
 function Root() {
-	const ready = useReady();
 	return (
 		<TooltipProvider>
 			<HeadContent />
 			<StatusProvider>
-				<div className="flex h-svh flex-col" data-ready={ready ? "true" : undefined}>
+				<ReadyMarker />
+				<div className="flex h-svh flex-col">
 					<AppStatus />
 					<div className="relative flex min-h-0 flex-1 flex-col contain-layout">
 						<Outlet />
