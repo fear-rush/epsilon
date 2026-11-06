@@ -547,6 +547,12 @@ The session index reads pi's v3 JSONL directly, so these are the fields it depen
 The index's conformance test pins each one to `SessionManager.listAll`; a pi upgrade that
 changes one fails there first.
 
+pi stores no project record. A session header's `cwd` is the only project-like value:
+`SessionManager.list(cwd)` filters one encoded session folder, `listAll()` returns every
+session flat and newest first, and the TUI's resume picker offers "current folder" and
+"all", printing each all-view row's cwd without grouping. Epsilon's project grouping is a
+view over that field, not a second store.
+
 - The first line is `{ type: "session", version: 3, id, timestamp, cwd, parentSession? }`.
   A file whose first entry is not a session header is not listed.
 - Every entry is `{ type, id, parentId, timestamp, ... }`; `session_info` carries `name`.

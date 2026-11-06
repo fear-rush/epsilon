@@ -97,6 +97,27 @@ Open: the design put the writes in a Worker; it was not built, and the sync runs
 server process, so a cold build stalls the socket. Whether to build the Worker is an item
 in [the rebuild plan](../archive/docs/plan/04-safety.md).
 
+## The sidebar pages its lists
+
+The session column shows ten Projects, ten Chats, ten missing folders and ten chats inside
+an expanded project; `Load more` adds ten to that list. Pinned chats keep their place at
+the top of Chats. Projects are ordered by the newest chat activity in the folder, not by
+name, because a project is derived from its sessions' `cwd` and activity is the only
+recency it has. A folder whose path is gone is neither a
+project nor a chat: it sits in a separate, last group, still expandable, with `Remove from
+Epsilon` deleting its chats through the same operation as any folder's removal. Search
+reads the whole list and shows every match, so a page never hides a chat from a search.
+
+Why: the operator's real home held 333 chats in 66 deleted folders beside 73 live project
+folders. Alphabetical projects put `.agents` and `.pi` above the work, and the deleted
+folders read as ordinary chats. The column was a wall, and a removed directory was
+indistinguishable from a live one.
+
+Not: server-side paging, a protocol change that duplicates the grouping and trust reads
+for 958 rows. Not: deleting missing chats automatically, which is destructive and would
+remove the way to reopen a transcript by choosing a folder. Not: a stored project list;
+pi has no project record ([pi-sdk.md](pi-sdk.md)).
+
 ## An engine cap
 
 `Engines.maxRunning` (default 8, in Epsilon's own settings file) counts engine

@@ -24,6 +24,9 @@ import { call } from "@/core/runtime";
 import { useSetProjectTrust } from "./queries.ts";
 import { TrustNotice } from "./trust-notice.tsx";
 
+/** The newest folders offered above the browser; the browser reaches the rest. */
+const MAX_RECENT_PROJECTS = 10;
+
 type FolderDialogProps = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -337,7 +340,7 @@ export function FolderDialog({
 									<p className="px-2 py-1 text-meta font-medium text-muted-foreground">
 										Recent projects
 									</p>
-									{recent.map((project) => (
+									{recent.slice(0, MAX_RECENT_PROJECTS).map((project) => (
 										<button
 											key={project.path}
 											type="button"

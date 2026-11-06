@@ -138,6 +138,9 @@ cannot represent is a visible notice, never silence.
 - Every column starts with a `PaneBar` (`h-bar`, the one rule columns share), so the
   sidebar, a list and a chat share one line. One inset per column: bar title, search, a
   group heading and a row's text start on the column's gutter.
+- The session column pages every chat list: ten rows, `Load more` adds ten, and a search
+  shows all matches. Projects sort by their newest chat, and a folder whose path is gone
+  sits in its own last group, never beside a live project.
 - A selection reveals with one `enter-rise`: a chat's rows and composer rise with the same
   token. A pane bar's title and count drop in from above, and again when their text
   changes.
