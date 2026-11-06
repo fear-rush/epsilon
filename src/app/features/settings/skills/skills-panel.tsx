@@ -4,10 +4,10 @@ import { useState } from "react";
 
 import { ListGroup } from "@/components/patterns/list/list-group";
 import { ListItem } from "@/components/patterns/list/list-item";
-import { ListPane } from "@/components/patterns/list/list-pane";
 import { MasterDetail } from "@/components/patterns/pane/master-detail";
 import { Notice } from "@/components/patterns/status/notice";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ListPane } from "@/features/settings/shell/list-pane";
 
 import { useSettings, useSettingsProject } from "../queries.ts";
 import { ForeignSkills } from "./foreign-skills.tsx";

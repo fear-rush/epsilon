@@ -133,7 +133,7 @@ function SignInQuestion({
 								)}
 							</ItemContent>
 							<ItemActions>
-								<ChevronRightIcon className="size-4 text-muted-foreground" />
+								<ChevronRightIcon className="size-icon text-muted-foreground" />
 							</ItemActions>
 						</Item>
 					))}
@@ -211,7 +211,7 @@ function SignInFlow({
 						<ItemDescription>{stepLineOf(flow)}</ItemDescription>
 					</ItemContent>
 					<ItemActions>
-						<Button size="sm" variant="destructive" disabled={cancelling} onClick={onCancel}>
+						<Button size="sm" variant="outline" disabled={cancelling} onClick={onCancel}>
 							Cancel
 						</Button>
 					</ItemActions>

@@ -13,8 +13,8 @@
 	display: grid;
 	grid-template-rows: 1fr;
 	transition:
-		grid-template-rows 200ms ease-out,
-		opacity 200ms ease-out;
+		grid-template-rows var(--duration-base) ease-out,
+		opacity var(--duration-base) ease-out;
 }
 
 .settings-row-anim > * {
@@ -36,7 +36,7 @@
 /* A newly added chat enters from the sidebar's left edge and settles with a short
    overshoot, so the row is noticed without moving the rest of the list. */
 .chat-row-enter {
-	animation: chat-row-enter 360ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+	animation: chat-row-enter var(--duration-slow) var(--ease-overshoot) both;
 }
 
 @keyframes chat-row-enter {
@@ -73,8 +73,8 @@
 }
 
 ::view-transition-group(*) {
-	animation-duration: 280ms;
-	animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+	animation-duration: var(--duration-base);
+	animation-timing-function: var(--ease-settle);
 }
 
 @media (prefers-reduced-motion: reduce) {

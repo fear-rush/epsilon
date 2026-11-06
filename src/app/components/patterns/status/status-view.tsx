@@ -67,7 +67,7 @@ export function StatusView(props: StatusViewProps) {
 	const Icon = view.icon;
 	return (
 		<div className="flex h-full min-h-0 animate-enter-fade flex-col items-center justify-center gap-3 p-6 text-center">
-			<Icon className={toneText(view.tone, "size-6")} aria-hidden />
+			<Icon className={toneText(view.tone, "size-icon-lg")} aria-hidden />
 			<div className="grid max-w-sm gap-1">
 				<p className="text-section">{view.title}</p>
 				{view.line !== undefined && view.line !== "" && (

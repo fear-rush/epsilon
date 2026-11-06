@@ -30,7 +30,7 @@ export function Confirmation({
 	onDeny: () => void;
 }) {
 	return (
-		<Item variant="outline" size="sm" className="rounded-xl">
+		<Item variant="outline" size="sm" className="rounded-card">
 			<ItemMedia variant="icon">
 				<ShieldQuestionIcon />
 			</ItemMedia>

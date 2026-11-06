@@ -3,6 +3,8 @@ import * as React from "react";
 
 import { cn } from "@/lib/cn";
 
+// local change: Epsilon's motion tokens (duration-fast/base, ease-settle) replace the registry's.
+
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {
 	return <PopoverPrimitive.Root data-slot="popover" {...props} />;
 }
@@ -37,7 +39,7 @@ function PopoverContent({
 				<PopoverPrimitive.Popup
 					data-slot="popover-content"
 					className={cn(
-						"z-50 flex w-72 origin-(--transform-origin) flex-col gap-4 rounded-lg bg-popover p-4 text-sm text-popover-foreground shadow-lg ring-1 ring-foreground/5 outline-hidden transition-[opacity,scale] duration-150 ease-out data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:ease-in data-starting-style:scale-95 data-starting-style:opacity-0 dark:ring-foreground/10",
+						"z-50 flex w-72 origin-(--transform-origin) flex-col gap-4 rounded-lg bg-popover p-4 text-sm text-popover-foreground shadow-lg ring-1 ring-foreground/5 outline-hidden transition-[opacity,scale] duration-fast ease-settle data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 dark:ring-foreground/10",
 						className,
 					)}
 					{...props}

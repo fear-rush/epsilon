@@ -38,7 +38,7 @@ export function StatusRow({
 		>
 			{spinner && <Spinner />}
 			{!spinner && Icon !== undefined && (
-				<Icon className={toneText(tone, "size-4 shrink-0")} aria-hidden />
+				<Icon className={toneText(tone, "size-icon shrink-0")} aria-hidden />
 			)}
 			{text !== undefined && <span className="min-w-0 flex-1">{text}</span>}
 			{children !== undefined && <div className="min-w-0 flex-1">{children}</div>}

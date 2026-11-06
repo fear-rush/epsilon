@@ -60,7 +60,7 @@ function ImportSession({ onClose }: { onClose: () => void }) {
 						</div>
 						{slot !== null &&
 							createPortal(
-								<Button type="button" variant="destructive" onClick={flow.cancel}>
+								<Button type="button" variant="outline" onClick={flow.cancel}>
 									Cancel
 								</Button>,
 								slot,

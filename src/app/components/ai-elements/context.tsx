@@ -39,13 +39,13 @@ export function Context({
 						variant="ghost"
 						size="xs"
 						aria-label={ariaLabel}
-						className="gap-1 rounded-md text-meta text-muted-foreground tabular-nums"
+						className="gap-1 rounded-chip text-meta text-muted-foreground tabular-nums"
 					/>
 				}
 			>
 				{label}
 			</HoverCardTrigger>
-			<HoverCardContent side="top" align="end" className="flex w-64 flex-col gap-3 rounded-xl">
+			<HoverCardContent side="top" align="end" className="flex w-64 flex-col gap-3 rounded-card">
 				<div className="flex items-center justify-between gap-3 text-meta">
 					<span className="font-medium">Context</span>
 					<span className="text-muted-foreground">

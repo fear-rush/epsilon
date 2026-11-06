@@ -4,6 +4,8 @@ import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 
 import { cn } from "@/lib/cn";
 
+// local change: Epsilon's motion tokens (duration-fast/base, ease-settle) replace the registry's.
+
 function TooltipProvider({ delay = 0, ...props }: TooltipPrimitive.Provider.Props) {
 	return <TooltipPrimitive.Provider data-slot="tooltip-provider" delay={delay} {...props} />;
 }
@@ -38,7 +40,7 @@ function TooltipContent({
 				<TooltipPrimitive.Popup
 					data-slot="tooltip-content"
 					className={cn(
-						"z-50 inline-flex w-fit max-w-xs origin-(--transform-origin) items-center gap-1.5 rounded-lg bg-foreground px-3 py-1.5 text-xs text-background transition-[opacity,scale] duration-150 ease-out has-data-[slot=kbd]:pr-1.5 data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:ease-in data-starting-style:scale-95 data-starting-style:opacity-0 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50 **:data-[slot=kbd]:rounded-md",
+						"z-50 inline-flex w-fit max-w-xs origin-(--transform-origin) items-center gap-1.5 rounded-lg bg-foreground px-3 py-1.5 text-xs text-background transition-[opacity,scale] duration-fast ease-settle has-data-[slot=kbd]:pr-1.5 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50 **:data-[slot=kbd]:rounded-md",
 						className,
 					)}
 					{...props}

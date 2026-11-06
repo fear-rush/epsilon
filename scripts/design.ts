@@ -52,7 +52,11 @@ export function generate(markdown: string): string {
 	const lines: string[] = [HEADER, "", ":root {"];
 	for (const [name, value] of Object.entries(tokens.colors)) lines.push(`\t--${name}: ${value};`);
 	const base = rem(tokens.rounded["lg"] ?? 0);
-	lines.push(`\t--radius: ${tokens.rounded["lg"]};`, "}", "");
+	lines.push(`\t--radius: ${tokens.rounded["lg"]};`);
+	for (const [name, value] of Object.entries(tokens.motion)) {
+		if (name.startsWith("duration-")) lines.push(`\t--${name}: ${value};`);
+	}
+	lines.push("}", "");
 
 	lines.push("/* Radius follows `--radius`, which a sidebar overrides for its subtree. */");
 	lines.push("@theme inline {");

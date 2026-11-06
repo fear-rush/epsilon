@@ -26,9 +26,9 @@ import { useState } from "react";
 
 import type { ProjectTrustAction } from "#protocol/settings/projects";
 import { DeleteDialog } from "@/components/patterns/confirm-dialogs";
+import { EmptyState } from "@/components/patterns/empty-state";
 import { SearchField } from "@/components/patterns/list/search-field";
 import { PaneBar } from "@/components/patterns/pane/pane-bar";
-import { InlineStatus } from "@/components/patterns/status/inline-status";
 import { LoadingState } from "@/components/patterns/status/loading-state";
 import { Notice } from "@/components/patterns/status/notice";
 import { toneText } from "@/components/patterns/status/status-tone";
@@ -327,7 +327,7 @@ export function SessionSidebar() {
 								<SidebarGroupContent>
 									{matchedChats.length === 0 ? (
 										<div className="px-2">
-											<InlineStatus icon={MessageSquareIcon}>No chats yet</InlineStatus>
+											<EmptyState icon={MessageSquareIcon} title="No chats yet" />
 										</div>
 									) : (
 										<SidebarMenu>
@@ -502,19 +502,19 @@ function ProjectGroup({
 			}}
 			render={<SidebarMenuItem className="animate-enter-rise" />}
 		>
-			<div className="group/project flex items-center gap-1 rounded-md pr-1 hover:bg-sidebar-accent">
+			<div className="group/project flex items-center gap-1 rounded-chip pr-1 hover:bg-sidebar-accent">
 				<CollapsibleTrigger
 					render={
 						<SidebarMenuButton className="min-w-0 flex-1 gap-1.5 hover:bg-transparent active:bg-transparent" />
 					}
 				>
-					<Folder className="size-4 shrink-0 animate-enter-fade text-muted-foreground" />
+					<Folder className="size-icon shrink-0 animate-enter-fade text-muted-foreground" />
 					<span className="truncate">{project.name}</span>
 					{!project.trusted && (
 						<Tip label="Not trusted yet">
 							<ShieldAlertIcon
 								aria-label="Not trusted"
-								className={toneText("warning", "size-4 shrink-0")}
+								className={toneText("warning", "size-icon shrink-0")}
 							/>
 						</Tip>
 					)}
@@ -598,7 +598,7 @@ function ProjectGroup({
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</div>
-			<CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-all duration-base data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
+			<CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-base data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
 				<SidebarMenu className="ml-3 w-auto pl-2">
 					{shownSessions.map((session) => (
 						<SessionItem

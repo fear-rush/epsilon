@@ -8,9 +8,9 @@ import { useMatchRoute } from "@tanstack/react-router";
 
 import { ListGroup } from "@/components/patterns/list/list-group";
 import { ListItem } from "@/components/patterns/list/list-item";
-import { ListPane } from "@/components/patterns/list/list-pane";
 import { MasterDetail } from "@/components/patterns/pane/master-detail";
 import { Notice } from "@/components/patterns/status/notice";
+import { ListPane } from "@/features/settings/shell/list-pane";
 
 import { contextQuery, useSettingsProject } from "../queries.ts";
 import { CONTEXT_SECTIONS, contextSection } from "./context-sections.ts";

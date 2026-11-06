@@ -85,6 +85,9 @@ spacing:
   dialog-body-sm: 16rem
   dialog-body-md: 24rem
   dialog-body-lg: 36rem
+  icon-sm: 0.875rem
+  icon: 1rem
+  icon-lg: 1.5rem
 containers:
   content: 56rem
   dialog-sm: 28rem
@@ -92,6 +95,7 @@ containers:
   dialog-lg: 56rem
 motion:
   ease-settle: cubic-bezier(0.16, 1, 0.3, 1)
+  ease-overshoot: cubic-bezier(0.34, 1.56, 0.64, 1)
   duration-fast: 150ms
   duration-base: 220ms
   duration-slow: 360ms
@@ -120,7 +124,7 @@ components:
     typography: "{typography.body}"
   empty-state:
     textColor: "{colors.muted-foreground}"
-    typography: "{typography.body}"
+    typography: "{typography.meta}"
   detail-empty:
     textColor: "{colors.muted-foreground}"
   status-view:
@@ -234,7 +238,10 @@ Spacing by role. Width, height, grid and flex placement are free and never linte
 - `row`: the gap between rows in a list. `field`: between fields in a form. `card`:
   between cards in a section. `section`: between sections.
 - `containers.content` is the widest a detail page's content grows (`max-w-content`).
-- `dialog-body-*` is a dialog body's minimum height by size; `containers.dialog-*` its width.
+- `dialog-body-sm` to `-lg` is a dialog body's steady height by size (a flex basis: it
+  shrinks on a short window and scrolls inside); `containers.dialog-*` its width.
+- `icon-sm`, `icon`, `icon-lg`: an icon's size (`size-icon`): 0.875rem inside dense text, 1rem
+  by default, 1.5rem in a pane's centred state.
 - One inset per column: a bar's title, search, a group heading and a row's text start on
   the column's gutter.
 - The jump rail owns a narrow gutter at the pane's left edge as a sibling of the scroll
@@ -249,7 +256,8 @@ Borders, not shadows, except overlays (dialog, menu, popover).
 One ladder by role: `chip` (rows and chips), `control` (controls, menus, code), `card`
 (dialogs, panels, bordered lists), `bubble` (message bubbles only), `pill` (pills and
 circular icon buttons). `sm` to `4xl` are the registry's steps behind them; a feature uses
-the role names. Radius follows `--radius`, which the sidebar overrides for its subtree.
+the role names, and `rounded-none`. The lint rule enforces it outside `components/ui` and
+`components/editor`. Radius follows `--radius`, which the sidebar overrides for its subtree.
 
 ## Components
 
@@ -281,8 +289,8 @@ Don't: repeat the label in the description.
 
 ### empty-state
 
-Icon, "No {plural} yet" (no period) and an optional action. One component for list panes
-and form pages.
+Icon, "No {plural} yet" (no period) in `meta` size, and an optional action. One component
+for list panes and form pages.
 Don't: write a second empty look.
 
 ### detail-empty
@@ -322,6 +330,12 @@ Don't: use it for a failure that needs an action; use a notice.
 Width by size; body min-height by size, max-height `80vh`, scrolls inside past it.
 Content stays mounted while closed so the transitions play.
 Don't: let a dialog resize between steps.
+
+### focus
+
+`ring-3 ring-ring/50`, no offset, on `:focus-visible` for every control: buttons, inputs,
+sidebar menu buttons and any focusable row.
+Don't: write another ring width, opacity or outline.
 
 ### button-default, button-outline, button-ghost, button-destructive
 
@@ -390,7 +404,7 @@ written here; a deviation carries `// ui: <reason>`. Layout is never linted.
 
 ## Motion
 
-One curve (`ease-settle`), three durations (`fast`, `base`, `slow`) and five entrances:
+One curve (`ease-settle`, and `ease-overshoot` for a newly added chat's entrance), three durations (`fast`, `base`, `slow`) and five entrances:
 `enter-fade`, `enter-rise`, `enter-drop`, `enter-left`, `enter-right`, with stagger steps
 `enter-delay-1` to `-3`. A list's band and a picker drop in; a selected pane's tabs, body
 and footer rise as one reveal. Reduced motion stops every non-essential animation, but a

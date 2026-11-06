@@ -44,9 +44,9 @@ export function TrustGate({
 				<StatusView {...errorView(status.error)} />
 			) : (
 				<div className="flex min-h-0 flex-1 animate-enter-rise items-center justify-center p-6">
-					<div className="grid w-full max-w-dialog-md gap-field rounded-xl border p-4">
+					<div className="grid w-full max-w-dialog-md gap-field rounded-card border p-4">
 						<div className="flex items-center gap-3">
-							<FolderIcon className="size-4 shrink-0" aria-hidden />
+							<FolderIcon className="size-icon shrink-0" aria-hidden />
 							<div className="min-w-0">
 								<p className="text-section">Trust {status.data.name}?</p>
 								<p className="truncate font-mono text-meta text-muted-foreground">
@@ -57,7 +57,7 @@ export function TrustGate({
 						<TrustNotice status={status.data} />
 						{trust.isError && <Notice error={trust.error} />}
 						<div className="flex justify-end gap-2">
-							<Button variant="destructive" onClick={() => void navigate({ to: "/", search: {} })}>
+							<Button variant="outline" onClick={() => void navigate({ to: "/", search: {} })}>
 								Cancel
 							</Button>
 							{status.data.parent !== null && (

@@ -64,17 +64,17 @@ export function CollapsibleSection({
 				onOpenChange?.(next);
 			}}
 		>
-			<CollapsibleTrigger className="group/override flex w-full cursor-pointer items-start justify-between gap-field rounded-xl border bg-card pad-row text-left transition-colors hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
+			<CollapsibleTrigger className="group/override flex w-full cursor-pointer items-start justify-between gap-field rounded-card border bg-card pad-row text-left transition-colors hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
 				<span className="grid gap-0.5">
 					<span className="text-body font-medium">{title}</span>
 					{description !== undefined && (
 						<span className="text-meta text-muted-foreground">{description}</span>
 					)}
 				</span>
-				<ChevronDownIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-aria-expanded/override:rotate-180" />
+				<ChevronDownIcon className="mt-0.5 size-icon shrink-0 text-muted-foreground transition-transform group-aria-expanded/override:rotate-180" />
 			</CollapsibleTrigger>
 			<CollapsibleContent
-				className="h-(--collapsible-panel-height) overflow-hidden transition-all duration-slow ease-in-out data-ending-style:h-0 data-starting-style:h-0"
+				className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-slow ease-in-out data-ending-style:h-0 data-starting-style:h-0"
 				onTransitionEnd={(event: TransitionEvent<HTMLDivElement>) => {
 					if (!scrollAfterOpen.current) return;
 					if (event.target !== event.currentTarget || event.propertyName !== "height") return;

@@ -74,14 +74,14 @@ export function AddProviderDialog({
 			size="md"
 			title={TITLE[mode]}
 			footer={
-				<Button type="button" variant="destructive" onClick={() => onOpenChange(false)}>
+				<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
 					Cancel
 				</Button>
 			}
 		>
 			<div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-field">
 				<div className="relative">
-					<SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
+					<SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-icon -translate-y-1/2 text-muted-foreground" />
 					<Input
 						value={query}
 						placeholder="Search providers"
@@ -95,7 +95,7 @@ export function AddProviderDialog({
 						<ListItem
 							name="Custom provider"
 							description="Base URL, API and models you define"
-							trailing={<PlusIcon className="size-4 text-muted-foreground" />}
+							trailing={<PlusIcon className="size-icon text-muted-foreground" />}
 							onClick={() => go("new")}
 						/>
 					)}
@@ -118,7 +118,9 @@ export function AddProviderDialog({
 									}
 									trailing={
 										<>
-											{mode === "account" && <LogInIcon className="size-4 text-muted-foreground" />}
+											{mode === "account" && (
+												<LogInIcon className="size-icon text-muted-foreground" />
+											)}
 											{badge !== undefined && <Badge variant="secondary">{badge}</Badge>}
 										</>
 									}

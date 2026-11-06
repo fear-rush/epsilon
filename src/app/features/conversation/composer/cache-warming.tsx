@@ -40,7 +40,7 @@ export function CacheWarmingState({ status }: { status: CacheWarming | undefined
 		<Tip label={detailOf(status)}>
 			<span
 				tabIndex={0}
-				className="rounded-md text-meta text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+				className="rounded-chip text-meta text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 			>
 				{stateLabel(status)}
 			</span>

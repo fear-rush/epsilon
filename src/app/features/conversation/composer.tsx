@@ -646,7 +646,7 @@ export function Composer({
 									<InputGroupButton
 										size="icon-sm"
 										variant="destructive"
-										className="rounded-full"
+										className="rounded-pill"
 										aria-label="Stop the run"
 										onClick={() => void onAbort()}
 									>
@@ -659,7 +659,7 @@ export function Composer({
 									type="submit"
 									size="icon-sm"
 									variant="default"
-									className="rounded-full"
+									className="rounded-pill"
 									disabled={text.trim() === "" || !writable || sending}
 									aria-label={busy ? "Steer the run" : "Send"}
 								>

@@ -95,7 +95,7 @@ export function StackTrace({
 									</TraceLine>
 								</TraceCollapsibleTrigger>
 								<TraceCollapsibleContent keepMounted>
-									<ol className="flex flex-col gap-1 overflow-x-auto rounded-md bg-muted p-3 font-mono text-meta">
+									<ol className="flex flex-col gap-1 overflow-x-auto rounded-chip bg-muted p-3 font-mono text-meta">
 										{internalFrames.map((frame) => (
 											<li key={frame.key} className="whitespace-nowrap">
 												{frame.line}

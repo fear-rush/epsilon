@@ -19,7 +19,7 @@ export function Section({
 			{description !== undefined && (
 				<p className="text-meta text-muted-foreground">{description}</p>
 			)}
-			<div className="divide-y overflow-hidden rounded-xl border bg-card">{children}</div>
+			<div className="divide-y overflow-hidden rounded-card border bg-card">{children}</div>
 		</section>
 	);
 }

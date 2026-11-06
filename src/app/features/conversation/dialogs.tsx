@@ -119,7 +119,7 @@ export function QuestionDialog({
 			footer={
 				<>
 					<Countdown seconds={remaining} />
-					<Button variant="destructive" onClick={cancel}>
+					<Button variant="outline" onClick={cancel}>
 						Cancel
 					</Button>
 					{question.kind !== "select" && <Button onClick={() => answer(text)}>Submit</Button>}

@@ -23,9 +23,7 @@ export function StepStatusIcon({
 	className?: string;
 }) {
 	if (status === "running") {
-		return (
-			<LoaderCircleIcon className={cn("animate-spin motion-reduce:animate-none", className)} />
-		);
+		return <LoaderCircleIcon className={cn("animate-spin", className)} />;
 	}
 	if (status === "pending") return <CircleIcon className={className} />;
 	if (status === "error") return <CircleAlertIcon className={className} />;

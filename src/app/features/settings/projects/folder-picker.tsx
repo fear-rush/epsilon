@@ -161,7 +161,7 @@ function FolderList({
 	}
 	if (current === undefined) return <LoadingState label="Reading folders…" />;
 	return (
-		<div className="grid max-h-64 gap-0.5 overflow-y-auto rounded-xl border p-1">
+		<div className="grid max-h-64 gap-0.5 overflow-y-auto rounded-card border p-1">
 			{current.folders.length === 0 && (
 				<p className="p-2 text-meta text-muted-foreground">No folders here.</p>
 			)}

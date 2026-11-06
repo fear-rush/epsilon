@@ -236,7 +236,7 @@ function BodyPreview({
 	return (
 		// oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- the rendered links keep their own keyboard activation; this only intercepts their clicks
 		<div
-			className="max-h-dialog-body-lg min-h-dialog-body-sm overflow-auto rounded-xl border bg-card p-4 text-body"
+			className="max-h-dialog-body-lg min-h-dialog-body-sm overflow-auto rounded-card border bg-card p-4 text-body"
 			aria-label="Instructions preview"
 			// A link to a skill or to a file of this skill stays inside the page.
 			onClick={(event) => {

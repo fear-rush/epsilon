@@ -222,7 +222,7 @@ export function FolderDialog({
 			description={description}
 			footer={
 				<>
-					<Button variant="destructive" onClick={() => close(false)}>
+					<Button variant="outline" onClick={() => close(false)}>
 						Cancel
 					</Button>
 					<Button
@@ -242,7 +242,7 @@ export function FolderDialog({
 			}
 		>
 			<div className="flex h-full min-h-0 flex-col gap-field">
-				<div className="flex flex-wrap items-center gap-2 rounded-lg border px-2 py-1.5">
+				<div className="flex flex-wrap items-center gap-2 rounded-control border px-2 py-1.5">
 					<Tip label="Up one folder">
 						<Button
 							variant="ghost"
@@ -328,7 +328,7 @@ export function FolderDialog({
 					</form>
 				)}
 
-				<div className="min-h-0 flex-1 overflow-y-auto rounded-lg border p-1">
+				<div className="min-h-0 flex-1 overflow-y-auto rounded-control border p-1">
 					{folders.isPending ? (
 						<LoadingState label="Loading folders…" />
 					) : folders.isError ? (
@@ -345,10 +345,10 @@ export function FolderDialog({
 											key={project.path}
 											type="button"
 											disabled={working}
-											className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-body hover:bg-muted"
+											className="flex items-center gap-2 rounded-chip px-2 py-1.5 text-left text-body hover:bg-muted"
 											onClick={() => void choose(project.path)}
 										>
-											<FolderIcon className="size-4 shrink-0 text-muted-foreground" />
+											<FolderIcon className="size-icon shrink-0 text-muted-foreground" />
 											<span className="truncate">{project.name}</span>
 											<span className="ml-auto truncate font-mono text-meta text-muted-foreground">
 												{project.path}
@@ -367,13 +367,13 @@ export function FolderDialog({
 									<button
 										key={folder.path}
 										type="button"
-										className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-body hover:bg-muted"
+										className="flex items-center gap-2 rounded-chip px-2 py-1.5 text-left text-body hover:bg-muted"
 										onClick={() => {
 											setTyped("");
 											setBrowsing(folder.path);
 										}}
 									>
-										<FolderIcon className="size-4 shrink-0 text-muted-foreground" />
+										<FolderIcon className="size-icon shrink-0 text-muted-foreground" />
 										<span className="truncate">{folder.name}</span>
 									</button>
 								))

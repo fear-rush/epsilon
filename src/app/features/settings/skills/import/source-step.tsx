@@ -101,11 +101,11 @@ export function SourceStep({
 							onDragLeave={() => setDragging(false)}
 							onDrop={drop}
 							className={cn(
-								"grid justify-items-center gap-2 rounded-xl border border-dashed p-6 text-center text-body transition-colors",
+								"grid justify-items-center gap-2 rounded-card border border-dashed p-6 text-center text-body transition-colors",
 								dragging && "border-primary bg-primary/5",
 							)}
 						>
-							<FolderOpenIcon className="size-6 text-muted-foreground" aria-hidden />
+							<FolderOpenIcon className="size-icon-lg text-muted-foreground" aria-hidden />
 							<p>Drop a skill folder here</p>
 							<Button
 								type="button"
@@ -214,7 +214,7 @@ export function SourceStep({
 			{footer !== null &&
 				createPortal(
 					<>
-						<Button type="button" variant="destructive" onClick={onCancel}>
+						<Button type="button" variant="outline" onClick={onCancel}>
 							Cancel
 						</Button>
 						<Button type="submit" form="skill-import-form" disabled={disabled || reading || !ready}>

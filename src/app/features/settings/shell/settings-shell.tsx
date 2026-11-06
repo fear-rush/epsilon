@@ -38,14 +38,14 @@ function NavLink({
 			{({ isActive }) => (
 				<span
 					className={cn(
-						"-mx-2 flex items-center gap-2 rounded-md px-2 py-2 text-body transition-colors duration-fast",
+						"-mx-2 flex items-center gap-2 rounded-chip px-2 py-2 text-body transition-colors duration-fast",
 						isActive
 							? "bg-muted font-medium text-foreground"
 							: "text-muted-foreground hover:bg-muted/60",
 						className,
 					)}
 				>
-					<Icon className="size-4" />
+					<Icon className="size-icon" />
 					{section.label}
 				</span>
 			)}
@@ -65,7 +65,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
 				<PaneBar
 					leading={
 						<Link to="/" aria-label="Back to app" className="text-muted-foreground">
-							<ArrowLeftIcon className="size-4" />
+							<ArrowLeftIcon className="size-icon" />
 						</Link>
 					}
 					title="Settings"
@@ -80,14 +80,14 @@ export function SettingsShell({ children }: { children: ReactNode }) {
 								to="/"
 								className="flex items-center gap-2 text-body text-muted-foreground transition-colors duration-fast hover:text-foreground"
 							>
-								<ArrowLeftIcon className="size-4" />
+								<ArrowLeftIcon className="size-icon" />
 								Back to app
 							</Link>
 						}
 					/>
 					<PaneBand className="animate-enter-drop enter-delay-1">
 						<div className="relative w-full">
-							<SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
+							<SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-icon -translate-y-1/2 text-muted-foreground" />
 							<Input
 								value={query}
 								placeholder="Search"

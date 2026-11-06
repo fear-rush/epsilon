@@ -187,7 +187,7 @@ export function SessionTreeDialog({
 					Summarise the branch I leave
 				</label>
 				{summarize && (
-					<div className="grid gap-2 rounded-md border p-2">
+					<div className="grid gap-2 rounded-chip border p-2">
 						<label htmlFor="tree-instructions" className="text-meta text-muted-foreground">
 							Instructions for the summary (optional)
 						</label>
@@ -301,14 +301,14 @@ function TreeRows({
 							aria-current={node.current ? "location" : undefined}
 							disabled={disabled || node.current}
 							className={cn(
-								"flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-default",
+								"flex w-full min-w-0 items-center gap-2 rounded-chip px-2 py-1.5 text-left outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-default",
 								node.current && "bg-muted",
 							)}
 							onClick={() => onPick(node)}
 						>
 							<Icon
 								className={cn(
-									"size-4 shrink-0",
+									"size-icon shrink-0",
 									prominent ? "text-foreground" : "text-muted-foreground",
 								)}
 								aria-hidden
@@ -327,7 +327,7 @@ function TreeRows({
 							</span>
 							{node.current && (
 								<span className="flex shrink-0 items-center gap-1 text-meta text-muted-foreground">
-									<MapPinIcon className="size-3.5" aria-hidden />
+									<MapPinIcon className="size-icon-sm" aria-hidden />
 									Here
 								</span>
 							)}

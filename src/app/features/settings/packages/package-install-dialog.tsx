@@ -49,7 +49,7 @@ export function PackageInstallDialog({
 			title="Install package"
 			footer={
 				<>
-					<Button type="button" variant="destructive" onClick={() => onOpenChange(false)}>
+					<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
 						Cancel
 					</Button>
 					<Button type="submit" form={FORM} disabled={install.isPending || source.trim() === ""}>

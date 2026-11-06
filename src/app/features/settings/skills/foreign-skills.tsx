@@ -66,7 +66,7 @@ export function ForeignSkills({ skills }: { skills: readonly ForeignSkillView[] 
 			{folders.map((entry) => {
 				const pending = link.isPending && link.variables.folder === entry.folder;
 				return (
-					<div key={entry.folder} className="grid min-w-0 gap-row rounded-md py-2">
+					<div key={entry.folder} className="grid min-w-0 gap-row rounded-chip py-2">
 						<div className="flex items-center gap-2">
 							<span className="min-w-0 flex-1 truncate text-body font-medium">
 								{AGENTS[entry.agent]}

@@ -181,7 +181,7 @@ export function SettingsDiagnostics() {
 								description={`exit ${crash.exit}${crash.signal === undefined || crash.signal === null ? "" : ` · ${crash.signal}`} · pi ${crash.piVersion}`}
 							>
 								<span className="inline-flex items-center gap-1 text-meta text-muted-foreground">
-									<CircleAlertIcon className="size-4" aria-hidden />
+									<CircleAlertIcon className="size-icon" aria-hidden />
 									{crash.time}
 								</span>
 							</Row>

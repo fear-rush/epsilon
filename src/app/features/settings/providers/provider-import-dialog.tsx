@@ -73,7 +73,7 @@ export function ProviderImportDialog({
 			description={endpoint ?? baseUrl}
 			footer={
 				<>
-					<Button type="button" variant="destructive" onClick={close}>
+					<Button type="button" variant="outline" onClick={close}>
 						Cancel
 					</Button>
 					<Button
@@ -107,7 +107,7 @@ export function ProviderImportDialog({
 							<Field
 								key={model.id}
 								orientation="horizontal"
-								className="rounded-md pad-item hover:bg-muted/60"
+								className="rounded-chip pad-item hover:bg-muted/60"
 							>
 								<Checkbox
 									id={`import-${model.id}`}

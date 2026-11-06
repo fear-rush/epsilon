@@ -54,7 +54,7 @@ export function ThinkingMenu({
 							render={
 								<InputGroupButton
 									size="sm"
-									className="w-auto cursor-pointer gap-1 rounded-md text-meta"
+									className="w-auto cursor-pointer gap-1 rounded-chip text-meta"
 									aria-label={`Thinking level: ${labels[level]}`}
 								/>
 							}

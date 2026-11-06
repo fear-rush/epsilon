@@ -64,7 +64,7 @@ export function RawPane({
 			</div>
 			{preview ? (
 				<div
-					className="min-h-0 flex-1 overflow-y-auto rounded-xl border bg-card px-6 py-4"
+					className="min-h-0 flex-1 overflow-y-auto rounded-card border bg-card px-6 py-4"
 					onClickCapture={keepRelativeLinks}
 				>
 					<Markdown>{withoutFrontmatter(text)}</Markdown>

@@ -165,7 +165,8 @@
 					"error",
 					{
 						"root": "src/app/features",
-						"aliasRoot": "src/app"
+						"aliasRoot": "src/app",
+						"shared": ["src/app/components"]
 					}
 				]
 			}

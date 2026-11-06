@@ -396,7 +396,7 @@ function CompactionOverrideRow({
 	const reserve = override.reserveTokens;
 	const keep = override.keepRecentTokens;
 	return (
-		<div className="grid gap-2 rounded-lg border pad-item">
+		<div className="grid gap-2 rounded-control border pad-item">
 			<div className="flex items-center justify-between gap-2">
 				<span className="min-w-0 truncate text-meta">{key}</span>
 				<Button

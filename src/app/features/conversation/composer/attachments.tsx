@@ -34,7 +34,7 @@ export function AttachmentStrip({
 		<ul aria-label="Attached images" className="flex flex-wrap gap-1">
 			{attachments.map((attachment, index) => (
 				<li key={`${attachment.name}-${index}`} className="max-w-full">
-					<AttachmentCard size="sm" className="rounded-lg">
+					<AttachmentCard size="sm" className="rounded-control">
 						<AttachmentMedia variant="image">
 							<img src={`data:${attachment.mimeType};base64,${attachment.data}`} alt="" />
 						</AttachmentMedia>

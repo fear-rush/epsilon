@@ -48,7 +48,7 @@ export function ToolsMenu({
 				<TooltipTrigger
 					render={
 						<DropdownMenuTrigger
-							render={<InputGroupButton size="sm" className="rounded-md text-meta" />}
+							render={<InputGroupButton size="sm" className="rounded-chip text-meta" />}
 						/>
 					}
 				>

@@ -121,7 +121,7 @@ export function SkillNewEntryDialog({
 			title={copy.title}
 			footer={
 				<>
-					<Button type="button" variant="destructive" onClick={close}>
+					<Button type="button" variant="outline" onClick={close}>
 						Cancel
 					</Button>
 					<Button type="submit" form={FORM_ID} disabled={create.isPending}>

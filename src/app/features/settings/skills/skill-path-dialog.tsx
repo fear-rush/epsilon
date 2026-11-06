@@ -49,7 +49,7 @@ export function SkillPathDialog({
 			title="Add a skill path"
 			footer={
 				<>
-					<Button type="button" variant="destructive" onClick={() => onOpenChange(false)}>
+					<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
 						Cancel
 					</Button>
 					<Button type="submit" form={FORM} disabled={add.isPending || path.trim() === ""}>

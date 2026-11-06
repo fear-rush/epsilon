@@ -134,7 +134,7 @@ export function ProviderModelDialog({
 							Test model
 						</Button>
 					</div>
-					<Button type="button" variant="destructive" onClick={close}>
+					<Button type="button" variant="outline" onClick={close}>
 						Cancel
 					</Button>
 					<Button type="submit" form="model-form">

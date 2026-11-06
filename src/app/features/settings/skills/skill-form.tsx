@@ -191,7 +191,7 @@ export function SkillForm({
 					<>
 						<Button
 							type="button"
-							variant="destructive"
+							variant={creating ? "outline" : "destructive"}
 							onClick={() => {
 								if (creating) {
 									form.setCancelOpen(true);

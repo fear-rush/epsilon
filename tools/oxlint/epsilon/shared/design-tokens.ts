@@ -2,7 +2,7 @@
 
 import { splitClasses, stripVariants } from "./classes.ts";
 
-export type TokenCategory = "bracket" | "palette" | "textSize" | "spacing";
+export type TokenCategory = "bracket" | "palette" | "textSize" | "spacing" | "radius";
 
 export type TokenViolation = {
 	category: TokenCategory;
@@ -14,7 +14,7 @@ export type TokenViolation = {
 
 export const defaultAllowed: readonly string[] = ["grid-cols-[minmax(0,1fr)]"];
 
-const spacingSteps = [0, 0.5, 1, 1.5, 2, 3, 4, 6, 8];
+const spacingSteps = [0, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10, 12];
 const spacingNames = ["pane", "page", "row", "field", "card", "section", "auto", "px"];
 const spacingUtilities = "gap-x|gap-y|space-x|space-y|gap|px|py|pt|pb|pl|pr|p|mx|my|mt|mb|ml|mr|m";
 
@@ -27,6 +27,17 @@ const paletteClass = new RegExp(
 	`^(?:${colorUtilities})-(?:(?:${palette})-\\d+|black|white)(?:/.+)?$`,
 );
 const textSizeClass = /^text-(xs|sm|base|lg|xl|[2-9]xl)(?:\/.+)?$/;
+const radiusRoles = new Set(["chip", "control", "card", "bubble", "pill", "none"]);
+const radiusClass = /^rounded(?:-(?:t|b|l|r|s|e|tl|tr|bl|br))?(?:-([a-z0-9]+))?$/;
+/** The role that has the radius a registry step had; a step with no role gets no suggestion. */
+const radiusByStep = new Map<string, string>([
+	["md", "rounded-chip"],
+	["lg", "rounded-control"],
+	["xl", "rounded-card"],
+	["2xl", "rounded-bubble"],
+	["full", "rounded-pill"],
+]);
+
 const spacingClass = new RegExp(`^(?:${spacingUtilities})-(\\d+(?:\\.\\d+)?)$`);
 
 const textRoles = {
@@ -48,6 +59,13 @@ function nearestStep(value: number): number {
 	return best;
 }
 
+/*
+ * Not checked, by design (DESIGN.md → Layout): width, height, grid, flex and position.
+ * Icon sizes (`size-icon-sm`, `size-icon`, `size-icon-lg`) are left to review: a class
+ * string does not know whether its element is an icon, so a rule would also fire on avatars
+ * and buttons.
+ */
+
 /** Violations among the whitespace-separated classes in one string. */
 export function findTokenViolations(
 	text: string,
@@ -62,17 +80,18 @@ export function findTokenViolations(
 		};
 
 		if (utility.includes("[")) {
-			if (allowed.includes(utility)) continue;
+			// `transition-[height,opacity]` names the properties that change; it is not a value.
+			if (allowed.includes(utility) || /^transition-\[[a-z,-]+\]$/.test(utility)) continue;
 			report(
 				"bracket",
-				`\`${utility}\` is an arbitrary value; use a design token (add one in tokens.css) or a documented exception.`,
+				`\`${utility}\` is an arbitrary value; use a design token (add one to DESIGN.md → front matter) or a documented exception.`,
 			);
 			continue;
 		}
 		if (paletteClass.test(bare)) {
 			report(
 				"palette",
-				`\`${utility}\` is a raw palette colour; use a semantic colour token such as bg-background, text-foreground or border-border.`,
+				`\`${utility}\` is a raw palette colour; use a semantic colour token such as bg-background, text-foreground or border-border (DESIGN.md → Colors).`,
 			);
 			continue;
 		}
@@ -80,7 +99,22 @@ export function findTokenViolations(
 		if (size?.[1] !== undefined) {
 			const key = size[1];
 			const role = textRolesByKey.get(key) ?? "text-display";
-			report("textSize", `\`${utility}\` is outside the type scale; use \`${role}\`.`);
+			report(
+				"textSize",
+				`\`${utility}\` is outside the type scale; use \`${role}\` (DESIGN.md → Typography).`,
+			);
+			continue;
+		}
+		const radius = radiusClass.exec(bare);
+		if (radius !== null) {
+			const step = radius[1] ?? "";
+			if (!radiusRoles.has(step)) {
+				const role = radiusByStep.get(step);
+				report(
+					"radius",
+					`\`${utility}\` is not a radius role; ${role === undefined ? "choose chip, control, card, bubble or pill" : `use \`${role}\``} (DESIGN.md → Shapes).`,
+				);
+			}
 			continue;
 		}
 		const spacing = spacingClass.exec(bare);
@@ -90,7 +124,7 @@ export function findTokenViolations(
 			const prefix = bare.slice(0, bare.length - spacing[1].length);
 			report(
 				"spacing",
-				`\`${utility}\` is not an allowed spacing step; use \`${prefix}${nearestStep(value)}\` or a named token (${spacingNames.join(", ")}).`,
+				`\`${utility}\` is not an allowed spacing step; use \`${prefix}${nearestStep(value)}\` or a named token (${spacingNames.join(", ")}) (DESIGN.md → Layout).`,
 			);
 		}
 	}

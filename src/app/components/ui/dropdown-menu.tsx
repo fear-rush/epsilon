@@ -4,6 +4,8 @@ import * as React from "react";
 
 import { cn } from "@/lib/cn";
 
+// local change: Epsilon's motion tokens (duration-fast/base, ease-settle) replace the registry's.
+
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
 	return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
 }
@@ -37,7 +39,7 @@ function DropdownMenuContent({
 				<MenuPrimitive.Popup
 					data-slot="dropdown-menu-content"
 					className={cn(
-						"z-50 max-h-(--available-height) w-auto max-w-(--available-width) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/5 transition-[opacity,scale] duration-150 ease-out outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:ease-in data-starting-style:scale-95 data-starting-style:opacity-0 dark:ring-foreground/10",
+						"z-50 max-h-(--available-height) w-auto max-w-(--available-width) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/5 transition-[opacity,scale] duration-fast ease-settle outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 dark:ring-foreground/10",
 						className,
 					)}
 					{...props}
@@ -131,7 +133,7 @@ function DropdownMenuSubContent({
 		<DropdownMenuContent
 			data-slot="dropdown-menu-sub-content"
 			className={cn(
-				"w-auto min-w-[96px] rounded-lg bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/5 transition-[opacity,scale] duration-150 ease-out data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:ease-in data-starting-style:scale-95 data-starting-style:opacity-0 dark:ring-foreground/10",
+				"w-auto min-w-[96px] rounded-lg bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/5 transition-[opacity,scale] duration-fast ease-settle data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 dark:ring-foreground/10",
 				className,
 			)}
 			align={align}

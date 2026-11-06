@@ -108,7 +108,7 @@ export function SkillRaw({
 						</div>
 					)}
 				</div>
-				<nav className="max-h-dialog-body-sm min-h-0 flex-1 overflow-y-auto rounded-xl border bg-card p-2 md:max-h-none">
+				<nav className="max-h-dialog-body-sm min-h-0 flex-1 overflow-y-auto rounded-card border bg-card p-2 md:max-h-none">
 					<FileTree
 						files={files}
 						folders={folders}

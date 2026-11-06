@@ -168,7 +168,7 @@ function AddFlow({ open, onOpenChange }: { open: boolean; onOpenChange: (open: b
 			footer={
 				step === "source" ? (
 					<>
-						<Button type="button" variant="destructive" onClick={onClose}>
+						<Button type="button" variant="outline" onClick={onClose}>
 							Cancel
 						</Button>
 						<Button type="button" disabled={!canContinue} onClick={() => setStep("values")}>

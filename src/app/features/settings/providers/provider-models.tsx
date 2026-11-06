@@ -134,7 +134,7 @@ export function ProviderModels({
 						</Notice>
 					)}
 
-					<div className="max-h-80 divide-y overflow-y-auto rounded-xl border">
+					<div className="max-h-80 divide-y overflow-y-auto rounded-card border">
 						{custom ? (
 							draft.models.length === 0 ? (
 								<p className="pad-row text-body text-muted-foreground">No models yet.</p>

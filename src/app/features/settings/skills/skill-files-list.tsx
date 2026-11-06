@@ -16,7 +16,7 @@ export function SkillFilesList({
 	onDelete: (file: BundleEntry) => void;
 }) {
 	return (
-		<div className="max-h-dialog-body-md divide-y overflow-y-auto rounded-xl border">
+		<div className="max-h-dialog-body-md divide-y overflow-y-auto rounded-card border">
 			{files.map((file) => (
 				<div key={file.path} className="flex items-center gap-2 px-3 py-2">
 					<button

@@ -37,11 +37,11 @@ export function SidebarAccount() {
 					<button
 						type="button"
 						aria-label="App menu"
-						className="flex w-full items-center gap-2 rounded-md pad-item text-left hover:bg-sidebar-accent"
+						className="flex w-full items-center gap-2 rounded-chip pad-item text-left hover:bg-sidebar-accent"
 					/>
 				}
 			>
-				<span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-body font-medium text-primary-foreground">
+				<span className="grid size-8 shrink-0 place-items-center rounded-pill bg-primary text-body font-medium text-primary-foreground">
 					{AVATAR}
 				</span>
 				<span className="grid min-w-0 flex-1 text-left leading-tight">
@@ -51,7 +51,7 @@ export function SidebarAccount() {
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side="top" align="center" sideOffset={8} className="w-64">
 				<div className="flex items-center gap-3 pad-item">
-					<span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-body font-medium text-primary-foreground">
+					<span className="grid size-9 shrink-0 place-items-center rounded-pill bg-primary text-body font-medium text-primary-foreground">
 						{AVATAR}
 					</span>
 					<div className="min-w-0">

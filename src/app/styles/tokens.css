@@ -66,21 +66,10 @@
 	animation-delay: 180ms;
 }
 
-/* Durations, for `transition-*` utilities. */
-@utility duration-fast {
-	transition-duration: 150ms;
-}
-@utility duration-base {
-	transition-duration: 220ms;
-}
-@utility duration-slow {
-	transition-duration: 360ms;
-}
-
 /* A collapsible's height, driven by Base UI's `--collapsible-panel-height`. */
 @utility transition-panel {
 	transition-property: height;
-	transition-duration: 200ms;
+	transition-duration: var(--duration-base);
 	transition-timing-function: var(--ease-settle);
 }
 

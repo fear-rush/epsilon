@@ -16,7 +16,7 @@ export function InlineStatus({
 }) {
 	return (
 		<p className={toneText(tone, "flex min-w-0 items-center gap-1.5 text-meta")}>
-			<Icon className="size-4 shrink-0" aria-hidden />
+			<Icon className="size-icon shrink-0" aria-hidden />
 			<span className="min-w-0 truncate">{children}</span>
 		</p>
 	);

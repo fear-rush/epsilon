@@ -21,6 +21,8 @@ describe("design-tokens", () => {
 		expect(categories("sm:grid-cols-[minmax(0,1fr)]")).toEqual([]);
 		expect(categories("w-[10px]", ["w-[10px]"])).toEqual([]);
 		expect(categories("grid-cols-[minmax(0,2fr)]")).toEqual(["bracket"]);
+		expect(categories("transition-[height,opacity] transition-[top]")).toEqual([]);
+		expect(categories("transition-[width:3px]")).toEqual(["bracket"]);
 	});
 
 	test("flags raw palette colours", () => {
@@ -45,7 +47,7 @@ describe("design-tokens", () => {
 	});
 
 	test("flags spacing outside the allowed steps", () => {
-		expect(categories("p-5 px-7 mt-10 gap-12 gap-x-2.5 space-y-3.5 -ml-5")).toEqual([
+		expect(categories("p-7 px-9 mt-11 gap-14 gap-x-2.5 space-y-3.5 -ml-7")).toEqual([
 			"spacing",
 			"spacing",
 			"spacing",
@@ -54,17 +56,42 @@ describe("design-tokens", () => {
 			"spacing",
 			"spacing",
 		]);
-		expect(findTokenViolations("p-5")[0]?.message).toContain("p-4");
+		expect(findTokenViolations("p-7")[0]?.message).toContain("p-6");
+		expect(categories("p-5 mt-10 gap-12")).toEqual([]);
 		expect(categories("p-0 p-0.5 gap-1.5 px-pane gap-field -mt-2 mx-auto p-px gap-x-8")).toEqual(
 			[],
 		);
 		expect(categories("size-5 h-10 w-12")).toEqual([]);
 	});
 
+	test("passes layout classes that are never linted", () => {
+		expect(categories("w-80 max-w-content grid-cols-3 h-full min-h-0 flex-1 top-1/2")).toEqual([]);
+		expect(categories("w-[37rem]")).toEqual(["bracket"]);
+	});
+
+	test("accepts only the radius roles and names the role for a registry step", () => {
+		expect(
+			categories("rounded-chip rounded-control rounded-card rounded-bubble rounded-pill"),
+		).toEqual([]);
+		expect(categories("rounded-none rounded-t-card sm:rounded-b-control")).toEqual([]);
+		expect(categories("rounded-md rounded-lg rounded-xl rounded-full rounded rounded-sm")).toEqual(
+			Array.from({ length: 6 }, () => "radius"),
+		);
+		const [md, lg, xl, full, bare, sm] = findTokenViolations(
+			"rounded-md rounded-lg rounded-xl rounded-full rounded rounded-sm",
+		);
+		expect(md?.message).toContain("rounded-chip");
+		expect(lg?.message).toContain("rounded-control");
+		expect(xl?.message).toContain("rounded-card");
+		expect(full?.message).toContain("rounded-pill");
+		expect(bare?.message).toContain("choose chip");
+		expect(sm?.message).toContain("DESIGN.md → Shapes");
+	});
+
 	test("strips variant prefixes, including bracketed ones", () => {
 		expect(categories("data-[state=open]:bg-muted has-[>svg]:gap-2")).toEqual([]);
 		expect(categories("group-data-[x=y]/name:p-4 dark:bg-card !p-4 sm:-mt-4")).toEqual([]);
-		expect(categories("sm:p-5 hover:text-red-500 dark:!text-sm")).toEqual([
+		expect(categories("sm:p-7 hover:text-red-500 dark:!text-sm")).toEqual([
 			"spacing",
 			"palette",
 			"textSize",

@@ -24,11 +24,11 @@ const Disclosure = ({
 	<Collapsible>
 		<CollapsibleTrigger
 			className={cn(
-				"group/disclosure flex items-center gap-1 rounded text-meta outline-none focus-visible:ring-2 focus-visible:ring-ring",
+				"group/disclosure flex items-center gap-1 rounded-chip text-meta outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
 				toneText(tone === "warning" ? "warning" : "neutral"),
 			)}
 		>
-			<ChevronRightIcon className="size-4 transition-transform group-data-[panel-open]/disclosure:rotate-90" />
+			<ChevronRightIcon className="size-icon transition-transform group-data-[panel-open]/disclosure:rotate-90" />
 			{label}
 		</CollapsibleTrigger>
 		<CollapsibleContent>{children}</CollapsibleContent>
@@ -58,7 +58,7 @@ export function CandidateCard({
 	const id = `skill-import-${candidate.dir || candidate.name}`;
 	const bytes = candidate.files.reduce((sum, file) => sum + file.size, 0);
 	return (
-		<li className="flex items-start gap-2 rounded-xl border p-3">
+		<li className="flex items-start gap-2 rounded-card border p-3">
 			<Checkbox
 				id={id}
 				checked={checked && !blocked}

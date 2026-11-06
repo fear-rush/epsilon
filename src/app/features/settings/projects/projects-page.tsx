@@ -153,9 +153,9 @@ function ProjectRow({
 			<DropdownMenu>
 				<DropdownMenuTrigger
 					aria-label={`Trust actions for ${project.name}`}
-					className="rounded-md p-1 text-muted-foreground hover:bg-muted"
+					className="rounded-chip p-1 text-muted-foreground hover:bg-muted"
 				>
-					<MoreHorizontalIcon className="size-4" />
+					<MoreHorizontalIcon className="size-icon" />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
 					{project.trusted ? (

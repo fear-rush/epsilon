@@ -49,7 +49,7 @@ export function RenameDialog({
 			title="Rename chat"
 			footer={
 				<>
-					<Button type="button" variant="destructive" onClick={() => onOpenChange(false)}>
+					<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
 						Cancel
 					</Button>
 					<Button type="submit" form={FORM_ID} disabled={invalid || pending}>

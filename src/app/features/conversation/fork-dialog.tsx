@@ -121,7 +121,7 @@ export function ForkSessionDialog({
 							key={message.entryId}
 							type="button"
 							disabled={pending}
-							className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-body hover:bg-muted disabled:opacity-50"
+							className="flex min-w-0 items-center gap-2 rounded-chip px-2 py-1.5 text-left text-body hover:bg-muted disabled:opacity-50"
 							onClick={() => void forkFrom(message)}
 						>
 							<span className="w-6 shrink-0 text-right text-meta text-muted-foreground tabular-nums">

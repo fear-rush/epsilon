@@ -44,7 +44,7 @@ export function ComposerPlace({
 }) {
 	const content = (
 		<>
-			<FolderIcon className="size-4 shrink-0" />
+			<FolderIcon className="size-icon shrink-0" />
 			<span className="truncate font-medium text-foreground">{folderName(path)}</span>
 			<span className="truncate">{path}</span>
 		</>
@@ -56,7 +56,7 @@ export function ComposerPlace({
 	return (
 		<button
 			type="button"
-			className={cn(className, "w-full rounded-md py-1 text-left hover:bg-muted")}
+			className={cn(className, "w-full rounded-chip py-1 text-left hover:bg-muted")}
 			onClick={onChange}
 		>
 			{content}

@@ -290,7 +290,7 @@ function toolBody(
 					<img
 						key={index}
 						alt="tool result"
-						className="max-h-64 w-auto rounded-lg border"
+						className="max-h-64 w-auto rounded-control border"
 						src={`data:${image.mimeType};base64,${image.data}`}
 					/>
 				))}

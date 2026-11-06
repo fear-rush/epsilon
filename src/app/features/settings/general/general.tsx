@@ -144,7 +144,7 @@ function AppSection({
 				</Badge>
 			</Row>
 			<Row stacked title="Agent home">
-				<code className="w-full rounded-md bg-muted pad-item text-code break-all">
+				<code className="w-full rounded-chip bg-muted pad-item text-code break-all">
 					{home ?? "…"}
 				</code>
 			</Row>
@@ -157,7 +157,7 @@ function AppSection({
 						: `Set in ${sessions.source}.`
 				}
 			>
-				<code className="w-full rounded-md bg-muted pad-item text-code break-all">
+				<code className="w-full rounded-chip bg-muted pad-item text-code break-all">
 					{sessions.dir}
 				</code>
 			</Row>

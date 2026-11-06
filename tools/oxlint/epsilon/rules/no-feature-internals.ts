@@ -10,6 +10,8 @@ type Options = {
 	aliasRoot: string | undefined;
 	/** Feature-relative paths other features may import, such as `settings/kit`. */
 	open: string[];
+	/** Repository-relative directories that may import no feature at all, such as `src/app/components`. */
+	shared: string[];
 };
 
 const repository = resolve(import.meta.dirname, "../../../..");
@@ -23,7 +25,11 @@ function readOptions(raw: unknown): Options | null {
 		"open" in raw && Array.isArray(raw.open)
 			? raw.open.filter((entry): entry is string => typeof entry === "string")
 			: [];
-	return { root: raw.root, aliasRoot, open };
+	const shared =
+		"shared" in raw && Array.isArray(raw.shared)
+			? raw.shared.filter((entry): entry is string => typeof entry === "string")
+			: [];
+	return { root: raw.root, aliasRoot, open, shared };
 }
 
 /** The feature and the path inside it that `target` names, or null outside the features root. */
@@ -55,12 +61,15 @@ export const noFeatureInternalsRule = defineRule({
 					root: { type: "string" },
 					aliasRoot: { type: "string" },
 					open: { type: "array", items: { type: "string" } },
+					shared: { type: "array", items: { type: "string" } },
 				},
 				required: ["root"],
 				additionalProperties: false,
 			},
 		],
 		messages: {
+			shared:
+				"`{{source}}` imports feature `{{feature}}` from a shared layer. Lift the shared piece into `components/patterns/`, `hooks/` or `lib/`, or move this file into the feature (see docs/rules/client.md CL-2).",
 			internal:
 				"`{{source}}` reaches inside feature `{{feature}}`. Import `{{feature}}/index.ts` (export what is needed there) or move the shared piece to `platform/` or `lib/` (see docs/rules/server.md SV-4, docs/rules/client.md CL-2).",
 		},
@@ -71,7 +80,10 @@ export const noFeatureInternalsRule = defineRule({
 			if (options === null || typeof specifier !== "string") return;
 			const root = resolve(repository, options.root);
 			const own = locate(root, context.filename);
-			if (own === null) return;
+			const isShared = options.shared.some(
+				(directory) => locate(resolve(repository, directory), context.filename) !== null,
+			);
+			if (own === null && !isShared) return;
 			let target: string | null = null;
 			if (specifier.startsWith(".")) {
 				target = resolve(dirname(context.filename), specifier);
@@ -80,7 +92,16 @@ export const noFeatureInternalsRule = defineRule({
 			}
 			if (target === null) return;
 			const other = locate(root, target);
-			if (other === null || other.feature === own.feature) return;
+			if (other === null) return;
+			if (isShared) {
+				context.report({
+					node,
+					messageId: "shared",
+					data: { source: specifier, feature: other.feature },
+				});
+				return;
+			}
+			if (own === null || other.feature === own.feature) return;
 			if (isPublic(other.feature, other.rest, options.open)) return;
 			context.report({
 				node,

@@ -22,7 +22,11 @@ export function ProviderActions({
 	return (
 		<>
 			{test}
-			<Button type="button" variant="destructive" onClick={isNew ? onCancel : onDelete}>
+			<Button
+				type="button"
+				variant={isNew ? "outline" : "destructive"}
+				onClick={isNew ? onCancel : onDelete}
+			>
 				{isNew ? "Cancel" : "Delete"}
 			</Button>
 			<Button type="button" onClick={onSave} disabled={saving}>

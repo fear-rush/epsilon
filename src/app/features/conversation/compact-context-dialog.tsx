@@ -39,7 +39,7 @@ export function CompactContextDialog({
 			description="pi replaces this chat's history with a summary. A running turn is stopped first."
 			footer={
 				<>
-					<Button type="button" variant="destructive" onClick={() => onOpenChange(false)}>
+					<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
 						Cancel
 					</Button>
 					<Button type="submit" form={FORM_ID}>

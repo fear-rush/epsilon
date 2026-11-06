@@ -3,7 +3,6 @@ import { ChevronDownIcon, LogInIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 
 import { ListItem } from "@/components/patterns/list/list-item";
-import { ListPane } from "@/components/patterns/list/list-pane";
 import { MasterDetail } from "@/components/patterns/pane/master-detail";
 import { Notice } from "@/components/patterns/status/notice";
 import { buttonVariants } from "@/components/ui/button";
@@ -13,6 +12,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ListPane } from "@/features/settings/shell/list-pane";
 import { cn } from "@/lib/cn";
 
 import { useSettings } from "../queries.ts";

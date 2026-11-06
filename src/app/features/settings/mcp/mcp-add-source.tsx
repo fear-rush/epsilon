@@ -77,7 +77,7 @@ function PastePreview({
 					onChange={(pasteName) => onChange({ pasteName })}
 				/>
 			)}
-			<ul className="divide-y rounded-xl border">
+			<ul className="divide-y rounded-card border">
 				{state.entries.map((entry) => {
 					const addable = entry.server !== undefined;
 					const checked = addable && !source.skipped.has(entry.id);

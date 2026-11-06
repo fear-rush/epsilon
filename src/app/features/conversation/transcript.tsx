@@ -69,6 +69,11 @@ const DEFAULT_HIDDEN_THINKING_LABEL = "Thinking...";
 
 /** The rail's five-slot viewport: as many dots as one screenful should hold. */
 const RAIL_SLOTS = 5;
+
+/** Smooth scrolling, unless the reader asked for reduced motion. */
+function scrollBehavior(): "auto" | "smooth" {
+	return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+}
 /** One line and a readable length, for a dot's label and tooltip. */
 const PREVIEW_LENGTH = 80;
 
@@ -148,7 +153,7 @@ function TranscriptRail({
 		// The same smooth follow main's rail had: the line moves with the active dot.
 		viewport.scrollTo({
 			top: Math.max(0, Math.min(target, lastStart)) * slot,
-			behavior: "smooth",
+			behavior: scrollBehavior(),
 		});
 	}, [activeIndex, rows.length]);
 
@@ -159,18 +164,18 @@ function TranscriptRail({
 		<div className="hidden w-8 shrink-0 items-center justify-center pl-1 sm:flex">
 			<nav
 				aria-label="Jump to a message"
-				className="flex flex-col items-center opacity-40 transition-all duration-base focus-within:opacity-100 hover:opacity-100 starting:scale-95 starting:opacity-0"
+				className="flex flex-col items-center opacity-40 transition-[opacity,scale] duration-base focus-within:opacity-100 hover:opacity-100 starting:scale-95 starting:opacity-0"
 			>
 				<Tip label="First message">
 					<button
 						type="button"
 						aria-label="Go to the first message"
-						className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
+						className="flex size-6 shrink-0 items-center justify-center rounded-chip text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
 						onClick={() => {
 							if (first !== undefined) onJump(first.id);
 						}}
 					>
-						<ChevronsUpIcon className="size-3.5" />
+						<ChevronsUpIcon className="size-icon-sm" />
 					</button>
 				</Tip>
 				<div
@@ -192,12 +197,12 @@ function TranscriptRail({
 										type="button"
 										aria-label={`Go to message ${index + 1}: ${preview}`}
 										aria-current={active ? "step" : undefined}
-										className="group relative flex h-16 w-6 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+										className="group relative flex h-16 w-6 shrink-0 items-center justify-center rounded-chip outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 										onClick={() => onJump(row.id)}
 									>
 										<span
 											className={cn(
-												"size-1.5 rounded-full transition duration-fast group-hover:scale-150 group-focus-visible:scale-150 motion-reduce:transition-none",
+												"size-1.5 rounded-pill transition duration-fast group-hover:scale-150 group-focus-visible:scale-150 motion-reduce:transition-none",
 												active
 													? "opacity-0"
 													: "bg-muted-foreground/35 group-hover:bg-muted-foreground/70",
@@ -210,7 +215,7 @@ function TranscriptRail({
 						<span
 							aria-hidden
 							data-rail-active="true"
-							className="pointer-events-none absolute left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/70 transition-all duration-slow ease-in-out"
+							className="pointer-events-none absolute left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-pill bg-foreground/70 transition-[top] duration-slow ease-in-out"
 							style={{ top: `${((activeIndex + 0.5) / rows.length) * 100}%` }}
 						/>
 					</div>
@@ -219,10 +224,10 @@ function TranscriptRail({
 					<button
 						type="button"
 						aria-label="Go to the last message"
-						className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
+						className="flex size-6 shrink-0 items-center justify-center rounded-chip text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
 						onClick={onJumpEnd}
 					>
-						<ChevronsDownIcon className="size-3.5" />
+						<ChevronsDownIcon className="size-icon-sm" />
 					</button>
 				</Tip>
 			</nav>
@@ -318,10 +323,10 @@ export function Transcript({
 	};
 
 	const jumpToEnd = (): void => {
-		if (virtual) virtualizer.scrollToEnd({ behavior: "smooth" });
+		if (virtual) virtualizer.scrollToEnd({ behavior: scrollBehavior() });
 		else {
 			const element = scroll.current;
-			element?.scrollTo({ behavior: "smooth", top: element.scrollHeight });
+			element?.scrollTo({ behavior: scrollBehavior(), top: element.scrollHeight });
 		}
 	};
 
@@ -428,11 +433,11 @@ export function Transcript({
 		(id: string): boolean => {
 			const index = rows.findIndex((row) => row.id === id);
 			if (index < 0) return false;
-			if (virtual) virtualizer.scrollToIndex(index, { align: "start", behavior: "smooth" });
+			if (virtual) virtualizer.scrollToIndex(index, { align: "start", behavior: scrollBehavior() });
 			else {
 				scroll.current
 					?.querySelector(rowSelector(id))
-					?.scrollIntoView({ behavior: "smooth", block: "start" });
+					?.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
 			}
 			return true;
 		},
@@ -496,13 +501,10 @@ export function Transcript({
 					    it takes no space from the transcript, so nothing moves under it. */}
 					{loadingOlder || olderFailure !== undefined ? (
 						<output className="sticky top-0 z-10 flex h-0 justify-center">
-							<span className="mt-2 flex animate-enter-drop items-center gap-2 rounded-full border bg-background/95 px-3 py-1 text-meta text-muted-foreground shadow-sm backdrop-blur">
+							<span className="mt-2 flex animate-enter-drop items-center gap-2 rounded-pill border bg-background/95 px-3 py-1 text-meta text-muted-foreground shadow-sm backdrop-blur">
 								{olderFailure === undefined ? (
 									<>
-										<LoaderCircleIcon
-											aria-hidden="true"
-											className="size-3.5 animate-spin motion-reduce:animate-none"
-										/>
+										<LoaderCircleIcon aria-hidden="true" className="size-icon-sm animate-spin" />
 										Loading earlier messages
 									</>
 								) : (
@@ -599,7 +601,7 @@ function Row({
 									<img
 										key={index}
 										alt="attached"
-										className="mb-2 max-h-48 rounded-lg"
+										className="mb-2 max-h-48 rounded-control"
 										src={`data:${image.mimeType};base64,${image.data}`}
 									/>
 								))}

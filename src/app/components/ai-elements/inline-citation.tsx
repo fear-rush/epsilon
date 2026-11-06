@@ -28,12 +28,12 @@ export function InlineCitation({
 				delay={10}
 				closeDelay={100}
 				render={
-					<Button variant="secondary" size="xs" className="h-5 rounded-full px-2 text-meta" />
+					<Button variant="secondary" size="xs" className="h-5 rounded-pill px-2 text-meta" />
 				}
 			>
 				{host}
 			</HoverCardTrigger>
-			<HoverCardContent side="top" align="start" className="flex w-64 flex-col gap-1 rounded-xl">
+			<HoverCardContent side="top" align="start" className="flex w-64 flex-col gap-1 rounded-card">
 				<div className="font-medium">{title}</div>
 				{description === undefined ? undefined : (
 					<p className="text-meta text-muted-foreground">{description}</p>

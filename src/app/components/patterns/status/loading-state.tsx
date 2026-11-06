@@ -9,7 +9,7 @@ import { Loader2Icon } from "lucide-react";
 export function LoadingState({ label }: { label: string }) {
 	return (
 		<p className="flex items-center gap-2 text-meta text-muted-foreground">
-			<Loader2Icon className="size-4 animate-spin" aria-hidden />
+			<Loader2Icon className="size-icon animate-spin" aria-hidden />
 			{label}
 		</p>
 	);

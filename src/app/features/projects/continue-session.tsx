@@ -36,9 +36,9 @@ export function ContinueSession({
 
 	return (
 		<div className="flex min-h-0 flex-1 animate-enter-rise items-center justify-center p-6">
-			<div className="grid w-full max-w-dialog-md gap-field rounded-xl border p-4">
+			<div className="grid w-full max-w-dialog-md gap-field rounded-card border p-4">
 				<div className="flex items-center gap-3">
-					<FolderXIcon className="size-4 shrink-0" aria-hidden />
+					<FolderXIcon className="size-icon shrink-0" aria-hidden />
 					<div className="min-w-0">
 						<p className="text-section">This chat&apos;s folder is gone</p>
 						<p className="truncate font-mono text-meta text-muted-foreground">{session.cwd}</p>

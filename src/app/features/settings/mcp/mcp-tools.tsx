@@ -113,7 +113,7 @@ export function McpTools({
 								onChange={(event) => setFilter(event.target.value)}
 							/>
 						)}
-						<ul className="max-h-dialog-body-md divide-y overflow-y-auto rounded-xl border">
+						<ul className="max-h-dialog-body-md divide-y overflow-y-auto rounded-card border">
 							{shown.map((tool) => {
 								const reachable = isToolReachable(draft.exposure, rules, tool.key);
 								const hints = hintsOf(tool.annotations);

@@ -99,6 +99,23 @@ describe("epsilon plugin", () => {
 		expect(output).not.toContain("../sessions/index.ts");
 	});
 
+	test("no-feature-internals refuses a feature import from a shared layer", () => {
+		const source =
+			'import { a } from "../../features/sessions/index.ts";\nexport const used = a;\n';
+
+		const output = lint(
+			{
+				rule: "no-feature-internals",
+				source,
+				options: { root: join(scratch, "app/features"), shared: [join(scratch, "app/components")] },
+			},
+			"app/components/patterns/panel",
+		);
+
+		expect(output).toContain("from a shared layer");
+		expect(output).toContain("../../features/sessions/index.ts");
+	});
+
 	test("feedback-surfaces refuses the alert banner and a state colour a feature painted", () => {
 		const output = lint(
 			{

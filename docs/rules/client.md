@@ -15,7 +15,7 @@ Enforced by: review
 
 Do: lift code to `components/patterns/`, `hooks/` or `lib/` when a second feature needs it.
 Don't: import a feature from `patterns`; reach into a sibling feature.
-Enforced by: epsilon/no-feature-internals
+Enforced by: epsilon/no-feature-internals (a file under `src/app/components/` importing any `@/features/*` is an error; settings' `scope-tabs` and `list-pane` live in `features/settings/shell/`)
 
 ### CL-3 · A local change to `ui/` is explained where it is made
 
@@ -111,7 +111,7 @@ Enforced by: review
 
 ### CL-17 · A dialog is `DialogFrame`
 
-Do: `DialogFrame size="sm|md|lg"`, fixed body height unless `body="content"`; mount closed and open on the next animation frame; on close wait for the transition, then unmount.
+Do: `DialogFrame size="sm|md|lg"`, a body of minimum height by size (growing to `80vh`, then scrolling) unless `body="content"`; mount closed and open on the next animation frame; on close wait for the transition, then unmount.
 Don't: mount a Base UI dialog already open (it has no motion).
 Enforced by: review
 

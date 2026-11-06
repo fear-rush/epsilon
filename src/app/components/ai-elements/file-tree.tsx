@@ -149,11 +149,11 @@ function TreeNode({
 				<li role="treeitem" className="group/entry relative">
 					<div
 						className={cn(
-							"flex h-7 w-full min-w-0 items-center gap-1 rounded-lg px-3 text-body text-muted-foreground",
+							"flex h-7 w-full min-w-0 items-center gap-1 rounded-control px-3 text-body text-muted-foreground",
 							deletable && "pr-8",
 						)}
 					>
-						<span className="size-4" aria-hidden />
+						<span className="size-icon" aria-hidden />
 						<FolderIcon />
 						<span className="truncate">{node.name}</span>
 					</div>

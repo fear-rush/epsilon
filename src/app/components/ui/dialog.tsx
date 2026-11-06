@@ -5,6 +5,8 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
+// local change: Epsilon's motion tokens (duration-fast/base, ease-settle) replace the registry's.
+
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
 	return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 }
@@ -26,7 +28,7 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
 		<DialogPrimitive.Backdrop
 			data-slot="dialog-overlay"
 			className={cn(
-				"fixed inset-0 isolate z-50 bg-black/30 transition-opacity duration-150 ease-out data-ending-style:opacity-0 data-ending-style:ease-in data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-sm",
+				"fixed inset-0 isolate z-50 bg-black/30 transition-opacity duration-fast ease-settle data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-sm",
 				className,
 			)}
 			{...props}
@@ -48,7 +50,7 @@ function DialogContent({
 			<DialogPrimitive.Popup
 				data-slot="dialog-content"
 				className={cn(
-					"fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100svh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 overflow-y-auto rounded-xl bg-popover p-6 text-sm break-words text-popover-foreground shadow-xl ring-1 ring-foreground/5 transition-[opacity,scale] duration-150 ease-out outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:ease-in data-starting-style:scale-95 data-starting-style:opacity-0 sm:max-w-md dark:ring-foreground/10",
+					"fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100svh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 overflow-y-auto rounded-xl bg-popover p-6 text-sm break-words text-popover-foreground shadow-xl ring-1 ring-foreground/5 transition-[opacity,scale] duration-fast ease-settle outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 sm:max-w-md dark:ring-foreground/10",
 					className,
 				)}
 				{...props}
