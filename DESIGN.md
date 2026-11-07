@@ -341,9 +341,11 @@ Don't: write another ring width, opacity or outline.
 
 ### cursor
 
-Every control keeps the arrow: no base rule and no component sets a hand. `cursor-text` on
-the input group's addon says clicking there types, not acts; `cursor-help` on an `abbr`
-says the title is a definition.
+Every control keeps the arrow. One base rule in `index.css` sets `cursor: default` on
+`a[href]`, which the browser's own sheet would paint as a hand; the editor's theme does
+the same for the parts CodeMirror's packages mark (fold chevrons, the folded placeholder,
+completion rows, diagnostic actions). `cursor-text` on the input group's addon says
+clicking there types, not acts; `cursor-help` on an `abbr` says the title is a definition.
 Don't: add `cursor-pointer` to a button, row or menu item because it looks clickable.
 
 ### button-default, button-outline, button-ghost, button-destructive

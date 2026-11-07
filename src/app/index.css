@@ -109,8 +109,13 @@
 	html {
 		@apply font-sans;
 	}
-	/* No cursor rule: every control keeps the arrow. A hand is added per control only when
-	   a pointer is wanted again. */
+	/* No cursor on a control: buttons, selects, labels and the roles Base UI draws as spans
+	   are already the arrow. The browser's own sheet is the exception: it paints a hand on
+	   `a[href]` and everything inside it, so those are set back to the arrow here. Utilities
+	   still win (a later layer), which is how `cursor-text` and `cursor-help` survive. */
+	a[href] {
+		cursor: default;
+	}
 }
 
 @layer components {

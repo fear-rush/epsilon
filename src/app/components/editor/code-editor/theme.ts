@@ -37,7 +37,11 @@ const theme = EditorView.theme({
 		backgroundColor: "color-mix(in oklab, var(--muted) 55%, transparent)",
 		color: "var(--foreground)",
 	},
-	".cm-foldGutter .cm-gutterElement": { padding: "0 0.25rem", cursor: "pointer" },
+	".cm-foldGutter .cm-gutterElement": { padding: "0 0.25rem" },
+	// The folding, autocomplete and lint packages paint a hand on their own parts; the
+	// arrow is the app's only cursor.
+	".cm-foldGutter span, .cm-foldPlaceholder, .cm-tooltip-autocomplete > ul > li, .cm-completionListIncompleteTop:before, .cm-completionListIncompleteBottom:after, .cm-diagnosticAction":
+		{ cursor: "default" },
 	".cm-lint-marker": { width: "0.75rem", height: "0.75rem" },
 	".cm-diagnostic-error": { borderLeft: "3px solid var(--destructive)" },
 	".cm-lintRange-error": {

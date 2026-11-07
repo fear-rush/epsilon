@@ -37,7 +37,7 @@ Enforced by: review
 
 ### CL-6 · The arrow is the cursor
 
-Do: leave the cursor alone. Buttons, links, rows and menu items keep the arrow; nothing in the app sets a hand.
+Do: leave the cursor alone. Buttons, selects, labels and the roles Base UI draws as spans keep the arrow on their own; `index.css` sets it back on `a[href]`, which the browser's sheet marks as a hand, and the editor's theme does the same for CodeMirror's fold and completion parts.
 Don't: add `cursor-pointer` (or `cursor-default`, `cursor-not-allowed`) to a component. `cursor-text` and `cursor-help` stay: they mean typing and a definition, not a click.
 Enforced by: review
 
