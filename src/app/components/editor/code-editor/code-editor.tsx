@@ -6,8 +6,7 @@
  *
  * It edits like a small VS Code: line numbers, folding, a problems gutter, the
  * language's own checks (JSON parse errors, YAML frontmatter) plus the caller's,
- * Prettier formatting on ⇧⌥F or the status bar button, and a status bar with the
- * cursor position and the problem count.
+ * and a status bar with the cursor position and the problem count.
  *
  * It lives in `components/` because the skill body is only the first file it
  * edits; the skill's bundled files and MCP entries use it too.
@@ -47,7 +46,6 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 
 import { languageChecks } from "./checks";
-import { canFormat, formatDocument } from "./format";
 import { bold, italic, link } from "./markdown-commands";
 import { editorTheme } from "./theme";
 
@@ -140,21 +138,6 @@ export function CodeEditor({
 		languageRef.current = language;
 	});
 	const [status, setStatus] = useState<Status>({ line: 1, column: 1, problems: 0 });
-	const [formatProblem, setFormatProblem] = useState<string | undefined>();
-
-	const format = (): boolean => {
-		const editor = view.current;
-		if (editor === null || readOnly || !canFormat(languageRef.current)) return false;
-		setFormatProblem(undefined);
-		void formatDocument(editor, languageRef.current).then((problem) =>
-			setFormatProblem(problem === undefined ? undefined : `Cannot format: ${problem}`),
-		);
-		return true;
-	};
-	const formatRef = useRef(format);
-	useEffect(() => {
-		formatRef.current = format;
-	});
 
 	// The view reads the first render's props; later changes have their own effects below.
 	const mount = useEffectEvent((parent: HTMLElement) => {
@@ -191,7 +174,6 @@ export function CodeEditor({
 							{ key: "Mod-b", run: bold },
 							{ key: "Mod-i", run: italic },
 							{ key: "Mod-k", run: link },
-							{ key: "Shift-Alt-f", run: () => formatRef.current() },
 						]),
 					),
 					keymap.of([
@@ -295,25 +277,7 @@ export function CodeEditor({
 							? "No problems"
 							: `${status.problems} ${status.problems === 1 ? "problem" : "problems"}`}
 					</span>
-					{formatProblem !== undefined && (
-						<span className="min-w-0 truncate text-destructive" title={formatProblem}>
-							{formatProblem}
-						</span>
-					)}
 					<span className="ml-auto">{LANGUAGE_NAMES[language]}</span>
-					{!readOnly && canFormat(language) && (
-						<button
-							type="button"
-							className="rounded px-1.5 py-0.5 hover:bg-muted hover:text-foreground"
-							title="Format (⇧⌥F)"
-							onClick={() => {
-								format();
-								view.current?.focus();
-							}}
-						>
-							Format
-						</button>
-					)}
 				</div>
 			)}
 		</div>
