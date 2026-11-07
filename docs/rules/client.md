@@ -35,10 +35,10 @@ Do: `Reasoning` for thinking, `Plan` for calls known up front, `Task` for a live
 Don't: draw a step's shape in a feature.
 Enforced by: review
 
-### CL-6 · One rule owns the pointer
+### CL-6 · The arrow is the cursor
 
-Do: let the base rule in `index.css` own the pointer; it covers buttons, links, labels and the roles Base UI draws as spans.
-Don't: add `cursor-pointer`, `cursor-default` or `cursor-not-allowed` to a component, or expect a base rule to override a registry utility (`cursor-default` on a `ui/` file beats it). `cursor-text` and `cursor-help` stay: they mean typing and a definition, not a click.
+Do: leave the cursor alone. Buttons, links, rows and menu items keep the arrow; nothing in the app sets a hand.
+Don't: add `cursor-pointer` (or `cursor-default`, `cursor-not-allowed`) to a component. `cursor-text` and `cursor-help` stay: they mean typing and a definition, not a click.
 Enforced by: review
 
 ### CL-7 · Styling goes through tokens

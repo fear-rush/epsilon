@@ -341,10 +341,10 @@ Don't: write another ring width, opacity or outline.
 
 ### cursor
 
-A clickable control shows the hand, from one base
-rule in `index.css`; no component adds a pointer of its own. `cursor-text` on the input
-group's addon says clicking there types, not acts.
-Don't: mark a card, row or menu item clickable with a cursor of its own.
+Every control keeps the arrow: no base rule and no component sets a hand. `cursor-text` on
+the input group's addon says clicking there types, not acts; `cursor-help` on an `abbr`
+says the title is a definition.
+Don't: add `cursor-pointer` to a button, row or menu item because it looks clickable.
 
 ### button-default, button-outline, button-ghost, button-destructive
 

@@ -109,54 +109,8 @@
 	html {
 		@apply font-sans;
 	}
-	/* Clickable means `cursor: pointer`, on the control and everything inside it. This is
-	   the only cursor rule: components add none, and `!important` keeps a stray utility
-	   or library style from showing an arrow over part of a control. Base UI draws some
-	   controls as spans with a role, so roles are listed. A disabled control sets
-	   `pointer-events-none`, so no cursor reaches it. */
-	:is(
-		a[href],
-		button,
-		label,
-		select,
-		summary,
-		[data-slot="sidebar-menu"],
-		[data-slot="sidebar-menu-item"],
-		[role="button"],
-		[role="checkbox"],
-		[role="combobox"],
-		[role="link"],
-		[role="menuitem"],
-		[role="menuitemcheckbox"],
-		[role="menuitemradio"],
-		[role="option"],
-		[role="radio"],
-		[role="switch"],
-		[role="tab"]
-	),
-	:is(
-			a[href],
-			button,
-			label,
-			select,
-			summary,
-			[data-slot="sidebar-menu"],
-			[data-slot="sidebar-menu-item"],
-			[role="button"],
-			[role="checkbox"],
-			[role="combobox"],
-			[role="link"],
-			[role="menuitem"],
-			[role="menuitemcheckbox"],
-			[role="menuitemradio"],
-			[role="option"],
-			[role="radio"],
-			[role="switch"],
-			[role="tab"]
-		)
-		*:not(input, textarea) {
-		cursor: pointer !important;
-	}
+	/* No cursor rule: every control keeps the arrow. A hand is added per control only when
+	   a pointer is wanted again. */
 }
 
 @layer components {
