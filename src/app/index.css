@@ -109,25 +109,53 @@
 	html {
 		@apply font-sans;
 	}
-	/* Tailwind preflight leaves interactive elements on the default arrow cursor,
-	   and the registry's menu and command items hardcode `cursor-default`. Base UI
-	   renders several controls as spans with a role, so the roles are listed here.
-	   Disabled items are excluded by `aria-disabled`, not by the presence of
-	   `data-disabled`: cmdk emits `data-disabled="false"` on enabled rows. */
-	button:not(:disabled),
-	select:not(:disabled),
-	summary,
-	label[for],
-	[role="button"]:not([aria-disabled="true"]),
-	[role="checkbox"]:not([aria-disabled="true"]),
-	[role="combobox"]:not([aria-disabled="true"]),
-	[role="link"],
-	[role="menuitem"]:not([aria-disabled="true"]),
-	[role="option"]:not([aria-disabled="true"]),
-	[role="radio"]:not([aria-disabled="true"]),
-	[role="switch"]:not([aria-disabled="true"]),
-	[role="tab"]:not([aria-disabled="true"]) {
-		cursor: pointer;
+	/* Clickable means `cursor: pointer`, on the control and everything inside it. This is
+	   the only cursor rule: components add none, and `!important` keeps a stray utility
+	   or library style from showing an arrow over part of a control. Base UI draws some
+	   controls as spans with a role, so roles are listed. A disabled control sets
+	   `pointer-events-none`, so no cursor reaches it. */
+	:is(
+		a[href],
+		button,
+		label,
+		select,
+		summary,
+		[data-slot="sidebar-menu"],
+		[data-slot="sidebar-menu-item"],
+		[role="button"],
+		[role="checkbox"],
+		[role="combobox"],
+		[role="link"],
+		[role="menuitem"],
+		[role="menuitemcheckbox"],
+		[role="menuitemradio"],
+		[role="option"],
+		[role="radio"],
+		[role="switch"],
+		[role="tab"]
+	),
+	:is(
+			a[href],
+			button,
+			label,
+			select,
+			summary,
+			[data-slot="sidebar-menu"],
+			[data-slot="sidebar-menu-item"],
+			[role="button"],
+			[role="checkbox"],
+			[role="combobox"],
+			[role="link"],
+			[role="menuitem"],
+			[role="menuitemcheckbox"],
+			[role="menuitemradio"],
+			[role="option"],
+			[role="radio"],
+			[role="switch"],
+			[role="tab"]
+		)
+		*:not(input, textarea) {
+		cursor: pointer !important;
 	}
 }
 

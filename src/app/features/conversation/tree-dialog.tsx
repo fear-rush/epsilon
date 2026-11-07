@@ -301,7 +301,7 @@ function TreeRows({
 							aria-current={node.current ? "location" : undefined}
 							disabled={disabled || node.current}
 							className={cn(
-								"flex w-full min-w-0 items-center gap-2 rounded-chip px-2 py-1.5 text-left outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-default",
+								"flex w-full min-w-0 items-center gap-2 rounded-chip px-2 py-1.5 text-left outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
 								node.current && "bg-muted",
 							)}
 							onClick={() => onPick(node)}

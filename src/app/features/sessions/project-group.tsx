@@ -77,9 +77,9 @@ export function ProjectGroup({
 	const shown = expanded || open;
 	/** One lucide folder, open or closed; switching it remounts and plays the fade. */
 	const Folder = shown ? FolderOpenIcon : FolderIcon;
-	/** Project actions stay out of the way until the row is hovered or focused. */
+	/** Project actions stay on the row surface, out of the way until it is hovered or focused. */
 	const rowAction =
-		"text-muted-foreground transition duration-fast md:translate-x-1 md:opacity-0 md:group-hover/project:translate-x-0 md:group-hover/project:opacity-100 md:focus-visible:translate-x-0 md:focus-visible:opacity-100 md:data-[popup-open]:translate-x-0 md:data-[popup-open]:opacity-100";
+		"absolute top-1/2 -translate-y-1/2 text-muted-foreground transition duration-fast md:translate-x-1 md:opacity-0 md:group-hover/project:translate-x-0 md:group-hover/project:opacity-100 md:focus-visible:translate-x-0 md:focus-visible:opacity-100 md:data-[popup-open]:translate-x-0 md:data-[popup-open]:opacity-100";
 	return (
 		<Collapsible
 			open={expanded ? true : open}
@@ -88,10 +88,10 @@ export function ProjectGroup({
 			}}
 			render={<SidebarMenuItem className="animate-enter-rise" />}
 		>
-			<div className="group/project flex items-center gap-1 rounded-chip pr-1 hover:bg-sidebar-accent">
+			<div className="group/project relative rounded-chip hover:bg-sidebar-accent">
 				<CollapsibleTrigger
 					render={
-						<SidebarMenuButton className="min-w-0 flex-1 gap-1.5 hover:bg-transparent active:bg-transparent" />
+						<SidebarMenuButton className="min-w-0 gap-1.5 hover:bg-transparent active:bg-transparent" />
 					}
 				>
 					<Folder className="size-icon shrink-0 animate-enter-fade text-muted-foreground" />
@@ -104,13 +104,15 @@ export function ProjectGroup({
 							/>
 						</Tip>
 					)}
+					{/* The actions sit on the row: this keeps a long name out from under them. */}
+					<span aria-hidden className="w-12 shrink-0" />
 				</CollapsibleTrigger>
 				<Tip label={`New chat in ${project.name}`}>
 					<Button
 						variant="ghost"
 						size="icon-sm"
 						aria-label={`New chat in ${project.name}`}
-						className={rowAction}
+						className={`${rowAction} right-9`}
 						onClick={onNewChat}
 					>
 						<PlusIcon />
@@ -124,7 +126,7 @@ export function ProjectGroup({
 									variant="ghost"
 									size="icon-sm"
 									aria-label={`${project.name} actions`}
-									className={rowAction}
+									className={`${rowAction} right-1`}
 								/>
 							}
 						>

@@ -36,7 +36,7 @@
 /* A newly added chat enters from the sidebar's left edge and settles with a short
    overshoot, so the row is noticed without moving the rest of the list. */
 .chat-row-enter {
-	animation: chat-row-enter var(--duration-slow) var(--ease-overshoot) both;
+	animation: chat-row-enter var(--duration-slow) var(--ease-overshoot) backwards;
 }
 
 @keyframes chat-row-enter {

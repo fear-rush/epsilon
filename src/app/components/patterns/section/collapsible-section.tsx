@@ -64,7 +64,7 @@ export function CollapsibleSection({
 				onOpenChange?.(next);
 			}}
 		>
-			<CollapsibleTrigger className="group/override flex w-full cursor-pointer items-start justify-between gap-field rounded-card border bg-card pad-row text-left transition-colors hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
+			<CollapsibleTrigger className="group/override flex w-full items-start justify-between gap-field rounded-card border bg-card pad-row text-left transition-colors hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
 				<span className="grid gap-0.5">
 					<span className="text-body font-medium">{title}</span>
 					{description !== undefined && (

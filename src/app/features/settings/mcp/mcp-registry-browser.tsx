@@ -97,7 +97,7 @@ function ResultList({
 						key={`${item.source}:${item.name}`}
 						size="xs"
 						variant="outline"
-						className="cursor-pointer text-left hover:bg-muted"
+						className="text-left hover:bg-muted"
 						render={
 							<button type="button" aria-label="Use this server" onClick={() => onPick(item)} />
 						}

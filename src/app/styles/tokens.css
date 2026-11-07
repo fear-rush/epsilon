@@ -10,11 +10,11 @@
 	/* Motion: one curve, three durations, five entrances. A list's band and a picker
 	   drop in from above; a selected pane's tabs, body and footer rise as one reveal,
 	   and a chat's rows and composer use that same rise. */
-	--animate-enter-fade: enter-fade 220ms var(--ease-settle) both;
-	--animate-enter-rise: enter-rise 360ms var(--ease-settle) both;
-	--animate-enter-drop: enter-drop 360ms var(--ease-settle) both;
-	--animate-enter-left: enter-left 300ms var(--ease-settle) both;
-	--animate-enter-right: enter-right 300ms var(--ease-settle) both;
+	--animate-enter-fade: enter-fade 220ms var(--ease-settle) backwards;
+	--animate-enter-rise: enter-rise 360ms var(--ease-settle) backwards;
+	--animate-enter-drop: enter-drop 360ms var(--ease-settle) backwards;
+	--animate-enter-left: enter-left 300ms var(--ease-settle) backwards;
+	--animate-enter-right: enter-right 300ms var(--ease-settle) backwards;
 
 	@keyframes enter-fade {
 		from {

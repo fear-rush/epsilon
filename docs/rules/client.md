@@ -35,10 +35,10 @@ Do: `Reasoning` for thinking, `Plan` for calls known up front, `Task` for a live
 Don't: draw a step's shape in a feature.
 Enforced by: review
 
-### CL-6 · Registry classes beat base-layer CSS
+### CL-6 · One rule owns the pointer
 
-Do: remove shadcn's `cursor-default` from the component files.
-Don't: expect a base rule to override a registry utility.
+Do: let the base rule in `index.css` own the pointer; it covers buttons, links, labels and the roles Base UI draws as spans.
+Don't: add `cursor-pointer`, `cursor-default` or `cursor-not-allowed` to a component, or expect a base rule to override a registry utility (`cursor-default` on a `ui/` file beats it). `cursor-text` and `cursor-help` stay: they mean typing and a definition, not a click.
 Enforced by: review
 
 ### CL-7 · Styling goes through tokens

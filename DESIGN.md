@@ -339,6 +339,13 @@ Don't: let a dialog resize between steps.
 sidebar menu buttons and any focusable row.
 Don't: write another ring width, opacity or outline.
 
+### cursor
+
+A clickable control shows the hand, from one base
+rule in `index.css`; no component adds a pointer of its own. `cursor-text` on the input
+group's addon says clicking there types, not acts.
+Don't: mark a card, row or menu item clickable with a cursor of its own.
+
 ### button-default, button-outline, button-ghost, button-destructive
 
 Destructive only for an action that deletes or stops, and it confirms in an `AlertDialog`.

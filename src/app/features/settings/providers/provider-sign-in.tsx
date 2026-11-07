@@ -117,7 +117,7 @@ function SignInQuestion({
 							key={option.id}
 							variant="outline"
 							size="sm"
-							className="cursor-pointer transition-colors hover:bg-muted/60"
+							className="transition-colors hover:bg-muted/60"
 							render={
 								<button
 									type="button"

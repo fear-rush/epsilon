@@ -22,7 +22,7 @@ export function SkillFilesList({
 					<button
 						type="button"
 						disabled={!file.text}
-						className="flex min-w-0 flex-1 items-baseline justify-between gap-2 text-left disabled:cursor-default disabled:text-muted-foreground"
+						className="flex min-w-0 flex-1 items-baseline justify-between gap-2 text-left disabled:text-muted-foreground"
 						onClick={() => onOpen(file.path)}
 					>
 						<span className="truncate text-body font-medium">{file.path}</span>

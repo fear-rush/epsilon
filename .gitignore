@@ -12,3 +12,6 @@ src/app/routeTree.gen.ts
 test-results/
 playwright-report/
 *.log
+
+# playwright-cli session files
+.playwright-cli/

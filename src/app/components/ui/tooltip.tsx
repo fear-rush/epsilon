@@ -35,7 +35,9 @@ function TooltipContent({
 				alignOffset={alignOffset}
 				side={side}
 				sideOffset={sideOffset}
-				className="isolate z-50"
+				// A tooltip annotates a control; it never takes the pointer. Its arrow reaches
+				// over the control's edge, and catching the pointer there flickers the cursor.
+				className="pointer-events-none isolate z-50"
 			>
 				<TooltipPrimitive.Popup
 					data-slot="tooltip-content"

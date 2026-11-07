@@ -83,12 +83,7 @@ function PastePreview({
 					const checked = addable && !source.skipped.has(entry.id);
 					return (
 						<li key={entry.id}>
-							<label
-								className={cn(
-									"flex items-start gap-3 px-3 py-2",
-									addable ? "cursor-pointer" : "opacity-70",
-								)}
-							>
+							<label className={cn("flex items-start gap-3 px-3 py-2", !addable && "opacity-70")}>
 								{many && (
 									<Checkbox
 										className="mt-0.5"
