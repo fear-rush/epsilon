@@ -29,6 +29,7 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/cn";
 
 import { formatWhen, sessionLabel } from "./format.ts";
 import type { SessionSummary } from "./list.ts";
@@ -65,7 +66,10 @@ export function SessionItem({
 			<ContextMenuTrigger
 				render={
 					<SidebarMenuItem
-						className={animate ? "group/chat chat-row-enter" : "group/chat"}
+						className={cn(
+							"group/chat rounded-chip hover:bg-sidebar-accent",
+							animate && "chat-row-enter",
+						)}
 						style={{ viewTransitionName: `chat-${session.id}` }}
 					/>
 				}
@@ -80,7 +84,7 @@ export function SessionItem({
 							onClick={closeOnNavigate}
 						/>
 					}
-					className="h-auto flex-col items-start gap-row py-1.5 pr-8"
+					className="h-auto flex-col items-start gap-row py-1.5 pr-8 hover:bg-transparent active:bg-transparent"
 				>
 					<span className="flex w-full items-center gap-1.5">
 						{session.pinned && (
@@ -100,7 +104,7 @@ export function SessionItem({
 							render={
 								<SidebarMenuAction
 									aria-label="Chat actions"
-									className="text-muted-foreground transition duration-fast md:translate-x-1 md:opacity-0 md:group-focus-within/chat:translate-x-0 md:group-focus-within/chat:opacity-100 md:group-hover/chat:translate-x-0 md:group-hover/chat:opacity-100 md:focus-visible:translate-x-0 md:focus-visible:opacity-100 md:data-[popup-open]:translate-x-0 md:data-[popup-open]:opacity-100"
+									className="text-muted-foreground transition duration-fast hover:bg-transparent md:translate-x-1 md:opacity-0 md:group-focus-within/chat:translate-x-0 md:group-focus-within/chat:opacity-100 md:group-hover/chat:translate-x-0 md:group-hover/chat:opacity-100 md:focus-visible:translate-x-0 md:focus-visible:opacity-100 md:data-[popup-open]:translate-x-0 md:data-[popup-open]:opacity-100"
 								/>
 							}
 						>

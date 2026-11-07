@@ -396,7 +396,8 @@ Don't: fake it with a div; the chat primitives mean something.
 
 A project's `+` and `...` and a chat's `...` appear when their own row is hovered or
 focused, and a project row reveals only its own. They fade and slide in by a pixel. A
-folder row has the same surface as a chat row.
+folder row has the same surface as a chat row, and the row owns the hover fill: pointing
+at an action lights the whole row, never the action alone.
 Don't: reveal them with `aria-expanded`; `data-popup-open` is the open state.
 
 ## Do's and Don'ts
